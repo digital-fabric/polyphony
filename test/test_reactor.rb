@@ -3,13 +3,24 @@ require 'modulation'
 
 Reactor = import('../lib/nuclear/reactor')
 
+module Reactor
+  def self.reset!
+    orig_verbose = $VERBOSE
+    $VERBOSE = nil  
+    const_set(:Selector, NIO::Selector.new(nil))
+    const_set(:TimerGroup, Timers::Group.new)
+  ensure
+    $VERBOSE = orig_verbose
+  end
+end
+
 class LoopTest < Minitest::Test
   def teardown
     Reactor.reset!
   end
 
   def test_that_loop_exits_if_nothing_is_watched
-    Reactor.loop
+    Reactor.run
     assert(true)
   end
 
@@ -18,7 +29,7 @@ class LoopTest < Minitest::Test
     timeout = 0.05
     Reactor.timeout(timeout) { fired = true }
     t = Time.now
-    Reactor.loop
+    Reactor.run
     elapsed = Time.now - t
 
     assert(fired)
@@ -37,7 +48,7 @@ class LoopTest < Minitest::Test
       msg << read_io.read_nonblock(8192, exception: false)
       Reactor.unwatch(read_io)
     end
-    Reactor.loop
+    Reactor.run
     Process.wait(child)
     assert_equal('hello!', msg)
   end

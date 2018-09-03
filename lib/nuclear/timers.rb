@@ -100,7 +100,8 @@ class Group
     upper = @timers.length
     while lower < upper
       middle = lower + (upper - lower).div(2)
-      lower = @timers[middle][:stamp] > stamp ? middle + 1 : middle
+      @timers[middle][:stamp] > stamp ?
+        (lower = middle + 1) : (upper = middle)
     end
 
     lower

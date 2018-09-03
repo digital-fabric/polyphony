@@ -24,3 +24,6 @@ Style/Alias:
 
 Style/SpecialGlobalVars:
   Enabled: false
+
+Style/ClassAndModuleChildren:
+  Enabled: false
