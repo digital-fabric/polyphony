@@ -1,81 +1,87 @@
 # frozen_string_literal: true
 
-export  :timeout,
+export  :cancel_timer,
         :interval,
-        :cancel_timer,
-        :watch,
+        :run,
+        :timeout,
         :unwatch,
-        :selectable_count,
-        :loop,
-        :reset!
+        :watch
 
+# Nuclear uses nio4r as sits selector/reactor engine
 require 'nio'
 
 Timers = import('./timers')
 
-def watch(io, interests, &block)
-  Selector.register(io, interests).tap { |m| m.value = block }
+# Default selector
+Selector = NIO::Selector.new(nil)
+
+# Default timer group
+TimerGroup = Timers::Group.new
+
+# Registers an io instance with the default selector. The given block will be
+# invoked once the given io is selected
+# @param io [IO] io instance
+# @param interests [:r, :rw, :w] read/write interests
+# @return [void]
+def watch(io, interests, &callback)
+  Selector.register(io, interests).tap { |m| m.value = callback }
 end
 
+# Unregisters the given io instance with the default selector
+# @return [void]
 def unwatch(io)
   Selector.deregister(io)
 end
 
-def selectable_count
-  Selector.selectables&.size
-end
+# Runs the default selector loop
+# @return [void]
+def run
+  trap('INT') { @run = false }
 
-module ::NIO
-  # Extensions for NIO::Selector
-  class Selector
-    attr_reader :selectables
-  end
-end
-
-Selector = NIO::Selector.new(nil)
-TimerGroup = Timers::Group.new
-
-def reset!
-  orig_verbose = $VERBOSE
-  $VERBOSE = nil  
-  const_set(:Selector, NIO::Selector.new(nil))
-  const_set(:TimerGroup, Timers::Group.new)
-ensure
-  $VERBOSE = orig_verbose
-end
-
-def loop
   @already_ran = true
   @run = true
-  trap('INT') { @run = false }
-  loop_run
-  puts unless @run # play nice with shell
+
+  reactor_loop
+  puts unless @run # play nice with shell, print a newline if interrupted
 end
 
-def loop_run
-  while @run && should_run_event_loop?
+# Performs selector loop, monitoring ios and firing timers
+# @return [void]
+def reactor_loop
+  while @run && should_run_reactor?
     interval = TimerGroup.idle_interval
     Selector.select(interval) { |m| m.value.(m) }
     TimerGroup.fire unless interval.nil?
   end
 end
 
-def should_run_event_loop?
+# Returns true if any ios are monitored are any timers are pending
+# @return [Boolean] should the default reactor loop
+def should_run_reactor?
   !(Selector.empty? && TimerGroup.empty?)
 end
 
-def timeout(duration, &block)
-  TimerGroup.timeout(duration, &block)
+# Adds a one-shot timer
+# @param timeout [Float] timeout in seconds
+# @return [Integer] timer id
+def timeout(timeout, &callback)
+  TimerGroup.timeout(timeout, &callback)
 end
 
-def interval(duration, &block)
-  TimerGroup.interval(duration, &block)
+# Adds a recurring timer
+# @param interval [Float] interval in seconds
+# @return [Integer] timer id
+def interval(interval, &callback)
+  TimerGroup.interval(interval, &callback)
 end
 
+# Cancels a pending timer
+# @param id [Integer] timer id
+# @return [void]
 def cancel_timer(id)
   TimerGroup.cancel(id)
 end
 
 at_exit do
-  loop if !$! && !@already_ran && should_run_event_loop?
+  run if !$! && !@already_ran && should_run_reactor?
 end

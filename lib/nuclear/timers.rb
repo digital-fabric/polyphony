@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export  :Group
+export :Group
 
 # Based on code in the timers gem:
 #   https://github.com/socketry/timers
@@ -14,47 +14,56 @@ class Group
   end
 
   # Returns true if group has no timers
+  # @return [Boolean] is group empty
   def empty?
     @timers.empty?
   end
 
   # Adds a one-shot timer
-  def timeout(interval, &block)
+  # @param timeout [Float] timeout in seconds
+  # @return [Integer] timer id
+  def timeout(timeout, &block)
     schedule(
       id: (@last_id += 1),
-      stamp: Group.now + interval,
+      stamp: now + timeout,
       block: block
     )
     @last_id
   end
 
   # Adds a recurring timer
+  # @param span [Float] interval in seconds
+  # @return [Integer] timer id
   def interval(interval, &block)
     schedule(
       id: (@last_id += 1),
-      stamp: Group.now + interval,
+      stamp: now + interval,
       interval: interval,
       block: block
     )
     @last_id
   end
 
-  # Cancel a timer
+  # Cancels a pending timer
+  # @param id [Integer] timer id
+  # @return [void]
   def cancel(id)
     @timers.reject! { |t| t[:id] == id }
   end
 
   # Returns time interval until next scheduled timer
+  # @return [Float] time left until next scheduled timer
   def idle_interval
-    if (first = @timers.last)
-      interval = first[:stamp] - Group.now
-      interval < 0 ? 0 : interval
-    end
+    return nil unless (first = @timers.last)
+
+    interval = first[:stamp] - now
+    interval.negative? ? 0 : interval
   end
 
   # Fires all elapsed timers
+  # @return [void]
   def fire
-    pop(Group.now).reverse_each do |t|
+    pop(now).reverse_each do |t|
       t[:block].(t[:id])
       if t[:interval]
         t[:stamp] += t[:interval]
@@ -65,37 +74,41 @@ class Group
 
   private
 
-  # Add a timer at the given time.
+  # Schedules a timer at the given time, inserting it into a reverse-ordered
+  # list of timers (last item is first to be fired)
+  # @param timer [Hash] timer spec
+  # @return [void]
   def schedule(timer)
-    index = bisect_left(@timers, timer[:stamp])
+    index = stamp_index(timer[:stamp])
     @timers.insert(index, timer)
   end
 
-  # Efficiently take k handles for which Handle#time is less than the given
-  # time.
+  # Pop all timers occurring before the given stamp from the list of pending
+  # timers
+  # @param stamp [Float] threshold stamp
+  # @return [Array<Hash>] array of timers
   def pop(stamp)
-    index = bisect_left(@timers, stamp)
+    index = stamp_index(stamp)
     @timers.pop(@timers.size - index)
   end
 
-  # Return the left-most index where to insert item e, in a list a, assuming
-  # a is sorted in descending order.
-  def bisect_left(a, e, l = 0, u = a.length)
-    while l < u
-      m = l + (u - l).div(2)
-
-      if a[m][:stamp] > e
-        l = m + 1
-      else
-        u = m
-      end
+  # Returns the index at which to insert the given element
+  # @param stamp [Float] stamp
+  # @return [Integer] index in timers array
+  def stamp_index(stamp)
+    lower = 0
+    upper = @timers.length
+    while lower < upper
+      middle = lower + (upper - lower).div(2)
+      lower = @timers[middle][:stamp] > stamp ? middle + 1 : middle
     end
 
-    l
+    lower
   end
 
   # Returns current time stamp based on CPU monotonic clock
-  def self.now
+  # @return [Float] current processor clock stamp as float
+  def now
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 end
