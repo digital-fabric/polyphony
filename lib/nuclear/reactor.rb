@@ -2,6 +2,7 @@
 
 export  :cancel_timer,
         :interval,
+        :next_tick,
         :run,
         :timeout,
         :unwatch,
@@ -11,6 +12,9 @@ export  :cancel_timer,
 require 'nio'
 
 Timers = import('./timers')
+
+# Operations to perform on next loop iteration
+NextTickOps = []
 
 # Default selector
 Selector = NIO::Selector.new(nil)
@@ -33,6 +37,10 @@ def unwatch(io)
   Selector.deregister(io)
 end
 
+def next_tick(&block)
+  NextTickOps << block
+end
+
 # Runs the default selector loop
 # @return [void]
 def run
@@ -49,6 +57,9 @@ end
 # @return [void]
 def reactor_loop
   while @run && should_run_reactor?
+    NextTickOps.each { |op| op.() }
+    NextTickOps.clear
+    
     interval = TimerGroup.idle_interval
     Selector.select(interval) { |m| m.value.(m) }
     TimerGroup.fire unless interval.nil?
