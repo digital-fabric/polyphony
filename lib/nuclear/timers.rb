@@ -10,6 +10,7 @@ class Group
   # Initializes the list of timers, and the last timer id
   def initialize
     @timers = []
+    @cancelled = []
     @last_id = 0
   end
 
@@ -49,6 +50,7 @@ class Group
   # @return [void]
   def cancel(id)
     @timers.reject! { |t| t[:id] == id }
+    @cancelled << id
   end
 
   # Returns time interval until next scheduled timer
@@ -63,7 +65,11 @@ class Group
   # Fires all elapsed timers
   # @return [void]
   def fire
+    # clear @cancelled, which is used to track timers cancelled while looping
+    # over elapsed timers, in order to prevent race condition
+    @cancelled.clear
     pop(now).reverse_each do |t|
+      next if @cancelled.include?(t[:id])
       t[:block].(t[:id])
       if t[:interval]
         t[:stamp] += t[:interval]
@@ -100,8 +106,7 @@ class Group
     upper = @timers.length
     while lower < upper
       middle = lower + (upper - lower).div(2)
-      @timers[middle][:stamp] > stamp ?
-        (lower = middle + 1) : (upper = middle)
+      @timers[middle][:stamp] > stamp ? (lower = middle + 1) : (upper = middle)
     end
 
     lower

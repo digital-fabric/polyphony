@@ -44,13 +44,13 @@ AWAIT_ERROR_MSG = 'await can only be called inside async block'
 
 # Yields control to other fibers while waiting for given promise(s) to resolve
 # if the resolved value is an error, it is raised
-# @param promises [Array<Promise>] one or more promises
+# @param promise [Promise] promise
+# @param more [Array<Promise>] more promises
 # @return [any] resolved value
-def await(*promises)
-  return await_all(*promises) if promises.size > 1
-  raise FiberError, AWAIT_ERROR_MSG unless Fiber.current.async?
-  promise = promises.first
+def await(promise = {}, *more)
+  return await_all(promise, *more) unless more.empty?
 
+  raise FiberError, AWAIT_ERROR_MSG unless Fiber.current.async?
   if promise.completed?
     # promise has already resolved
     return_value = promise.clear_result
@@ -66,13 +66,13 @@ end
 # Await for 1 or more of the given promises to resolve
 # @return [Promise] promise
 def await_any(*promises)
-  await(Promise.some(promises, 1))
+  await(parallel(promises, 1))
 end
 
 # Await for all given promises to resolve
 # @return [Promise] promise
 def await_all(*promises)
-  await(Promise.some(promises, -1))
+  await(parallel(promises, -1))
 end
 
 # Creates a new promise
@@ -99,43 +99,42 @@ end
 # @return [Promise] promise
 def pulse(interval)
   Promise.new(recurring: true) do |p|
-    puts "pulse #{p.inspect}"
     timer_id = Reactor.interval(interval, &p)
     p.on_stop { Reactor.cancel_timer(timer_id) }
+  end
+end
+
+# Creates a promise waiting for 1 or more of the given promises in parallel
+# @param promises [Array<Promise>] array of promises
+# @param count [Integer] minimum number of resolutions to wait for or -1 (all)
+# @return [Promise] promise
+def parallel(promises, count = -1)
+  count = promises.count if count == -1
+  Promise.new { |all| reduce_promises(all, promises, count) }
+end
+
+# Setups parallel execution of given promises, passing the resolved values to
+# the wrapper promise
+# @param wrapper_promise [Promise] wrapper promise
+# @param promises [Array<Promise>] array of promises
+# @param count [Integer] minimum number of resolutions to wait for or -1 (all)
+# @return [void]
+def reduce_promises(parallel_promise, promises, count)
+  completed = 0
+  values = []
+  promises.each_with_index do |p, idx|
+    p.then do |v|
+      values[idx] = v
+      completed += 1
+      parallel_promise.resolve(values) if completed == count
+    end
+    p.catch { |e| parallel_promise.error(e) }
   end
 end
 
 # Encapsulates the eventual completion or failure of an asynchronous operation
 # (loosely based on the Javascript Promise API
 class Promise
-  # Creates a promise waiting for 1 or more of the given promises in parallel
-  # @param promises [Array<Promise>] array of promises
-  # @param count [Integer] minimum number of resolutions to wait for or -1 (all)
-  # @return [Promise] promise
-  def self.some(promises, count = -1)
-    count = promises.count if count == -1
-    new { |all| reduce_promises(all, promises, count) }
-  end
-
-  # Setups parallel execution of given promises, passing the resolved values to
-  # the wrapper promise
-  # @param wrapper_promise [Promise] wrapper promise
-  # @param promises [Array<Promise>] array of promises
-  # @param count [Integer] minimum number of resolutions to wait for or -1 (all)
-  # @return [void]
-  def self.reduce_promises(wrapper_promise, promises, count)
-    completed = 0
-    values = []
-    promises.each_with_index do |p, idx|
-      p.then do |v|
-        values[idx] = v
-        completed += 1
-        wrapper_promise.resolve(values) if completed == count
-      end
-      p.catch { |e| wrapper_promise.error(e) }
-    end
-  end
-
   # Fiber associated
   attr_accessor :fiber
 
@@ -160,11 +159,17 @@ class Promise
     @catch = opts[:catch]
     timeout(opts[:timeout]) if opts[:timeout]
     if opts[:link]
-      opts[:link].chain(self)
-      @action = block
+      chain_to(opts[:link], &block)
     elsif block_given?
       yield self
     end
+  end
+
+  # Chains the promise to another promise, with the given block executed once
+  # the other promise has resolved
+  def chain_to(promise, &block)
+    promise.chain(self)
+    @action = block
   end
 
   # Chain another promise to be executed once the promise is resolved
@@ -264,6 +269,13 @@ class Promise
     @catch = proc || block
     @catch.(@value) if @errored
     self
+  end
+
+  # Sets the callback for both success and error completion
+  def on_complete(proc = nil, &block)
+    @then = @catch = proc || block
+    @then.(@value) if @resolved
+    @catch.(@value) if @errored
   end
 
   # Converts the promise into a Proc. This allows a promise to be coerced into
