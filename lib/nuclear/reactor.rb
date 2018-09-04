@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-export  :cancel_timer,
+export  :cancel_all_timers,
+        :cancel_timer,
         :interval,
         :next_tick,
         :run,
@@ -91,6 +92,10 @@ end
 # @return [void]
 def cancel_timer(id)
   TimerGroup.cancel(id)
+end
+
+def cancel_all_timers
+  TimerGroup.cancel_all
 end
 
 at_exit do

@@ -53,6 +53,11 @@ class Group
     @cancelled << id
   end
 
+  def cancel_all
+    @cancelled += @timers
+    @timers.clear
+  end
+
   # Returns time interval until next scheduled timer
   # @return [Float] time left until next scheduled timer
   def idle_interval
