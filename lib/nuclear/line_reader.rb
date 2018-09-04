@@ -8,7 +8,7 @@ class LineReader
   def initialize(source = nil)
     @source = source
     if source
-      source.on(:data) { push(data) }
+      source.on(:data) { |data| push(data) }
       source.on(:close) { close }
       source.on(:error) { |err| error(err) }
     end

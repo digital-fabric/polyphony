@@ -307,7 +307,7 @@ class Promise
   def each
     until @stopped
       result = MODULE.await self
-      yield(result) if result
+      result ? yield(result) : break
     end
   end
 
