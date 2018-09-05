@@ -40,8 +40,8 @@ module Watching
     when :w
       write_to_io
     when :rw
-      read_from_io
       write_to_io
+      read_from_io
     end
   end
 
@@ -232,9 +232,11 @@ class IO < Stream
   # @param err [Exception] raised error
   # @return [void]
   def close_on_error(err)
-    puts "error: #{err.inspect}"
-    puts err.backtrace.join("\n")
-    @callbacks[:error]&.(err)
+    unless err.is_a?(Errno::ECONNRESET)
+      puts "error: #{err.inspect}"
+      puts err.backtrace.join("\n")
+      @callbacks[:error]&.(err)
+    end
     close
   end
 
@@ -246,6 +248,8 @@ class IO < Stream
 
   # Closes the underlying IO and cleans up
   def close
+    return unless @io
+
     Reactor.unwatch(@io)
     @io.close
     @open = false
@@ -256,5 +260,7 @@ class IO < Stream
     @callbacks[:close]&.()
   rescue StandardError => e
     puts "error while closing: #{e}"
+    puts "*"
+    puts e.backtrace.join("\n")
   end
 end
