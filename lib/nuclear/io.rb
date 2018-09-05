@@ -109,7 +109,7 @@ module ReadWrite
   # when data is available
   # @return [void]
   def read_from_io
-    loop do
+    while @io do
       result = @io.read_nonblock(READ_MAX_CHUNK_SIZE, NO_EXCEPTION_OPTS)
       break unless handle_read_result(result)
     end
@@ -138,7 +138,7 @@ module ReadWrite
   # callback once all pending data has been written
   # @return [void]
   def write_to_io
-    loop do
+    while @io do
       result = @io.write_nonblock(@write_buffer, exception: false)
       break unless handle_write_result(result)
     end
@@ -258,6 +258,7 @@ class IO < Stream
     @write_buffer = nil
     @io = nil
     @callbacks[:close]&.()
+    @callbacks.clear
   rescue StandardError => e
     puts "error while closing: #{e}"
     puts "*"
