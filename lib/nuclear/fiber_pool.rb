@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :call
+export :call, :size
 
 require 'fiber'
 
