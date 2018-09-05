@@ -3,8 +3,9 @@
 
 require 'modulation'
 
-Net =         import('../../lib/nuclear/net')
-include       import('../../lib/nuclear/concurrency')
+Net =     import('../../lib/nuclear/net')
+Reactor = import('../../lib/nuclear/reactor')
+include   import('../../lib/nuclear/concurrency')
 
 socket = Net::Socket.new
 socket.connect('127.0.0.1', 1234, timeout: 3).
@@ -13,7 +14,11 @@ socket.connect('127.0.0.1', 1234, timeout: 3).
       STDOUT << data
     end
   
-    Reactor.interval(1) { socket << "#{Time.now}\n" }
+    timer_id = Reactor.interval(1) { socket << "#{Time.now}\n" }
+    Reactor.timeout(5) do
+      Reactor.cancel_timer(timer_id)
+      socket.close
+    end
   }.
   catch { |err|
     puts "error: #{err}"

@@ -23,7 +23,6 @@ end
 
 server = Net::Server.new
 server.on(:connection) do |socket|
-  puts "connection #{socket.inspect}"
   async { echo_connection(socket) }
 end
 server.listen(port: 1234)
