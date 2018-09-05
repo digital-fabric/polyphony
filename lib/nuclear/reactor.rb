@@ -7,7 +7,8 @@ export  :cancel_all_timers,
         :run,
         :timeout,
         :unwatch,
-        :watch
+        :watch,
+        :watched?
 
 # Nuclear uses nio4r as sits selector/reactor engine
 require 'nio'
@@ -38,6 +39,10 @@ def unwatch(io)
   Selector.deregister(io)
 end
 
+def watched?(io)
+  Selector.registered?(io)
+end
+
 def next_tick(&block)
   NextTickOps << block
 end
@@ -62,7 +67,8 @@ def reactor_loop
     NextTickOps.clear
     
     interval = TimerGroup.idle_interval
-    Selector.select(interval) { |m| m.value.(m) }
+    Selector.select(interval) { |m| m.value.(m) } unless Selector.empty?
+    
     TimerGroup.fire unless interval.nil?
   end
 end
