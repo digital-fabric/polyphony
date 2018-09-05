@@ -38,6 +38,10 @@ class LineReader
     end
   end
 
+  def each_line(&block)
+    lines.each(&block)
+  end
+
   def close
     @lines_promise&.stop
   end

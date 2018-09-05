@@ -77,6 +77,14 @@ class IO < Stream
     write_to_io
   end
 
+  def write(data)
+    Concurrency.promise do |p|
+      @callbacks[:drain] = proc { p.resolve(true) }
+      self << data
+      @callbacks[:drain] = nil
+    end
+  end
+
   READ_MAX_CHUNK_SIZE = 2 ** 20
   NO_EXCEPTION_OPTS = {exception: false}
 
@@ -117,6 +125,7 @@ class IO < Stream
     if written == @write_buffer.bytesize
       update_monitor_interests(:r)
       @write_buffer.clear
+      @callbacks[:drain]&.()
       false
     else
       @write_buffer.slice!(0, written)
@@ -147,6 +156,5 @@ class IO < Stream
   rescue => e
     puts "error while closing: #{e}"
   end
-
 end
 
