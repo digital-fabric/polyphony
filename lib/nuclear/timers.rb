@@ -33,12 +33,13 @@ class Group
   end
 
   # Adds a recurring timer
-  # @param span [Float] interval in seconds
+  # @param interval [Float] interval in seconds
+  # @param offset [Float] offset for first firing
   # @return [Integer] timer id
-  def interval(interval, &block)
+  def interval(interval, offset = nil, &block)
     schedule(
       id: (@last_id += 1),
-      stamp: now + interval,
+      stamp: now + (offset || interval),
       interval: interval,
       block: block
     )
@@ -53,6 +54,8 @@ class Group
     @cancelled << id
   end
 
+  # Cancels all pending timers
+  # @return [void]
   def cancel_all
     @cancelled += @timers
     @timers.clear

@@ -82,9 +82,10 @@ end
 
 # Adds a recurring timer
 # @param interval [Float] interval in seconds
+# @param offset [Float] offset in seconds for first firing
 # @return [Integer] timer id
-def interval(interval, &callback)
-  TimerGroup.interval(interval, &callback)
+def interval(interval, offset = nil, &callback)
+  TimerGroup.interval(interval, offset, &callback)
 end
 
 # Cancels a pending timer
