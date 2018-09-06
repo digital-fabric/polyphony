@@ -1,7 +1,8 @@
 require 'minitest/autorun'
 require 'modulation'
 
-Reactor = import('../lib/nuclear/reactor')
+Core = import('../lib/nuclear/core')
+Reactor = Core::Reactor
 
 module Reactor
   def self.reset!

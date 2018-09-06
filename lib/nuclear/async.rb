@@ -1,16 +1,6 @@
 # frozen_string_literal: true
 
-# export :async,
-#        :await,
-#        :await_all,
-#        :await_any,
-#        :generator,
-#        :pulse,
-#        :promise,
-#        :sleep,
-#        :thread
-
-export_default :Async
+export_default :Methods
 
 require 'fiber'
 
@@ -30,7 +20,7 @@ class ::Fiber
 end
 
 FiberPool = import('./fiber_pool')
-Reactor =   import('./reactor')
+Reactor   = import('./reactor')
 Promise   = import('./promise')
 
 # Extension
@@ -40,14 +30,14 @@ class Promise
   # @return [void]
   def each
     until @stopped
-      result = MODULE.await self
+      result = Methods.await self
       result ? yield(result) : break
     end
   end
 end
 
 # Asynchronous methods
-module Async
+module Methods
   # Runs an asynchronous operation. The given block is expected to use await to
   # yield to other fibers while waiting for blocking operations (such as I/O or
   # timers)
@@ -106,7 +96,8 @@ module Async
     Promise.new(*args, &block)
   end
 
-  # Creates a recurring promise that will fire (resolve) every <interval> seconds
+  # Creates a recurring promise that will fire (resolve) every <interval>
+  # seconds
   # @param interval [Float] interval in seconds
   # @return [Promise] promise
   def pulse(interval)
@@ -133,7 +124,7 @@ module Async
   end
 
   private
-  
+
   # Setups parallel execution of given promises, passing the resolved values to
   # the wrapper promise
   # @param wrapper_promise [Promise] wrapper promise
@@ -153,4 +144,3 @@ module Async
     end
   end
 end
-

@@ -110,7 +110,7 @@ module ReadWrite
   # when data is available
   # @return [void]
   def read_from_io
-    while @io do
+    while @io
       result = @io.read_nonblock(READ_MAX_CHUNK_SIZE, NO_EXCEPTION_OPTS)
       break unless handle_read_result(result)
     end
@@ -139,7 +139,7 @@ module ReadWrite
   # callback once all pending data has been written
   # @return [void]
   def write_to_io
-    while @io do
+    while @io
       result = @io.write_nonblock(@write_buffer, exception: false)
       break unless handle_write_result(result)
     end
@@ -251,18 +251,27 @@ class IO < Stream
   def close
     return unless @io
 
-    Reactor.unwatch(@io)
-    @io.close
-    @open = false
-    @connected = false
-    @read_buffer = nil
-    @write_buffer = nil
-    @io = nil
+    cleanup_io
+    cleanup_buffers
+    cleanup_callbacks
+
     @callbacks[:close]&.()
     @callbacks.clear
   rescue StandardError => e
     puts "error while closing: #{e}"
-    puts "*"
     puts e.backtrace.join("\n")
+  end
+
+  def cleanup_io
+    Reactor.unwatch(@io)
+    @io.close
+    @io = nil
+    @open = false
+    @connected = false
+  end
+
+  def cleanup_buffers
+    @read_buffer = nil
+    @write_buffer = nil
   end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 export :Async, :Promise, :Reactor, :Thread, :IO
 
 Reactor = import('./reactor')

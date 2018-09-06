@@ -63,12 +63,12 @@ end
 # @return [void]
 def reactor_loop
   while @run && should_run_reactor?
-    NextTickOps.each { |op| op.() }
+    NextTickOps.each(&:call)
     NextTickOps.clear
-    
+
     interval = TimerGroup.idle_interval
     Selector.select(interval) { |m| m.value.(m) } unless Selector.empty?
-    
+
     TimerGroup.fire unless interval.nil?
   end
 end

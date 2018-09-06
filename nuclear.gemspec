@@ -1,8 +1,10 @@
+require_relative './lib/nuclear'
+
 Gem::Specification.new do |s|
   s.name        = 'nuclear'
-  s.version     = '0.2'
+  s.version     = Nuclear::Version
   s.licenses    = ['MIT']
-  s.summary     = 'Nuclear: lightweight reactor for Ruby'
+  s.summary     = 'Nuclear: lightweight async for Ruby'
   s.author      = 'Sharon Rosner'
   s.email       = 'ciconia@gmail.com'
   s.files       = `git ls-files README.md CHANGELOG.md lib`.split
