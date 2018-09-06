@@ -3,6 +3,7 @@
 export :Server, :Socket
 
 require 'socket'
+require 'openssl'
 
 Core  = import('./core')
 IO    = import('./io')
@@ -19,8 +20,18 @@ class Server
   # @param opts [Hash] options
   # @return [void]
   def listen(opts)
-    @server = TCPServer.new(opts[:host] || '127.0.0.1', opts[:port])
+    @secure_context = opts[:secure_context]
+    @server = opts[:socket] || create_server_socket(opts)
     Core::Reactor.watch(@server, :r) { accept_from_socket }
+  end
+
+  def create_server_socket(opts)
+    socket = TCPServer.new(opts[:host] || '127.0.0.1', opts[:port])
+    if @secure_context
+      socket = OpenSSL::SSL::SSLServer.new(socket, @secure_context)
+      socket.start_immediately = false
+    end
+    socket
   end
 
   # Returns true if server is listening
@@ -41,10 +52,15 @@ class Server
   # @return [void]
   def accept_from_socket
     socket = @server.accept
-    @callbacks[:connection]&.(Socket.new(socket, connected: true)) if socket
+    @callbacks[:connection]&.(wrap_socket(socket)) if socket
   rescue StandardError => e
     puts "error in accept_from_socket: #{e.inspect}"
     puts e.backtrace.join("\n")
+  end
+
+  def wrap_socket(socket)
+    klass = @secure_context ? SecureSocket : Socket
+    klass.new(socket, connected: true, secure_context: @secure_context)
   end
 
   # Registers a callback for given event
@@ -192,5 +208,47 @@ class Socket < IO
   # @return [void]
   def setsockopt(*args)
     @io.setsockopt(*args)
+  end
+end
+
+# Socket with TLS handshake functionality
+class SecureSocket < Socket
+  # Initializes secure socket
+  def initialize(socket = nil, opts = {})
+    super(socket, opts.merge(watch: false))
+    super(socket, opts)
+    accept_secure_handshake
+  end
+
+  # accepts secure handshake asynchronously
+  # @return [void]
+  def accept_secure_handshake
+    @pending_secure_handshake = true
+    result = @io.accept_nonblock(exception: false)
+    handle_accept_secure_handshake_result(result)
+  rescue StandardError => e
+    close_on_error(e)
+  end
+
+  # Handles result of secure handshake
+  # @param result [Integer, any] result of call to accept_nonblock
+  # @return [void]
+  def handle_accept_secure_handshake_result(result)
+    case result
+    when :wait_readable
+      update_monitor_interests(:r)
+    when :wait_writable
+      update_monitor_interests(:w)
+    else
+      @pending_secure_handshake = false
+      update_monitor_interests(:r)
+    end
+  end
+
+  # Overrides handle_selected to accept secure handshake
+  # @param monitor [NIO::Monitor] associated monitor
+  # @return [void]
+  def handle_selected(monitor)
+    @pending_secure_handshake ? accept_secure_handshake : super(monitor)
   end
 end

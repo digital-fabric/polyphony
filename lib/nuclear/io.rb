@@ -220,7 +220,7 @@ class IO < Stream
     super(opts)
     @io = io
     @open = true
-    watch_io if io
+    watch_io if io && opts[:watch] != false
   end
 
   # Returns raw (plain) IO object
