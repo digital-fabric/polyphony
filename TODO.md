@@ -457,3 +457,9 @@ end
 # do threads
 
 ```
+
+## HTTP 2.0 API
+
+```ruby
+
+```

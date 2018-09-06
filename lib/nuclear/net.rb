@@ -52,15 +52,24 @@ class Server
   # @return [void]
   def accept_from_socket
     socket = @server.accept
-    @callbacks[:connection]&.(wrap_socket(socket)) if socket
+    setup_connection(socket) if socket
   rescue StandardError => e
     puts "error in accept_from_socket: #{e.inspect}"
     puts e.backtrace.join("\n")
   end
 
-  def wrap_socket(socket)
-    klass = @secure_context ? SecureSocket : Socket
-    klass.new(socket, connected: true, secure_context: @secure_context)
+  def setup_connection(socket)
+    opts = { connected: true, secure_context: @secure_context }
+    if @secure_context
+      connection = SecureSocket.new(socket, opts)
+      connection.on(:handshake, &@callbacks[:connection])
+    else
+      connection = Socket.new(socket, opts)
+      @callbacks[:connection]&.(connection)
+    end
+    # klass = @secure_context ? SecureSocket : Socket
+    # klass.new(socket, connected: true, secure_context: @secure_context)
+    
   end
 
   # Registers a callback for given event
@@ -204,6 +213,10 @@ class Socket < IO
     @connected
   end
 
+  def secure?
+    false
+  end
+
   # Sets socket option
   # @return [void]
   def setsockopt(*args)
@@ -216,8 +229,11 @@ class SecureSocket < Socket
   # Initializes secure socket
   def initialize(socket = nil, opts = {})
     super(socket, opts.merge(watch: false))
-    super(socket, opts)
     accept_secure_handshake
+  end
+
+  def secure?
+    true
   end
 
   # accepts secure handshake asynchronously
@@ -242,6 +258,7 @@ class SecureSocket < Socket
     else
       @pending_secure_handshake = false
       update_monitor_interests(:r)
+      @callbacks[:handshake]&.(self)
     end
   end
 

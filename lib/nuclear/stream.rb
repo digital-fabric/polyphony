@@ -7,6 +7,8 @@ Core = import('./core')
 # Implements a duplex stream that can buffer and emit events on sending or
 # receiving data
 class Stream
+  attr_reader :opts
+
   # Initializes a new stream
   def initialize(opts = {})
     @opts = opts

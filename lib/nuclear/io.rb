@@ -233,7 +233,7 @@ class IO < Stream
   # @param err [Exception] raised error
   # @return [void]
   def close_on_error(err)
-    unless err.is_a?(Errno::ECONNRESET)
+    unless err.is_a?(Errno::ECONNRESET) || err.is_a?(Errno::EPIPE)
       puts "error: #{err.inspect}"
       puts err.backtrace.join("\n")
       @callbacks[:error]&.(err)
