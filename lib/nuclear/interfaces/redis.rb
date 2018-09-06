@@ -7,9 +7,11 @@ Core      = import('../core')
 Net       = import('../net')
 Commands  = import('./redis/commands')
 
+# Redis connection
 class Connection < Net::Socket
   include Commands
 
+  # Initializes connection
   def initialize(opts = {})
     super(nil, opts)
     @opts[:host] ||= '127.0.0.1'
@@ -20,23 +22,28 @@ class Connection < Net::Socket
     setup_reader
   end
 
-  def method_missing(m, *args)
-    cmd(m, *args)
-  end
-
+  # Returns true if connected
+  # @return [Boolean]
   def connected?
     @socket&.connected?
   end
 
+  # Connects to redis server
+  # @return [void]
   def connect
     super(@opts[:host], @opts[:port], @opts)
   end
 
+  # Setups Hiredis reader
+  # @return [void]
   def setup_reader
     @reader = ::Hiredis::Reader.new
     on(:data) { |data| process_incoming_data(data) }
   end
 
+  # Processes data received from server
+  # @param data [String] data received
+  # @return [void]
   def process_incoming_data(data)
     @reader.feed(data)
     loop do
@@ -46,8 +53,11 @@ class Connection < Net::Socket
     end
   end
 
+  # Handles reply from server
+  # @param reply [Object] reply
+  # @return [void]
   def handle_reply(reply)
-    args, transform, promise = @queue.shift
+    _, transform, promise = @queue.shift
     if reply.is_a?(RuntimeError)
       Core::Reactor.next_tick { promise.error(reply) }
     else
@@ -56,6 +66,8 @@ class Connection < Net::Socket
     end
   end
 
+  # Queues a command to be sent to the server, sends it if not busy
+  # @return [void]
   def cmd(*args, &result_transform)
     Core::Async.promise do |p|
       @queue << [args, result_transform, p]
@@ -63,10 +75,14 @@ class Connection < Net::Socket
     end
   end
 
+  # Sends command to server
+  # @return [void]
   def send_command(*args)
     self << format_command(*args)
   end
 
+  # Formats command to be sent to server
+  # @return [String] protocol message
   def format_command(*args)
     (+"*#{args.size}\r\n").tap do |s|
       args.each do |a|
@@ -76,4 +92,3 @@ class Connection < Net::Socket
     end
   end
 end
-

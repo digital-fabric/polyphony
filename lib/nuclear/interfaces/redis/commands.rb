@@ -1,31 +1,30 @@
 # frozen_string_literal: true
+
 export_default :Commands
 
+# Redis commands
 module Commands
   ONE = '1'
   TO_BOOL = ->(v) { v == ONE }
   TO_I_OR_NIL = ->(v) { v.nil? ? v : v.to_i }
 
   # https://github.com/redis/redis-rb/blob/94af6b4a78abec71b5591af0ba8fc88c8c33268a/lib/redis.rb#L277
-  INFO_TRANSFORM = ->(reply) {
-    reply = Hash[reply.split("\r\n").map do |line|
-      line.split(":", 2) unless line =~ /^(#|$)/
+
+  NEWLINE = '\r\n'
+  COLON = ':'
+  HASHDOLLAR = /^(#|$)/
+
+  INFO_TRANSFORM = lambda do |reply|
+    Hash[reply.split(NEWLINE).map do |line|
+      line.split(COLON, 2) unless line =~ HASHDOLLAR
     end.compact]
+  end
 
-    # if cmd && cmd.to_s == "commandstats"
-    #   # Extract nested hashes for INFO COMMANDSTATS
-    #   reply = Hash[reply.map do |k, v|
-    #     v = v.split(",").map { |e| e.split("=") }
-    #     [k[/^cmdstat_(.*)$/, 1], Hash[v]]
-    #   end]
-    # end
-  }
-
-  def self.def_cmd(m, transform = nil)
+  def self.def_cmd(sym, transform = nil)
     if transform
-      define_method(m) { |*args| cmd(m, *args, &transform) }
+      define_method(sym) { |*args| cmd(sym, *args, &transform) }
     else
-      define_method(m) { |*args| cmd(m, *args) }
+      define_method(sym) { |*args| cmd(sym, *args) }
     end
   end
 
@@ -238,4 +237,3 @@ module Commands
   def_cmd(:unwatch)
   def_cmd(:watch)
 end
-

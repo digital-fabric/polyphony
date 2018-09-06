@@ -397,3 +397,63 @@ rescue => e
 end
 ```
 
+## Class based on stream
+
+```ruby
+class IO < Stream
+  def initialize(io)
+    @io = io
+    watch_io
+    super
+  end
+
+  def watch_io
+    @monitor = Reactor.watch(@io, :r) do
+      case @monitor.readiness
+      when :r, :rw
+        read_from_io
+      when :w, :rw
+        write_to_io
+      end
+    end
+  end
+
+  READ_MAX_CHUNK_SIZE = 2 ** 20
+  NO_EXCEPTION_OPTS = {exception: false}
+
+  def read_from_io
+    loop do
+      case (data = @io.read_nonblock(READ_MAX_CHUNK_SIZE, NO_EXCEPTION_OPTS))
+      when nil
+        return connection_was_closed
+      when :wait_readable
+        return
+      else
+        emit(data)
+      end
+    end
+  end
+end
+```
+
+## The (first) great refactoring
+
+Put some order in, and maybe simplify, `concurrency`:
+
+```ruby
+Nuclear = import('nuclear')
+include Nuclear::Async
+
+# Nuclear exposes:
+Nuclear::Promise
+Nuclear::Reactor
+
+# Nuclear::Async#async
+async do
+  x = await this
+  y = await that
+end
+
+# do threads
+
+```

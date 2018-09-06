@@ -8,6 +8,7 @@ AllCops:
     - '**/*.gemspec'
     - 'test/**/*.rb'
     - 'examples/**/*.rb'
+    - 'Gemfile*'
 
 Style/LambdaCall:
   Enabled: false
