@@ -253,7 +253,6 @@ class IO < Stream
 
     cleanup_io
     cleanup_buffers
-    cleanup_callbacks
 
     @callbacks[:close]&.()
     @callbacks.clear

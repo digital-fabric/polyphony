@@ -127,7 +127,7 @@ module Methods
 
   # Setups parallel execution of given promises, passing the resolved values to
   # the wrapper promise
-  # @param wrapper_promise [Promise] wrapper promise
+  # @param parallel_promise [Promise] wrapper promise
   # @param promises [Array<Promise>] array of promises
   # @param count [Integer] minimum number of resolutions to wait for or -1 (all)
   # @return [void]
