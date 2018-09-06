@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 require 'modulation'
 
-Redis =     import('../../lib/nuclear/interfaces/redis')
-Reactor =   import('../../lib/nuclear/reactor')
-extend      import('../../lib/nuclear/concurrency')
+Core  = import('../../lib/nuclear/core')
+Redis = import('../../lib/nuclear/interfaces/redis')
+
+include Core::Async
 
 redis = Redis::Connection.new
 

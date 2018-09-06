@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Reactor = import('../../lib/nuclear/reactor')
-extend import('../../lib/nuclear/concurrency')
+Core = import('../../lib/nuclear/core')
+include Core::Async
 
 timer = pulse(1)
 async do
@@ -13,4 +13,4 @@ async do
   puts "done with timer"
 end
 
-Reactor.timeout(5) { timer.stop }
+Core::Reactor.timeout(5) { timer.stop }

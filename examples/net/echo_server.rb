@@ -3,9 +3,10 @@
 
 require 'modulation'
 
-Net =         import('../../lib/nuclear/net')
-LineReader =  import('../../lib/nuclear/line_reader')
-include       import('../../lib/nuclear/concurrency')
+Core        = import('../../lib/nuclear/core')
+Net         = import('../../lib/nuclear/net')
+LineReader  = import('../../lib/nuclear/line_reader')
+include Core::Async
 
 def echo_connection(socket)
   puts "connected: #{socket}"

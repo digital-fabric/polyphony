@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 require 'modulation'
 
-Reactor = import('../../lib/nuclear/reactor')
+Core = import('../../lib/nuclear/core')
 
-Reactor.interval(1) {
-  Reactor.next_tick { puts Time.now }
+Core::Reactor.interval(1) {
+  Core::Reactor.next_tick { puts Time.now }
 }

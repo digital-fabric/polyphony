@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 require 'modulation'
 
+Core = import('../../lib/nuclear/core')
 Postgres =  import('../../lib/nuclear/interfaces/postgres')
-Reactor =   import('../../lib/nuclear/reactor')
-extend      import('../../lib/nuclear/concurrency')
+
+include Core::Async
 
 def now
   Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -17,7 +18,7 @@ DB = Postgres::Connection.new(
   sslmode:  'require'
 )
 
-Reactor.interval(1) do
+Core::Reactor.interval(1) do
   async do
     t0 = Time.now
     res = await DB.query("select 1 as test")
@@ -25,6 +26,6 @@ Reactor.interval(1) do
   end
 end
 
-Reactor.interval(1, 0.5) do
+Core::Reactor.interval(1, 0.5) do
   puts "* #{Time.now}"
 end

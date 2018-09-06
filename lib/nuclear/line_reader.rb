@@ -2,7 +2,7 @@
 
 export_default :LineReader
 
-Concurrency = import('./concurrency')
+Core = import('./core')
 
 # a stream that can read single lines from another stream
 class LineReader
@@ -47,7 +47,7 @@ class LineReader
   # Returns a async generator of lines
   # @return [Promise] line generator
   def lines
-    Concurrency.generator do |p|
+    Core::Async.generator do |p|
       @lines_promise = p
     end
   end

@@ -2,10 +2,11 @@
 
 export_default :IO
 
-Stream =      import('./stream')
-Concurrency = import('./concurrency')
-Reactor =     import('./reactor')
-LineReader =  import('./line_reader')
+Core        = import('./core')
+Stream      = import('./stream')
+LineReader  = import('./line_reader')
+Async       = Core::Async
+Reactor     = Core::Reactor
 
 # Methods for watching an io
 module Watching
@@ -84,7 +85,7 @@ module ReadWrite
   # @param data [String] data be written
   # @return [Promise]
   def write(data)
-    Concurrency.promise do |p|
+    Async.promise do |p|
       @callbacks[:drain] = proc { p.resolve(true) }
       self << data
       @callbacks[:drain] = nil
@@ -94,7 +95,7 @@ module ReadWrite
   # Creates a promise that will complete once data is available for reading
   # @return [Promise]
   def read
-    Concurrency.promise do |p|
+    Async.promise do |p|
       @callbacks[:data] = proc do |data|
         @callbacks[:data] = nil
         p.(data)

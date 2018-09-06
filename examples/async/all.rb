@@ -1,20 +1,21 @@
 # frozen_string_literal: true
+
 require 'modulation'
 
-Concurrency = import('../../lib/nuclear/concurrency')
-Reactor =     import('../../lib/nuclear/reactor')
+Core = import('../../lib/nuclear/core')
+include Core::Async
 
 def timeout(t)
-  Concurrency.promise { |p| Reactor.timeout(t, &p) }
+  promise { |p| Core::Reactor.timeout(t, &p) }
 end
 
-Concurrency.async do
+async do
   t1 = Time.now
   
-  result = Concurrency.await timeout(2), timeout(1), timeout(3)
+  result = await timeout(2), timeout(1), timeout(3)
   puts "elapsed! (#{Time.now - t1})"
   puts "result: #{result}"
   exit
 end
 
-Reactor.interval(1) { puts Time.now }
+Core::Reactor.interval(1) { puts Time.now }

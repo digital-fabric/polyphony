@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Reactor = import('../../lib/nuclear/reactor')
-extend import('../../lib/nuclear/concurrency')
+Core = import('../../lib/nuclear/core')
+include Core::Async
 
 running = true
 

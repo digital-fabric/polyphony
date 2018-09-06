@@ -3,18 +3,18 @@
 
 require 'modulation'
 
-Net =     import('../../lib/nuclear/net')
-Reactor = import('../../lib/nuclear/reactor')
-include   import('../../lib/nuclear/concurrency')
+Core  = import('../../lib/nuclear/core')
+Net   = import('../../lib/nuclear/net')
+include Core::Async
 
 socket = Net::Socket.new
 
 async do
   await socket.connect('127.0.0.1', 1234, timeout: 3)
 
-  timer_id = Reactor.interval(1) { socket << "#{Time.now}\n" }
-  Reactor.timeout(5) do
-    Reactor.cancel_timer(timer_id)
+  timer_id = Core::Reactor.interval(1) { socket << "#{Time.now}\n" }
+  Core::Reactor.timeout(5) do
+    Core::Reactor.cancel_timer(timer_id)
     socket.close
   end
 

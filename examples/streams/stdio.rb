@@ -3,19 +3,19 @@
 
 require 'modulation'
 
-IO =          import('../../lib/nuclear/io')
-Concurrency = import('../../lib/nuclear/concurrency')
+Core  = import('../../lib/nuclear/core')
+include Core::Async
 
 STDIN.sync = true
 STDOUT.sync = true
 
-lines = IO.lines(IO.stdin)
+lines = Core::IO.lines(Core::IO.stdin)
 
-Concurrency.async do
+async do
   loop do
-    IO.stdout << "Say something: "
-    l = Concurrency.await(lines)
+    Core::IO.stdout << "Say something: "
+    l = await(lines)
     break unless l
-    IO.stdout << "You said: #{l}"
+    Core::IO.stdout << "You said: #{l}"
   end
 end
