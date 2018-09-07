@@ -2,11 +2,10 @@
 
 export_default :IO
 
-Core        = import('./core')
+Async       = import('./async')
+Reactor     = import('./reactor')
 Stream      = import('./stream')
 LineReader  = import('./line_reader')
-Async       = Core::Async
-Reactor     = Core::Reactor
 
 # Methods for watching an io
 module Watching
