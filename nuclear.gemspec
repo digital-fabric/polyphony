@@ -2,7 +2,7 @@ require_relative './lib/nuclear'
 
 Gem::Specification.new do |s|
   s.name        = 'nuclear'
-  s.version     = Nuclear::Version
+  s.version     = Nuclear::VERSION
   s.licenses    = ['MIT']
   s.summary     = 'Nuclear: lightweight async for Ruby'
   s.author      = 'Sharon Rosner'

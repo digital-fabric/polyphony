@@ -67,9 +67,6 @@ class Server
       connection = Socket.new(socket, opts)
       @callbacks[:connection]&.(connection)
     end
-    # klass = @secure_context ? SecureSocket : Socket
-    # klass.new(socket, connected: true, secure_context: @secure_context)
-    
   end
 
   # Registers a callback for given event

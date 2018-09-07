@@ -6,21 +6,9 @@ require 'json'
 
 HTTP = import('../../lib/nuclear/http')
 
-body = 'Hello, world!'
-reply = "HTTP/1.1 200 OK\r\nContent-Length: #{body.bytesize}\r\n\r\n#{body}"
-
-server = HTTP::Server.new do |socket, req|
-  # body
-  # object = {
-  #   url: req.request_url,
-  #   headers: req.headers,
-  #   upgrade: req.upgrade_data
-  # }
-  # body = object.to_json
-
-  reply = "HTTP/1.1 200 OK\r\nContent-Length: #{body.bytesize}\r\n\r\n#{body}"
-
-  socket << reply
+server = HTTP::Server.new do |request, response|
+  response.write_head(200, 'Content-Type': 'application/json')
+  response.finish(request.inspect)
 end
 
 server.listen(port: 1234)

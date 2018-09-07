@@ -458,8 +458,53 @@ end
 
 ```
 
-## HTTP 2.0 API
+## HTTP 1.0 / 2.0 API
 
 ```ruby
+# request and connection
+server = HTTP::Server.new do |request, connection|
+  connection.write_head(200, {
+    content_type: 'text/plain'
+  });
+  connection.write('Hello world!')
+  connection.end
+end
 
+# request and response
+server = HTTP::Server.new do |request, response|
+  response.status_code = 200
+  response['Content-Type'] = 'text/plain'
+  response['Set-Cookie'] = ['type=ninja', 'language=javascript']
+  response.end('Hello, world!')
+end
+
+# or:
+server = HTTP::Server.new do |request, response|
+  response.write_head(200,
+    'Content-Type': 'text/plain',
+    'Set-Cookie': ['type=ninja', 'language=javascript']
+  )
+  response.end('Hello, world!')
+end
+
+# streaming
+server = HTTP::Server.new do |request, response|
+  response.write_head(200, 
+    'Content-Type': 'text/event-stream; charset=utf-8'
+  )
+
+  interval(1) {
+    response.emit_sse(data: {stamp: Time.now}.to_json)
+  }
+end
+
+# upgrading
+server = HTTP::Server.new do |request, response|
+  next unless request[:upgrade]&.include?('echo')
+  ...
+  response.upgrade('echo', { <any additional headers> })
+
+  response.socket.on(:data) { |data| response.socket << data }
+end
 ```
+
