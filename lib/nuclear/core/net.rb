@@ -5,8 +5,9 @@ export :Server, :Socket
 require 'socket'
 require 'openssl'
 
-Core  = import('./core')
-IO    = import('./io')
+Async   = import('./async')
+IO      = import('./io')
+Reactor = import('./reactor')
 
 # Implements a TCP server
 class Server
@@ -22,7 +23,7 @@ class Server
   def listen(opts)
     @secure_context = opts[:secure_context]
     @server = opts[:socket] || create_server_socket(opts)
-    Core::Reactor.watch(@server, :r) { accept_from_socket }
+    Reactor.watch(@server, :r) { accept_from_socket }
   end
 
   def create_server_socket(opts)
@@ -43,7 +44,7 @@ class Server
   # Closes the server socket
   # @return [void]
   def close
-    Core::Reactor.unwatch(@server)
+    Reactor.unwatch(@server)
     @server.close
     @server = nil
   end
@@ -79,7 +80,7 @@ class Server
   # Returns a promise fulfilled upon the first incoming connection
   # @return [Promise]
   def connection(&block)
-    Core::Async.promise(then: block, catch: block) do |p|
+    Async.promise(then: block, catch: block) do |p|
       @callbacks[:connection] = p.to_proc
     end
   end
@@ -88,7 +89,7 @@ class Server
   # connections
   # @return [void]
   def each_connection(&block)
-    Core::Async.promise(recurring: true) do |p|
+    Async.promise(recurring: true) do |p|
       @callbacks[:connection] = p.to_proc
     end.each(&block)
   end
@@ -104,7 +105,7 @@ module ClientConnection
   # @param opts [Hash] options
   # @return [Promise] connection promise
   def connect(host, port, opts = {})
-    Core::Async.promise do |p|
+    Async.promise do |p|
       socket = ::Socket.new(::Socket::AF_INET, ::Socket::SOCK_STREAM)
       p.timeout(opts[:timeout]) { connect_timeout(socket) } if opts[:timeout]
       connect_async(socket, host, port, p)
@@ -150,7 +151,7 @@ module ClientConnection
   def handle_invalid_connect_result(result, socket)
     invalid_connect_result(result, socket)
     @connection_pending = false
-    Core::Reactor.unwatch(socket)
+    Reactor.unwatch(socket)
     @monitor = nil
     raise "Invalid result from connect_nonblock: #{result.inspect}"
   end
@@ -188,7 +189,7 @@ module ClientConnection
   # @return [void]
   def connect_timeout(socket)
     @connection_pending = false
-    Core::Reactor.unwatch(socket)
+    Reactor.unwatch(socket)
     @monitor = nil
     socket.close
   end

@@ -4,8 +4,8 @@ require 'pg'
 
 export :Connection
 
-Core  = import('../core')
-IO    = import('../io')
+Async = import('../core/async')
+IO    = import('../core/io')
 
 # Asynchronous PostgreSQL connection
 class Connection < IO
@@ -25,7 +25,7 @@ class Connection < IO
   # is already in progress
   # @return [Promise]
   def query(*args)
-    Core::Async.promise do |p|
+    Async.promise do |p|
       if @busy
         @queue << [args, p]
       else

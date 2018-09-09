@@ -1,2 +1,1 @@
-# nuclear
-A lightweight reactor for Ruby
+# Nuclear - a lightweight reactor for Ruby

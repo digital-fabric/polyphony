@@ -1,9 +1,14 @@
 # frozen_string_literal: true
 
-export :Async, :Promise, :Reactor, :Thread, :IO
+export_default :Core
 
-Reactor = import('./reactor')
-Promise = import('./promise')
-Async   = import('./async')
-Thread  = import('./thread')
-IO      = import('./io')
+module Core
+  Async       = import('./core/async')
+  IO          = import('./core/io')
+  LineReader  = import('./core/line_reader')
+  Net         = import('./core/net')
+  Promise     = import('./core/promise')
+  Reactor     = import('./core/reactor')
+  Stream      = import('./core/stream')
+  Thread      = import('./core/thread')
+end
