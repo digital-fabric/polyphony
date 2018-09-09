@@ -2,22 +2,21 @@
 
 require 'modulation'
 
-Core = import('../../lib/nuclear/core')
-include Core::Async
+Nuclear = import('../../lib/nuclear')
 
 def count_to(x)
-  generator do |promise|
+  Nuclear.generator do |promise|
     count = 0
     counter = proc {
       count += 1
       promise.resolve(count)
-      Core::Reactor.timeout(0.1 + rand * 0.1) { counter.() } unless count == x
+      Nuclear.timeout(0.05 + rand * 0.05) { counter.() } unless count == x
     }
-    Core::Reactor.timeout(0.1, &counter)
+    Nuclear.timeout(0.05, &counter)
   end
 end
 
-async do
+Nuclear.async do
   generator = count_to(10)
   generator.each do |i|
     puts "count: #{i}"

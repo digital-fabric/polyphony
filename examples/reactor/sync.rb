@@ -2,14 +2,13 @@
 
 require 'modulation'
 
-Core = import('../../lib/nuclear/core')
-include Core::Async
+Nuclear = import('../../lib/nuclear')
 
 $reactor_loop_fiber = Fiber.new do
-  Core::Reactor.run
+  Nuclear.async_reactor
 end
 
-def await(promise = {}, *more)
+def Nuclear.await(promise = {}, *more)
   return await_all(promise, *more) unless more.empty?
 
   # raise FiberError, AWAIT_ERROR_MSG unless Fiber.current.async?
@@ -26,6 +25,6 @@ def await(promise = {}, *more)
 end
 
 t0 = Time.now
-await sleep(1)
+Nuclear.await Nuclear.sleep(1)
 puts "Elapsed: #{Time.now - t0}"
 

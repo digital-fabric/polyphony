@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 require 'modulation'
 
-Core = import('../../lib/nuclear/core')
-include Core::Async
+Nuclear = import('../../lib/nuclear')
 
-async do
-  generator = pulse(1)
-  Core::Reactor.timeout(5) { generator.stop }
+Nuclear.async do
+  generator = Nuclear.pulse(1)
+  Nuclear.timeout(5) { generator.stop }
   generator.each do
     puts Time.now
   end

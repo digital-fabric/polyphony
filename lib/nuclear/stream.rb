@@ -2,7 +2,7 @@
 
 export_default :Stream
 
-Reactor = import('./reactor')
+Core = import('./core')
 
 # Implements a duplex stream that can buffer and emit events on sending or
 # receiving data
@@ -48,7 +48,7 @@ class Stream
     @read_buffer << data
     return if @pending_emit_data
     @pending_emit_data = true
-    Reactor.next_tick { emit_data }
+    Core.next_tick { emit_data }
   end
 
   # Emits data in the read buffer to the registered :data callback

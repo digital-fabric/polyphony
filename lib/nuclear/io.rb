@@ -2,8 +2,7 @@
 
 export_default :IO
 
-Async       = import('./async')
-Reactor     = import('./reactor')
+Core        = import('./core')
 Stream      = import('./stream')
 LineReader  = import('./line_reader')
 
@@ -20,13 +19,13 @@ module Watching
   # @param interests [Symbol] one of :r, :rw, :w
   # @return [void]
   def create_monitor(io, interests)
-    @monitor = Reactor.watch(io, interests, &method(:handle_selected))
+    @monitor = Core.watch(io, interests, &method(:handle_selected))
   end
 
   # Unregisters io with default reactor, removes monitor
   # return [void]
   def remove_monitor
-    Reactor.unwatch(@io)
+    Core.unwatch(@io)
     @monitor = nil
   end
 
@@ -84,7 +83,7 @@ module ReadWrite
   # @param data [String] data be written
   # @return [Promise]
   def write(data)
-    Async.promise do |p|
+    Core.promise do |p|
       @callbacks[:drain] = proc { p.resolve(true) }
       self << data
       @callbacks[:drain] = nil
@@ -94,7 +93,7 @@ module ReadWrite
   # Creates a promise that will complete once data is available for reading
   # @return [Promise]
   def read
-    Async.promise do |p|
+    Core.promise do |p|
       @callbacks[:data] = proc do |data|
         @callbacks[:data] = nil
         p.(data)
@@ -261,7 +260,7 @@ class IO < Stream
   end
 
   def cleanup_io
-    Reactor.unwatch(@io)
+    remove_monitor
     @io.close
     @io = nil
     @open = false

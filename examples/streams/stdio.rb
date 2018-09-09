@@ -3,19 +3,20 @@
 
 require 'modulation'
 
-Core  = import('../../lib/nuclear/core')
-include Core::Async
+Nuclear = import('../../lib/nuclear')
 
 STDIN.sync = true
 STDOUT.sync = true
 
-lines = Core::IO.lines(Core::IO.stdin)
+input = Nuclear::IO.lines(Nuclear::IO.stdin)
 
-async do
+Nuclear.async do
+  Nuclear.interval(1) { puts Time.now }
+
   loop do
-    Core::IO.stdout << "Say something: "
-    l = await(lines)
+    Nuclear::IO.stdout << "Say something: "
+    l = Nuclear.await(input)
     break unless l
-    Core::IO.stdout << "You said: #{l}"
+    Nuclear::IO.stdout << "You said: #{l}"
   end
 end

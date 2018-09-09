@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 require 'modulation'
 
-Core = import('../../lib/nuclear/core')
+Nuclear = import('../../lib/nuclear')
 
-timer_id = Core::Reactor.interval(1) do
+timer_id = Nuclear.interval(1) do
   puts Time.now
 end
 
-Core::Reactor.timeout(5) do
-  Core::Reactor.cancel_timer(timer_id)
+Nuclear.timeout(5) do
+  Nuclear.cancel_timer(timer_id)
   puts "done with timer"
 end

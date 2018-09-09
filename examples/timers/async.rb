@@ -2,20 +2,19 @@
 
 require 'modulation'
 
-Core = import('../../lib/nuclear/core')
-include Core::Async
+Nuclear = import('../../lib/nuclear')
 
 running = true
 
-async do
+Nuclear.async do
   while running do
-    await sleep(1)
+    Nuclear.await Nuclear.sleep(1)
     puts Time.now
   end
   puts "done with timer"
 end
 
-async do
-  await sleep(5)
+Nuclear.async do
+  Nuclear.await Nuclear.sleep(5)
   running = false
 end

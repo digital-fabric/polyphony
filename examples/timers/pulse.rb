@@ -2,15 +2,14 @@
 
 require 'modulation'
 
-Core = import('../../lib/nuclear/core')
-include Core::Async
+Nuclear = import('../../lib/nuclear')
 
-timer = pulse(1)
-async do
-  while await timer do
+timer = Nuclear.pulse(1)
+Nuclear.async do
+  while Nuclear.await timer do
     puts Time.now
   end
   puts "done with timer"
 end
 
-Core::Reactor.timeout(5) { timer.stop }
+Nuclear.timeout(5) { timer.stop }

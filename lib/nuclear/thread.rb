@@ -2,7 +2,7 @@
 
 export :spawn
 
-Async = import('./async')
+Core  = import('./core')
 IO    = import('./io')
 
 # Runs the given block in a separate thread, returning a promise fulfilled
@@ -11,7 +11,7 @@ IO    = import('./io')
 # @param opts [Hash] promise options
 # @return [Core::Promise]
 def spawn(opts = {}, &block)
-  Async.promise(opts) do |p|
+  Core.promise(opts) do |p|
     i, o = ::IO.pipe
     ctx = { o: o }
 

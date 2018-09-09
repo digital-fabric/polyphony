@@ -4,7 +4,7 @@ export_default :Promise
 
 require 'fiber'
 
-Reactor = import('./reactor')
+extend import('./reactor')
 
 # Encapsulates the eventual completion or failure of an asynchronous operation
 # (loosely based on the Javascript Promise API
@@ -117,7 +117,7 @@ class Promise
   # @return [void]
   def complete(value)
     @pending = false unless @recurring
-    Reactor.cancel_timer(@timeout) if @timeout
+    MODULE.cancel_timer(@timeout) if @timeout
     @value = value
     if @fiber
       @fiber.resume(value)
@@ -169,7 +169,7 @@ class Promise
   # timeout, allowing for the cancellation of any pending operations
   # @return [void]
   def timeout(interval, &block)
-    @timeout = Reactor.timeout(interval) do
+    @timeout = MODULE.timeout(interval) do
       block&.()
       error(TimeoutError.new(TIMEOUT_MESSAGE))
     end

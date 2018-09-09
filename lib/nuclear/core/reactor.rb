@@ -1,14 +1,6 @@
 # frozen_string_literal: true
 
-export  :cancel_all_timers,
-        :cancel_timer,
-        :interval,
-        :next_tick,
-        :run,
-        :timeout,
-        :unwatch,
-        :watch,
-        :watched?
+export_default :Reactor
 
 # Nuclear uses nio4r as sits selector/reactor engine
 require 'nio'
@@ -24,87 +16,102 @@ Selector = NIO::Selector.new(nil)
 # Default timer group
 TimerGroup = Timers::Group.new
 
-# Registers an io instance with the default selector. The given block will be
-# invoked once the given io is selected
-# @param io [IO] io instance
-# @param interests [:r, :rw, :w] read/write interests
-# @return [void]
-def watch(io, interests, &callback)
-  Selector.register(io, interests).tap { |m| m.value = callback }
-end
+module Reactor
+  # Cancels all active timers
+  # @return [void]
+  def cancel_all_timers
+    TimerGroup.cancel_all
+  end
 
-# Unregisters the given io instance with the default selector
-# @return [void]
-def unwatch(io)
-  Selector.deregister(io)
-end
+  # Cancels a pending timer
+  # @param id [Integer] timer id
+  # @return [void]
+  def cancel_timer(id)
+    TimerGroup.cancel(id)
+  end
 
-def watched?(io)
-  Selector.registered?(io)
-end
+  # Adds a recurring timer
+  # @param interval [Float] interval in seconds
+  # @param offset [Float] offset in seconds for first firing
+  # @return [Integer] timer id
+  def interval(interval, offset = nil, &callback)
+    TimerGroup.interval(interval, offset, &callback)
+  end
 
-def next_tick(&block)
-  NextTickOps << block
-end
+  # Schedules an operation to be performed in the next reactor iteration
+  # @return [void]
+  def next_tick(&block)
+    NextTickOps << block
+  end
+  
+  # Runs the default selector loop
+  # @return [void]
+  def run_reactor
+    trap('INT') { @reactor_running = false }
+  
+    @reactor_already_ran = true
+    @reactor_running = true
+  
+    reactor_loop
+    # play nice with shell, print a newline if interrupted
+    puts unless @reactor_running
+  end
 
-# Runs the default selector loop
-# @return [void]
-def run
-  trap('INT') { @run = false }
+  # Returns true if any ios are monitored are any timers are pending
+  # @return [Boolean] should the default reactor loop
+  def should_run_reactor?
+    !(Selector.empty? && TimerGroup.empty?)
+  end
 
-  @already_ran = true
-  @run = true
+  # Adds a one-shot timer
+  # @param timeout [Float] timeout in seconds
+  # @return [Integer] timer id
+  def timeout(timeout, &callback)
+    TimerGroup.timeout(timeout, &callback)
+  end
 
-  reactor_loop
-  puts unless @run # play nice with shell, print a newline if interrupted
-end
+  # Registers an io instance with the default selector. The given block will be
+  # invoked once the given io is selected
+  # @param io [IO] io instance
+  # @param interests [:r, :rw, :w] read/write interests
+  # @return [void]
+  def watch(io, interests, &callback)
+    Selector.register(io, interests).tap { |m| m.value = callback }
+  end
 
-# Performs selector loop, monitoring ios and firing timers
-# @return [void]
-def reactor_loop
-  while @run && should_run_reactor?
-    NextTickOps.each(&:call)
-    NextTickOps.clear
+  # Unregisters the given io instance with the default selector
+  # @return [void]
+  def unwatch(io)
+    Selector.deregister(io)
+  end
 
-    interval = TimerGroup.idle_interval
-    Selector.select(interval) { |m| m.value.(m) } unless Selector.empty?
+  # Returns true if the given io is currently watched
+  # @param io [IO]
+  # @return [Boolean]
+  def watched?(io)
+    Selector.registered?(io)
+  end
 
-    TimerGroup.fire unless interval.nil?
+  private
+
+  # Performs selector loop, monitoring ios and firing timers
+  # @return [void]
+  def reactor_loop
+    while @reactor_running && should_run_reactor?
+      NextTickOps.each(&:call)
+      NextTickOps.clear
+
+      interval = TimerGroup.idle_interval
+      Selector.select(interval) { |m| m.value.(m) } unless Selector.empty?
+
+      TimerGroup.fire unless interval.nil?
+    end
   end
 end
 
-# Returns true if any ios are monitored are any timers are pending
-# @return [Boolean] should the default reactor loop
-def should_run_reactor?
-  !(Selector.empty? && TimerGroup.empty?)
+extend Reactor
+
+Kernel.at_exit do
+  run_reactor if !$! && !@reactor_already_ran && should_run_reactor?
 end
 
-# Adds a one-shot timer
-# @param timeout [Float] timeout in seconds
-# @return [Integer] timer id
-def timeout(timeout, &callback)
-  TimerGroup.timeout(timeout, &callback)
-end
-
-# Adds a recurring timer
-# @param interval [Float] interval in seconds
-# @param offset [Float] offset in seconds for first firing
-# @return [Integer] timer id
-def interval(interval, offset = nil, &callback)
-  TimerGroup.interval(interval, offset, &callback)
-end
-
-# Cancels a pending timer
-# @param id [Integer] timer id
-# @return [void]
-def cancel_timer(id)
-  TimerGroup.cancel(id)
-end
-
-def cancel_all_timers
-  TimerGroup.cancel_all
-end
-
-at_exit do
-  run if !$! && !@already_ran && should_run_reactor?
-end

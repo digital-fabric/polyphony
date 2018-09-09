@@ -4,15 +4,16 @@ require 'modulation/gem'
 
 export_default :Nuclear
 
+Nuclear = import('./nuclear/core')
+
 module Nuclear
   VERSION = '0.3'
 
-  Async       = import('./nuclear/core/async')
-  IO          = import('./nuclear/core/io')
-  LineReader  = import('./nuclear/core/line_reader')
-  Net         = import('./nuclear/core/net')
   Promise     = import('./nuclear/core/promise')
-  Reactor     = import('./nuclear/core/reactor')
-  Stream      = import('./nuclear/core/stream')
-  Thread      = import('./nuclear/core/thread')
+
+  IO          = import('./nuclear/io')
+  LineReader  = import('./nuclear/line_reader')
+  Net         = import('./nuclear/net')
+  Stream      = import('./nuclear/stream')
+  Thread      = import('./nuclear/thread')
 end

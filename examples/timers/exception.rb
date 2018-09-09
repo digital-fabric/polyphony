@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 require 'modulation'
 
-Core = import('../../lib/nuclear/core')
+Nuclear = import('../../lib/nuclear')
 
-Core::Reactor.interval(1) { raise "hi!"}
+Nuclear.interval(1) { raise "hi!"}

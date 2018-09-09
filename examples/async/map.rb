@@ -2,20 +2,19 @@
 
 require 'modulation'
 
-Core = import('../../lib/nuclear/core')
-include Core::Async
+Nuclear = import('../../lib/nuclear')
 
 def timeout(t)
-  promise { |p| Core::Reactor.timeout(t, &p) }
+  Nuclear.promise { |p| Nuclear.timeout(t, &p) }
 end
 
-async do
+Nuclear.async do
   t1 = Time.now
   
-  result = await *[2, 1.5, 3].map(&method(:timeout))
+  result = Nuclear.await *[2, 1.5, 3].map(&method(:timeout))
   puts "elapsed! (#{Time.now - t1})"
   puts "result: #{result}"
   exit
 end
 
-Core::Reactor.interval(1) { puts Time.now }
+Nuclear.interval(1) { puts Time.now }

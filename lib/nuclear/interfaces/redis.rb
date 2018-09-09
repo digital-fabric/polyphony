@@ -3,9 +3,8 @@
 require 'hiredis/reader'
 export :Connection
 
-Async   = import('../core/async')
-Net     = import('../core/net')
-Reactor = import('../core/reactor')
+Core  = import('../core')
+Net   = import('../net')
 
 Commands  = import('./redis/commands')
 
@@ -61,17 +60,17 @@ class Connection < Net::Socket
   def handle_reply(reply)
     _, transform, promise = @queue.shift
     if reply.is_a?(RuntimeError)
-      Reactor.next_tick { promise.error(reply) }
+      Core.next_tick { promise.error(reply) }
     else
       reply = transform.(reply) if transform
-      Reactor.next_tick { promise.resolve(reply) }
+      Core.next_tick { promise.resolve(reply) }
     end
   end
 
   # Queues a command to be sent to the server, sends it if not busy
   # @return [void]
   def cmd(*args, &result_transform)
-    Async.promise do |p|
+    Core.promise do |p|
       @queue << [args, result_transform, p]
       send_command(*args)
     end
