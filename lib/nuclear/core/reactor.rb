@@ -61,7 +61,7 @@ module Reactor
   # Returns true if any ios are monitored are any timers are pending
   # @return [Boolean] should the default reactor loop
   def should_run_reactor?
-    !(Selector.empty? && TimerGroup.empty?)
+    !(Selector.empty? && TimerGroup.empty? && NextTickOps.empty?)
   end
 
   # Adds a one-shot timer
@@ -99,8 +99,7 @@ module Reactor
   # @return [void]
   def reactor_loop
     while @reactor_running && should_run_reactor?
-      NextTickOps.each(&:call)
-      NextTickOps.clear
+      NextTickOps.slice!(0..-1).each(&:call) unless NextTickOps.empty?
 
       interval = TimerGroup.idle_interval
       Selector.select(interval) { |m| m.value.(m) } unless Selector.empty?
