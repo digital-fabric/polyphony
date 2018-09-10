@@ -16,6 +16,7 @@ Selector = NIO::Selector.new(nil)
 # Default timer group
 TimerGroup = Timers::Group.new
 
+# Reactor methods
 module Reactor
   # Cancels all active timers
   # @return [void]
@@ -43,15 +44,15 @@ module Reactor
   def next_tick(&block)
     NextTickOps << block
   end
-  
+
   # Runs the default selector loop
   # @return [void]
   def run_reactor
     trap('INT') { @reactor_running = false }
-  
+
     @reactor_already_ran = true
     @reactor_running = true
-  
+
     reactor_loop
     # play nice with shell, print a newline if interrupted
     puts unless @reactor_running
@@ -112,6 +113,6 @@ end
 extend Reactor
 
 Kernel.at_exit do
+  # Run reactor once all user files are loaded
   run_reactor if !$! && !@reactor_already_ran && should_run_reactor?
 end
-

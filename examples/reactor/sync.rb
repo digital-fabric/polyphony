@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A way to run async ops synchronously
 
 require 'modulation'

@@ -17,32 +17,52 @@ class HTTP2Response < Response
 
   HTTP2_PROTOCOL = 'h2'
 
+  # Returns 'h2' as the protocol used
+  # @return [String]
   def protocol
     HTTP2_PROTOCOL
   end
 
+  # Resets the response so it can be reused
+  # @return [void]
   def reset!
     @status_code = 200
     @headers = {}
     @headers_sent = nil
   end
 
+  # Adds a response header
+  # @param key [Symbol, String] header key
+  # @param value [any] header value
+  # @return [void]
   def set_header(key, value)
     @headers[key.to_s] = value.to_s
   end
 
+  # Sets the status code and response headers. The response headers will not
+  # actually be sent until #send_headers is called.
+  # @param status_code [Integer] HTTP status code
+  # @param headers [Hash] response headers
+  # @return [void]
   def write_head(status_code = 200, headers = {})
+    @status_code = status_code
     raise 'Headers already sent' if @headers_sent
 
     headers.each { |k, v| @headers[k.to_s] = v.to_s }
   end
 
+  # Sends status code and headers
+  # @return [void]
   def send_headers
     headers = { ':status' => @status_code.to_s }.merge(@headers)
     @stream.headers(headers, end_stream: false)
     @headers_sent = true
   end
 
+  # Sends response body, optionally finishing the response
+  # @param data [String] response body
+  # @param finish [Boolean] whether the response is finished
+  # @return [void]
   def send(data, finish)
     @stream.data(data, end_stream: finish)
   end
@@ -88,6 +108,10 @@ def start_stream(stream, handler)
   stream.on(:half_close) { finalize_request(stream, request, handler) }
 end
 
+# Sets request headers
+# @param request [Hash] request object
+# @param headers [Array<Array>] array of headers as received from h2 interface
+# @return [void]
 def set_request_headers(request, headers)
   h = request[:headers] = Hash[*headers.flatten]
   request[:method]      = h[':method']
@@ -95,11 +119,19 @@ def set_request_headers(request, headers)
   request[:scheme]      = h[':scheme']
 end
 
+# Handles body chunk received from stream
+# @param request [Hash] request object
+# @param chunk [String] body chunk
+# @return [void]
 def handle_body_chunk(request, chunk)
   request[:body] ||= +''
   request[:body] << chunk
 end
 
+# Finalizes request, passing it to given handler
+# @param stream [HTTP2::Stream] stream
+# @param request [Hash] request object
+# @param handler [Proc] handler proc
 def finalize_request(stream, request, handler)
   response = HTTP2Response.new(stream)
   Request.prepare(request)

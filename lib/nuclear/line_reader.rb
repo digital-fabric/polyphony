@@ -32,16 +32,22 @@ class LineReader
   # Emits lines from the read buffer
   # @return [void]
   def emit_lines
-    while (line = gets)
+    while (line = _gets)
       @lines_promise.resolve(line)
     end
   end
 
   # Returns a line sliced from the read buffer
   # @return [String] line
-  def gets
+  def _gets
     idx = @read_buffer.index(@separator)
     idx && @read_buffer.slice!(0, idx + @separator_size)
+  end
+
+  def gets
+    Core.promise do |p|
+      @lines_promise = p
+    end
   end
 
   # Returns a async generator of lines

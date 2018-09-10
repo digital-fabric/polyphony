@@ -9,10 +9,6 @@ HTTP2 = import('./http/http2')
 
 # HTTP server implementation
 class Server < Net::Server
-  include ALPN
-  # include Protocol
-  # include Request
-
   # initializes an HTTP server, using the given block as a request handler
   # @param opts [Hash] options
   def initialize(opts = {}, &block)
@@ -38,6 +34,10 @@ class Server < Net::Server
 
   H2_PROTOCOL = 'h2'
 
+  # Returns the protocol module to be used for handling the connection,
+  # depending on whether the socket is secure and on the selected ALPN protocol
+  # @param socket [Net::Socket] connection
+  # @return [Module]
   def protocol_module(socket)
     protocol = @secure_context && ALPN.alpn_protocol(socket)
 

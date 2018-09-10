@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require 'modulation'
 
 Nuclear = import('../../lib/nuclear')

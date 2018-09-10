@@ -5,17 +5,11 @@ require 'modulation'
 Nuclear = import('../../lib/nuclear')
 
 def echo_connection(socket)
-  puts "connected: #{socket}"
   Nuclear.await socket.write("Echo server!\n")
   Nuclear::LineReader.new(socket).each_line do |line|
     break unless line
     Nuclear.await socket.write("You said: #{line}")
   end
-  puts "disconnected: #{socket}"
-rescue => e
-  puts "*** error ***"
-  puts e
-  puts e.backtrace.join("\n")
 end
 
 server = Nuclear::Net::Server.new

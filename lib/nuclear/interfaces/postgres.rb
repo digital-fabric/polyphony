@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require 'pg'
-
 export :Connection
 
-Core = import('../core')
+require 'pg'
+
+Core  = import('../core')
 IO    = import('../io')
 
 # Corehronous PostgreSQL connection

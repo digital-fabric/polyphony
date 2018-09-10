@@ -1,39 +1,15 @@
 # frozen_string_literal: true
 
 export_default :Async
-# (
-#   :await,
-#   :await_all,
-#   :await_any,
-#   :generator,
-#   :promise,
-#   :pulse,
-#   :run,
-#   :sleep
-# )
 
 require 'fiber'
-
-# Fiber extensions
-class ::Fiber
-  # Returns true if fiber is marked as async
-  # @return [Boolean] is fiber async
-  def async?
-    @async
-  end
-
-  # Marks the fiber as async
-  # @return [void]
-  def async!
-    @async = true
-  end
-end
 
 FiberPool = import('./fiber_pool')
 Promise   = import('./promise')
 
 extend import('./reactor')
 
+# Async methods
 module Async
   INVALID_PROMISE_MSG = 'await accepts promises only'
   ASYNC_ONLY_MSG = 'await can only be called inside async block'
@@ -144,7 +120,7 @@ end
 
 extend Async
 
-# Promise extension
+# Promise extensions
 class Promise
   # Iterates asynchronously over each resolution of a recurring promise. This
   # method can only be called inside of an async block.
@@ -154,5 +130,20 @@ class Promise
       result = MODULE.await self
       result ? yield(result) : break
     end
+  end
+end
+
+# Fiber extensions
+class ::Fiber
+  # Returns true if fiber is marked as async
+  # @return [Boolean] is fiber async
+  def async?
+    @async
+  end
+
+  # Marks the fiber as async
+  # @return [void]
+  def async!
+    @async = true
   end
 end

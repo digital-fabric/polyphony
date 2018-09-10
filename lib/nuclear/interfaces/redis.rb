@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
-require 'hiredis/reader'
 export :Connection
+
+require 'hiredis/reader'
 
 Core  = import('../core')
 Net   = import('../net')
 
-Commands  = import('./redis/commands')
+Commands = import('./redis/commands')
 
 # Redis connection
 class Connection < Net::Socket

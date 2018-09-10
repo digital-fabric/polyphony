@@ -25,6 +25,9 @@ class Server
     Core.watch(@server, :r) { accept_from_socket }
   end
 
+  # Creates a server socket for listening to incoming connections
+  # @param opts [Hash] listening options
+  # @return [Net::Socket]
   def create_server_socket(opts)
     socket = TCPServer.new(opts[:host] || '127.0.0.1', opts[:port])
     if @secure_context
@@ -58,6 +61,9 @@ class Server
     puts e.backtrace.join("\n")
   end
 
+  # Sets up an accepted connection
+  # @param socket [TCPSocket] accepted socket
+  # @return [Net::Socket]
   def setup_connection(socket)
     opts = { connected: true, secure_context: @secure_context }
     if @secure_context
@@ -210,6 +216,8 @@ class Socket < IO
     @connected
   end
 
+  # Returns false
+  # @return [false]
   def secure?
     false
   end
@@ -229,6 +237,8 @@ class SecureSocket < Socket
     accept_secure_handshake
   end
 
+  # Returns true
+  # @return [true]
   def secure?
     true
   end

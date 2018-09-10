@@ -14,7 +14,7 @@ HTTP2 = import('./http2')
 # @return [void]
 def start(socket, handler)
   socket.opts[:can_upgrade] = true
-  
+
   ctx = connection_context(socket, handler)
   ctx[:response] = Response.new(socket) { response_did_finish(ctx) }
 
@@ -96,6 +96,9 @@ def upgrade_connection(ctx)
   true
 end
 
+# Returns a request object based on the given context
+# @param ctx [Hash] connection context
+# @return [Hash]
 def make_request(ctx)
   {
     method:       ctx[:parser].http_method,

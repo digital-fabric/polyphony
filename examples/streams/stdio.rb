@@ -1,12 +1,8 @@
-#!/usr/bin/env ruby
 # frozen_string_literal: true
 
 require 'modulation'
 
 Nuclear = import('../../lib/nuclear')
-
-STDIN.sync = true
-STDOUT.sync = true
 
 input = Nuclear::IO.lines(Nuclear::IO.stdin)
 
