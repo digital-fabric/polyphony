@@ -1,3 +1,8 @@
+0.5 2018-09-10
+--------------
+
+* Remove HTTP, move ALPN code inside net module
+
 0.4 2018-09-10
 --------------
 

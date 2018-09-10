@@ -33,8 +33,20 @@ class Server
     if @secure_context
       socket = OpenSSL::SSL::SSLServer.new(socket, @secure_context)
       socket.start_immediately = false
+      setup_alpn(opts[:alpn_protocols]) if opts[:alpn_protocols]
     end
     socket
+  end
+
+  # Sets up ALPN protocols negotiated during handshake
+  # @param server_protocols [Array<String>] protocols supported by server
+  # @return [void]
+  def setup_alpn(server_protocols)
+    @secure_context.alpn_protocols = server_protocols
+    @secure_context.alpn_select_cb = proc do |client_protocols|
+      # select first common protocol
+      (server_protocols & client_protocols).first
+    end
   end
 
   # Returns true if server is listening
@@ -200,9 +212,19 @@ module ClientConnection
   end
 end
 
+# ALPN protocol
+module ALPN
+  # returns the ALPN protocol used for the given socket
+  # @return [String, nil]
+  def alpn_protocol
+    secure? && raw_io.alpn_protocol
+  end
+end
+
 # Encapsulates a TCP socket
 class Socket < IO
   include ClientConnection
+  include ALPN
 
   # Initializes socket
   def initialize(socket = nil, opts = {})
