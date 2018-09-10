@@ -61,4 +61,77 @@ automatically once the program file has been executed (in a similar fashion to
 $ gem install nuclear
 ```
 
-## Developer's guide
+## Getting Started
+
+Nuclear is a framework that provides all the tools needed to write concurrent
+programs in Ruby. Nuclear allows the developer to write in a synchronous style,
+without using blocking calls, threads or any locking mechanisms.
+
+At its core, Nuclear runs a reactor loop that checks for any elapsed timers, or
+any I/O descriptors (such as sockets or files) that have become readable or 
+writable. Once such an event has been detected, control is passed to code that
+handles the event. Such code is normally contained in a callback `Proc`, or an
+`await` expression that involves a `Promise`.
+
+Here is an example using callbacks:
+
+```ruby
+require 'nuclear'
+
+Nuclear.interval(1) { puts Time.now }
+```
+
+And here's an example using `async`/`await`:
+
+```ruby
+require 'nuclear'
+
+Nuclear.async do
+  loop do
+    Nuclear.await Nuclear.sleep(1)
+    puts Time.now
+  end
+end
+```
+
+## Nuclear Timers
+
+Nuclear timers allow scheduling of tasks at specific times, optionally with a
+specific frequency for recurring timers. In addition, a task can be scheduled
+to be run on the next iteration of the reactor loop using `Nuclear.next_tick`.
+
+### Nuclear.timeout(timeout)
+
+Schedules a task to be run after the given timeout:
+
+```ruby
+Nuclear.timeout(5) { puts "5 seconds have elapsed" }
+```
+
+### Nuclear.interval(interval, offset = nil)
+
+Schedules a task to be run repeatedly at the given frequency. The `offset`
+argument can be used to specify the interval for running the given task for the
+first time:
+
+```ruby
+Nuclear.interval(1) { puts Time.now }
+Nuclear.interval(1, 0.5) { puts "in between..." }
+```
+
+### Nuclear.next_tick
+
+Schedules a task to be run in the next iteration of the reactor loop:
+
+```ruby
+@count = 0
+
+def counter
+  @count += 1
+  puts @count if @count % 100000 == 0
+  Nuclear.next_tick { counter }
+end
+counter
+```
+
+To be continued...
