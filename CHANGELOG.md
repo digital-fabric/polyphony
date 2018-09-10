@@ -1,3 +1,8 @@
+0.4 2018-09-10
+--------------
+
+* Code refactored and reogranized
+* Fix recursion in next_tick
 * HTTP 2 server with support for ALPN protocol negotiation and HTTP upgrade
 * OpenSSL server
 
