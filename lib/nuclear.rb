@@ -10,7 +10,6 @@ module Nuclear
   VERSION = '0.6'
 
   Promise     = import('./nuclear/core/promise')
-
   IO          = import('./nuclear/io')
   LineReader  = import('./nuclear/line_reader')
   Net         = import('./nuclear/net')

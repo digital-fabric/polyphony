@@ -93,6 +93,14 @@ module Reactor
     Selector.registered?(io)
   end
 
+  def reset!
+    orig_verbose, $VERBOSE = $VERBOSE, nil
+    MODULE.const_set(:Selector, NIO::Selector.new(nil))
+    $VERBOSE = orig_verbose
+    TimerGroup.reset!
+    NextTickOps.clear
+  end
+
   private
 
   # Performs selector loop, monitoring ios and firing timers

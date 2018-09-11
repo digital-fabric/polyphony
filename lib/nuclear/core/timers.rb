@@ -20,6 +20,11 @@ class Group
     @timers.empty?
   end
 
+  def reset!
+    @timers = []
+    @cancelled = []
+  end
+
   # Adds a one-shot timer
   # @param timeout [Float] timeout in seconds
   # @return [Integer] timer id

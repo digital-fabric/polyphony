@@ -2,35 +2,23 @@ require 'minitest/autorun'
 require 'modulation'
 
 Core = import('../lib/nuclear/core')
-Reactor = Core::Reactor
-
-module Reactor
-  def self.reset!
-    orig_verbose = $VERBOSE
-    $VERBOSE = nil  
-    const_set(:Selector, NIO::Selector.new(nil))
-    const_set(:TimerGroup, Timers::Group.new)
-  ensure
-    $VERBOSE = orig_verbose
-  end
-end
 
 class LoopTest < Minitest::Test
   def teardown
-    Reactor.reset!
+    Core.reset!
   end
 
   def test_that_loop_exits_if_nothing_is_watched
-    Reactor.run
+    Core.run_reactor
     assert(true)
   end
 
   def test_that_loop_exits_once_no_timers_are_pending
     fired = false
     timeout = 0.05
-    Reactor.timeout(timeout) { fired = true }
     t = Time.now
-    Reactor.run
+    Core.timeout(timeout) { fired = true }
+    Core.run_reactor
     elapsed = Time.now - t
 
     assert(fired)
@@ -45,11 +33,11 @@ class LoopTest < Minitest::Test
     end
 
     msg = (+"")
-    Reactor.watch(read_io, :r) do
+    Core.watch(read_io, :r) do
       msg << read_io.read_nonblock(8192, exception: false)
-      Reactor.unwatch(read_io)
+      Core.unwatch(read_io)
     end
-    Reactor.run
+    Core.run_reactor
     Process.wait(child)
     assert_equal('hello!', msg)
   end
