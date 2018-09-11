@@ -1,7 +1,8 @@
-0.5 2018-09-10
+0.6 2018-09-11
 --------------
 
-* Remove HTTP, move ALPN code inside net module
+* Add http, redis, pg dependencies
+* Move ALPN code inside net module
 
 0.4 2018-09-10
 --------------
