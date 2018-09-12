@@ -7,6 +7,8 @@ require 'fiber'
 FiberPool = import('./fiber_pool')
 Promise   = import('./promise')
 
+import('../ext/fiber')
+
 extend import('./reactor')
 
 # Async methods
@@ -130,20 +132,5 @@ class Promise
       result = MODULE.await self
       result ? yield(result) : break
     end
-  end
-end
-
-# Fiber extensions
-class ::Fiber
-  # Returns true if fiber is marked as async
-  # @return [Boolean] is fiber async
-  def async?
-    @async
-  end
-
-  # Marks the fiber as async
-  # @return [void]
-  def async!
-    @async = true
   end
 end

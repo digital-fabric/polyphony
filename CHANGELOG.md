@@ -1,3 +1,6 @@
+* Implement resource pool
+* transaction method for pg cient
+* Async connect for pg client
 * Add testing module for testing async code
 * Improve HTTP server performance
 * Proper promise chaining

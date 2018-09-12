@@ -41,7 +41,6 @@ async do
 
 ## PG
 
-- connection pool
 - specify connection using URL
 - support for SSL
 
