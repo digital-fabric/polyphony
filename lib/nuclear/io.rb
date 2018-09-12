@@ -52,10 +52,10 @@ module Watching
     if @monitor
       if interests.nil?
         remove_reactor
-      else
+      elsif interests != @monitor.interests
         @monitor.interests = interests
       end
-    elsif interests && interests
+    elsif interests
       create_monitor(@io, interests)
     end
   end
@@ -217,7 +217,7 @@ class IO < Stream
   def initialize(io, opts = {})
     super(opts)
     @io = io
-    @open = true
+    @open = !!io
     watch_io if io && opts[:watch] != false
   end
 
