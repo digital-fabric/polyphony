@@ -24,7 +24,11 @@ Reactor.watch(socket,
 
 See examples/reactor/sync.rb
 
-## HTTP/HTTPS client
+## HTTP
+
+- client
+- rack adapter
+- binary for running rack apps
 
 ## ThreadPool that runs code and returns promise
 
@@ -35,13 +39,17 @@ async do
   result = await ThreadPool.spawn { fib(100) }
 ```
 
-## Code reogranisation
+## PG
 
-- Split into multiple gems:
+- async connect etc: look at https://github.com/socketry/async-postgres
+- connection pool
+- specify connection using URL
+- support for SSL
 
-  `nuclear.core` - includes reactor, async, io, net, line_reader
-  `nuclear.http` - http server/client
-  `nuclear.redis` - redis client
-  `nuclear.pg` - pg client
+## Redis
 
-- Move ALPN code from http module to net module
+- support for sentinel:
+  https://redis.io/topics/sentinel
+  https://github.com/redis/redis-rb#sentinel-support
+- support for SSL
+- specify connection using URL

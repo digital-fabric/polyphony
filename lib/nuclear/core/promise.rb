@@ -132,19 +132,46 @@ class Promise
   # Sets the callback for successful completion
   # @return [void]
   def then(proc = nil, &block)
-    @then = proc || block
-    @then.(@value) if @resolved
-    self
+    Promise.new do |p|
+      block ||= proc
+      set_then  { |v| resolve_then(p, block, v) }
+      set_catch { |e| p.error(e) }
+
+      @then.(@value) if @resolved
+    end
+
+    # @then = proc || block
+    
   end
 
   # Sets the callback for failed (error) completion
   # @return [void]
   def catch(proc = nil, &block)
-    @catch = proc || block
-    @catch.(@value) if @errored
-    self
+    Promise.new do |p|
+      block ||= proc
+      set_then  { |v| p.resolve(v) }
+      set_catch(&block)
+    end
   end
 
+  def set_then(&block)
+    @then = block
+  end
+
+  def set_catch(&block)
+    @catch = block
+  end
+
+  def resolve_then(promise, block, value)
+    r = block.(value)
+    if r.is_a?(Promise)
+      r.set_then  { |v| promise.resolve(v) }
+      r.set_catch { |e| promise.error(e) }
+    else
+      promise.resolve(value)
+    end
+  end
+  
   # Sets the callback for both success and error completion
   def on_complete(proc = nil, &block)
     @then = @catch = proc || block
