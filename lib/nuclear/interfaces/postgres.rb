@@ -7,7 +7,8 @@ require 'pg'
 Core  = import('../core')
 IO    = import('../io')
 
-module PostgresConnection
+# Connection establishment methods
+module Connection
   def connect
     close if @raw_io
     @connection = PG::Connection.connect_start(@opts)
@@ -50,31 +51,8 @@ module PostgresConnection
   end
 end
 
-# Corehronous PostgreSQL connection
-class Client < IO
-  include PostgresConnection
-
-  # Initializes connection
-  def initialize(opts)
-    @opts = opts
-
-    # if @connected
-    # @conn = ::PG.connect(opts)
-    # @connection.setnonblocking(true)
-    # @connection.type_map_for_results = ::PG::BasicTypeMapForResults.new(@conn)
-
-    # super(::IO.new(@connection.socket), connected: true)
-
-    @queue = []
-    @busy = false
-  end
-
-  # Set type map for connection
-  def set_type_map
-    @connection.type_map_for_results =
-      ::PG::BasicTypeMapForResults.new(@connection)
-  end
-
+# Querying methods
+module Query
   # Issues a query, returning a promise. The promise is queued if another query
   # is already in progress
   # @return [Promise]
@@ -89,6 +67,30 @@ class Client < IO
     end
   end
 
+  SQL_BEGIN = 'begin'
+  SQL_COMMIT = 'commit'
+  SQL_ROLLBACK = 'rollback'
+
+  def transaction(&block)
+    unless Fiber.current.async?
+      raise RuntimeError, 'transaction can only be called inside async block'
+    end
+
+    began = false
+    return block.() if @transaction # allow nesting of calls to #transactions
+    
+    Core.await query(SQL_BEGIN)
+    @transaction = true
+    began = true
+    block.()
+    Core.await query(SQL_COMMIT)
+  rescue => e
+    Core.await query(SQL_ROLLBACK) if began
+    raise e
+  ensure
+    @transaction = false
+  end
+
   # Sends query to backend
   # @param args [Array] array of query arguments
   # @param promise [Promise] associated promise
@@ -96,6 +98,7 @@ class Client < IO
   def send_query(args, promise)
     if @connected
       @query_promise = promise
+      puts "sql: #{args.first}"
       @connection.send_query(*args)
     else
       connect.then { send_query(args, promise) }
@@ -126,5 +129,33 @@ class Client < IO
     @query_promise.error(e)
   ensure
     result.clear
+  end
+
+end
+
+# Corehronous PostgreSQL connection
+class Client < IO
+  include Connection
+  include Query
+
+  # Initializes connection
+  def initialize(opts)
+    @opts = opts
+
+    # if @connected
+    # @conn = ::PG.connect(opts)
+    # @connection.setnonblocking(true)
+    # @connection.type_map_for_results = ::PG::BasicTypeMapForResults.new(@conn)
+
+    # super(::IO.new(@connection.socket), connected: true)
+
+    @queue = []
+    @busy = false
+  end
+
+  # Set type map for connection
+  def set_type_map
+    @connection.type_map_for_results =
+      ::PG::BasicTypeMapForResults.new(@connection)
   end
 end

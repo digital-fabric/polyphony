@@ -20,9 +20,9 @@ Reactor.watch(socket,
 )
 ```
 
-## A way to test async/await code
-
-See examples/reactor/sync.rb
+This will require a fork of nio4r, which could possibly yield a significant
+performance improvement. There's a lot of stuff there we don't need, and the
+API in general is a bit clunky.
 
 ## HTTP
 
@@ -41,7 +41,6 @@ async do
 
 ## PG
 
-- async connect etc: look at https://github.com/socketry/async-postgres
 - connection pool
 - specify connection using URL
 - support for SSL
