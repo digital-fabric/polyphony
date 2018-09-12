@@ -1,3 +1,4 @@
+* Add testing module for testing async code
 * Improve HTTP server performance
 * Proper promise chaining
 
