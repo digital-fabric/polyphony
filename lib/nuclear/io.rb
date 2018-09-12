@@ -217,7 +217,7 @@ class IO < Stream
   def initialize(io, opts = {})
     super(opts)
     @io = io
-    @open = !!io
+    @open = io
     watch_io if io && opts[:watch] != false
   end
 

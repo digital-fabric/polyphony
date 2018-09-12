@@ -2,11 +2,17 @@
 
 Core = import('./core')
 
+# Fiber used for running reactor loop
 ReactorLoopFiber = Fiber.new do
   Nuclear.run_reactor
 end
 
+# Monkey-patch core module with async/await methods
 module Core
+  # Processes a promise by running reactor loop until promise is completed
+  # @param promise [Promise] promise
+  # @param more [Array<Promise>] more promises
+  # @return [any] resolved value
   def self.await(promise = {}, *more)
     return await_all(promise, *more) unless more.empty?
 
@@ -14,14 +20,14 @@ module Core
     if promise.completed?
       return_value = promise.clear_result
     else
-      until promise.completed?
-        ReactorLoopFiber.resume      
-      end      
-      return_value = return_value = promise.result
+      ReactorLoopFiber.resume until promise.completed?
+      return_value = promise.result
     end
     return_value.is_a?(Exception) ? raise(return_value) : return_value
   end
 
+  # Runs given block
+  # @return [void]
   def self.async(&block)
     block.()
   end

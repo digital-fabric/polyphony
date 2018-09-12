@@ -141,7 +141,6 @@ class Promise
     end
 
     # @then = proc || block
-    
   end
 
   # Sets the callback for failed (error) completion
@@ -171,7 +170,7 @@ class Promise
       promise.resolve(value)
     end
   end
-  
+
   # Sets the callback for both success and error completion
   def on_complete(proc = nil, &block)
     @then = @catch = proc || block

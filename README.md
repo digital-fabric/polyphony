@@ -10,19 +10,16 @@ Under the hood, nuclear uses [nio4r](https://github.com/socketry/nio4r/) and
 [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to provide
 concurrency without having to use multiple threads and locking mechanisms.
 
-Nuclear provides the following features:
+## Features:
 
 - Asynchronous I/O processing.
 - `async`/`await` API for writing asynchronous software in a synchronous style.
 - TCP sockets with built-in support for TLS (secure sockets).
 - One-shot and recurring timers.
 - Various promise-based abstractions such as `generator`, `pulse`, `sleep` etc.
-
-Current plugins include:
-
-- HTTP client/server, with support for HTTPS and HTTP/2
-- PostgreSQL client
-- Redis client
+- HTTP client/server implementation, with support for HTTPS and HTTP/2
+- PostgreSQL client implementation
+- Redis client implementation
 
 ## An echo server in nuclear
 
@@ -134,4 +131,23 @@ end
 counter
 ```
 
-To be continued...
+## Promises
+
+A promise represents the future result of an asynchronous operation. A promise
+may be fulfilled with either a result value, or an error. Promises can be
+chained to create complex asynchronous workflows:
+
+```ruby
+# using callbacks, we use recursion
+foo { |v| bar(v) { |v| baz(v) } }
+
+# with promises, we can chain operations using then
+foo.then { |v| bar(v) }.then { |v| baz(v) }
+```
+
+Promises can also be used to catch exceptions:
+
+```ruby
+foo.then { bar }.catch { |err| puts "error: #{err}" }
+```
+

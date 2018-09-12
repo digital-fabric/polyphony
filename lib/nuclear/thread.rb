@@ -7,6 +7,7 @@ IO    = import('./io')
 
 # Cross-thread readiness cue
 class Cue
+  # Initializes the cue
   def initialize(&block)
     @i, @o = ::IO.pipe
     IO.new(@i).on(:close) do
@@ -15,6 +16,7 @@ class Cue
     end
   end
 
+  # Signals the cue, causing the block given in #initializes to be called
   def signal!
     @o.close
   end
