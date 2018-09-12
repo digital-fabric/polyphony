@@ -9,7 +9,7 @@ def now
   Process.clock_gettime(Process::CLOCK_MONOTONIC)
 end
 
-DB = Postgres::Connection.new(
+DB = Postgres::Client.new(
   host:     '/tmp',
   user:     'reality',
   password: nil,
@@ -17,14 +17,15 @@ DB = Postgres::Connection.new(
   sslmode:  'require'
 )
 
-Nuclear.interval(1) do
-  Nuclear.async do
-    t0 = Time.now
-    res = Nuclear.await DB.query("select 1 as test")
-    puts "got #{res.ntuples} records (elapsed: #{Time.now - t0}): #{res.to_a}"
-  end
+def get_records
+  res = Nuclear.await DB.query("select 1 as test")
+  puts "got #{res.ntuples} records: #{res.to_a}"
+rescue => e
+  puts "got error: #{e.inspect}"
 end
 
-Nuclear.interval(1, 0.5) do
-  puts "* #{Time.now}"
+Nuclear.async { get_records }
+
+Nuclear.interval(1) do
+  Nuclear.async { get_records }
 end
