@@ -29,6 +29,7 @@ class Server < Net::Server
   # @param socket [Net::Socket] connection
   # @return [void]
   def new_connection(socket)
+    socket.raw_io.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
     protocol_module(socket).start(socket, @request_handler)
   end
 

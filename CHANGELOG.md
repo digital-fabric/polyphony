@@ -1,3 +1,6 @@
+* Improve HTTP server performance
+* Proper promise chaining
+
 0.6 2018-09-11
 --------------
 

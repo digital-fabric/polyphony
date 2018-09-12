@@ -61,11 +61,12 @@ class Response
   # @param finish [Boolean] whether to finish response
   # @return [void]
   def write(data, finish = nil)
-    unless @headers_sent
+    if @headers_sent
+      send(data, finish)
+    else
       set_header('Content-Length', data.bytesize) if data && finish
-      send_headers
+      send_headers_and_body(data, finish)
     end
-    send(data, finish)
   end
 
   # Finish response, optionally writing response body
@@ -90,6 +91,11 @@ class Response
   # @return [void]
   def send_headers
     @socket << "HTTP/1.1 #{@status_code}\r\n#{@headers}\r\n"
+    @headers_sent = true
+  end
+
+  def send_headers_and_body(data, _finish)
+    @socket << "HTTP/1.1 #{@status_code}\r\n#{@headers}\r\n#{data}"
     @headers_sent = true
   end
 end
