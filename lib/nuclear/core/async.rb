@@ -114,8 +114,7 @@ module Async
         values[idx] = v
         completed += 1
         parallel_promise.resolve(values) if completed == count
-      end
-      p.catch { |e| parallel_promise.error(e) }
+      end.catch { |e| parallel_promise.reject(e) }
     end
   end
 end

@@ -18,7 +18,7 @@ class PromiseTest < Minitest::Test
     result = nil
     p.then { |v| result = v }.catch { |e| result = e }
     assert_nil(result)
-    p.error(RuntimeError.new('hi'))
+    p.reject(RuntimeError.new('hi'))
     assert_kind_of(RuntimeError, result)
     assert_equal('hi', result.message)
   end
@@ -42,7 +42,7 @@ class PromiseTest < Minitest::Test
   def resolve_promises(promises, log, error_idx = nil)
     promises.each_with_index do |p, idx|
       if idx == error_idx
-        return p.error(RuntimeError.new("idx:#{error_idx}"))
+        return p.reject(RuntimeError.new("idx:#{error_idx}"))
       else
         p.resolve(log.last)
       end

@@ -140,7 +140,7 @@ module ClientConnection
     result = socket.connect_nonblock addr, exception: false
     handle_connect_result(result, socket, host, port, promise)
   rescue StandardError => e
-    promise.error(e)
+    promise.reject(e)
   end
 
   # Handles result of asynchronous connection

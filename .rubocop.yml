@@ -32,3 +32,6 @@ Metrics/AbcSize:
 
 Style/MixinUsage:
   Enabled: false
+
+Style/MultilineBlockChain:
+  Enabled: false

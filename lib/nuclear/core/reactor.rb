@@ -94,11 +94,13 @@ module Reactor
   end
 
   def reset!
-    orig_verbose, $VERBOSE = $VERBOSE, nil
+    orig_verbose = $VERBOSE
+    $VERBOSE = nil
     MODULE.const_set(:Selector, NIO::Selector.new(nil))
-    $VERBOSE = orig_verbose
     TimerGroup.reset!
     NextTickOps.clear
+  ensure
+    $VERBOSE = orig_verbose
   end
 
   private

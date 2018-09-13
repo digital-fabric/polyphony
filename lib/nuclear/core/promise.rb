@@ -11,6 +11,7 @@ extend import('./reactor')
 class Promise
   # Fiber associated
   attr_accessor :fiber
+  attr_writer :fulfilled_handler, :rejected_handler
 
   # Initializes a new Promise, passing self to the given block. The following
   # options are accepted:
@@ -19,45 +20,16 @@ class Promise
   #   :then           callback for successful completion
   #   :catch          callback for error
   #   :timeout        timeout in seconds
-  #   :link           promise to link to for sequential execution
   #
-  # The given block will be executed immediately, unless the promise is chained
-  # to another promise using :link, in which case the block will be executed
-  # once the other promise is completed
   # @param opts [Hash] options
-  def initialize(opts = {}, &block)
+  def initialize(opts = {})
     @pending = true
     @recurring = opts[:recurring]
 
-    @then = opts[:then]
-    @catch = opts[:catch]
+    @fulfilled_handler = opts[:then]
+    @rejected_handler  = opts[:catch]
     timeout(opts[:timeout]) if opts[:timeout]
-    if opts[:link]
-      chain_to(opts[:link], &block)
-    elsif block_given?
-      yield self
-    end
-  end
-
-  # Chains the promise to another promise, with the given block executed once
-  # the other promise has resolved
-  def chain_to(promise, &block)
-    promise.chain(self)
-    @action = block
-  end
-
-  # Chain another promise to be executed once the promise is resolved
-  # @param promise [Promise] subsequent promise
-  # @return [void]
-  def chain(promise)
-    @next ? @next.chain(promise) : (@next = promise)
-  end
-
-  # Runs the action block for a promise that was chained (that is the block
-  # that was passed to Promise.new)
-  # @return [void]
-  def run
-    @action&.(self)
+    yield(self) if block_given?
   end
 
   # Returns true if the promise is not completed (or is recurring)
@@ -75,27 +47,27 @@ class Promise
   # Returns true if the promise is completed
   # @return [Boolean]
   def completed?
-    !@recurring && (@resolved || @errored)
+    !@recurring && (@fulfilled || @rejected)
   end
 
   # Returns resolved value/error if promise is completed
   # @return [any]
   def result
-    (@resolved || @errored) && @value
+    (@fulfilled || @rejected) && @value
   end
 
   # Returns resolved value/error, clearing it
   # @return [any]
   def clear_result
-    @resolved = false
-    @errored = false
+    @fulfilled = false
+    @rejected = false
     @value
   end
 
   # Resolves the promise with the given value
   # @return [void]
   def resolve(value = nil)
-    @resolved = true
+    @fulfilled = true
     complete(value)
   end
 
@@ -106,8 +78,8 @@ class Promise
   # Completes the promise with the given error
   # @param err [Exception] raised error
   # @return [void]
-  def error(err)
-    @errored = true
+  def reject(err)
+    @rejected = true
     complete(err)
   end
 
@@ -122,11 +94,9 @@ class Promise
     if @fiber
       @fiber.resume(value)
     else
-      (value.is_a?(Exception) ? @catch : @then)&.(value)
+      proc = value.is_a?(Exception) ? @rejected_handler : @fulfilled_handler
+      proc&.(value)
     end
-
-    # run next promised action (if chained)
-    @next&.run
   end
 
   # Sets the callback for successful completion
@@ -134,13 +104,11 @@ class Promise
   def then(proc = nil, &block)
     Promise.new do |p|
       block ||= proc
-      set_then  { |v| resolve_then(p, block, v) }
-      set_catch { |e| p.error(e) }
+      @fulfilled_handler = proc { |v| resolve_then(p, block, v) }
+      @rejected_handler  = proc { |e| p.reject(e) }
 
-      @then.(@value) if @resolved
+      @fulfilled_handler.(@value) if @fulfilled
     end
-
-    # @then = proc || block
   end
 
   # Sets the callback for failed (error) completion
@@ -148,34 +116,19 @@ class Promise
   def catch(proc = nil, &block)
     Promise.new do |p|
       block ||= proc
-      set_then  { |v| p.resolve(v) }
-      set_catch(&block)
+      @fulfilled_handler = proc { |v| p.resolve(v) }
+      @rejected_handler  = block
     end
-  end
-
-  def set_then(&block)
-    @then = block
-  end
-
-  def set_catch(&block)
-    @catch = block
   end
 
   def resolve_then(promise, block, value)
     r = block.(value)
     if r.is_a?(Promise)
-      r.set_then  { |v| promise.resolve(v) }
-      r.set_catch { |e| promise.error(e) }
+      r.fulfilled_handler = proc { |v| promise.resolve(v) }
+      r.rejected_handler  = proc { |e| promise.reject(e) }
     else
       promise.resolve(value)
     end
-  end
-
-  # Sets the callback for both success and error completion
-  def on_complete(proc = nil, &block)
-    @then = @catch = proc || block
-    @then.(@value) if @resolved
-    @catch.(@value) if @errored
   end
 
   # Converts the promise into a Proc. This allows a promise to be coerced into
@@ -197,7 +150,7 @@ class Promise
   def timeout(interval, &block)
     @timeout = MODULE.timeout(interval) do
       block&.()
-      error(TimeoutError.new(TIMEOUT_MESSAGE))
+      reject(TimeoutError.new(TIMEOUT_MESSAGE))
     end
   end
 

@@ -42,7 +42,7 @@ module Connection
   def connect_error
     remove_monitor
     @io = nil
-    @connect_promise.error PG::Error.new(@connection.error_message)
+    @connect_promise.reject PG::Error.new(@connection.error_message)
   end
 
   # Finalizes connection to PG server
@@ -91,7 +91,7 @@ module Query
   # error is raised, the transaction is rolled back and the error is raised
   # again.
   # @return [void]
-  def transaction(&block)
+  def transaction
     raise MSG_ASYNC_TRANSACTION unless Fiber.current.async?
 
     began = false
@@ -116,7 +116,6 @@ module Query
   def send_query(args, promise)
     if @connected
       @query_promise = promise
-      puts "sql: #{args.first}"
       @connection.send_query(*args)
     else
       connect.then { send_query(args, promise) }
@@ -147,7 +146,7 @@ module Query
     result.check
     @query_promise.resolve(result)
   rescue StandardError => e
-    @query_promise.error(e)
+    @query_promise.reject(e)
   ensure
     result.clear
   end
@@ -204,9 +203,9 @@ class ImprovedTypeMap < ::PG::BasicTypeMapForResults
     sql = supports_ranges?(connection) ? SQL_WITH_RANGES : SQL_WITHOUT_RANGES
     result = connection.exec(sql)
 
-    CODER_ARRAY.each_with_object([]) do |h, (format, direction, arraycoder)|
-      h[format] ||= {}
-      h[format][direction] = coder_map(result, format, direction, arraycoder)
+    CODER_ARRAY.each_with_object([]) do |(format, direction, arraycoder), a|
+      a[format] ||= {}
+      a[format][direction] = coder_map(result, format, direction, arraycoder)
     end
   end
 

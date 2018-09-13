@@ -38,7 +38,6 @@ def parse_request_url(request)
   request[:query] = q.split('&').each_with_object({}) do |kv, h|
     k, v = kv.split('=')
     h[k.to_sym] = URI.decode_www_form_component(v)
-    h
   end
 end
 

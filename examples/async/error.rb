@@ -6,7 +6,7 @@ Nuclear = import('../../lib/nuclear')
 
 def timeout(t)
   Nuclear.promise do |p|
-    Nuclear.timeout(t) { p.error(RuntimeError.new("hello")) }
+    Nuclear.timeout(t) { p.reject(RuntimeError.new("hello")) }
   end
 end
 

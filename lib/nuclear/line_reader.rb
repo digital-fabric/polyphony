@@ -77,6 +77,6 @@ class LineReader
     return unless @lines_promise
 
     @lines_promise.stop
-    @lines_promise.error(err)
+    @lines_promise.reject(err)
   end
 end
