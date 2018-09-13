@@ -7,7 +7,7 @@ export_default :Nuclear
 Nuclear = import('./nuclear/core')
 
 module Nuclear
-  VERSION = '0.6'
+  VERSION = '0.7'
 
   Promise       = import('./nuclear/core/promise')
   IO            = import('./nuclear/io')

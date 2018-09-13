@@ -1,3 +1,6 @@
+0.7 2018-09-13
+--------------
+
 * Implement resource pool
 * transaction method for pg cient
 * Async connect for pg client
