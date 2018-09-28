@@ -8,7 +8,11 @@ require 'nio'
 Timers = import('./timers')
 
 # Operations to perform on next loop iteration
-NextTickOps = []
+NextTickQueue = []
+
+# Operations to perform submitted from other threads
+XThreadQueue = []
+XThreadMutex = Mutex.new
 
 # Default selector
 Selector = NIO::Selector.new(nil)
@@ -42,7 +46,17 @@ module Reactor
   # Schedules an operation to be performed in the next reactor iteration
   # @return [void]
   def next_tick(&block)
-    NextTickOps << block
+    NextTickQueue << block
+  end
+
+  def reset!
+    orig_verbose = $VERBOSE
+    $VERBOSE = nil
+    MODULE.const_set(:Selector, NIO::Selector.new(nil))
+    TimerGroup.reset!
+    NextTickQueue.clear
+  ensure
+    $VERBOSE = orig_verbose
   end
 
   # Runs the default selector loop
@@ -61,7 +75,7 @@ module Reactor
   # Returns true if any ios are monitored are any timers are pending
   # @return [Boolean] should the default reactor loop
   def should_run_reactor?
-    !(Selector.empty? && TimerGroup.empty? && NextTickOps.empty?)
+    !(Selector.empty? && TimerGroup.empty? && NextTickQueue.empty?)
   end
 
   # Adds a one-shot timer
@@ -93,14 +107,11 @@ module Reactor
     Selector.registered?(io)
   end
 
-  def reset!
-    orig_verbose = $VERBOSE
-    $VERBOSE = nil
-    MODULE.const_set(:Selector, NIO::Selector.new(nil))
-    TimerGroup.reset!
-    NextTickOps.clear
-  ensure
-    $VERBOSE = orig_verbose
+  def xthread_tick(&block)
+    XThreadMutex.synchronize { XThreadQueue << block }
+    @@wakeup_t0 = Time.now
+    Selector.wakeup
+    Thread.pass
   end
 
   private
@@ -109,13 +120,24 @@ module Reactor
   # @return [void]
   def reactor_loop
     while @reactor_running && should_run_reactor?
-      NextTickOps.slice!(0..-1).each(&:call) unless NextTickOps.empty?
+      NextTickQueue.slice!(0..-1).each(&:call) unless NextTickQueue.empty?
 
       interval = TimerGroup.idle_interval
-      Selector.select(interval) { |m| m.value.(m) } unless Selector.empty?
+      count = Selector.select(interval) { |m| m.value.(m) }
 
       TimerGroup.fire unless interval.nil?
+
+      # The nio4r API doesn't make it easy to find out if wakeup was called,
+      # but here we use it as a way to signal when xthread
+      run_xthread_ops if count == 0
+        
+        # wakeup was called
     end
+  end
+
+  def run_xthread_ops
+    xthread_ops = XThreadMutex.synchronize { XThreadQueue.slice!(0..-1) }
+    xthread_ops.each(&:call)
   end
 end
 

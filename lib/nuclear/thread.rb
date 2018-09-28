@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :spawn
+export :spawn, :Cue
 
 Core  = import('./core')
 IO    = import('./io')
