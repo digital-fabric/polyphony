@@ -1,4 +1,4 @@
-require_relative './lib/nuclear'
+require_relative './lib/nuclear/version'
 
 Gem::Specification.new do |s|
   s.name        = 'nuclear'
