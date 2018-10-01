@@ -24,5 +24,5 @@ rescue => e
   puts "Got error: #{e.inspect}"
 ensure
   puts "cancelling incrementer"
-  Nuclear.cancel_timer(incrementer)
+  incrementer.stop
 end

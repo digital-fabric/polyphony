@@ -18,7 +18,7 @@ def start(socket, handler)
   ctx = connection_context(socket, handler)
   ctx[:response] = Response.new(socket) { response_did_finish(ctx) }
 
-  ctx[:parser].on_message_complete = proc { handle_request(ctx) }
+  ctx[:parser].on_message_complete = proc { Nuclear.next_tick { handle_request(ctx) } }
   ctx[:parser].on_body = proc { |chunk| handle_body_chunk(ctx, chunk) }
 
   socket.on(:data) { |data| parse_incoming_data(ctx, data) }
@@ -31,6 +31,7 @@ end
 # @return [Hash]
 def connection_context(socket, handler)
   {
+    count:    0,
     socket:   socket,
     handler:  handler,
     parser:   Http::Parser.new,
@@ -55,6 +56,7 @@ end
 # @param ctx [Hash] connection context
 # @return [void]
 def parse_incoming_data(ctx, data)
+  puts "parse_incoming_data #{ctx[:count]} #{ctx[:socket]}"
   ctx[:parser] << data
 rescue StandardError => e
   puts "HTTP 1 parsing error: #{e.inspect}"
@@ -66,6 +68,8 @@ end
 # @param ctx [Hash] connection context
 # @return [void]
 def handle_request(ctx)
+  ctx[:count] += 1
+  puts "handle_request #{ctx[:count]} #{ctx[:socket]}"
   return if ctx[:socket].opts[:can_upgrade] && upgrade_connection(ctx)
 
   ctx[:socket].opts[:can_upgrade] = false

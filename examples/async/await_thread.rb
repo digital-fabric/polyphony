@@ -16,11 +16,11 @@ end
 
 Nuclear.async do
   begin
-    timer_id = Nuclear.interval(1) { puts Time.now }
+    timer = Nuclear.interval(1) { puts Time.now }
     puts "counting to 30..."
     Nuclear.await count_to(30)
     puts "counter done"
-    Nuclear.cancel_timer(timer_id)
+    timer.stop
   rescue => e
     p e
     puts e.backtrace.join("\n")

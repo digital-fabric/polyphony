@@ -11,67 +11,44 @@ module Watching
   # Registers the underlying IO with the default reactor
   # @return [void]
   def watch_io
-    update_monitor_interests(:r)
-  end
-
-  # Creates a monitor for the given io
-  # @param io [::IO] io to monitor
-  # @param interests [Symbol] one of :r, :rw, :w
-  # @return [void]
-  def create_monitor(io, interests)
-    @monitor = Core.watch(io, interests, &method(:handle_selected))
+    update_event_mask(:r)
   end
 
   # Unregisters io with default reactor, removes monitor
   # return [void]
   def remove_monitor
-    Core.unwatch(@io)
+    @watcher.stop
     @monitor = nil
-  end
-
-  # Handles readiness monitor (this method is called by the reactor)
-  # @param monitor [Monitor] selected monitor
-  # @return [void]
-  def handle_selected(monitor)
-    case monitor.readiness
-    when :r
-      read_from_io
-    when :w
-      write_to_io
-    when :rw
-      write_to_io
-      read_from_io
-    end
   end
 
   # Updates monitor interests
   # @param interests [Symbol] one of :r, :rw, :w
   # @return [void]
-  def update_monitor_interests(interests)
-    interests = filter_interests(interests)
-    if @monitor
-      if interests.nil?
-        remove_reactor
-      elsif interests != @monitor.interests
-        @monitor.interests = interests
-      end
-    elsif interests
-      create_monitor(@io, interests)
+  def update_event_mask(mask)
+    mask = filter_event_mask(mask)
+    if @watcher
+      @watcher.event_mask = mask
+    else
+      create_monitor(@io, mask)
     end
+  end
+
+  def create_monitor(io, mask)
+    @watcher = EV::IO.new(io, mask, 
+      readable: method(:read_from_io),
+      writable: method(:write_to_io)
+    )
   end
 
   # Filters intersts according to options
   # @param interests [Symbol] one of :r, :rw, :w
   # @return [Symbol] one of :r, :rw, :w
-  def filter_interests(interests)
-    return interests unless @opts[:write_only]
-    case interests
-    when :r
-      nil
-    when :rw
-      :w
-    else
-      interests
+  def filter_event_mask(mask)
+    return mask unless @opts[:write_only]
+    case mask
+    when :r   then nil
+    when :rw  then :w
+              else mask
     end
   end
 end
@@ -152,7 +129,7 @@ module ReadWrite
   def handle_write_result(result)
     case result
     when :wait_writable
-      update_monitor_interests(:rw)
+      update_event_mask(:rw)
       false
     when nil
       connection_was_closed
@@ -168,7 +145,7 @@ module ReadWrite
   # @return [Boolean] true if write buffer is not empty
   def slice_write_buffer(written)
     if written == @write_buffer.bytesize
-      update_monitor_interests(:r)
+      update_event_mask(:r)
       @write_buffer.clear
       @callbacks[:drain]&.()
       false

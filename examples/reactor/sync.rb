@@ -5,7 +5,7 @@
 require 'modulation'
 
 Nuclear = import('../../lib/nuclear')
-import('../../lib/nuclear/test')
+# import('../../lib/nuclear/test')
 
 Nuclear.async do 
   t0 = Time.now

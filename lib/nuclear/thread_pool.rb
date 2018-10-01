@@ -8,12 +8,14 @@ IO      = import('./io')
 @size = 4
 
 def process(&block)
-  setup unless @queue
-  Core.promise { |p| @queue << [block, p] }
+  
+  setup unless @task_queue
+  EV.ref
+  Core.promise { |p| @task_queue << [block, p] }
 end
 
 def size=(size)
-  @size = size 
+  @size = size
 end
 
 def busy?
@@ -21,9 +23,22 @@ def busy?
 end
 
 def setup
-  @queue = ::Queue.new
+  @task_queue = ::Queue.new
+  @resolve_queue = ::Queue.new
 
-  @threads = (1..@size).map { Thread.new { thread_loop } }#.tap { |t| t.priority = 1 } }
+  @async_watcher = EV::Async.new { resolve_from_queue }
+  EV.unref
+
+  @threads = (1..@size).map { Thread.new { thread_loop } }
+end
+
+def resolve_from_queue
+  while !@resolve_queue.empty?
+    (promise, result, error) = @resolve_queue.pop(true)
+
+    error ? promise.reject(error) : promise.resolve(result)
+    EV.unref
+  end
 end
 
 def thread_loop
@@ -31,9 +46,11 @@ def thread_loop
 end
 
 def run_queued_task
-  (block, promise) = @queue.pop
+  (block, promise) = @task_queue.pop
   result = block.()
-  Core.xthread_tick { promise.resolve(result) }
+  @resolve_queue << [promise, result]
+  @async_watcher.signal!
 rescue StandardError=> e
-  Core.xthread_tick { promise.reject(e) }
+  @resolve_queue << [promise, nil, e]
+  @async_watcher.signal!
 end

@@ -4,6 +4,7 @@ require 'modulation'
 require 'json'
 require 'time'
 
+Nuclear = import('../../lib/nuclear')
 Server = import('../../lib/nuclear/http/server')
 
 H_SERVER = 'Server'

@@ -4,11 +4,8 @@ require 'modulation'
 
 Nuclear = import('../../lib/nuclear')
 
-t1 = Nuclear.interval(1) do
+Nuclear.interval(1) {
   puts Time.now
-end
+}
 
-Nuclear.timeout(5) do
-  t1.stop
-  puts "done with timer"
-end
+Nuclear.trap(:int) { EV.break; puts }

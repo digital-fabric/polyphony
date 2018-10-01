@@ -29,9 +29,9 @@ module Connection
     when PG::PGRES_POLLING_FAILED
       connect_error
     when PG::PGRES_POLLING_READING
-      update_monitor_interests(:r)
+      update_event_mask(:r)
     when PG::PGRES_POLLING_WRITING
-      update_monitor_interests(:w)
+      update_event_mask(:w)
     when PG::PGRES_POLLING_OK
       finalize_connection
     end
@@ -54,9 +54,7 @@ module Connection
     @connect_promise.resolve(true)
   end
 
-  # Handles socket readiness
-  # @return [void]
-  def handle_selected(_monitor)
+  def read_from_io(_monitor)
     if !@connected && @connection
       connect_async
     else

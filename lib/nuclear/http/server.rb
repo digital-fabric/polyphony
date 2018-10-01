@@ -2,7 +2,7 @@
 
 export_default :Server
 
-Net   = import('nuclear/net')
+Net   = import('../net')
 HTTP1 = import('./http1')
 HTTP2 = import('./http2')
 

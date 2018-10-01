@@ -72,6 +72,7 @@ end
 # @param socket [Net::Socket] socket
 # @return [HTTP2::Server] HTTP2 interface
 def start(socket, handler)
+  puts "start"
   ::HTTP2::Server.new.tap do |interface|
     socket.on(:data) { |data| parse_incoming_data(socket, interface, data) }
 

@@ -22,7 +22,8 @@ class Server
   def listen(opts)
     @secure_context = opts[:secure_context]
     @server = opts[:socket] || create_server_socket(opts)
-    Core.watch(@server, :r) { accept_from_socket }
+    @watcher = EV::IO.new(@server, :r, readable: proc { accept_from_socket })
+    # Core.watch(@server, :r) { accept_from_socket }
   end
 
   # Creates a server socket for listening to incoming connections
@@ -180,7 +181,7 @@ module ClientConnection
   # @param promise [Promise] connection promise
   # @return [void]
   def connect_async_pending(socket, host, port, promise)
-    @monitor = create_monitor(socket, :rw)
+    create_monitor(socket, :rw)
     @connection_pending = [socket, host, port, promise]
   end
 
@@ -197,7 +198,7 @@ module ClientConnection
   def connect_success(socket, promise)
     @io = socket
     @connected = true
-    update_monitor_interests(:r)
+    update_event_mask(:r)
     promise.resolve(socket)
   end
 
@@ -281,20 +282,19 @@ class SecureSocket < Socket
   def handle_accept_secure_handshake_result(result)
     case result
     when :wait_readable
-      update_monitor_interests(:r)
+      update_event_mask(:r)
     when :wait_writable
-      update_monitor_interests(:w)
+      update_event_mask(:w)
     else
       @pending_secure_handshake = false
-      update_monitor_interests(:r)
+      update_event_mask(:r)
       @callbacks[:handshake]&.(self)
     end
   end
 
-  # Overrides handle_selected to accept secure handshake
-  # @param monitor [NIO::Monitor] associated monitor
+  # Overrides read_from_io to accept secure handshake
   # @return [void]
-  def handle_selected(monitor)
-    @pending_secure_handshake ? accept_secure_handshake : super(monitor)
+  def read_from_io
+    @pending_secure_handshake ? accept_secure_handshake : super
   end
 end

@@ -1,43 +1,8 @@
-## Nicer interface for watching i/o:
-
-```ruby
-Reactor.watch(socket, :rw) do |readable, writable|
-  if readable
-    ...
-  end
-  if writable
-    ...
-  end
-end
-```
-
-Or maybe:
-
-```ruby
-Reactor.watch(socket,
-  read: -> { ... },
-  write: -> { ... }
-)
-```
-
-This will require a fork of nio4r, which could possibly yield a significant
-performance improvement. There's a lot of stuff there we don't need, and the
-API in general is a bit clunky.
-
 ## HTTP
 
 - client
 - rack adapter
 - binary for running rack apps
-
-## ThreadPool that runs code and returns promise
-
-```ruby
-ThreadPool = import('nuclear/thread_pool')
-
-async do
-  result = await ThreadPool.spawn { fib(100) }
-```
 
 ## PG
 
@@ -51,3 +16,51 @@ async do
   https://github.com/redis/redis-rb#sentinel-support
 - support for SSL
 - specify connection using URL
+
+## UDP socket
+
+```ruby
+socket = UDP.new
+
+socket.on(:message) do |msg, info|
+  puts "got #{msg} from #{info[:address]}:#{info[:port]}"
+  socket.send("reply", **info)
+end
+
+socket.on(:listen) { puts "listening..." }
+
+socket.bind(1234) # localhost port 1234
+```
+
+## DNS client
+
+```ruby
+ip_address = await DNS.lookup('google.com', 'A')
+```
+
+Prior art:
+
+- https://github.com/alexdalitz/dnsruby
+- https://github.com/eventmachine/eventmachine/blob/master/lib/em/resolver.rb
+- https://github.com/gmodarelli/em-resolv-replace/blob/master/lib/em-dns-resolver.rb
+- https://github.com/socketry/async-dns
+
+### DNS server
+
+```ruby
+Server = import('../../lib/nuclear/dns/server')
+
+server = Server.new do |transaction|
+  puts "got query from #{transaction.info[:client_ip_address]}"
+  transaction.questions.each do |q|
+    respond(transaction, q[:domain], q[:resource_class])
+  end
+end
+
+server.listen(port: 5300)
+puts "listening on port 5300"
+```
+
+Prior art:
+
+- https://github.com/socketry/async-dns

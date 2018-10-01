@@ -3,13 +3,12 @@
 export_default :Async
 
 require 'fiber'
+require_relative '../../ev'
 
 FiberPool = import('./fiber_pool')
 Promise   = import('./promise')
 
 import('../ext/fiber')
-
-extend import('./reactor')
 
 # Async methods
 module Async
@@ -68,8 +67,8 @@ module Async
   # @return [Promise] promise
   def pulse(interval)
     Promise.new(recurring: true) do |p|
-      timer_id = MODULE.interval(interval, &p)
-      p.on_stop { MODULE.cancel_timer(timer_id) }
+      timer = EV.interval(interval, &p)
+      p.on_stop { timer.stop }
     end
   end
 
@@ -88,7 +87,7 @@ module Async
   # @param duration [Float] duration in seconds
   # @return [Promise] promise
   def sleep(duration)
-    Promise.new { |p| MODULE.timeout(duration, &p) }
+    Promise.new { |p| EV.timeout(duration, &p) }
   end
 
   # Creates a promise waiting for 1 or more of the given promises in parallel

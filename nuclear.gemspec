@@ -14,9 +14,10 @@ Gem::Specification.new do |s|
   }
   s.rdoc_options = ["--title", "Nuclear", "--main", "README.md"]
   s.extra_rdoc_files = ["README.md"]
+  s.extensions = ["ext/ev/extconf.rb"]
+  s.require_paths = ["lib"]
 
   s.add_runtime_dependency 'modulation',      '0.15'
-  s.add_runtime_dependency 'nio4r',           '2.3.1'
   
   s.add_runtime_dependency 'http_parser.rb',  '0.6.0'
   s.add_runtime_dependency 'http-2',          '0.10.0'

@@ -5,23 +5,6 @@ export :spawn, :Cue
 Core  = import('./core')
 IO    = import('./io')
 
-# Cross-thread readiness cue
-class Cue
-  # Initializes the cue
-  def initialize(&block)
-    @i, @o = ::IO.pipe
-    IO.new(@i).on(:close) do
-      @i.close
-      block.()
-    end
-  end
-
-  # Signals the cue, causing the block given in #initializes to be called
-  def signal!
-    @o.close
-  end
-end
-
 # Runs the given block in a separate thread, returning a promise fulfilled
 # once the thread is done. The signalling for the thread is done using an
 # I/O pipe.
@@ -29,9 +12,14 @@ end
 # @return [Core::Promise]
 def spawn(opts = {}, &block)
   Core.promise(opts) do |p|
-    ctx = { cue: Cue.new { p.complete(ctx[:value]) } }
+    ctx = { watcher: EV::Async.new { complete_thread_promise(p, ctx) } }
     Thread.new { promised_thread(ctx, &block) }
   end
+end
+
+def complete_thread_promise(p, ctx)
+  p.complete(ctx[:value])
+  ctx[:watcher].stop
 end
 
 # Runs the given block, passing the result or exception to the given context
@@ -43,5 +31,5 @@ rescue StandardError => e
   puts "error: #{e}"
   ctx[:value] = e
 ensure
-  ctx[:cue].signal!
+  ctx[:watcher].signal!
 end

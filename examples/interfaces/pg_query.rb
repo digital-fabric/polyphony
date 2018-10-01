@@ -5,10 +5,6 @@ require 'modulation'
 Nuclear = import('../../lib/nuclear')
 Postgres =  import('../../lib/nuclear/interfaces/postgres')
 
-def now
-  Process.clock_gettime(Process::CLOCK_MONOTONIC)
-end
-
 DB = Postgres::Client.new(
   host:     '/tmp',
   user:     'reality',

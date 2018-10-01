@@ -84,7 +84,7 @@ class Response
   # @param _finish [Boolean] whether the response is finished
   # @return [void]
   def send(data, _finish)
-    @socket << data
+    @socket << data if data
   end
 
   # Sends status code and headers
