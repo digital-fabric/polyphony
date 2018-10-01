@@ -18,7 +18,7 @@ def start(socket, handler)
   ctx = connection_context(socket, handler)
   ctx[:response] = Response.new(socket) { response_did_finish(ctx) }
 
-  ctx[:parser].on_message_complete = proc { Nuclear.next_tick { handle_request(ctx) } }
+  ctx[:parser].on_message_complete = proc { handle_request(ctx) }
   ctx[:parser].on_body = proc { |chunk| handle_body_chunk(ctx, chunk) }
 
   socket.on(:data) { |data| parse_incoming_data(ctx, data) }
