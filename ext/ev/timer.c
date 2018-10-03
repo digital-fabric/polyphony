@@ -1,5 +1,11 @@
 #include "ev.h"
 
+struct EV_Timer
+{
+    struct ev_timer ev_timer;
+    VALUE callback;
+};
+
 static VALUE mEV = Qnil;
 static VALUE cEV_Timer = Qnil;
 
@@ -58,10 +64,10 @@ static VALUE EV_Timer_initialize(VALUE self, VALUE after, VALUE repeat)
 
   ev_timer_init(&timer->ev_timer, EV_Timer_callback, NUM2DBL(after), NUM2DBL(repeat));
 
-  timer->self = self;
   timer->ev_timer.data = (void *)timer;
 
   ev_timer_start(EV_DEFAULT, &timer->ev_timer);
+  EV_add_watcher_ref(self);
 
   return Qnil;
 }
@@ -79,6 +85,7 @@ static VALUE EV_Timer_start(VALUE self)
   Data_Get_Struct(self, struct EV_Timer, timer);
 
   ev_timer_start(EV_DEFAULT, &timer->ev_timer);
+  EV_add_watcher_ref(self);
 
   return Qnil;
 }
@@ -89,6 +96,7 @@ static VALUE EV_Timer_stop(VALUE self)
   Data_Get_Struct(self, struct EV_Timer, timer);
 
   ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
+  EV_del_watcher_ref(self);
 
   return Qnil;
 }

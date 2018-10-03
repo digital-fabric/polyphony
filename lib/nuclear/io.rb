@@ -17,10 +17,10 @@ module Watching
   # Unregisters io with default reactor, removes monitor
   # return [void]
   def remove_watcher
-    @watcher_r.stop
+    @watcher_r.cancel
     @watcher_r = nil
 
-    @watcher_w.stop
+    @watcher_w.cancel
     @watcher_w = nil
   end
 
@@ -174,8 +174,6 @@ class IO < Stream
     @stdout ||= new(STDOUT, write_only: true)
   end
 
-  @@active_ios = {}
-
   include Watching
   include ReadWrite
 
@@ -188,8 +186,6 @@ class IO < Stream
     @open = io
     @read_buf = (+"")
     watch_io if io && opts[:watch] != false
-
-    @@active_ios[object_id] = self
   end
 
   # Returns raw (plain) IO object
@@ -236,7 +232,6 @@ class IO < Stream
     @io = nil
     @open = false
     @connected = false
-    @@active_ios.delete(object_id)
   end
 
   def cleanup_buffers

@@ -2,7 +2,6 @@
 
 struct EV_IO
 {
-    VALUE self;
     int event_mask;
     int active;
     struct ev_io ev_io;
@@ -20,6 +19,7 @@ static VALUE EV_IO_initialize(VALUE self, VALUE io, VALUE event_mask, VALUE star
 
 static VALUE EV_IO_start(VALUE self);
 static VALUE EV_IO_stop(VALUE self);
+static VALUE EV_IO_cancel(VALUE self);
 
 void EV_IO_callback(ev_loop *ev_loop, struct ev_io *io, int revents);
 
@@ -46,6 +46,7 @@ void Init_EV_IO()
   rb_define_method(cEV_IO, "initialize", EV_IO_initialize, 3);
   rb_define_method(cEV_IO, "start", EV_IO_start, 0);
   rb_define_method(cEV_IO, "stop", EV_IO_stop, 0);
+  rb_define_method(cEV_IO, "cancel", EV_IO_cancel, 0);
   // rb_define_method(cEV_IO, "event_mask", EV_IO_event_mask, 0);
   // rb_define_method(cEV_IO, "event_mask=", EV_IO_set_event_mask, 1);
 
@@ -83,16 +84,14 @@ static VALUE EV_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask, VALUE 
 
   Data_Get_Struct(self, struct EV_IO, io);
 
+  EV_add_watcher_ref(self);
+
   io->event_mask = EV_IO_symbol2event_mask(event_mask);
   io->callback = rb_block_proc();
 
   GetOpenFile(rb_convert_type(io_obj, T_FILE, "IO", "to_io"), fptr);
   ev_io_init(&io->ev_io, EV_IO_callback, FPTR_TO_FD(fptr), io->event_mask);
 
-  // rb_ivar_set(self, rb_intern("io"), io_obj);
-  // rb_ivar_set(self, rb_intern("event_mask"), event_mask);
-
-  io->self = self;
   io->ev_io.data = (void *)io;
 
   io->active = RTEST(start);
@@ -125,8 +124,7 @@ static VALUE EV_IO_start(VALUE self)
   return Qnil;
 }
 
-static VALUE EV_IO_stop(VALUE self)
-{
+static VALUE EV_IO_stop(VALUE self) {
   struct EV_IO *io;
   Data_Get_Struct(self, struct EV_IO, io);
 
@@ -136,6 +134,11 @@ static VALUE EV_IO_stop(VALUE self)
   }
 
   return Qnil;
+}
+
+static VALUE EV_IO_cancel(VALUE self) {
+  EV_del_watcher_ref(self);
+  return EV_IO_stop(self);
 }
 
 /* Internal C functions */

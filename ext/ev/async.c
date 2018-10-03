@@ -1,5 +1,11 @@
 #include "ev.h"
 
+struct EV_Async
+{
+    struct ev_async ev_async;
+    VALUE callback;
+};
+
 static VALUE mEV = Qnil;
 static VALUE cEV_Async = Qnil;
 
@@ -61,10 +67,10 @@ static VALUE EV_Async_initialize(VALUE self)
 
   ev_async_init(&async->ev_async, EV_Async_callback);
 
-  async->self = self;
   async->ev_async.data = (void *)async;
 
   ev_async_start(EV_DEFAULT, &async->ev_async);
+  EV_add_watcher_ref(self);
 
   return Qnil;
 }
@@ -82,6 +88,7 @@ static VALUE EV_Async_start(VALUE self)
   Data_Get_Struct(self, struct EV_Async, async);
 
   ev_async_start(EV_DEFAULT, &async->ev_async);
+  EV_add_watcher_ref(self);
 
   return Qnil;
 }
@@ -92,6 +99,7 @@ static VALUE EV_Async_stop(VALUE self)
   Data_Get_Struct(self, struct EV_Async, async);
 
   ev_async_stop(EV_DEFAULT, &async->ev_async);
+  EV_del_watcher_ref(self);
 
   return Qnil;
 }

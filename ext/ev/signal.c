@@ -1,5 +1,13 @@
 #include "ev.h"
 
+struct EV_Signal
+{
+    VALUE self;
+    int signum;
+    struct ev_signal ev_signal;
+    VALUE callback;
+};
+
 static VALUE mEV = Qnil;
 static VALUE cEV_Signal = Qnil;
 
@@ -62,10 +70,10 @@ static VALUE EV_Signal_initialize(VALUE self, VALUE sig)
 
   ev_signal_init(&signal->ev_signal, EV_Signal_callback, signal->signum);
 
-  signal->self = self;
   signal->ev_signal.data = (void *)signal;
 
   ev_signal_start(EV_DEFAULT, &signal->ev_signal);
+  EV_add_watcher_ref(self);
 
   return Qnil;
 }
@@ -82,6 +90,7 @@ static VALUE EV_Signal_start(VALUE self)
   Data_Get_Struct(self, struct EV_Signal, signal);
 
   ev_signal_start(EV_DEFAULT, &signal->ev_signal);
+  EV_add_watcher_ref(self);
 
   return Qnil;
 }
@@ -92,6 +101,7 @@ static VALUE EV_Signal_stop(VALUE self)
   Data_Get_Struct(self, struct EV_Signal, signal);
 
   ev_signal_stop(EV_DEFAULT, &signal->ev_signal);
+  EV_del_watcher_ref(self);
 
   return Qnil;
 }
