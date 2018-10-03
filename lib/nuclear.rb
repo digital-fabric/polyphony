@@ -38,6 +38,12 @@ module Nuclear
   end
 end
 
-at_exit do
+def auto_run
+  Nuclear.trap(:int) { puts; EV.break }
   EV.run
+rescue Exception => e
+  puts "Exception: #{e}"
+  puts e.backtrace.join("\n")
 end
+
+at_exit { auto_run }

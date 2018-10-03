@@ -11,33 +11,22 @@ module Watching
   # Registers the underlying IO with the default reactor
   # @return [void]
   def watch_io
-    update_event_mask(:r)
+    create_watcher(@io, true, false)
   end
 
   # Unregisters io with default reactor, removes monitor
   # return [void]
-  def remove_monitor
-    @watcher.stop
-    @monitor = nil
+  def remove_watcher
+    @watcher_r.stop
+    @watcher_r = nil
+
+    @watcher_w.stop
+    @watcher_w = nil
   end
 
-  # Updates monitor interests
-  # @param interests [Symbol] one of :r, :rw, :w
-  # @return [void]
-  def update_event_mask(mask)
-    mask = filter_event_mask(mask)
-    if @watcher
-      @watcher.event_mask = mask
-    else
-      create_monitor(@io, mask)
-    end
-  end
-
-  def create_monitor(io, mask)
-    @watcher = EV::IO.new(io, mask, 
-      readable: method(:read_from_io),
-      writable: method(:write_to_io)
-    )
+  def create_watcher(io, read, write)
+    @watcher_r = EV::IO.new(io, :r, read) { read_from_io }
+    @watcher_w = EV::IO.new(io, :w, write) { write_to_io }
   end
 
   # Filters intersts according to options
@@ -86,7 +75,7 @@ module ReadWrite
   # @return [void]
   def read_from_io
     while @io
-      result = @io.read_nonblock(READ_MAX_CHUNK_SIZE, NO_EXCEPTION_OPTS)
+      result = @io.read_nonblock(READ_MAX_CHUNK_SIZE, @read_buf, NO_EXCEPTION_OPTS)
       break unless handle_read_result(result)
     end
   rescue StandardError => e
@@ -129,7 +118,7 @@ module ReadWrite
   def handle_write_result(result)
     case result
     when :wait_writable
-      update_event_mask(:rw)
+      @watcher_w.start
       false
     when nil
       connection_was_closed
@@ -145,7 +134,7 @@ module ReadWrite
   # @return [Boolean] true if write buffer is not empty
   def slice_write_buffer(written)
     if written == @write_buffer.bytesize
-      update_event_mask(:r)
+      @watcher_w.stop
       @write_buffer.clear
       @callbacks[:drain]&.()
       false
@@ -185,6 +174,8 @@ class IO < Stream
     @stdout ||= new(STDOUT, write_only: true)
   end
 
+  @@active_ios = {}
+
   include Watching
   include ReadWrite
 
@@ -195,7 +186,10 @@ class IO < Stream
     super(opts)
     @io = io
     @open = io
+    @read_buf = (+"")
     watch_io if io && opts[:watch] != false
+
+    @@active_ios[object_id] = self
   end
 
   # Returns raw (plain) IO object
@@ -237,11 +231,12 @@ class IO < Stream
   end
 
   def cleanup_io
-    remove_monitor
+    remove_watcher
     @io.close
     @io = nil
     @open = false
     @connected = false
+    @@active_ios.delete(object_id)
   end
 
   def cleanup_buffers

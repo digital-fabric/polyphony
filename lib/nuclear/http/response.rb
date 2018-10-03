@@ -56,6 +56,8 @@ class Response
     end
   end
 
+  S_CONTENT_LENGTH = 'Content-Length'
+
   # Writes response body to connection
   # @param data [String] response body
   # @param finish [Boolean] whether to finish response
@@ -64,7 +66,7 @@ class Response
     if @headers_sent
       send(data, finish)
     else
-      set_header('Content-Length', data.bytesize) if data && finish
+      set_header(S_CONTENT_LENGTH, data.bytesize) if data && finish
       send_headers_and_body(data, finish)
     end
   end

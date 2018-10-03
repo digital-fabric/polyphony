@@ -22,8 +22,7 @@ class Server
   def listen(opts)
     @secure_context = opts[:secure_context]
     @server = opts[:socket] || create_server_socket(opts)
-    @watcher = EV::IO.new(@server, :r, readable: proc { accept_from_socket })
-    # Core.watch(@server, :r) { accept_from_socket }
+    @watcher = EV::IO.new(@server, :r, true) { accept_from_socket }
   end
 
   # Creates a server socket for listening to incoming connections
@@ -181,7 +180,7 @@ module ClientConnection
   # @param promise [Promise] connection promise
   # @return [void]
   def connect_async_pending(socket, host, port, promise)
-    create_monitor(socket, :rw)
+    create_watcher(socket, :rw)
     @connection_pending = [socket, host, port, promise]
   end
 
@@ -282,12 +281,13 @@ class SecureSocket < Socket
   def handle_accept_secure_handshake_result(result)
     case result
     when :wait_readable
-      update_event_mask(:r)
+      @watcher_r.start
     when :wait_writable
-      update_event_mask(:w)
+      @watcher_w.start
     else
       @pending_secure_handshake = false
-      update_event_mask(:r)
+      @watcher_r.start
+      @watcher_w.stop
       @callbacks[:handshake]&.(self)
     end
   end

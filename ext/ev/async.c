@@ -45,6 +45,7 @@ static void EV_Async_mark(struct EV_Async *async)
 
 static void EV_Async_free(struct EV_Async *async)
 {
+  ev_async_stop(EV_DEFAULT, &async->ev_async);
   xfree(async);
 }
 

@@ -10,15 +10,6 @@
 #include "ruby/io.h"
 #include "libev.h"
 
-struct EV_IO
-{
-    VALUE self;
-    int event_mask;
-    struct ev_io ev_io;
-    VALUE readable_callback;
-    VALUE writable_callback;
-};
-
 struct EV_Timer
 {
     VALUE self;

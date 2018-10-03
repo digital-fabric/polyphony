@@ -42,6 +42,7 @@ static void EV_Signal_mark(struct EV_Signal *signal)
 
 static void EV_Signal_free(struct EV_Signal *signal)
 {
+  ev_signal_stop(EV_DEFAULT, &signal->ev_signal);
   xfree(signal);
 }
 

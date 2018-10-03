@@ -42,6 +42,7 @@ static void EV_Timer_mark(struct EV_Timer *timer)
 
 static void EV_Timer_free(struct EV_Timer *timer)
 {
+  ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
   xfree(timer);
 }
 
@@ -53,9 +54,7 @@ static VALUE EV_Timer_initialize(VALUE self, VALUE after, VALUE repeat)
 
   Data_Get_Struct(self, struct EV_Timer, timer);
 
-  if (rb_block_given_p()) {
-    timer->callback = rb_block_proc();
-  }
+  timer->callback = rb_block_proc();
 
   ev_timer_init(&timer->ev_timer, EV_Timer_callback, NUM2DBL(after), NUM2DBL(repeat));
 

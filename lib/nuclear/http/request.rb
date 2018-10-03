@@ -27,16 +27,20 @@ def prepare(request)
   parse_body(request)
 end
 
+S_EMPTY     = ''
+S_AMPERSAND = '&'
+S_EQUAL     = '='
+
 # Parses path, query from request_url
 # @param request [Hash]
 # @return [void]
 def parse_request_url(request)
-  u = URI.parse(request[:request_url] || '')
+  u = URI.parse(request[:request_url] || S_EMPTY)
   request[:path] = u.path
 
   return unless (q = u.query)
-  request[:query] = q.split('&').each_with_object({}) do |kv, h|
-    k, v = kv.split('=')
+  request[:query] = q.split(S_AMPERSAND).each_with_object({}) do |kv, h|
+    k, v = kv.split(S_EQUAL)
     h[k.to_sym] = URI.decode_www_form_component(v)
   end
 end
