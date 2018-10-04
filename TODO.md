@@ -1,5 +1,9 @@
 ## HTTP
 
+- integrate `http_parser.rb` gem, with better suited API:
+  - parser should provide `Request`-compatible API:
+  - go for minimum of allocations, use symbols as hash keys for 
+
 - client
 - rack adapter
 - binary for running rack apps

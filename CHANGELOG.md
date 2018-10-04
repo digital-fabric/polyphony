@@ -1,3 +1,10 @@
+0.8 2018-10-04
+--------------
+
+* Replace nio4r with in-house extension based on libev, with better API,
+  better performance, support for IO, timer, signal and async watchers
+* Fix mem leak coming from nio4r (probably related to code in Selector#select)
+
 0.7 2018-09-13
 --------------
 
