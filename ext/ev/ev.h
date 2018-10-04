@@ -1,10 +1,5 @@
-/*
- * Copyright (c) 2011 Tony Arcieri. Distributed under the MIT License. See
- * LICENSE.txt for further details.
- */
-
-#ifndef NUCLEAR_H
-#define NUCLEAR_H
+#ifndef EV_H
+#define EV_H
 
 #include "ruby.h"
 #include "ruby/io.h"
@@ -19,4 +14,4 @@ void EV_del_watcher_ref(VALUE obj);
 # define FPTR_TO_FD(fptr) fptr->fd
 #endif /* GetReadFile */
 
-#endif /* NUCLEAR_H */
+#endif /* EV_H */

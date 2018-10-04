@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2011 Tony Arcieri. Distributed under the MIT License. See
- * LICENSE.txt for further details.
- */
-
 #include "ev.h"
 
 static VALUE mEV = Qnil;
