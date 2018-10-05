@@ -12,9 +12,9 @@ module Connection
   # Initiates an asynchronous connection to a PG server, returning a promise
   # @return [Promise]
   def connect
-    close if @raw_io
     @connection = PG::Connection.connect_start(@opts)
     @io = @connection.socket_io
+    create_watcher(@io, false, false)
 
     Core.promise do |p|
       @connect_promise = p
@@ -25,14 +25,16 @@ module Connection
   # Continues connection to PG server
   # @return [void]
   def connect_async
-    case @connection.connect_poll
+    res = @connection.connect_poll
+    case res
     when PG::PGRES_POLLING_FAILED
       connect_error
     when PG::PGRES_POLLING_READING
-      update_event_mask(:r)
+      @watcher_r.start
     when PG::PGRES_POLLING_WRITING
-      update_event_mask(:w)
+      @watcher_w.start
     when PG::PGRES_POLLING_OK
+      @watcher_w.stop
       finalize_connection
     end
   end
@@ -40,7 +42,7 @@ module Connection
   # Handles connection error
   # @return [void]
   def connect_error
-    remove_monitor
+    remove_watcher
     @io = nil
     @connect_promise.reject PG::Error.new(@connection.error_message)
   end
@@ -52,14 +54,6 @@ module Connection
     @connection.setnonblocking(true)
     set_type_map
     @connect_promise.resolve(true)
-  end
-
-  def read_from_io(_monitor)
-    if !@connected && @connection
-      connect_async
-    else
-      super
-    end
   end
 end
 
@@ -120,9 +114,17 @@ module Query
     end
   end
 
+  def read_from_io
+    if !@connected && @connection
+      connect_async
+    else
+      read_from_io_for_query
+    end
+  end
+
   # Consumes input from connection, resolving query result if applicable
   # @return [void]
-  def read_from_io
+  def read_from_io_for_query
     @connection.consume_input
     return if @connection.is_busy
 
@@ -157,6 +159,7 @@ class Client < IO
 
   # Initializes connection
   def initialize(opts)
+    super(nil, opts.merge(watch: false))
     @opts = opts
     @queue = []
     @busy = false

@@ -18,6 +18,7 @@ def get_records
   puts "got #{res.ntuples} records: #{res.to_a}"
 rescue => e
   puts "got error: #{e.inspect}"
+  puts e.backtrace.join("\n")
 end
 
 Nuclear.async { get_records }
