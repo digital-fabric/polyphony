@@ -198,7 +198,10 @@ class IO < Stream
   # @param err [Exception] raised error
   # @return [void]
   def close_on_error(err)
-    unless err.is_a?(Errno::ECONNRESET) || err.is_a?(Errno::EPIPE)
+    case err
+    when OpenSSL::OpenSSLError, SystemCallError
+      # do nothing
+    else
       puts "error: #{err.inspect}"
       puts err.backtrace.join("\n")
       @callbacks[:error]&.(err)
