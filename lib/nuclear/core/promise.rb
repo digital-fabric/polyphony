@@ -3,6 +3,7 @@
 export_default :Promise
 
 require 'fiber'
+require_relative '../../ev_ext'
 
 # Encapsulates the eventual completion or failure of an asynchronous operation
 # (loosely based on the Javascript Promise API
@@ -146,7 +147,7 @@ class Promise
   # timeout, allowing for the cancellation of any pending operations
   # @return [void]
   def timeout(interval, &block)
-    @timeout = EV.timeout(interval) do
+    @timeout = EV::Timer.new(interval, 0) do
       block&.()
       reject(TimeoutError.new(TIMEOUT_MESSAGE))
     end
