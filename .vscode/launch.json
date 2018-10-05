@@ -12,11 +12,11 @@
       "program": "${workspaceRoot}/test/test_promise.rb"
     },
     {
-      "name": "Debug Local File",
+      "name": "pg client",
       "type": "Ruby",
       "request": "launch",
       "cwd": "${workspaceRoot}",
-      "program": "${workspaceRoot}/main.rb"
+      "program": "${workspaceRoot}/examples/interfaces/pg_client.rb"
     },
     {
       "name": "Listen for rdebug-ide",
