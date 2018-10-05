@@ -51,6 +51,11 @@ class HTTP2Response < Response
     headers.each { |k, v| @headers[k.to_s] = v.to_s }
   end
 
+  def write(data, finish = nil)
+    send_headers unless @headers_sent
+    send(data, finish)
+  end
+
   # Sends status code and headers
   # @return [void]
   def send_headers
@@ -64,7 +69,11 @@ class HTTP2Response < Response
   # @param finish [Boolean] whether the response is finished
   # @return [void]
   def send(data, finish)
-    @stream.data(data, end_stream: finish)
+    if data
+      @stream.data(data, end_stream: finish)
+    elsif finish
+      @stream.close
+    end
   end
 end
 
@@ -72,7 +81,6 @@ end
 # @param socket [Net::Socket] socket
 # @return [HTTP2::Server] HTTP2 interface
 def start(socket, handler)
-  puts "start"
   ::HTTP2::Server.new.tap do |interface|
     socket.on(:data) { |data| parse_incoming_data(socket, interface, data) }
 

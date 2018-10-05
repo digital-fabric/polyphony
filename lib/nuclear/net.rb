@@ -255,7 +255,7 @@ end
 class SecureSocket < Socket
   # Initializes secure socket
   def initialize(socket = nil, opts = {})
-    super(socket, opts.merge(watch: false))
+    super
     accept_secure_handshake
   end
 

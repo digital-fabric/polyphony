@@ -27,8 +27,5 @@ end
 
 def render_rack_response(response, (status_code, headers, body))
   response.write_head(status_code, headers)
-  body.each do |chunk|
-    response.write(chunk)
-  end
-  response.finish
+  response.finish(body.first)
 end
