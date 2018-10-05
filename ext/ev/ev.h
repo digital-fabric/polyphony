@@ -1,5 +1,5 @@
-#ifndef EV_H
-#define EV_H
+#ifndef RUBY_EV_H
+#define RUBY_EV_H
 
 #include "ruby.h"
 #include "ruby/io.h"
@@ -14,4 +14,4 @@ void EV_del_watcher_ref(VALUE obj);
 # define FPTR_TO_FD(fptr) fptr->fd
 #endif /* GetReadFile */
 
-#endif /* EV_H */
+#endif /* RUBY_EV_H */
