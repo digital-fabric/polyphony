@@ -1,3 +1,18 @@
+## Net
+
+- rename to TCP
+- add support for reuse_addr
+- use plain `Socket` instance instead of `TCPServer`
+- use `#bind` and `#listen` instead of implicit listen in `TCPServer.new`
+
+## Testing
+
+- test EV layer: `EV.run`, watchers: IO, timer, signal (and `Core.trap`), async
+- test promises / async constructs: async/await, generator, pulse etc.
+- test stream / IO
+- test TCP server / client
+- test thread / thread_pool modules
+
 ## HTTP
 
 - integrate `http_parser.rb` gem, with better suited API:

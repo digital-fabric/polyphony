@@ -10,8 +10,11 @@ Rake::ExtensionTask.new("ev_ext") do |ext|
   ext.ext_dir = "ext/ev"
 end
 
-# Dir[File.expand_path("../tasks/**/*.rake", __FILE__)].each { |task| load task }
+task :default => :test
+task :test do
+  Dir.glob('./test/test_*.rb').each { |file| require(file) }
+end
 
-task default: %w[compile]# spec rubocop]
+# task default: %w[compile]# spec rubocop]
 
 CLEAN.include "**/*.o", "**/*.so", "**/*.bundle", "**/*.jar", "pkg", "tmp"

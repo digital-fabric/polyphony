@@ -7,8 +7,6 @@ export_default :Nuclear
 Nuclear = import('./nuclear/core')
 
 module Nuclear
-  VERSION = '0.7'
-
   FS            = import('./nuclear/fs')
   IO            = import('./nuclear/io')
   LineReader    = import('./nuclear/line_reader')

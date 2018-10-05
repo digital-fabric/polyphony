@@ -1,9 +1,10 @@
 require 'minitest/autorun'
 require 'modulation'
 
-Core = import('../lib/nuclear/core')
-
 class PromiseTest < Minitest::Test
+  # 
+  Core = import('../lib/nuclear/core')
+
   def test_that_promise_resolves
     p = Core.promise
     result = nil

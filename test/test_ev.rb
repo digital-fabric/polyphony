@@ -1,9 +1,9 @@
 require 'minitest/autorun'
 require 'modulation'
 
-Core = import('../lib/nuclear/core')
-
 module EVTest
+  Core = import('../lib/nuclear/core')
+
   class RunTest < Minitest::Test
     def test_that_run_loop_returns_immediately_if_no_watchers
       t0 = Time.now
