@@ -180,7 +180,7 @@ module ClientConnection
   # @param promise [Promise] connection promise
   # @return [void]
   def connect_async_pending(socket, host, port, promise)
-    create_watcher(socket, :rw)
+    create_watcher(socket, true, true)
     @connection_pending = [socket, host, port, promise]
   end
 
@@ -197,7 +197,6 @@ module ClientConnection
   def connect_success(socket, promise)
     @io = socket
     @connected = true
-    update_event_mask(:r)
     promise.resolve(socket)
   end
 

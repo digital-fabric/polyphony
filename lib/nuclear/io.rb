@@ -75,7 +75,7 @@ module ReadWrite
   # @return [void]
   def read_from_io
     while @io
-      result = @io.read_nonblock(READ_MAX_CHUNK_SIZE, @read_buf, NO_EXCEPTION_OPTS)
+      result = @io.read_nonblock(READ_MAX_CHUNK_SIZE, @read_buffer, NO_EXCEPTION_OPTS)
       break unless handle_read_result(result)
     end
   rescue StandardError => e
@@ -184,7 +184,6 @@ class IO < Stream
     super(opts)
     @io = io
     @open = io
-    @read_buf = (+"")
     watch_io if io && opts[:watch] != false
   end
 
