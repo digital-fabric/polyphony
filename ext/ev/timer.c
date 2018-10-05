@@ -2,8 +2,11 @@
 
 struct EV_Timer
 {
-    struct ev_timer ev_timer;
-    VALUE callback;
+  VALUE self;
+  struct ev_timer ev_timer;
+  double after;
+  double repeat;
+  VALUE callback;
 };
 
 static VALUE mEV = Qnil;
@@ -54,16 +57,16 @@ static void EV_Timer_free(struct EV_Timer *timer)
 
 static VALUE EV_Timer_initialize(VALUE self, VALUE after, VALUE repeat)
 {
-  printf("Timer_initialize\n");
-
   struct EV_Timer *timer;
 
   Data_Get_Struct(self, struct EV_Timer, timer);
 
+  timer->self = self;
   timer->callback = rb_block_proc();
+  timer->after = NUM2DBL(after);
+  timer->repeat = NUM2DBL(repeat);
 
-  ev_timer_init(&timer->ev_timer, EV_Timer_callback, NUM2DBL(after), NUM2DBL(repeat));
-
+  ev_timer_init(&timer->ev_timer, EV_Timer_callback, timer->after, timer->repeat);
   timer->ev_timer.data = (void *)timer;
 
   ev_timer_start(EV_DEFAULT, &timer->ev_timer);
@@ -77,6 +80,9 @@ void EV_Timer_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents)
 {
   struct EV_Timer *timer_data = (struct EV_Timer *)timer->data;
   rb_funcall(timer_data->callback, rb_intern("call"), 1, Qtrue);
+  if (!timer_data->repeat) {
+    EV_del_watcher_ref(timer_data->self);
+  }
 }
 
 static VALUE EV_Timer_start(VALUE self)
