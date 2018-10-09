@@ -4,4 +4,4 @@ require 'modulation'
 
 Nuclear = import('../../lib/nuclear')
 
-Nuclear.interval(1) { raise "hi!"}
+Nuclear.interval(1) { raise 'hi!' }
