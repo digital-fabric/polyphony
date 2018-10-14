@@ -15,6 +15,17 @@ module Async
   INVALID_PROMISE_MSG = 'await accepts promises only'
   ASYNC_ONLY_MSG = 'await can only be called inside async block'
 
+  # Runs an asynchronous operation. The given block is expected to use await to
+  # yield to other fibers while waiting for blocking operations (such as I/O or
+  # timers)
+  def async(*args, &block)
+    FiberPool.() do |fiber|
+      fiber.async! # important: the async flag is checked by await
+      block = args.shift if args.first.is_a?(Proc) && !block
+      block.(*args)
+    end
+  end
+
   # Yields control to other fibers while waiting for given promise(s) to resolve
   # if the resolved value is an error, it is raised
   # @param promise [Promise] promise
@@ -55,6 +66,15 @@ module Async
     Promise.new(recurring: true, &block)
   end
 
+  # Creates a promise waiting for 1 or more of the given promises in parallel
+  # @param promises [Array<Promise>] array of promises
+  # @param count [Integer] minimum number of resolutions to wait for or -1 (all)
+  # @return [Promise] promise
+  def parallel(promises, count = -1)
+    count = promises.count if count == -1
+    Promise.new { |all| reduce_promises(all, promises, count) }
+  end
+
   # Creates a new promise
   # @return [Promise] promise
   def promise(*args, &block)
@@ -70,33 +90,6 @@ module Async
       timer = EV::Timer.new(interval, interval, &p)
       p.on_stop { timer.stop }
     end
-  end
-
-  # Runs an asynchronous operation. The given block is expected to use await to
-  # yield to other fibers while waiting for blocking operations (such as I/O or
-  # timers)
-  def async(*args, &block)
-    FiberPool.() do |fiber|
-      fiber.async! # important: the async flag is checked by await
-      block = args.shift if args.first.is_a?(Proc) && !block
-      block.(*args)
-    end
-  end
-
-  # Creates a promise that will resolve after the given duration
-  # @param duration [Float] duration in seconds
-  # @return [Promise] promise
-  def sleep(duration)
-    Promise.new { |p| EV::Timer.new(duration, 0, &p) }
-  end
-
-  # Creates a promise waiting for 1 or more of the given promises in parallel
-  # @param promises [Array<Promise>] array of promises
-  # @param count [Integer] minimum number of resolutions to wait for or -1 (all)
-  # @return [Promise] promise
-  def parallel(promises, count = -1)
-    count = promises.count if count == -1
-    Promise.new { |all| reduce_promises(all, promises, count) }
   end
 
   # Setups parallel execution of given promises, passing the resolved values to
@@ -115,6 +108,13 @@ module Async
         parallel_promise.resolve(values) if completed == count
       end.catch { |e| parallel_promise.reject(e) }
     end
+  end
+
+  # Creates a promise that will resolve after the given duration
+  # @param duration [Float] duration in seconds
+  # @return [Promise] promise
+  def sleep(duration)
+    Promise.new { |p| EV::Timer.new(duration, 0, &p) }
   end
 end
 

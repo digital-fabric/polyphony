@@ -2,19 +2,30 @@
 
 export :set_fiber_local_resource
 
-# Fiber extensions
-class ::Fiber
-  # Returns true if fiber is marked as async
-  # @return [Boolean] is fiber async
-  def async?
-    @async
+class ::Proc
+  attr_writer :async_fiber
+
+  def run!
+    async! { call }
   end
 
-  # Marks the fiber as async
-  # @return [void]
-  def async!
-    @async = true
+  def move_on!(value)
+    if @async_fiber
+      @async_fiber.resume Cancelled.new(nil)
+    else
+      raise "Proc does not have an associated async fiber"
+    end
   end
+end
+
+# Fiber extensions
+class ::Fiber
+  def self.yield_and_raise_error(v = nil)
+    result = self.yield(v)
+    Exception === result ? raise(result) : result
+  end
+
+  attr_accessor :cancelled
 
   # Returns fiber-local value
   # @param key [Symbol]

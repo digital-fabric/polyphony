@@ -116,6 +116,11 @@ static VALUE EV_IO_start(VALUE self)
   struct EV_IO *io;
   Data_Get_Struct(self, struct EV_IO, io);
 
+  VALUE proc = rb_block_proc();
+  if (proc) {
+    io->callback = proc;
+  }
+
   if (!io->active) {
     ev_io_start(EV_DEFAULT, &io->ev_io);
     io->active = 1;

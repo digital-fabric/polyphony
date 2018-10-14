@@ -2,16 +2,17 @@
 
 export :process, :setup, :size=, :busy?
 
-Core    = import('./core')
-IO      = import('./io')
+Core = import('./core')
 
-@size = 4
+@size = 1
 
 def process(&block)
-  
   setup unless @task_queue
   EV.ref
-  Core.promise { |p| @task_queue << [block, p] }
+  proc do
+    @task_queue << [block, Fiber.current]
+    Fiber.yield_and_raise_error
+  end
 end
 
 def size=(size)
@@ -34,9 +35,8 @@ end
 
 def resolve_from_queue
   while !@resolve_queue.empty?
-    (promise, result, error) = @resolve_queue.pop(true)
-
-    error ? promise.reject(error) : promise.resolve(result)
+    (fiber, result) = @resolve_queue.pop(true)
+    fiber.resume result
     EV.unref
   end
 end
@@ -46,11 +46,11 @@ def thread_loop
 end
 
 def run_queued_task
-  (block, promise) = @task_queue.pop
+  (block, fiber) = @task_queue.pop
   result = block.()
-  @resolve_queue << [promise, result]
+  @resolve_queue << [fiber, result]
   @async_watcher.signal!
 rescue StandardError=> e
-  @resolve_queue << [promise, nil, e]
+  @resolve_queue << [fiber, e]
   @async_watcher.signal!
 end

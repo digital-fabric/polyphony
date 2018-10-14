@@ -15,7 +15,7 @@ static VALUE watcher_refs;
 /* IO encapsulates an io wsatcher */
 void Init_EV()
 {
-    mEV = rb_define_module("EV");
+    mEV     = rb_define_module("EV");
 
     rb_define_singleton_method(mEV, "run", EV_run, 0);
     rb_define_singleton_method(mEV, "break", EV_break, 0);
@@ -23,7 +23,7 @@ void Init_EV()
     rb_define_singleton_method(mEV, "unref", EV_unref, 0);
 
     watcher_refs = rb_hash_new();
-    rb_ivar_set(mEV, rb_intern("__watcher_refs"), watcher_refs);
+    rb_ivar_set(mEV, rb_intern("@__watcher_refs"), watcher_refs);
 }
 
 static VALUE EV_run(VALUE self)

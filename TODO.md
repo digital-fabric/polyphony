@@ -1,3 +1,91 @@
+## Simpler spawning of tasks
+
+Tasks are basically just procs that run on separate fibers, and can
+suspend and resume execution.
+
+Spawning a task is done from the root fiber. If a task is spawned not from the
+root fiber, it will be spawned using a timer.
+
+```ruby
+# spawn a new asynchronous task, and return the fiber used
+async { ... }
+```
+
+This obviates the need for `async!`.
+
+A task can be cancelled by resuming its fiber with a `Cancelled` or `MoveOn`
+exception. We do need a way to cancel nested asyncs, e.g.:
+
+```ruby
+async {
+  move_on_after(60) do |scope|
+    task1 = async { ... }
+    task2 = async { ... }
+
+    # add more tasks to scope, so they too will be cancelled
+    scope << task1
+    scope << task2
+
+    # if we only start sub-tasks, maybe we can wait for the scope's timeout
+    await scope.timeout
+  end
+}
+```
+
+## Happy eyeballs code with planned changes:
+
+```ruby
+def open_tcp_socket(hostname, port, max_wait_time: 0.25)
+  targets = await Net.getaddrinfo(hostname, port, :STREAM)
+  winning_socket = nil
+
+  await async_cluster do |cluster|
+    previous_try = nil
+    targets.each do |t|
+      await sleep max_wait_time if previous_try
+      previous_try = async { try_connect(cluster, t) }
+      cluster << previous_try
+    end
+  end
+end
+
+def try_connect(cluster, target)
+  socket = await Net.connect(*target)
+  cluster.move_on(socket)
+end
+
+# Let's try it out:
+async do
+  puts(await open_tcp_socket("debian.org", "https"))
+end
+```
+
+## Going forward
+
+- make async/await methods global methods in `Kernel` module
+- rewrite Promise as Task
+- add cancel scope implementation
+- rewrite I/O class:
+  - get rid of stream class
+  - get rid of callback API
+- rewrite Net class:
+  - get rid of callback API
+
+## Error backtracing
+
+*exception.rb*
+```ruby
+require 'modulation'
+Nuclear = import('../../lib/nuclear')
+Nuclear.interval(1) { raise 'hi!' }
+```
+
+Exception: hi
+examples/timers/exception.rb:3:in `block in <main>'
+/Users/sharon/repo/nuclear/lib/nuclear/core.rb:50:in `run'
+/Users/sharon/repo/nuclear/lib/nuclear/ev.rb:xxx:in `interval'
+examples/timers/exception.rb:3:in `<main>'
+
 ## Net
 
 - rename to TCP
