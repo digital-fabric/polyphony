@@ -16,67 +16,65 @@ class IOWrapper
   end
 
   def read(max = 8192)
-    Nuclear::Task.new do |t|
-      read_from_io(t, max)
+    proc do
+      read_from_io(Fiber.current, max)
     end
   end
 
   def write(data)
-    Nuclear::Task.new do |t|
-      write_to_io(t, data)
+    proc do
+      write_to_io(Fiber.current, data)
     end
   end
-
-  def connect(host, port)
 
   NO_EXCEPTION_OPTS = { exception: false }.freeze
 
-  def read_from_io(task, max)
+  def read_from_io(fiber, max)
     result = @io.read_nonblock(max, NO_EXCEPTION_OPTS)
     case result
     when nil
-      task.resolve RuntimeError.new('socket closed')
       close
+      raise RuntimeError.new('socket closed')
     when :wait_readable
-      fiber = Fiber.current
       create_read_watcher unless @read_watcher
       @read_watcher.start do
         @read_watcher.stop
-        task.resolve @io.read_nonblock(max, NO_EXCEPTION_OPTS)
+        fiber.resume @io.read_nonblock(max, NO_EXCEPTION_OPTS)
       end
-      task.on_cancel { @read_watcher.stop }
+      Fiber.yield_and_raise_error
     else
-      task.resolve result
+      result
     end
-  rescue => e
-    puts "error: #{e}"
-    puts e.backtrace.join("\n")
-    task.resolve(e)
+  ensure
+    @read_watcher&.stop
   end
 
-  def write_to_io(task, data)
-    result = @io.write_nonblock(data, exception: false)
-    case result
-    when nil
-      task.resolve RuntimeError.new('socket closed')
-      close
-    when :wait_writable
-      fiber = Fiber.current
-      create_write_watcher unless @write_watcher
-      @write_watcher.start do
-        @write_watcher.stop
-        write_to_io(task, data)
-      end
-      task.on_cancel { @write_watcher.stop }
-    else
-      if result == data.bytesize
-        task.resolve(result)
+  def write_to_io(fiber, data)
+    paused = true
+    loop do
+      result = @io.write_nonblock(data, exception: false)
+      case result
+      when nil
+        close
+        raise RuntimeError.new('socket closed')
+      when :wait_writable
+        create_write_watcher unless @write_watcher
+        @write_watcher.start do
+          @write_watcher.stop
+          fiber.resume
+        end
+        paused = true
+        Fiber.yield_and_raise_error
       else
-        write_to_io(data.slice(0, result))
+        if result == data.bytesize
+          return result
+        else
+          data = data[result..-1]
+        end
       end
     end
-  rescue => e
-    task.resolve(e)
+  ensure
+    @write_watcher&.stop
   end
 
   def create_read_watcher

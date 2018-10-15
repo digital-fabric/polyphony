@@ -21,30 +21,13 @@ module EVTest
       assert_equal(1, count)
     end
 
-    def test_that_timeout_api_works
-      count = 0
-      t = Core.timeout(0.001) { count += 1 }
-      assert_kind_of(EV::Timer, t)
-      EV.run
-      assert_equal(1, count)
-    end
-
     def test_that_repeating_timer_works
       count = 0
       t = EV::Timer.new(0.001, 0.001) { count += 1; t.stop if count >= 3}
       EV.run
       assert_equal(3, count)
     end
-
-    def test_that_interval_api_works
-      count = 0
-      t = Core.interval(0.001) { count += 1; t.stop if count >= 3 }
-      assert_kind_of(EV::Timer, t)
-      EV.run
-      assert_equal(3, count)
-    end
   end
-
   class IOTest < MiniTest::Test
     def test_that_reading_works
       i, o = IO.pipe
@@ -91,8 +74,11 @@ module EVTest
     def test_that_async_watcher_coalesces_signals
       count = 0
       a = EV::Async.new { count += 1 }
-      Core.timeout(0.01) { a.stop }
-      Thread.new { sleep 0.001; 3.times { a.signal! } }
+      Thread.new do
+        sleep 0.001
+        3.times { a.signal! }
+        EV::Timer.new(0.01, 0) { a.stop }
+      end
       EV.run
       assert_equal(1, count)
     end

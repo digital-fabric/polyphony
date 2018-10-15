@@ -15,9 +15,9 @@ async! do
   puts "#{Time.now} going to sleep..."
   move_on_after(0.5) do
     await Nuclear.nexus do |f|
-      f << my_sleep(10)
-      # f << my_sleep(2)
-      # f << my_sleep(3)
+      f << my_sleep(1)
+      f << my_sleep(2)
+      f << my_sleep(3)
     end
     puts "nexus done"
   end

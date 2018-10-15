@@ -5,90 +5,42 @@ export_default :Core
 require 'fiber'
 require_relative '../ev_ext'
 
-
-import('./ext/fiber')
-
-FiberPool   = import('./core/fiber_pool')
+Async       = import('./core/async')
 CancelScope = import('./core/cancel_scope')
-Task        = import('./core/task')
+Ext         = import('./core/ext')
+FiberPool   = import('./core/fiber_pool')
 Nexus       = import('./core/nexus')
 
 module ::Kernel
-  def id
-    "#{self.class.to_s[/[^:]+$/]}:#{object_id.to_s[-3..-1]}"
+  @@next_tick_ops = []
+  @@next_tick_timer ||= EV::Timer.new(0, 0) { __run_next_tick_ops }
+  @@next_tick_timer.stop
+
+  def next_tick(&block)
+    @@next_tick_timer.start
+    @@next_tick_ops << block
   end
 
-  # temporary, but very useful debugging facility, can be used in two ways:
-  #
-  #     # print current method name and its arguments
-  #     _p binding
-  #     # => my_method("hello", "world")
-  #
-  #     # print arbitrary method name and arguments
-  #     _p :my_method, x, y
-  def _p(*args)
-    if (args.size == 1) && args.first.is_a?(Binding)
-      caller_binding = args.first
-      caller_name = caller[0][/`.*'/][1..-2]
-      method = caller_binding.receiver.method(caller_name)
-      arguments = method.parameters.map do |_, n|
-        n && caller_binding.local_variable_get(n)
-      end
-      _p(method.name, *arguments)
-    else
-      sym, *args = *args
-      STDOUT.puts "%s(%s)" % [sym, args.map(&:inspect).join(', ')]
-    end
+  private def __run_next_tick_ops
+    @@next_tick_ops.slice!(0..-1).each(&:call)
+    @@next_tick_timer.stop if @@next_tick_ops.empty?
   end
 
   def async(sym = nil, &block)
     if sym
-      async_decorate(sym)
+      Async.async_decorate(is_a?(Class) ? self : singleton_class, sym)
     else
-      async_task(&block)
+      Async.async_task(&block)
     end
   end
 
   def async!(&block)
-    FiberPool.invoke do |fiber|
-      async_task(&block).call
-    end
-  end
-
-  def async_task(&block)
-    proc do |&override_block|
-      calling_fiber = Fiber.current
-      task_fiber = nil
-      done = nil
-      EV::Timer.new(0, 0) do
-        FiberPool.invoke do |fiber|
-          begin
-            task_fiber = fiber
-            result = (override_block || block).()
-            task_fiber = nil
-            calling_fiber.resume(result)
-          rescue Exception => e
-            task_fiber = nil
-            calling_fiber&.resume(e)
-          end
-        end
+    next_tick do
+      if block.async
+        block.call
+      else
+        FiberPool.spawn(&block)
       end
-      begin
-        Fiber.yield_and_raise_error
-      rescue Cancelled, MoveOn => e
-        calling_fiber = nil
-        task_fiber&.resume(e)
-        raise e
-      end
-    end
-  end
-
-  def async_decorate(sym)
-    sync_sym = :"sync_#{sym}"
-    receiver = is_a?(Class) ? self : singleton_class
-    receiver.alias_method(sync_sym, sym)
-    receiver.define_method(sym) do |*args, &block|
-      async_task { send(sync_sym, *args, &block) }
     end
   end
 
@@ -100,6 +52,8 @@ module ::Kernel
     else
       (task || block).call
     end
+  rescue Exception => e
+    raise e
   end
 
   def cancel_after(timeout, &block)
@@ -108,9 +62,7 @@ module ::Kernel
   end
 
   def nexus(tasks = nil, &block)
-    return Nexus.new(tasks, &block).to_proc
-
-    # Nexus.new(tasks, &block)
+    Nexus.new(tasks, &block).to_proc
   end
 
   def move_on_after(timeout, &block)

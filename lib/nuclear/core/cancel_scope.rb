@@ -35,7 +35,7 @@ class CancelScope
   end
 
   def run
-    # @fiber.cancelled = false
+    @fiber.cancelled = false
     yield(self)
   rescue MoveOn => e
     raise e unless e.cancel_scope == self

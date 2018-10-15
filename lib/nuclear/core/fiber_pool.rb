@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :invoke, :size
+export :spawn, :size
 
 require 'fiber'
 
@@ -24,11 +24,11 @@ end
 
 # Invokes the given block using a fiber taken from the fiber pool. If the pool
 # is exhausted, a new fiber will be created.
-# @return [void]
-def invoke(&block)
-  fib = @pool.empty? ? new_fiber : @pool.pop
-  @job = block
-  fib.resume
+# @return [Fiber]
+def spawn(&block)
+  fiber = @pool.empty? ? new_fiber : @pool.pop
+  @next_job = block
+  fiber.resume
 end
 
 # Creates a new fiber to be added to the pool
@@ -43,11 +43,9 @@ end
 def fiber_loop
   fiber = Fiber.current
   loop do
-    job = @job
-    @job = nil
-    result = job&.(fiber)
-
+    job, @next_job = @next_job, nil
+    job&.(fiber)
     @pool << fiber
-    Fiber.yield result
+    Fiber.yield
   end
 end

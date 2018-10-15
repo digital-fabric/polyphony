@@ -1,37 +1,3 @@
-## Simpler spawning of tasks
-
-Tasks are basically just procs that run on separate fibers, and can
-suspend and resume execution.
-
-Spawning a task is done from the root fiber. If a task is spawned not from the
-root fiber, it will be spawned using a timer.
-
-```ruby
-# spawn a new asynchronous task, and return the fiber used
-async { ... }
-```
-
-This obviates the need for `async!`.
-
-A task can be cancelled by resuming its fiber with a `Cancelled` or `MoveOn`
-exception. We do need a way to cancel nested asyncs, e.g.:
-
-```ruby
-async {
-  move_on_after(60) do |scope|
-    task1 = async { ... }
-    task2 = async { ... }
-
-    # add more tasks to scope, so they too will be cancelled
-    scope << task1
-    scope << task2
-
-    # if we only start sub-tasks, maybe we can wait for the scope's timeout
-    await scope.timeout
-  end
-}
-```
-
 ## Happy eyeballs code with planned changes:
 
 ```ruby

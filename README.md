@@ -1,17 +1,22 @@
-# Nuclear - a lightweight asynchronous framework for Ruby
+# Nuclear - async-style concurrency for Ruby
 
-Nuclear is a reactor framework for Ruby. Nuclear provides a lightweight API for
-asynchronous I/O processing, designed to maximize both developer happiness and
-performance. Nuclear provides all the tools needed to write asynchronous
-applications in a synchronous style, making the code much easier to understand
-and reason about.
+Nuclear is a framework for building concurrent applications in Ruby. Nuclear
+provides a simple and lightweight API for asynchronous I/O processing, designed to
+maximize both developer happiness and performance. Nuclear provides all the
+tools needed for asynchronous programming, making it easier to reason about
+your concurrent code.
 
-Under the hood, nuclear uses [nio4r](https://github.com/socketry/nio4r/) and
-[Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to provide
-concurrency without having to use multiple threads and locking mechanisms.
+Under the hood, Nuclear uses [libev](https://github.com/enki/libev) as a
+high-performance event reactor that provides timer, I/O and other
+primitives that allow async programming. Nuclear uses the libev event reactor
+in association with 
+[Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to achieve
+concurrency without having to use multiple threads, locking mechanisms, or
+callbacks.
 
 ## Features
 
+- Asynchronous programming 
 - Asynchronous I/O processing.
 - `async`/`await` API for writing asynchronous software in a synchronous style.
 - TCP sockets with built-in support for TLS (secure sockets).
@@ -32,6 +37,7 @@ concurrency without having to use multiple threads and locking mechanisms.
 
 - [nio4r](https://github.com/socketry/nio4r/)
 - [EventMachine](https://github.com/eventmachine/eventmachine)
+- [Trio](https://trio.readthedocs.io/)
 
 ## An echo server in nuclear
 
@@ -40,6 +46,7 @@ require 'nuclear'
 
 def echo_connection(socket)
   reader = Nuclear::LineReader.new(socket)
+
   while line = Nuclear.await(reader.gets)
     socket << "You said: #{line}"
   end
@@ -70,32 +77,12 @@ automatically once the program file has been executed (in a similar fashion to
 $ gem install nuclear
 ```
 
-## Getting Started
 
-Nuclear is a framework that provides all the tools needed to write concurrent
-programs in Ruby. Nuclear allows the developer to write in a synchronous style,
-without using blocking calls, threads or any locking mechanisms.
-
-At its core, Nuclear runs a reactor loop that checks for any elapsed timers, or
-any I/O descriptors (such as sockets or files) that have become readable or 
-writable. Once such an event has been detected, control is passed to code that
-handles the event. Such code is normally contained in a callback `Proc`, or an
-`await` expression that involves a `Promise`.
-
-Here is an example using callbacks:
 
 ```ruby
 require 'nuclear'
 
-Nuclear.interval(1) { puts Time.now }
-```
-
-And here's an example using `async`/`await`:
-
-```ruby
-require 'nuclear'
-
-Nuclear.async do
+async! do
   loop do
     Nuclear.await Nuclear.sleep(1)
     puts Time.now

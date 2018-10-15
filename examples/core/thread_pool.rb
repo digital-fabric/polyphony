@@ -7,52 +7,55 @@ require 'socket'
 Nuclear     = import('../../lib/nuclear')
 
 def lengthy_op
+  data = IO.read('../../docs/reality-ui.bmpr')
+  data.clear
   # Socket.getaddrinfo('debian.org', 80)
-  Digest::SHA256.digest(IO.read('doc/Promise.html'))
+  #Digest::SHA256.digest(IO.read('doc/Promise.html'))
 end
 
 X = 1000
-
 
 async def compare_performance
   t0 = Time.now
   X.times { lengthy_op }
   native_perf = X / (Time.now - t0)
   puts "native performance: #{native_perf}"
+  # puts "*" * 40
 
   begin
-    loop do
-      puts "testing async performance..."
+    # 0.times do
+    #   puts "testing async performance..."
+    #   t0 = Time.now
+    #   X.times do
+    #     await Nuclear::ThreadPool.process { lengthy_op }
+    #   end
+    #   async_perf = X / (Time.now - t0)
+    #   puts "async performance: %g (%.2g%%)" % [
+    #     async_perf, async_perf / native_perf * 100
+    #   ]
+    # end
+
+    acc = 0
+    count = 0
+    10.times do
       t0 = Time.now
-      X.times do
-        await Nuclear::ThreadPool.process { lengthy_op }
-      end
-      async_perf = X / (Time.now - t0)
-      puts "async performance: %g (%.2g%%)" % [
-        async_perf, async_perf / native_perf * 100
-      ]
-
-      loop do
-        puts "*" * 40
-        puts "testing thread pool performance..."
-        t0 = Time.now
-        await nexus do |n|
-          X.times do
-            n << Nuclear::ThreadPool.process { lengthy_op }
-          end
+      await nexus do |n|
+        X.times do
+          n << Nuclear::ThreadPool.process { lengthy_op }
         end
-        thread_pool_perf = X / (Time.now - t0)
-        puts "thread pool performance: %g (%.2g%%)" % [
-          thread_pool_perf, thread_pool_perf / native_perf * 100
-        ]
       end
-
-      break
+      thread_pool_perf = X / (Time.now - t0)
+      acc += thread_pool_perf
+      count += 1
     end
-  rescue => e
+    avg_perf = acc / count
+    puts "avg thread pool performance: %g (X %0.2f)" % [
+      avg_perf, avg_perf / native_perf
+    ]
+rescue => e
     p e
     puts e.backtrace.join("\n")
   end
 end
 
-compare_performance.run!
+compare_performance.call

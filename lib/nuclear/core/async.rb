@@ -1,134 +1,79 @@
 # frozen_string_literal: true
 
-export_default :Async
-
-require 'fiber'
-require_relative '../../ev_ext'
+export  :async_decorate, :async_task
 
 FiberPool = import('./fiber_pool')
-Promise   = import('./promise')
 
-import('../ext/fiber')
-
-# Async methods
-module Async
-  INVALID_PROMISE_MSG = 'await accepts promises only'
-  ASYNC_ONLY_MSG = 'await can only be called inside async block'
-
-  # Runs an asynchronous operation. The given block is expected to use await to
-  # yield to other fibers while waiting for blocking operations (such as I/O or
-  # timers)
-  def async(*args, &block)
-    FiberPool.() do |fiber|
-      fiber.async! # important: the async flag is checked by await
-      block = args.shift if args.first.is_a?(Proc) && !block
-      block.(*args)
-    end
-  end
-
-  # Yields control to other fibers while waiting for given promise(s) to resolve
-  # if the resolved value is an error, it is raised
-  # @param promise [Promise] promise
-  # @param more [Array<Promise>] more promises
-  # @return [any] resolved value
-  def await(promise = {}, *more)
-    return await_all(promise, *more) unless more.empty?
-
-    raise FiberError, INVALID_PROMISE_MSG unless promise.is_a?(Promise)
-    raise FiberError, ASYNC_ONLY_MSG unless Fiber.current.async?
-    if promise.completed?
-      # promise has already resolved
-      return_value = promise.clear_result
-    else
-      promise.fiber = Fiber.current
-      # it's here that execution stops, it will resume once the promise is
-      # resolved (see Promise#complete)
-      return_value = Fiber.yield
-    end
-    return_value.is_a?(Exception) ? raise(return_value) : return_value
-  end
-
-  # Await for all given promises to resolve
-  # @return [Promise] promise
-  def await_all(*promises)
-    await(parallel(promises, -1))
-  end
-
-  # Await for 1 or more of the given promises to resolve
-  # @return [Promise] promise
-  def await_any(*promises)
-    await(parallel(promises, 1))
-  end
-
-  # Creates a generator/recurring promise
-  # @return [Promise] promise
-  def generator(&block)
-    Promise.new(recurring: true, &block)
-  end
-
-  # Creates a promise waiting for 1 or more of the given promises in parallel
-  # @param promises [Array<Promise>] array of promises
-  # @param count [Integer] minimum number of resolutions to wait for or -1 (all)
-  # @return [Promise] promise
-  def parallel(promises, count = -1)
-    count = promises.count if count == -1
-    Promise.new { |all| reduce_promises(all, promises, count) }
-  end
-
-  # Creates a new promise
-  # @return [Promise] promise
-  def promise(*args, &block)
-    Promise.new(*args, &block)
-  end
-
-  # Creates a recurring promise that will fire (resolve) every <interval>
-  # seconds
-  # @param interval [Float] interval in seconds
-  # @return [Promise] promise
-  def pulse(interval)
-    Promise.new(recurring: true) do |p|
-      timer = EV::Timer.new(interval, interval, &p)
-      p.on_stop { timer.stop }
-    end
-  end
-
-  # Setups parallel execution of given promises, passing the resolved values to
-  # the wrapper promise
-  # @param parallel_promise [Promise] wrapper promise
-  # @param promises [Array<Promise>] array of promises
-  # @param count [Integer] minimum number of resolutions to wait for or -1 (all)
-  # @return [void]
-  def reduce_promises(parallel_promise, promises, count)
-    completed = 0
-    values = []
-    promises.each_with_index do |p, idx|
-      p.then do |v|
-        values[idx] = v
-        completed += 1
-        parallel_promise.resolve(values) if completed == count
-      end.catch { |e| parallel_promise.reject(e) }
-    end
-  end
-
-  # Creates a promise that will resolve after the given duration
-  # @param duration [Float] duration in seconds
-  # @return [Promise] promise
-  def sleep(duration)
-    Promise.new { |p| EV::Timer.new(duration, 0, &p) }
+def async_decorate(receiver, sym)
+  sync_sym = :"sync_#{sym}"
+  receiver.alias_method(sync_sym, sym)
+  receiver.define_method(sym) do |*args, &block|
+    MODULE.async_task { send(sync_sym, *args, &block) }
   end
 end
 
-extend Async
+def call_proc_with_optional_block(proc, block)
+  if proc && block
+    proc.call(&block)
+  else
+    (proc || block).call
+  end
+end
 
-# Promise extensions
-class Promise
-  # Iterates asynchronously over each resolution of a recurring promise. This
-  # method can only be called inside of an async block.
-  # @return [void]
-  def each
-    until @stopped
-      result = MODULE.await self
-      result ? yield(result) : break
+def async_task(&block)
+  proc do |opts = {}, &block2|
+    calling_fiber = Fiber.current
+    if calling_fiber.root?
+      FiberPool.spawn { |f| call_proc_with_optional_block(block, block2) }
+    else
+      start_async_task(calling_fiber, block, block2, opts)
     end
+  end.tap { |p| p.async = true }
+end
+
+def start_async_task(calling_fiber, block, block2, opts)
+  ctx = {calling_fiber: calling_fiber}
+
+  next_tick do
+    FiberPool.spawn { |fiber| run_task(fiber, ctx, opts, block, block2) }
+  end
+  wait_for_task(calling_fiber, ctx, opts)
+rescue Cancelled, MoveOn => e
+  ctx[:calling_fiber] = nil
+  ctx[:task_fiber]&.resume(e)
+  raise e
+end
+
+def run_task(fiber, ctx, opts, block, block2)
+  ctx[:task_fiber] = fiber
+  begin
+    opts[:on_start]&.call(fiber)
+    ctx[:result] = call_proc_with_optional_block(block, block2)
+    finalize_task(ctx, opts)
+  rescue Exception => error
+    ctx[:result] = error
+    finalize_task(ctx, opts)
+  end
+end
+
+def finalize_task(ctx, opts)
+  fiber = ctx[:task_fiber]
+  ctx[:task_fiber] = nil
+  ctx[:done] = true
+  if opts[:on_done]
+    opts[:on_done].call(fiber, ctx[:result])
+  else
+    ctx[:calling_fiber]&.resume(ctx[:result])
+  end
+end
+
+def wait_for_task(calling_fiber, ctx, opts)
+  return if opts[:no_block] || !calling_fiber
+
+  if ctx[:done]
+    ctx[:result]
+  else
+    ctx[:calling_fiber] = calling_fiber
+    Fiber.yield_and_raise_error
   end
 end

@@ -3,19 +3,7 @@
 export :set_fiber_local_resource
 
 class ::Proc
-  attr_writer :async_fiber
-
-  def run!
-    async! { call }
-  end
-
-  def move_on!(value)
-    if @async_fiber
-      @async_fiber.resume Cancelled.new(nil)
-    else
-      raise "Proc does not have an associated async fiber"
-    end
-  end
+  attr_accessor :async
 end
 
 # Fiber extensions
@@ -26,6 +14,11 @@ class ::Fiber
   end
 
   attr_accessor :cancelled
+  attr_writer   :root
+
+  def root?
+    @root
+  end
 
   # Returns fiber-local value
   # @param key [Symbol]
@@ -44,6 +37,8 @@ class ::Fiber
     @locals[key] = value
   end
 end
+
+Fiber.current.root = true
 
 # Sets a fiber-local value, adding a global accessor to Object. The value will
 # be accessible using the given key, e.g.:

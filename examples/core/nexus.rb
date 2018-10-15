@@ -16,6 +16,9 @@ async! do
     n << my_sleep(1)
     n << my_sleep(2)
     n << my_sleep(3)
+    n << async {
+      puts "fiber count: #{Nuclear::FiberPool.size}"
+    }
   end
   puts "#{Time.now} woke up"
 end

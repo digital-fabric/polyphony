@@ -4,7 +4,7 @@ export :process, :setup, :size=, :busy?
 
 Core = import('./core')
 
-@size = 1
+@size = 4
 
 def process(&block)
   setup unless @task_queue

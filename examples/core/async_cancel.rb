@@ -8,7 +8,7 @@ async def sleep_and_cancel
   puts "going to sleep..."
   cancel_after(1) do
     await async do
-      await Nuclear.sleep 60
+      await Nuclear.sleep 2
     end
   end
 rescue Cancelled => e
@@ -17,4 +17,4 @@ ensure
   puts "woke up"
 end
 
-sleep_and_cancel.run!
+sleep_and_cancel.call

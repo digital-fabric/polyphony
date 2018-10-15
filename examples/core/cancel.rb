@@ -15,4 +15,4 @@ ensure
   puts "woke up"
 end
 
-sleep_and_cancel.run!
+sleep_and_cancel.call

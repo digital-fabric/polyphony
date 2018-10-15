@@ -2,7 +2,7 @@
 
 export_default :Pool
 
-FiberExt = import('./ext/fiber')
+Ext = import('./core/ext')
 
 # Implements a limited resource pool
 class Pool
