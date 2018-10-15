@@ -22,7 +22,9 @@ module ::Kernel
   end
 
   private def __run_next_tick_ops
-    @@next_tick_ops.slice!(0..-1).each(&:call)
+    ops = @@next_tick_ops
+    @@next_tick_ops = []
+    ops.each(&:call)
     @@next_tick_timer.stop if @@next_tick_ops.empty?
   end
 
