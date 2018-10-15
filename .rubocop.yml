@@ -35,3 +35,9 @@ Style/MixinUsage:
 
 Style/MultilineBlockChain:
   Enabled: false
+
+Lint/RescueException:
+  Enabled: false
+
+Lint/InheritException:
+  Enabled: false

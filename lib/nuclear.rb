@@ -12,10 +12,8 @@ module Nuclear
   IO            = import('./nuclear/io')
   LineReader    = import('./nuclear/line_reader')
   Net           = import('./nuclear/net')
-  Promise       = import('./nuclear/core/promise')
   ResourcePool  = import('./nuclear/resource_pool')
   Stream        = import('./nuclear/stream')
-  Task          = import('./nuclear/core/task')
-  Thread        = import('./nuclear/thread')
-  ThreadPool    = import('./nuclear/thread_pool')
+  Thread        = import('./nuclear/core/thread')
+  ThreadPool    = import('./nuclear/core/thread_pool')
 end

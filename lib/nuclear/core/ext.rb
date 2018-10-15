@@ -2,20 +2,26 @@
 
 export :set_fiber_local_resource
 
+# Proc extensions
 class ::Proc
   attr_accessor :async
 end
 
 # Fiber extensions
 class ::Fiber
-  def self.yield_and_raise_error(v = nil)
-    result = self.yield(v)
-    Exception === result ? raise(result) : result
+  # yields control of fiber, raising error if resumed value is an exception
+  # @param value [any] value to yield
+  # @return [any] resumed value if not an exception
+  def self.yield_and_raise_error(value = nil)
+    result = self.yield(value)
+    result.is_a?(Exception) ? raise(result) : result
   end
 
   attr_accessor :cancelled
   attr_writer   :root
 
+  # Returns true if fiber is root fiber
+  # @return [boolean]
   def root?
     @root
   end

@@ -5,7 +5,7 @@ export  :stat,
 
 require 'fileutils'
 
-ThreadPool = import('./thread_pool')
+ThreadPool = import('./core/thread_pool')
 
 def stat(path)
   ThreadPool.process { File.stat(path) }

@@ -43,7 +43,8 @@ end
 def fiber_loop
   fiber = Fiber.current
   loop do
-    job, @next_job = @next_job, nil
+    job = @next_job
+    @next_job = nil
     job&.(fiber)
     @pool << fiber
     Fiber.yield

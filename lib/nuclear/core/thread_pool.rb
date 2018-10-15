@@ -2,8 +2,6 @@
 
 export :process, :setup, :size=, :busy?
 
-Core = import('./core')
-
 @size = 4
 
 def process(&block)
