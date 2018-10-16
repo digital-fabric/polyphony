@@ -48,7 +48,7 @@ class Stream
     @read_buffer << data
     return if @pending_emit_data
     @pending_emit_data = true
-    Core.next_tick { emit_data }
+    EV.next_tick { emit_data }
   end
 
   # Emits data in the read buffer to the registered :data callback

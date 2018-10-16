@@ -58,7 +58,7 @@ end
 def start_async_task(calling_fiber, block, block2, opts)
   ctx = { calling_fiber: calling_fiber }
 
-  next_tick do
+  EV.next_tick do
     FiberPool.spawn { |fiber| run_task(fiber, ctx, opts, block, block2) }
   end
   wait_for_task(calling_fiber, ctx, opts)

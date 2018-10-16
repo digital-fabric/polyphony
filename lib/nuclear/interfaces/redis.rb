@@ -61,10 +61,10 @@ class Connection < Net::Socket
   def handle_reply(reply)
     _, transform, promise = @queue.shift
     if reply.is_a?(RuntimeError)
-      Core.next_tick { promise.reject(reply) }
+      EV.next_tick { promise.reject(reply) }
     else
       reply = transform.(reply) if transform
-      Core.next_tick { promise.resolve(reply) }
+      EV.next_tick { promise.resolve(reply) }
     end
   end
 

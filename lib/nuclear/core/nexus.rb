@@ -52,7 +52,7 @@ class Nexus
     if task.async
       run_async_proc(task)
     else
-      next_tick do
+      EV.next_tick do
         FiberPool.spawn { |fiber| run_async_sub_task(fiber, task) }
       end
     end

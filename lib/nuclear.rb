@@ -14,6 +14,7 @@ module Nuclear
   Net           = import('./nuclear/net')
   ResourcePool  = import('./nuclear/resource_pool')
   Stream        = import('./nuclear/stream')
+  Sync          = import('./nuclear/core/sync')
   Thread        = import('./nuclear/core/thread')
   ThreadPool    = import('./nuclear/core/thread_pool')
 end

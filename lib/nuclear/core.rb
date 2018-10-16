@@ -12,22 +12,6 @@ FiberPool   = import('./core/fiber_pool')
 Nexus       = import('./core/nexus')
 
 module ::Kernel
-  @@next_tick_ops = []
-  @@next_tick_timer ||= EV::Timer.new(0, 0) { __run_next_tick_ops }
-  @@next_tick_timer.stop
-
-  def next_tick(&block)
-    @@next_tick_timer.start
-    @@next_tick_ops << block
-  end
-
-  private def __run_next_tick_ops
-    ops = @@next_tick_ops
-    @@next_tick_ops = []
-    ops.each(&:call)
-    @@next_tick_timer.stop if @@next_tick_ops.empty?
-  end
-
   def async(sym = nil, &block)
     if sym
       Async.async_decorate(is_a?(Class) ? self : singleton_class, sym)
@@ -37,7 +21,7 @@ module ::Kernel
   end
 
   def async!(&block)
-    next_tick do
+    EV.next_tick do
       if block.async
         block.call
       else

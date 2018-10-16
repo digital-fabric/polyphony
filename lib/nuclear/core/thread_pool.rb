@@ -2,7 +2,7 @@
 
 export :process, :setup, :size=, :busy?
 
-@size = 4
+@size = 10
 
 def process(&block)
   setup unless @task_queue
