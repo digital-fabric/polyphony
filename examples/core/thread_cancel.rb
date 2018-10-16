@@ -16,15 +16,14 @@ def lengthy_op
 end
 
 async! do
-  begin
-    t0 = Time.now
-    cancel_after(0.01) do
-      data = await Nuclear::Thread.spawn { lengthy_op }
-      puts "read #{data.bytesize} bytes (#{Time.now - t0}s)"
-    end
-  rescue Exception => e
-    puts "error: #{e}"
+  t0 = Time.now
+  cancel_after(0.01) do
+    data = await Nuclear::Thread.spawn { lengthy_op }
+    puts "read #{data.bytesize} bytes (#{Time.now - t0}s)"
   end
+rescue Exception => e
+  puts "error: #{e}"
+ensure
   p hey
 end
 

@@ -4,7 +4,7 @@ require 'modulation'
 require 'digest'
 require 'socket'
 
-Nuclear     = import('../../lib/nuclear')
+Nuclear = import('../../lib/nuclear')
 
 def lengthy_op
   data = IO.read('../../docs/reality-ui.bmpr')
@@ -36,7 +36,7 @@ def compare_performance
 
     acc = 0
     count = 0
-    10.times do
+    100.times do
       t0 = Time.now
       await nexus do |n|
         X.times do

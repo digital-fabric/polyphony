@@ -11,14 +11,13 @@ end
 
 async! do
   puts "#{Time.now} going to sleep..."
-  begin
-    result = await Nuclear.nexus do |f|
-      f << my_sleep(1)
-      f << my_sleep(2)
-      f << my_sleep(3)
-    end
-  rescue => e
-    puts "exception from nexus: #{e}"
+  result = await Nuclear.nexus do |f|
+    f << my_sleep(1)
+    f << my_sleep(2)
+    f << my_sleep(3)
   end
+rescue => e
+  puts "exception from nexus: #{e}"
+ensure
   puts "#{Time.now} woke up"
 end

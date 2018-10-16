@@ -8,19 +8,15 @@ async def sleep_and_cancel
   puts "#{Time.now} going to sleep with cancel..."
   cancel_after(1) do
     puts "#{Time.now} outer cancel scope"
-    begin
-      cancel_after(10) do
-        begin
-          puts "#{Time.now} inner cancel scope"
-          await Nuclear.sleep 60
-        rescue Exception => e
-          puts "#{Time.now} inner scope got error: #{e}"
-          raise e
-        end
-      end
+    cancel_after(10) do
+      puts "#{Time.now} inner cancel scope"
+      await Nuclear.sleep 60
     rescue Exception => e
-      puts "#{Time.now} outer scope got error: #{e}"
+      puts "#{Time.now} inner scope got error: #{e}"
+      raise e
     end
+  rescue Exception => e
+    puts "#{Time.now} outer scope got error: #{e}"
   end
 rescue Cancelled => e
   puts "#{Time.now} got error: #{e}"

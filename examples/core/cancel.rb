@@ -4,7 +4,7 @@ require 'modulation'
 
 Nuclear = import('../../lib/nuclear')
 
-async def sleep_and_cancel
+async! do
   puts "going to sleep..."
   cancel_after(1) do
     await Nuclear.sleep 60
@@ -14,5 +14,3 @@ rescue Cancelled => e
 ensure
   puts "woke up"
 end
-
-sleep_and_cancel.call
