@@ -8,7 +8,8 @@ FiberPool = import('./fiber_pool')
 # their execution.
 class Nexus
   def initialize(tasks = nil, &block)
-    @tasks = tasks || []
+    @task_count = 0
+    @pending_count = 0
     @fibers = []
     @completed = []
     @block = block
@@ -24,7 +25,8 @@ class Nexus
   # @param task [Proc] asynchronous task
   # @return [void]
   def <<(task)
-    @tasks << task
+    @task_count += 1
+    start_sub_task(task)
   end
 
   # Returns an asynchronous task for running the nexus
@@ -36,9 +38,8 @@ class Nexus
   # Runs the nexus with an optional block
   # @return [any] result of running the nexus
   def run_nexus(&block2)
-    (block2 || @block)&.(self)
-    @tasks.each { |t| start_sub_task(t) }
     @nexus_fiber = Fiber.current
+    start_sub_task(async { (block2 || @block).call(self) })
     Fiber.yield_and_raise_error
   rescue Exception => e
     cancel_sub_tasks(Cancelled.new(nil, nil)) unless @cancelled
@@ -49,6 +50,7 @@ class Nexus
   # @param task [Proc] sub task
   # @return [void]
   def start_sub_task(task)
+    @pending_count += 1
     if task.async
       run_async_proc(task)
     else
@@ -78,7 +80,6 @@ class Nexus
     result = await task
     task_completed(fiber, result)
   rescue Exception => e
-    puts "error: #{e}"
     task_completed(fiber, e) unless @cancelled
   end
 
@@ -98,10 +99,11 @@ class Nexus
     return if @cancelled
 
     @fibers.delete(fiber)
+    @pending_count -= 1
     if result.is_a?(Exception)
       @nexus_fiber&.resume(result)
-    elsif @fibers.empty?
-      @nexus_fiber&.resume(@tasks.size)
+    elsif @pending_count == 0
+      @nexus_fiber&.resume(@task_count)
     end
   end
 

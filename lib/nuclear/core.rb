@@ -30,14 +30,10 @@ module ::Kernel
     end
   end
 
-  def await(task, &block)
+  def await(proc, &block)
     return nil if Fiber.current.cancelled
 
-    if task && block
-      task.call(&block)
-    else
-      (task || block).call
-    end
+    Async.call_proc_with_optional_block(proc, block)
   end
 
   def cancel_after(timeout, &block)

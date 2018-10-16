@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :async_decorate, :async_task
+export :async_decorate, :async_task, :call_proc_with_optional_block
 
 FiberPool = import('./fiber_pool')
 

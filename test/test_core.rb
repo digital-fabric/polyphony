@@ -190,5 +190,26 @@ module CoreTest
       assert(ctx[2])
       assert(ctx[3])
     end
+
+    def test_that_nexus_can_add_tasks_after_having_started
+      result = []
+      async! do
+        await nexus do |n|
+          fiber = Fiber.current
+          watcher = EV::Async.new { fiber.resume }
+          async! do
+            3.times do |i|
+              await Core.sleep(0.001)
+              n << async { await Core.sleep(0.002); result << i }
+            end
+            watcher.signal!
+          end
+          Fiber.yield_and_raise_error
+          watcher.stop
+        end
+      end
+      EV.run
+      assert_equal([0, 1, 2], result)
+    end
   end
 end
