@@ -9,7 +9,4 @@ void EV_add_watcher_ref(VALUE obj);
 void EV_del_watcher_ref(VALUE obj);
 void EV_async_free(void *p);
 
-static ID ID_call;
-static ID ID_each;
-
 #endif /* RUBY_EV_H */

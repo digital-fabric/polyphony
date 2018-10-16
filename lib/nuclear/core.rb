@@ -38,8 +38,6 @@ module ::Kernel
     else
       (task || block).call
     end
-  rescue Exception => e
-    raise e
   end
 
   def cancel_after(timeout, &block)

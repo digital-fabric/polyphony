@@ -26,6 +26,8 @@ static VALUE EV_Timer_stop(VALUE self);
 
 void EV_Timer_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
 
+static ID ID_call = Qnil;
+
 /* Timer encapsulates an timer watcher */
 void Init_EV_Timer() {
   mEV = rb_define_module("EV");
@@ -35,6 +37,8 @@ void Init_EV_Timer() {
   rb_define_method(cEV_Timer, "initialize", EV_Timer_initialize, 2);
   rb_define_method(cEV_Timer, "start", EV_Timer_start, 0);
   rb_define_method(cEV_Timer, "stop", EV_Timer_stop, 0);
+
+  ID_call = rb_intern("call");
 }
 
 static VALUE EV_Timer_allocate(VALUE klass) {
@@ -94,7 +98,7 @@ void EV_Timer_callback(ev_loop *ev_loop, struct ev_timer *ev_timer, int revents)
     EV_del_watcher_ref(timer->self);
     timer->active = 0;
   }
-  rb_funcall(timer->callback, rb_intern("call"), 1, Qtrue);
+  rb_funcall(timer->callback, ID_call, 1, Qtrue);
 }
 
 static VALUE EV_Timer_start(VALUE self) {

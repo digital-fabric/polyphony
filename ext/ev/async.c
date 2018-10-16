@@ -24,7 +24,7 @@ static VALUE EV_Async_signal(VALUE self);
 
 void EV_Async_callback(ev_loop *ev_loop, struct ev_async *async, int revents);
 
-
+static ID ID_call;
 
 /* async encapsulates an async watcher */
 void Init_EV_Async() {
@@ -37,6 +37,8 @@ void Init_EV_Async() {
   rb_define_method(cEV_Async, "start", EV_Async_start, 0);
   rb_define_method(cEV_Async, "stop", EV_Async_stop, 0);
   rb_define_method(cEV_Async, "signal!", EV_Async_signal, 0);
+
+  ID_call = rb_intern("call");
 }
 
 static VALUE EV_Async_allocate(VALUE klass) {
@@ -72,7 +74,7 @@ static VALUE EV_Async_initialize(VALUE self) {
   async->ev_async.data = (void *)async;
 
   async->active = 1;
-  async->free_in_callback = 1;
+  async->free_in_callback = 0;
 
   ev_async_start(EV_DEFAULT, &async->ev_async);
   EV_add_watcher_ref(self);

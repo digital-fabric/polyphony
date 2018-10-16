@@ -17,6 +17,9 @@ static struct ev_timer next_tick_timer;
 static int next_tick_active;
 void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
 
+static ID ID_call;
+static ID ID_each;
+
 void Init_EV() {
   mEV = rb_define_module("EV");
 
