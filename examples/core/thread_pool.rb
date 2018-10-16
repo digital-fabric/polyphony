@@ -15,7 +15,7 @@ end
 
 X = 1000
 
-async def compare_performance
+def compare_performance
   t0 = Time.now
   X.times { lengthy_op }
   native_perf = X / (Time.now - t0)
@@ -23,17 +23,16 @@ async def compare_performance
   # puts "*" * 40
 
   begin
-    # 0.times do
-    #   puts "testing async performance..."
-    #   t0 = Time.now
-    #   X.times do
-    #     await Nuclear::ThreadPool.process { lengthy_op }
-    #   end
-    #   async_perf = X / (Time.now - t0)
-    #   puts "async performance: %g (%.2g%%)" % [
-    #     async_perf, async_perf / native_perf * 100
-    #   ]
-    # end
+    1.times do
+      t0 = Time.now
+      X.times do
+        await Nuclear::ThreadPool.process { lengthy_op }
+      end
+      async_perf = X / (Time.now - t0)
+      puts "seq thread pool performance: %g (X %0.2f)" % [
+        async_perf, async_perf / native_perf
+      ]
+    end
 
     acc = 0
     count = 0
@@ -52,10 +51,10 @@ async def compare_performance
     puts "avg thread pool performance: %g (X %0.2f)" % [
       avg_perf, avg_perf / native_perf
     ]
-rescue => e
+rescue Exception => e
     p e
     puts e.backtrace.join("\n")
   end
 end
 
-compare_performance.call
+async! { compare_performance }

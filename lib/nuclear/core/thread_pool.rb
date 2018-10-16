@@ -6,11 +6,16 @@ export :process, :setup, :size=, :busy?
 
 def process(&block)
   setup unless @task_queue
+
+  proc { start_task_on_thread(Fiber.current, block) }
+end
+
+def start_task_on_thread(fiber, block)
   EV.ref
-  proc do
-    @task_queue << [block, Fiber.current]
-    Fiber.yield_and_raise_error
-  end
+  @task_queue << [block, Fiber.current]
+  Fiber.yield_and_raise_error
+ensure
+  EV.unref
 end
 
 def size=(size)
@@ -34,8 +39,7 @@ end
 def resolve_from_queue
   while !@resolve_queue.empty?
     (fiber, result) = @resolve_queue.pop(true)
-    fiber.resume result
-    EV.unref
+    fiber.resume result unless fiber.cancelled
   end
 end
 
