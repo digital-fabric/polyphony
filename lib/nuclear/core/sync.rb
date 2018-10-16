@@ -2,16 +2,17 @@
 
 export :Mutex
 
+# Implements mutex lock for synchronizing async operations
 class Mutex
   def initialize
     @waiting = []
   end
 
-  def acquire(&block)
+  def acquire
     fiber = Fiber.current
     @waiting << fiber
     Fiber.yield if @waiting.size > 1
-    block.call
+    yield
   ensure
     @waiting.shift if @waiting[0] == fiber
     dequeue unless @waiting.empty?
@@ -21,4 +22,3 @@ class Mutex
     EV.next_tick { @waiting[0]&.resume }
   end
 end
-

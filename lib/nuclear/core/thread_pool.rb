@@ -7,10 +7,10 @@ export :process, :setup, :size=, :busy?
 def process(&block)
   setup unless @task_queue
 
-  proc { start_task_on_thread(Fiber.current, block) }
+  proc { start_task_on_thread(block) }
 end
 
-def start_task_on_thread(fiber, block)
+def start_task_on_thread(block)
   EV.ref
   @task_queue << [block, Fiber.current]
   Fiber.yield_and_raise_error
@@ -37,7 +37,7 @@ def setup
 end
 
 def resolve_from_queue
-  while !@resolve_queue.empty?
+  until @resolve_queue.empty?
     (fiber, result) = @resolve_queue.pop(true)
     fiber.resume result unless fiber.cancelled
   end
@@ -52,7 +52,7 @@ def run_queued_task
   result = block.()
   @resolve_queue << [fiber, result]
   @async_watcher.signal!
-rescue StandardError=> e
+rescue Exception => e
   @resolve_queue << [fiber, e]
   @async_watcher.signal!
 end

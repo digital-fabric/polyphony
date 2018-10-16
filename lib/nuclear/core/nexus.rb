@@ -7,7 +7,7 @@ FiberPool = import('./fiber_pool')
 # Encapsulates a group of related asynchronous tasks with means for controlling
 # their execution.
 class Nexus
-  def initialize(tasks = nil, &block)
+  def initialize(_tasks = nil, &block)
     @task_count = 0
     @pending_count = 0
     @fibers = []

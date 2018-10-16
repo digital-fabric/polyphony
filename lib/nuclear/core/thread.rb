@@ -5,9 +5,8 @@ export :spawn
 # Runs the given block in a separate thread, returning a promise fulfilled
 # once the thread is done. The signalling for the thread is done using an
 # I/O pipe.
-# @param opts [Hash] promise options
-# @return [Core::Promise]
-def spawn(opts = {}, &block)
+# @return [Proc]
+def spawn(&block)
   proc do
     ctx = {
       fiber:    Fiber.current,
@@ -24,7 +23,7 @@ def wait_for_thread(ctx)
   Fiber.yield_and_raise_error
 rescue Cancelled, MoveOn => e
   ctx[:fiber] = nil
-  ctx[:thread].raise(e) if ctx[:thread]
+  ctx[:thread]&.raise(e)
   raise e
 ensure
   ctx[:watcher]&.stop

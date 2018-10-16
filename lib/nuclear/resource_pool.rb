@@ -17,9 +17,9 @@ class ResourcePool
     @count = 0
   end
 
-  def acquire(&block)
+  def acquire
     resource = wait
-    block.(resource)
+    yield resource
   ensure
     @available << resource
     dequeue
@@ -29,18 +29,17 @@ class ResourcePool
     fiber = Fiber.current
     @waiting << fiber
     dequeue
-    return Fiber.yield_and_raise_error
+    Fiber.yield_and_raise_error
   ensure
     @waiting.delete(fiber)
   end
 
   def dequeue
-    if resource = get_from_stock
-      EV.next_tick { @waiting[0]&.resume(resource) }
-    end
+    return unless (resource = from_stock)
+    EV.next_tick { @waiting[0]&.resume(resource) }
   end
 
-  def get_from_stock
+  def from_stock
     @available.shift || (@count < @limit && allocate)
   end
 

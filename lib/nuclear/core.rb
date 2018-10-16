@@ -11,6 +11,7 @@ Ext         = import('./core/ext')
 FiberPool   = import('./core/fiber_pool')
 Nexus       = import('./core/nexus')
 
+# Kernel extensions (methods available to all objects)
 module ::Kernel
   def async(sym = nil, &block)
     if sym
@@ -23,7 +24,7 @@ module ::Kernel
   def async!(&block)
     EV.next_tick do
       if block.async
-        block.call
+        yield
       else
         FiberPool.spawn(&block)
       end
@@ -55,46 +56,40 @@ end
 module Core
   def self.sleep(duration)
     proc do
-      begin
-        fiber = Fiber.current
-        timer = EV::Timer.new(duration, 0) { fiber.resume duration }
-        Fiber.yield_and_raise_error
-      ensure
-        timer&.stop
-      end
+      fiber = Fiber.current
+      timer = EV::Timer.new(duration, 0) { fiber.resume duration }
+      Fiber.yield_and_raise_error
+    ensure
+      timer&.stop
     end
   end
 
-  def self.pulse(freq, &block)
+  def self.pulse(freq)
     fiber = Fiber.current
     timer = EV::Timer.new(freq, freq) { fiber.resume freq }
     proc do
-      begin
-        Fiber.yield_and_raise_error
-        # Exception === result ? raise(result) : result
-      rescue Exception => e
-        timer.stop
-        raise e
-      end
+      Fiber.yield_and_raise_error
+    rescue Exception => e
+      timer.stop
+      raise e
     end
-    # Task.new(start: true) do |t|
-    #   timer = EV::Timer.new(freq, freq) { t.resolve(freq) }
-    #   t.on_cancel { timer.stop }
-    # end
   end
 
-  def self.trap(sig, &cb)
+  def self.trap(sig, &callback)
     sig = Signal.list[sig.to_s.upcase] if sig.is_a?(Symbol)
-    EV::Signal.new(sig, &cb)
+    EV::Signal.new(sig, &callback)
   end
 end
 
 def auto_run
   return if @auto_ran
   @auto_ran = true
-  
+
   return if $!
-  Core.trap(:int) { puts; EV.break }
+  Core.trap(:int) do
+    puts
+    EV.break
+  end
   EV.unref # undo ref count increment caused by signal trap
   EV.run
 end
