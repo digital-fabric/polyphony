@@ -34,6 +34,17 @@ module Core
     sig = Signal.list[sig.to_s.upcase] if sig.is_a?(Symbol)
     EV::Signal.new(sig, &callback)
   end
+
+  def self.at_exit(&block)
+    @exit_tasks ||= []
+    @exit_tasks << block
+  end
+
+  def self.run_exit_procs
+    return unless @exit_tasks
+
+    @exit_tasks.each { |t| t.call rescue nil }
+  end
 end
 
 def auto_run
@@ -41,6 +52,7 @@ def auto_run
   @auto_ran = true
 
   return if $!
+  
   Core.trap(:int) do
     puts
     EV.break
@@ -49,4 +61,7 @@ def auto_run
   EV.run
 end
 
-at_exit { auto_run }
+at_exit do
+  auto_run
+  Core.run_exit_procs
+end
