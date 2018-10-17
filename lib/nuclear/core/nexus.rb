@@ -7,7 +7,8 @@ FiberPool = import('./fiber_pool')
 # Encapsulates a group of related asynchronous tasks with means for controlling
 # their execution.
 class Nexus
-  def initialize(_tasks = nil, &block)
+  def initialize(pre_tasks = nil, &block)
+    @pre_tasks = pre_tasks
     @task_count = 0
     @pending_count = 0
     @fibers = []
@@ -39,7 +40,9 @@ class Nexus
   # @return [any] result of running the nexus
   def run_nexus(&block2)
     @nexus_fiber = Fiber.current
-    start_sub_task(async { (block2 || @block).call(self) })
+    @pre_tasks&.each { |t| start_sub_task(t) }
+    proc = block2 || @block2
+    start_sub_task(async { proc.call(self) }) if proc
     suspend
   rescue Exception => e
     cancel_sub_tasks(Cancelled.new(nil, nil)) unless @cancelled
