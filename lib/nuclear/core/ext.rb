@@ -34,13 +34,15 @@ module ::Kernel
   end
 
   def cancel_after(timeout, &block)
-    c = CancelScope.new(timeout: timeout)
-    c.run(&block)
+    CancelScope.new(timeout: timeout).run(&block)
+  end
+
+  def cancel_scope(&block)
+    CancelScope.new.run(&block)
   end
 
   def move_on_after(timeout, &block)
-    c = CancelScope.new(timeout: timeout, mode: :move_on)
-    c.run(&block)
+    CancelScope.new(timeout: timeout, mode: :move_on).run(&block)
   end
 
   def nexus(tasks = nil, &block)

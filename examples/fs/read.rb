@@ -13,25 +13,26 @@ def raw_read_file(x)
   puts "raw_read_file: #{Time.now - t0}"
 end
 
-raw_read_file(1000)
-
 def read_file
-  Nuclear::FS.read(PATH)
+  await Nuclear::FS.read(PATH)
 end
 
-def do_read(x)
+def do_read(nexus, x)
+  x.times { nexus << async { read_file } }
+end
+
+X = 100
+
+raw_read_file(X)
+
+spawn do
   t0 = Time.now
-  Nuclear.await *(x.times.map { read_file })
-  puts "thread_pool_read_file: #{Time.now - t0}"
-end
-
-Nuclear.async do
-  begin
-    timer = Nuclear.interval(1) { puts Time.now }
-    do_read(1000)
-    timer.stop
-  rescue => e
-    p e
-    puts e.backtrace.join("\n")
+  await nexus do |n|
+    # n << async { Nuclear.pulse(1) { puts Time.now } }
+    do_read(n, X)
   end
+  puts "thread_pool_read_file: #{Time.now - t0}"
+rescue Exception => e
+  p e
+  puts e.backtrace.join("\n")
 end
