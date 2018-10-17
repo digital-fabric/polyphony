@@ -45,19 +45,16 @@ class IOWrapper
 
   def read_async(max)
     fiber = Fiber.current
-    result = @io.read_nonblock(max, NO_EXCEPTION_OPTS)
-    case result
-    when nil
-      close
-      raise 'socket closed'
-    when :wait_readable
-      read_watcher.start do
-        @read_watcher.stop
-        fiber.resume @io.read_nonblock(max, NO_EXCEPTION_OPTS)
+    loop do
+      result = @io.read_nonblock(max, NO_EXCEPTION_OPTS)
+      case result
+      when nil
+        close
+      when :wait_readable
+        read_watcher.await!(fiber)
+      else
+        return result
       end
-      suspend
-    else
-      result
     end
   ensure
     @read_watcher&.stop
@@ -78,11 +75,7 @@ class IOWrapper
       when :wait_writable
         write_watcher.await!(fiber)
       else
-        if result == data.bytesize
-          return result
-        else
-          data = data[result..-1]
-        end
+        (result == data.bytesize) ? (return result) : (data = data[result..-1])
       end
     end
   ensure
@@ -141,5 +134,48 @@ class SocketWrapper < IOWrapper
         raise "Failed SSL handshake: #{result.inspect}"
       end
     end
+  end
+
+  def accept
+    proc do
+      socket = accept_async
+      if @opts[:secure]
+        accept_ssl_handshake_async(socket)
+      else
+        SocketWrapper.new(socket, @opts)
+      end
+    end
+  end
+
+  def accept_async
+    fiber = Fiber.current
+    loop do
+      result, client_addr = @io.accept_nonblock(exception: false)
+      case result
+      when Socket
+        return result
+      when :wait_readable
+        read_watcher.await!(fiber)
+      else
+        close
+        raise "failed to accept (#{result.inspect})"
+      end
+    end
+  rescue Exception => e
+    close
+    raise e
+  end
+
+  def bind(host, port)
+    proc {
+      addr = ::Socket.sockaddr_in(port, host)
+      @io.bind(addr)
+    }
+  end
+
+  def listen(backlog = 0)
+    proc {
+      @io.listen(backlog)
+    }
   end
 end
