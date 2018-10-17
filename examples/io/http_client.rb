@@ -5,17 +5,19 @@ require 'modulation'
 Nuclear = import('../../lib/nuclear')
 
 def connect(host, port)
-  addr = ::Socket.sockaddr_in(port, host)
-  socket = ::Socket.new(::Socket::AF_INET, ::Socket::SOCK_STREAM)
-  socket.connect addr
-  Nuclear::IO::Wrapper.new(socket)
-  # result = socket.connect_nonblock addr, exception: false
+  proc do
+    socket = ::Socket.new(::Socket::AF_INET, ::Socket::SOCK_STREAM)
+    # socket = OpenSSL::SSL::SSLSocket.new(socket)
+    Nuclear::IO::SocketWrapper.new(socket, secure: true).tap do |o|
+      await o.connect(host, port)
+    end
+  end
 end
 
 
 spawn do
   begin
-    io = connect('google.com', 80)
+    io = await connect('google.com', 443)
     t0 = Time.now
     await io.write("GET / HTTP/1.1\r\nHost: google.com\r\n\r\n")
     puts "write time: #{Time.now - t0}"
