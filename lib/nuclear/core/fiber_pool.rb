@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :spawn, :size
+export :spawn, :size, :available
 
 require 'fiber'
 
@@ -22,19 +22,29 @@ def size
   @count
 end
 
+@last_downsize_stamp = Time.now
+
 # Invokes the given block using a fiber taken from the fiber pool. If the pool
 # is exhausted, a new fiber will be created.
 # @return [Fiber]
 def spawn(&block)
+  now = Time.now
+  downsize(now) if now - @last_downsize_stamp >= 60
+
   fiber = @pool.empty? ? new_fiber : @pool.pop
   @next_job = block
   fiber.resume
 end
 
+def downsize(now)
+  @last_downsize_stamp = now
+  return if @count < 10 || @pool.size < @count / 5
+  @pool.slice!(0, @pool.size - @count / 5).each { |f| f.resume :stop }
+end
+
 # Creates a new fiber to be added to the pool
 # @return [Fiber] new fiber
 def new_fiber
-  @count += 1
   Fiber.new { fiber_loop }
 end
 
@@ -42,11 +52,16 @@ end
 # @return [void]
 def fiber_loop
   fiber = Fiber.current
+  @count += 1
   loop do
     job = @next_job
     @next_job = nil
     job&.(fiber)
+    job = nil
     @pool << fiber
-    Fiber.yield
+    break if Fiber.yield == :stop
   end
+  puts "stopped fiber"
+ensure
+  @count -= 1
 end
