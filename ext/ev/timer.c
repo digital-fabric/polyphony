@@ -23,6 +23,7 @@ static VALUE EV_Timer_initialize(VALUE self, VALUE after, VALUE repeat);
 
 static VALUE EV_Timer_start(VALUE self);
 static VALUE EV_Timer_stop(VALUE self);
+static VALUE EV_Timer_reset(VALUE self);
 
 void EV_Timer_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
 
@@ -37,6 +38,7 @@ void Init_EV_Timer() {
   rb_define_method(cEV_Timer, "initialize", EV_Timer_initialize, 2);
   rb_define_method(cEV_Timer, "start", EV_Timer_start, 0);
   rb_define_method(cEV_Timer, "stop", EV_Timer_stop, 0);
+  rb_define_method(cEV_Timer, "reset", EV_Timer_reset, 0);
 
   ID_call = rb_intern("call");
 }
@@ -122,6 +124,18 @@ static VALUE EV_Timer_stop(VALUE self) {
     EV_del_watcher_ref(self);
     timer->active = 0;
   }
+
+  return Qnil;
+}
+
+static VALUE EV_Timer_reset(VALUE self) {
+  struct EV_Timer *timer;
+  Data_Get_Struct(self, struct EV_Timer, timer);
+
+  ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
+  ev_timer_set(&timer->ev_timer, timer->after, timer->repeat);
+  ev_timer_start(EV_DEFAULT, &timer->ev_timer);
+  timer->active = 1;
 
   return Qnil;
 }

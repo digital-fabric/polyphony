@@ -32,7 +32,7 @@ class CancelScope
     @opts = opts
     @cancel_error_class = opts[:mode] == :move_on ? ::MoveOn : ::Cancelled
 
-    @timer = EV::Timer.new(opts[:timeout], 0) { cancel! } if @opts[:timeout]
+    @timeout = EV::Timer.new(opts[:timeout], 0) { cancel! } if @opts[:timeout]
   end
 
   # Runs the given block inside the cancellation scope
@@ -43,7 +43,7 @@ class CancelScope
     raise e unless e.cancel_scope == self
     nil
   ensure
-    @timer&.stop
+    @timeout&.stop
     @fiber.cancelled = false
   end
 
@@ -65,8 +65,7 @@ class CancelScope
 
   # Resets the timeout associated with the cancellation scope
   # @return [void]
-  def reset_timer
-    @timer.stop
-    @timer.start
+  def reset_timeout
+    @timeout.reset
   end
 end
