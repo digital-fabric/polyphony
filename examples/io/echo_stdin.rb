@@ -41,7 +41,7 @@ class IO
   end
 end
 
-async! do
+spawn do
   begin
     puts "Write something..."
     loop do

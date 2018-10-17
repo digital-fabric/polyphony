@@ -29,7 +29,7 @@ class ResourcePool
     fiber = Fiber.current
     @waiting << fiber
     dequeue
-    Fiber.yield_and_raise_error
+    suspend
   ensure
     @waiting.delete(fiber)
   end

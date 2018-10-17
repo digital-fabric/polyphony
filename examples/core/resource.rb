@@ -22,7 +22,7 @@ def user(number)
 end
 
 100.times do |x|
-  async! { user(x) }
+  spawn { user(x) }
 end
 
 t0 = Time.now

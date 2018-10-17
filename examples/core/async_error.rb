@@ -8,7 +8,7 @@ async def my_sleep(t)
   raise "hello"
 end
 
-async! do
+spawn do
   await my_sleep(1)
 end
 

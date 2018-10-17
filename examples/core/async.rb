@@ -10,6 +10,6 @@ async def my_sleep(t)
   puts "woke up"
 end
 
-async! do
+spawn do
   await my_sleep(1)
 end

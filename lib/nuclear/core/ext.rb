@@ -2,6 +2,59 @@
 
 export :set_fiber_local_resource
 
+Async       = import('./async')
+CancelScope = import('./cancel_scope')
+FiberPool   = import('./fiber_pool')
+Nexus       = import('./nexus')
+
+# Kernel extensions (methods available to all objects)
+module ::Kernel
+  def async(sym = nil, &block)
+    if sym
+      Async.async_decorate(is_a?(Class) ? self : singleton_class, sym)
+    else
+      Async.async_task(&block)
+    end
+  end
+
+  def spawn(&block)
+    EV.next_tick do
+      if block.async
+        yield
+      else
+        FiberPool.spawn(&block)
+      end
+    end
+  end
+
+  def await(proc, &block)
+    return nil if Fiber.current.cancelled
+
+    Async.call_proc_with_optional_block(proc, block)
+  end
+
+  def cancel_after(timeout, &block)
+    c = CancelScope.new(timeout: timeout)
+    c.run(&block)
+  end
+
+  def move_on_after(timeout, &block)
+    c = CancelScope.new(timeout: timeout, mode: :move_on)
+    c.run(&block)
+  end
+
+  def nexus(tasks = nil, &block)
+    Nexus.new(tasks, &block).to_proc
+  end
+
+  # yields from current fiber, raising error if resumed value is an exception
+  # @return [any] resumed value if not an exception
+  def suspend
+    result = Fiber.yield
+    result.is_a?(Exception) ? raise(result) : result
+  end
+end
+
 # Proc extensions
 class ::Proc
   attr_accessor :async
@@ -9,14 +62,6 @@ end
 
 # Fiber extensions
 class ::Fiber
-  # yields control of fiber, raising error if resumed value is an exception
-  # @param value [any] value to yield
-  # @return [any] resumed value if not an exception
-  def self.yield_and_raise_error(value = nil)
-    result = self.yield(value)
-    result.is_a?(Exception) ? raise(result) : result
-  end
-
   attr_accessor :cancelled
   attr_writer   :root
 

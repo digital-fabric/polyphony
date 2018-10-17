@@ -4,7 +4,7 @@ require 'modulation'
 
 Nuclear = import('../../lib/nuclear')
 
-async! do
+spawn do
   move_on_after(3) do
     pulse = Nuclear.pulse(1)
     while await pulse

@@ -7,13 +7,13 @@ Nuclear = import('../../lib/nuclear')
 c1 = Nuclear.channel
 c2 = Nuclear.channel
 
-async! do
-  async! do
+spawn do
+  spawn do
     await Nuclear.sleep(1)
     c1 << "one"
   end
 
-  async! do
+  spawn do
     await Nuclear.sleep(2)
     c2 << "two"
   end

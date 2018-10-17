@@ -112,6 +112,6 @@ def wait_for_task(calling_fiber, ctx, opts)
     ctx[:result]
   else
     ctx[:calling_fiber] = calling_fiber
-    Fiber.yield_and_raise_error
+    suspend
   end
 end

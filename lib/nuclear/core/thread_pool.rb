@@ -13,7 +13,7 @@ end
 def start_task_on_thread(block)
   EV.ref
   @task_queue << [block, Fiber.current]
-  Fiber.yield_and_raise_error
+  suspend
 ensure
   EV.unref
 end

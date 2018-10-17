@@ -10,7 +10,7 @@ async def my_sleep(t)
   puts "#{t} done"
 end
 
-async! do
+spawn do
   puts "#{Time.now} going to sleep..."
   await Nuclear.nexus do |n|
     n << my_sleep(1)

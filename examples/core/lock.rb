@@ -15,6 +15,6 @@ def loop_it(number, lock)
 end
 
 lock = Nuclear::Sync::Mutex.new
-async! { loop_it(1, lock) }
-async! { loop_it(2, lock) }
-async! { loop_it(3, lock) }
+spawn { loop_it(1, lock) }
+spawn { loop_it(2, lock) }
+spawn { loop_it(3, lock) }

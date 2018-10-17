@@ -10,11 +10,11 @@ async def my_sleep(t)
   puts "done: #{t}"
 end
 
-async! do
+spawn do
   puts "#{Time.now} going to sleep..."
   result = await Nuclear.nexus do |n|
     fiber = Fiber.current
-    async! do
+    spawn do
       await Nuclear.sleep(0.5)
       n.move_on!(42)
     end

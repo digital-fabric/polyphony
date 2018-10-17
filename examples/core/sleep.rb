@@ -4,7 +4,7 @@ require 'modulation'
 
 Nuclear = import('../../lib/nuclear')
 
-async! do
+spawn do
   puts "going to sleep..."
   await Nuclear.sleep 1
   puts "woke up"

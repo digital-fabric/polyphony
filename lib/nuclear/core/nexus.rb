@@ -40,7 +40,7 @@ class Nexus
   def run_nexus(&block2)
     @nexus_fiber = Fiber.current
     start_sub_task(async { (block2 || @block).call(self) })
-    Fiber.yield_and_raise_error
+    suspend
   rescue Exception => e
     cancel_sub_tasks(Cancelled.new(nil, nil)) unless @cancelled
     e.is_a?(MoveOn) ? e.value : raise(e)

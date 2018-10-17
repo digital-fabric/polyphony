@@ -41,7 +41,7 @@ class IOWrapper
         @read_watcher.stop
         fiber.resume @io.read_nonblock(max, NO_EXCEPTION_OPTS)
       end
-      Fiber.yield_and_raise_error
+      suspend
     else
       result
     end
@@ -64,7 +64,7 @@ class IOWrapper
           fiber.resume
         end
         paused = true
-        Fiber.yield_and_raise_error
+        suspend
       else
         if result == data.bytesize
           return result
@@ -95,7 +95,7 @@ def connect(host, port)
 end
 
 
-async! do
+spawn do
   begin
     io = connect('google.com', 80)
     await io.write("GET / HTTP/1.1\r\n\r\n")

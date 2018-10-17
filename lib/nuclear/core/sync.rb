@@ -12,7 +12,7 @@ class Mutex
     proc do |&block|
       fiber = Fiber.current
       @waiting << fiber
-      Fiber.yield_and_raise_error if @waiting.size > 1
+      suspend if @waiting.size > 1
       block.()
     ensure
       @waiting.delete(fiber)

@@ -15,7 +15,7 @@ def lengthy_op
   acc / count
 end
 
-async! do
+spawn do
   t0 = Time.now
   cancel_after(0.01) do
     data = await Nuclear::Thread.spawn { lengthy_op }

@@ -36,7 +36,7 @@ def compare_performance
 
     acc = 0
     count = 0
-    100.times do
+    10.times do
       t0 = Time.now
       await nexus do |n|
         X.times do
@@ -57,4 +57,4 @@ rescue Exception => e
   end
 end
 
-async! { compare_performance }
+spawn { compare_performance }

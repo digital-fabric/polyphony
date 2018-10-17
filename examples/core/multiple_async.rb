@@ -4,13 +4,13 @@ require 'modulation'
 
 Nuclear = import('../../lib/nuclear')
 
-async! do
+spawn do
   puts "1 >"
   await Nuclear.sleep(1)
   puts "1 <"
 end
 
-async! do
+spawn do
   puts "2 >"
   await Nuclear.sleep(1)
   puts "2 <"

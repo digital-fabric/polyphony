@@ -20,7 +20,7 @@ def spawn(&block)
 end
 
 def wait_for_thread(ctx)
-  Fiber.yield_and_raise_error
+  suspend
 rescue Cancelled, MoveOn => e
   ctx[:fiber] = nil
   ctx[:thread]&.raise(e)

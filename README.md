@@ -47,7 +47,7 @@ require 'nuclear'
 def echo_connection(socket)
   reader = Nuclear::LineReader.new(socket)
 
-  while line = Nuclear.await(reader.gets)
+  while line = await(reader.gets)
     socket << "You said: #{line}"
   end
 end
@@ -55,9 +55,9 @@ end
 server = Nuclear::Net::Server.new
 server.listen(port: 1234)
 
-Nuclear.async do
-  while socket = Nuclear.await(server.connection)
-    Nuclear.async { echo_connection(socket) }
+spawn do
+  while socket = await server.accept
+    spawn { echo_connection(socket) }
   end
 end
 
@@ -82,7 +82,7 @@ $ gem install nuclear
 ```ruby
 require 'nuclear'
 
-async! do
+spawn do
   loop do
     Nuclear.await Nuclear.sleep(1)
     puts Time.now

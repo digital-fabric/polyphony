@@ -25,7 +25,7 @@ module CoreTest
       o = add(2, 3)
       assert_kind_of(Proc, o)
       result = nil
-      async! { result = await add(2, 3) }
+      spawn { result = await add(2, 3) }
       EV.run
       assert_equal(5, result)
     end
@@ -35,7 +35,7 @@ module CoreTest
       task_fiber = nil
       result = nil
       done = nil
-      async! { task_fiber = Fiber.current; result = 42; done = true }
+      spawn { task_fiber = Fiber.current; result = 42; done = true }
       EV.run # run async task
       assert_equal(true, done)
       assert_equal(42, result)
@@ -54,11 +54,11 @@ module CoreTest
           timer_fired = true
           fiber.resume('hello')
         end
-        Fiber.yield_and_raise_error
+        suspend
       end
       assert_nil(task_started)
       
-      async! { result = await task }
+      spawn { result = await task }
       EV.run
       assert(task_started)
       assert(timer_fired)
@@ -67,7 +67,7 @@ module CoreTest
 
     def test_that_await_accepts_block_and_passes_it_to_given_task
       result = nil
-      async! do
+      spawn do
         result = await async { 42 }
       end
       # async returns a task that uses an EV signal to resolve, so we need to run
@@ -88,7 +88,7 @@ module CoreTest
 
     def test_that_cancel_scope_cancels_async_op
       ctx = {}
-      async! do
+      spawn do
         begin
           EV::Timer.new(0.005, 0) { ctx[:cancel_scope]&.cancel! }
           sleep_with_cancel(ctx)
@@ -108,7 +108,7 @@ module CoreTest
 
     def test_that_cancel_scope_cancels_async_op_with_move_on
       ctx = {}
-      async! do
+      spawn do
         EV::Timer.new(0, 0) { ctx[:cancel_scope].cancel! }
         sleep_with_cancel(ctx, :move_on)
       end
@@ -120,7 +120,7 @@ module CoreTest
 
     def test_that_cancel_after_raises_cancelled_exception
       result = nil
-      async! do
+      spawn do
         begin
           cancel_after(0.01) do
             await Core.sleep(1000)
@@ -137,7 +137,7 @@ module CoreTest
     def test_that_cancel_scopes_can_be_nested
       inner_result = nil
       outer_result = nil
-      async! do
+      spawn do
         move_on_after(0.01) do
           move_on_after(0.02) do
             await Core.sleep(1000)
@@ -151,7 +151,7 @@ module CoreTest
       assert_equal(42, outer_result)
 
       outer_result = nil
-      async! do
+      spawn do
         move_on_after(0.02) do
           move_on_after(0.01) do
             await Core.sleep(1000)
@@ -182,7 +182,7 @@ module CoreTest
     
     def test_that_nexus_waits_for_all_nested_tasks_to_complete
       ctx = {}
-      async! do
+      spawn do
         await parallel_sleep(ctx)
       end
       EV.run
@@ -193,18 +193,18 @@ module CoreTest
 
     def test_that_nexus_can_add_tasks_after_having_started
       result = []
-      async! do
+      spawn do
         await nexus do |n|
           fiber = Fiber.current
           watcher = EV::Async.new { fiber.resume }
-          async! do
+          spawn do
             3.times do |i|
               await Core.sleep(0.001)
               n << async { await Core.sleep(0.002); result << i }
             end
             watcher.signal!
           end
-          Fiber.yield_and_raise_error
+          suspend
           watcher.stop
         end
       end
