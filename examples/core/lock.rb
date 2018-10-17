@@ -6,9 +6,10 @@ Nuclear = import('../../lib/nuclear')
 
 def loop_it(number, lock)
   loop do
-    lock.acquire do
+    await Nuclear.sleep(rand*0.2)
+    await lock.synchronize do
       puts "child #{number} has the lock"
-      await Nuclear.sleep(0.1)
+      await Nuclear.sleep(rand*0.05)
     end
   end
 end

@@ -8,17 +8,15 @@ class Mutex
     @waiting = []
   end
 
-  def acquire
-    fiber = Fiber.current
-    @waiting << fiber
-    Fiber.yield if @waiting.size > 1
-    yield
-  ensure
-    @waiting.shift if @waiting[0] == fiber
-    dequeue unless @waiting.empty?
-  end
-
-  def dequeue
-    EV.next_tick { @waiting[0]&.resume }
+  def synchronize
+    proc do |&block|
+      fiber = Fiber.current
+      @waiting << fiber
+      Fiber.yield_and_raise_error if @waiting.size > 1
+      block.()
+    ensure
+      @waiting.delete(fiber)
+      EV.next_tick { @waiting[0]&.resume } unless @waiting.empty?
+    end
   end
 end
