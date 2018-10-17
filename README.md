@@ -41,36 +41,6 @@ callbacks.
 
 ## An echo server in nuclear
 
-```ruby
-require 'nuclear'
-
-def echo_connection(socket)
-  reader = Nuclear::LineReader.new(socket)
-
-  while line = await(reader.gets)
-    socket << "You said: #{line}"
-  end
-end
-
-server = Nuclear::Net::Server.new
-server.listen(port: 1234)
-
-spawn do
-  while socket = await server.accept
-    spawn { echo_connection(socket) }
-  end
-end
-
-puts "listening on port 1234"
-```
-
-In the example above there are two loops which run concurrently inside separate
-fibers. Whenever `await` is called, control is yielded back to the nuclear
-reactor. Once a line is received (using `reader.gets`) control is handed back
-to the paused fiber, and processing continues. The reactor loop is run
-automatically once the program file has been executed (in a similar fashion to
-[node.js](https://nodejs.org/))
-
 ## Installation
 
 ```bash
