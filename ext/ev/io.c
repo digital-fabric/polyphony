@@ -7,10 +7,10 @@
 #endif /* GetReadFile */
 
 struct EV_IO {
+  struct  ev_io ev_io;
   int     event_mask;
   int     active;
   int     free_in_callback;
-  struct  ev_io ev_io;
   VALUE   callback;
 };
 
@@ -66,12 +66,11 @@ static void EV_IO_mark(struct EV_IO *io) {
 }
 
 static void EV_IO_free(struct EV_IO *io) {
-  ev_io_stop(EV_DEFAULT, &io->ev_io);
-
   if ev_is_pending(&io->ev_io) {
     io->free_in_callback = 1;
   }
   else {
+    ev_io_stop(EV_DEFAULT, &io->ev_io);
     xfree(io);
   }
 }
@@ -80,32 +79,41 @@ static VALUE EV_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask, VALUE 
   struct EV_IO *io;
   rb_io_t *fptr;
 
+  printf("0");
   Data_Get_Struct(self, struct EV_IO, io);
 
-  EV_add_watcher_ref(self);
-
+  printf("1");
   io->event_mask = EV_IO_symbol2event_mask(event_mask);
+  printf("2");
   io->callback = rb_block_proc();
 
+  printf("3");
   GetOpenFile(rb_convert_type(io_obj, T_FILE, "IO", "to_io"), fptr);
+  printf("4");
   ev_io_init(&io->ev_io, EV_IO_callback, FPTR_TO_FD(fptr), io->event_mask);
-
-  io->ev_io.data = (void *)io;
-
+  
+  printf("5");
   io->active = RTEST(start);
+  printf("6");
   io->free_in_callback = 0;
+  printf("7");
   if (io->active) {
+    printf("8");
+    EV_add_watcher_ref(self);
+    printf("9");
     ev_io_start(EV_DEFAULT, &io->ev_io);
   }
 
+  printf("A\n");
   return Qnil;
 }
 
 /* libev callback fired on IO event */
 void EV_IO_callback(ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
-  struct EV_IO *io = (struct EV_IO *)ev_io->data;
+  struct EV_IO *io = (struct EV_IO *)ev_io;
 
   if (io->free_in_callback) {
+    ev_io_stop(EV_DEFAULT, ev_io);
     xfree(io);
     return;
   }
@@ -127,6 +135,7 @@ static VALUE EV_IO_start(VALUE self) {
   if (!io->active) {
     ev_io_start(EV_DEFAULT, &io->ev_io);
     io->active = 1;
+    EV_add_watcher_ref(self);
   }
 
   return Qnil;
@@ -139,13 +148,14 @@ static VALUE EV_IO_stop(VALUE self) {
   if (io->active) {
     ev_io_stop(EV_DEFAULT, &io->ev_io);
     io->active = 0;
+    EV_del_watcher_ref(self);
   }
 
   return Qnil;
 }
 
 static VALUE EV_IO_cancel(VALUE self) {
-  EV_del_watcher_ref(self);
+  // EV_del_watcher_ref(self);
   return EV_IO_stop(self);
 }
 

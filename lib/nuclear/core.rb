@@ -32,7 +32,7 @@ module Core
 
   def self.trap(sig, &callback)
     sig = Signal.list[sig.to_s.upcase] if sig.is_a?(Symbol)
-    EV::Signal.new(sig, &callback)
+    @sigint_watcher = EV::Signal.new(sig, &callback)
   end
 
   def self.at_exit(&block)

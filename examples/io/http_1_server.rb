@@ -6,6 +6,7 @@ require 'http/parser'
 Nuclear = import('../../lib/nuclear')
 
 $client_count = 0
+$request_count = 0
 
 def handle_client(client)
   $client_count += 1
@@ -22,6 +23,7 @@ def handle_client(client)
       # scope.reset_timeout
       parser << data
       if request_complete
+        $request_count += 1
         status_code = 200
         data = "Hello world!\n"
         headers = "Content-Length: #{data.bytesize}\r\n"
@@ -32,8 +34,10 @@ def handle_client(client)
     end
     # puts "moved on due to inactivity"
   # end
+rescue Errno::ECONNRESET, IOError
+  # ignore
 rescue => e
-  # puts "client error: #{e.inspect}"
+  puts "client error: #{e.inspect}"
 ensure
   client.close
   $client_count -= 1
@@ -56,12 +60,13 @@ rescue Exception => e
   server.close
 end
 
-# EV::Timer.new(60, 60) { GC.start }
+t0 = Time.now
 EV::Timer.new(5, 5) do
-  puts "%s %d clients: %d fibers: %d / %d" % [
-    Time.now.to_s,
+  puts "pid: %d uptime: %d clients: %d reqs: %d fibers: %d / %d" % [
     Process.pid,
+    (Time.now - t0).to_i,
     $client_count,
+    $request_count,
     Nuclear::FiberPool.available,
     Nuclear::FiberPool.size
   ]

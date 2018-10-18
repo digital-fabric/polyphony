@@ -48,12 +48,9 @@ class IOWrapper
     loop do
       result = @io.read_nonblock(max, NO_EXCEPTION_OPTS)
       case result
-      when nil
-        close
-      when :wait_readable
-        read_watcher.await!(fiber)
-      else
-        return result
+      when nil            then raise IOError
+      when :wait_readable then read_watcher.await!(fiber)
+      else                return result
       end
     end
   ensure
@@ -69,11 +66,8 @@ class IOWrapper
     loop do
       result = @io.write_nonblock(data, exception: false)
       case result
-      when nil
-        close
-        raise 'socket closed'
-      when :wait_writable
-        write_watcher.await!(fiber)
+      when nil            then raise IOError
+      when :wait_writable then write_watcher.await!(fiber)
       else
         (result == data.bytesize) ? (return result) : (data = data[result..-1])
       end
@@ -107,15 +101,13 @@ class SocketWrapper < IOWrapper
     loop do
       result = @io.connect_nonblock(addr, exception: false)
       case result
-      when 0
-        return result
-      when :wait_writable
-        write_watcher.await!(fiber)
-      else
-        close
-        raise 'failed to connect'
+      when 0              then return result
+      when :wait_writable then write_watcher.await!(fiber)
+      else                raise IOError
       end
     end
+  ensure
+    @write_watcher&.stop
   end
 
   def connect_ssl_handshake_async
@@ -124,16 +116,16 @@ class SocketWrapper < IOWrapper
     loop do
       result = @io.connect_nonblock(exception: false)
       case result
-      when OpenSSL::SSL::SSLSocket
-        return true
-      when :wait_readable
-        read_watcher.await!(fiber)
-      when :wait_writable
-        write_watcher.await!(fiber)
-      else
-        raise "Failed SSL handshake: #{result.inspect}"
+      when OpenSSL::SSL::SSLSocket  then return true
+      when :wait_readable           then read_watcher.await!(fiber)
+      when :wait_writable           then write_watcher.await!(fiber)
+      else                          
+        raise IOError, "Failed SSL handshake: #{result.inspect}"
       end
     end
+  ensure
+    @read_watcher&.stop
+    @write_watcher&.stop
   end
 
   def accept
@@ -152,18 +144,13 @@ class SocketWrapper < IOWrapper
     loop do
       result, client_addr = @io.accept_nonblock(exception: false)
       case result
-      when Socket
-        return result
-      when :wait_readable
-        read_watcher.await!(fiber)
-      else
-        close
-        raise "failed to accept (#{result.inspect})"
+      when Socket         then return result
+      when :wait_readable then read_watcher.await!(fiber)
+      else                     raise "failed to accept (#{result.inspect})"
       end
     end
-  rescue Exception => e
-    close
-    raise e
+  ensure
+    @read_watcher&.stop
   end
 
   def bind(host, port)
