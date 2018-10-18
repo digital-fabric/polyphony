@@ -67,20 +67,20 @@ static void EV_IO_mark(struct EV_IO *io) {
 }
 
 static void EV_IO_free(struct EV_IO *io) {
-  if (rb_thread_current() != io->thread) {
-    printf("thread mismatch\n");
-  }
-  io->free_in_callback = 1;
-  ev_io_stop(EV_DEFAULT, &io->ev_io);
-  return;
+  // if (rb_thread_current() != io->thread) {
+  //   printf("thread mismatch\n");
+  // }
+  // io->free_in_callback = 1;
+  // ev_io_stop(EV_DEFAULT, &io->ev_io);
+  // return;
 
-  if ev_is_pending(&io->ev_io) {
-    io->free_in_callback = 1;
-  }
-  else {
+  // if ev_is_pending(&io->ev_io) {
+  //   io->free_in_callback = 1;
+  // }
+  // else {
     ev_io_stop(EV_DEFAULT, &io->ev_io);
     xfree(io);
-  }
+  // }
 }
 
 static const char * S_IO = "IO";
@@ -114,13 +114,13 @@ static VALUE EV_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask, VALUE 
 void EV_IO_callback(ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
   struct EV_IO *io = (struct EV_IO *)ev_io;
 
-  if (io->free_in_callback) {
-    printf("callback called after free\n");
+  // if (io->free_in_callback) {
+  //   printf("callback called after free\n");
 
-    // ev_io_stop(EV_DEFAULT, ev_io);
-    // xfree(io);
-    return;
-  }
+  //   // ev_io_stop(EV_DEFAULT, ev_io);
+  //   // xfree(io);
+  //   return;
+  // }
 
   if (io->callback != Qnil) {
     rb_funcall(io->callback, ID_call, 1, revents);
