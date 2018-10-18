@@ -24,9 +24,9 @@ class IOWrapper
   end
 
   def close
-    @io.close
     @read_watcher&.stop
     @write_watcher&.stop
+    @io.close
   end
 
   def read_watcher

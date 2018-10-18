@@ -12,6 +12,7 @@ struct EV_IO {
   int     active;
   int     free_in_callback;
   VALUE   callback;
+  VALUE   thread;
 };
 
 static VALUE mEV = Qnil;
@@ -66,6 +67,13 @@ static void EV_IO_mark(struct EV_IO *io) {
 }
 
 static void EV_IO_free(struct EV_IO *io) {
+  if (rb_thread_current() != io->thread) {
+    printf("thread mismatch\n");
+  }
+  io->free_in_callback = 1;
+  ev_io_stop(EV_DEFAULT, &io->ev_io);
+  return;
+
   if ev_is_pending(&io->ev_io) {
     io->free_in_callback = 1;
   }
@@ -75,36 +83,30 @@ static void EV_IO_free(struct EV_IO *io) {
   }
 }
 
+static const char * S_IO = "IO";
+static const char * S_to_io = "to_io";
+
 static VALUE EV_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask, VALUE start) {
   struct EV_IO *io;
   rb_io_t *fptr;
 
-  printf("0");
   Data_Get_Struct(self, struct EV_IO, io);
 
-  printf("1");
   io->event_mask = EV_IO_symbol2event_mask(event_mask);
-  printf("2");
   io->callback = rb_block_proc();
 
-  printf("3");
-  GetOpenFile(rb_convert_type(io_obj, T_FILE, "IO", "to_io"), fptr);
-  printf("4");
+  GetOpenFile(rb_convert_type(io_obj, T_FILE, S_IO, S_to_io), fptr);
   ev_io_init(&io->ev_io, EV_IO_callback, FPTR_TO_FD(fptr), io->event_mask);
   
-  printf("5");
   io->active = RTEST(start);
-  printf("6");
   io->free_in_callback = 0;
-  printf("7");
   if (io->active) {
-    printf("8");
     EV_add_watcher_ref(self);
-    printf("9");
     ev_io_start(EV_DEFAULT, &io->ev_io);
   }
 
-  printf("A\n");
+  io->thread = rb_thread_current();
+
   return Qnil;
 }
 
@@ -113,8 +115,10 @@ void EV_IO_callback(ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
   struct EV_IO *io = (struct EV_IO *)ev_io;
 
   if (io->free_in_callback) {
-    ev_io_stop(EV_DEFAULT, ev_io);
-    xfree(io);
+    printf("callback called after free\n");
+
+    // ev_io_stop(EV_DEFAULT, ev_io);
+    // xfree(io);
     return;
   }
 
