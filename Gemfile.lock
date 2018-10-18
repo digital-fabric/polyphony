@@ -16,12 +16,16 @@ GEM
     http_parser.rb (0.6.1)
     modulation (0.15)
     pg (1.0.0)
+    rake (12.3.1)
+    rake-compiler (1.0.5)
+      rake
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   nuclear!
+  rake-compiler (= 1.0.5)
 
 BUNDLED WITH
    1.16.5
