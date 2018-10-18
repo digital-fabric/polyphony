@@ -38,10 +38,11 @@ end
 
 def downsize(now)
   @last_downsize_stamp = now
-  return if @count < 10 || @pool.size < @count / 5
-  stop_count = @pool.size - @count / 5
-  stop_count = 10 if stop_count > 10
-  @pool.slice!(0, stop_count).each { |f| f.resume :stop }
+  return if @count < 10
+  max_available = @count >= 50 ? @count / 5 : 10
+  if @pool.count > max_available
+    @pool.slice!(max_available, 10).each { |f| f.resume :stop }
+  end
 end
 
 # Creates a new fiber to be added to the pool
