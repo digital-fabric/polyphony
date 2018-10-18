@@ -29,7 +29,7 @@ def handle_client(client)
         headers = "Content-Length: #{data.bytesize}\r\n"
         await client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
         request_complete = nil
-        break unless parser.keep_alive?
+        parser.keep_alive? ? resume_on_next_tick : break
       end
     end
     # puts "moved on due to inactivity"

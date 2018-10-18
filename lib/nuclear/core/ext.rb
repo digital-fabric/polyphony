@@ -55,6 +55,12 @@ module ::Kernel
     result = Fiber.yield
     result.is_a?(Exception) ? raise(result) : result
   end
+
+  def resume_on_next_tick
+    fiber = Fiber.current
+    EV.next_tick { fiber.resume }
+    Fiber.yield
+  end
 end
 
 # Proc extensions
