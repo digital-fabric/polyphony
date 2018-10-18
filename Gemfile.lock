@@ -2,20 +2,16 @@ PATH
   remote: .
   specs:
     nuclear (0.8)
-      hiredis (= 0.6.1)
       http-2 (= 0.10.0)
-      http_parser.rb (= 0.6.1)
+      http_parser.rb (= 0.6.0)
       modulation (= 0.15)
-      pg (= 1.0.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    hiredis (0.6.1)
     http-2 (0.10.0)
-    http_parser.rb (0.6.1)
+    http_parser.rb (0.6.0)
     modulation (0.15)
-    pg (1.0.0)
     rake (12.3.1)
     rake-compiler (1.0.5)
       rake
