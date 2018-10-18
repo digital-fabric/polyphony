@@ -22,8 +22,8 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency      'http_parser.rb', '0.6.1'
   s.add_runtime_dependency      'http-2',         '0.10.0'
   
-  s.add_runtime_dependency      'hiredis',        '0.6.1'
-  s.add_runtime_dependency      'pg',             '1.0.0'
+  # s.add_runtime_dependency      'hiredis',        '0.6.1'
+  # s.add_runtime_dependency      'pg',             '1.0.0'
 
   s.add_development_dependency  'rake-compiler',  '1.0.5'
 end
