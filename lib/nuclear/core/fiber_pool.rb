@@ -39,7 +39,9 @@ end
 def downsize(now)
   @last_downsize_stamp = now
   return if @count < 10 || @pool.size < @count / 5
-  @pool.slice!(0, @pool.size - @count / 5).each { |f| f.resume :stop }
+  stop_count = @pool.size - @count / 5
+  stop_count = 10 if stop_count > 10
+  @pool.slice!(0, stop_count).each { |f| f.resume :stop }
 end
 
 # Creates a new fiber to be added to the pool
@@ -61,7 +63,6 @@ def fiber_loop
     @pool << fiber
     break if Fiber.yield == :stop
   end
-  puts "stopped fiber"
 ensure
   @count -= 1
 end
