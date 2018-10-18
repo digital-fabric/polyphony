@@ -1,7 +1,9 @@
-# Summary
-​
+# Table of contents
+
+* [Introduction](../README.md)
+
 ## Getting Started
-​
-* [Installing](getting-started.md#installing)
-* [Tutorial](getting-started.md#tutorial)
-    
+
+* [Installing](getting-started/getting-started.md)
+* [Tutorial](getting-started/tutorial.md)
+
