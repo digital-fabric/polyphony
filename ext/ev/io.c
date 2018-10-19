@@ -101,7 +101,7 @@ static VALUE EV_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask, VALUE 
   io->active = RTEST(start);
   io->free_in_callback = 0;
   if (io->active) {
-    EV_add_watcher_ref(self);
+    // EV_add_watcher_ref(self);
     ev_io_start(EV_DEFAULT, &io->ev_io);
   }
 
@@ -139,7 +139,7 @@ static VALUE EV_IO_start(VALUE self) {
   if (!io->active) {
     ev_io_start(EV_DEFAULT, &io->ev_io);
     io->active = 1;
-    EV_add_watcher_ref(self);
+    // EV_add_watcher_ref(self);
   }
 
   return Qnil;
@@ -152,7 +152,7 @@ static VALUE EV_IO_stop(VALUE self) {
   if (io->active) {
     ev_io_stop(EV_DEFAULT, &io->ev_io);
     io->active = 0;
-    EV_del_watcher_ref(self);
+    // EV_del_watcher_ref(self);
   }
 
   return Qnil;
