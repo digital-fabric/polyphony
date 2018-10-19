@@ -93,7 +93,7 @@ static VALUE EV_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask, VALUE 
   Data_Get_Struct(self, struct EV_IO, io);
 
   io->event_mask = EV_IO_symbol2event_mask(event_mask);
-  io->callback = rb_block_proc();
+  io->callback = rb_block_given_p() ? rb_block_proc() : Qnil;
 
   GetOpenFile(rb_convert_type(io_obj, T_FILE, S_IO, S_to_io), fptr);
   ev_io_init(&io->ev_io, EV_IO_callback, FPTR_TO_FD(fptr), io->event_mask);
@@ -129,11 +129,11 @@ void EV_IO_callback(ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
 
 static VALUE EV_IO_start(VALUE self) {
   struct EV_IO *io;
+  
   Data_Get_Struct(self, struct EV_IO, io);
 
-  VALUE proc = rb_block_proc();
-  if (proc) {
-    io->callback = proc;
+  if (rb_block_given_p()) {
+    io->callback = rb_block_proc();
   }
 
   if (!io->active) {
@@ -147,6 +147,7 @@ static VALUE EV_IO_start(VALUE self) {
 
 static VALUE EV_IO_stop(VALUE self) {
   struct EV_IO *io;
+  
   Data_Get_Struct(self, struct EV_IO, io);
 
   if (io->active) {
@@ -166,11 +167,12 @@ static VALUE EV_IO_cancel(VALUE self) {
 /* Internal C functions */
 
 static int EV_IO_symbol2event_mask(VALUE sym) {
+  ID sym_id;
+
   if (NIL_P(sym)) {
     return 0;
   }
 
-  ID sym_id;
   sym_id = SYM2ID(sym);
 
   if(sym_id == ID_R) {
