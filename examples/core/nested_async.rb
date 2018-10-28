@@ -10,7 +10,7 @@ spawn do
     await async do
       await async do
         puts "Fiber count: #{Nuclear::FiberPool.size}"
-        await Nuclear.sleep(1)
+        await sleep(1)
       end
     end
   end

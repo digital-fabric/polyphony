@@ -9,12 +9,12 @@ c2 = Nuclear.channel
 
 spawn do
   spawn do
-    await Nuclear.sleep(1)
+    await sleep(1)
     c1 << "one"
   end
 
   spawn do
-    await Nuclear.sleep(2)
+    await sleep(2)
     c2 << "two"
   end
 

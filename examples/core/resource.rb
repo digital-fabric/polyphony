@@ -14,7 +14,7 @@ def user(number)
     # puts "user #{number} >"
     Pool.acquire do |r|
       # puts "user #{number} #{r.inspect} >"
-      await Nuclear.sleep(0.05 + rand * 0.2)
+      await sleep(0.05 + rand * 0.2)
       STDOUT << '.'
       # puts "#{number}: #{r.inspect}"
     end
@@ -26,4 +26,4 @@ end
 end
 
 t0 = Time.now
-EV::Timer.new(10, 10) { puts "uptime: #{Time.now - t0}" }
+every(10) { puts "uptime: #{Time.now - t0}" }

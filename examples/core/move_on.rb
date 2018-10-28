@@ -7,7 +7,7 @@ Nuclear = import('../../lib/nuclear')
 async def sleep_and_cancel
   puts "going to sleep..."
   move_on_after(1) do
-    await Nuclear.sleep 60
+    await sleep 60
   end
   puts "woke up"
 end

@@ -9,4 +9,4 @@ EV.next_tick do
   EV.next_tick { puts "111" }
 end
 
-EV::Timer.new(1, 1) { puts Time.now }
+Nuclear.every(1) { puts Time.now }

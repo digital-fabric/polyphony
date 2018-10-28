@@ -6,7 +6,7 @@ Nuclear = import('../../lib/nuclear')
 
 async def my_sleep(t)
   puts "going to sleep..."
-  await Nuclear.sleep t
+  await sleep t
   puts "woke up"
 end
 

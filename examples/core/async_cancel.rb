@@ -8,7 +8,7 @@ spawn do
   puts "going to sleep..."
   cancel_after(1) do
     await async do
-      await Nuclear.sleep 2
+      await sleep 2
     end
   end
 rescue Cancelled => e

@@ -46,7 +46,7 @@ require 'nuclear'
 
 spawn do
   loop do
-    Nuclear.await Nuclear.sleep(1)
+    Nuclear.await sleep(1)
     puts Time.now
   end
 end

@@ -6,7 +6,7 @@ Nuclear = import('../../lib/nuclear')
 
 async def my_sleep(t)
   puts "start: #{t}"
-  await Nuclear.sleep(t)
+  await sleep(t)
   puts "done: #{t}"
 end
 
@@ -15,7 +15,7 @@ spawn do
   result = await Nuclear.nexus do |n|
     fiber = Fiber.current
     spawn do
-      await Nuclear.sleep(0.5)
+      await sleep(0.5)
       n.move_on!(42)
     end
     n << my_sleep(1)

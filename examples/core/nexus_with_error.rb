@@ -5,7 +5,7 @@ require 'modulation'
 Nuclear = import('../../lib/nuclear')
 
 async def my_sleep(t)
-  await Nuclear.sleep(t)
+  await sleep(t)
   raise "blah"
 end
 

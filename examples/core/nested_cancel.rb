@@ -10,7 +10,7 @@ async def sleep_and_cancel
     puts "#{Time.now} outer cancel scope"
     cancel_after(10) do
       puts "#{Time.now} inner cancel scope"
-      await Nuclear.sleep 60
+      await sleep 60
     rescue Exception => e
       puts "#{Time.now} inner scope got error: #{e}"
       raise e
@@ -30,7 +30,7 @@ async def sleep_and_move_on
     puts "#{Time.now} outer cancel scope"
     move_on_after(10) do
       puts "#{Time.now} inner cancel scope"
-      await Nuclear.sleep 60
+      await sleep 60
       puts "#{Time.now} inner scope done"
     end
     puts "#{Time.now} outer scope done"
