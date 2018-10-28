@@ -61,6 +61,36 @@ module ::Kernel
     EV.next_tick { fiber.resume }
     Fiber.yield
   end
+
+  def after(duration, &block)
+    EV::Timer.new(freq, 0).start(&block)
+  end
+
+  def every(freq, &block)
+    EV::Timer.new(freq, freq).start(&block)
+  end
+
+  alias_method :sync_sleep, :sleep 
+
+  def sleep(duration)
+    proc do
+      timer = EV::Timer.new(duration, 0)
+      timer.await
+    ensure
+      timer.stop
+    end
+  end
+
+  def pulse(freq)
+    fiber = Fiber.current
+    timer = EV::Timer.new(freq, freq)
+    timer.start { fiber.resume freq }
+    proc do
+      suspend
+    ensure
+      timer.stop
+    end
+  end
 end
 
 # Proc extensions
