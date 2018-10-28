@@ -41,7 +41,7 @@ class Nexus
   def run_nexus(&block2)
     @nexus_fiber = Fiber.current
     @pre_tasks&.each { |t| start_sub_task(t) }
-    proc = block2 || @block2
+    proc = block2 || @block
     start_sub_task(async { proc.call(self) }) if proc
     suspend
   rescue Exception => e
