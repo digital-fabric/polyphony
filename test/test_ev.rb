@@ -3,6 +3,7 @@ require 'modulation'
 
 module EVTest
   Core = import('../lib/nuclear/core')
+  Core.dont_auto_run!
 
   class RunTest < Minitest::Test
     def test_that_run_loop_returns_immediately_if_no_watchers
@@ -16,14 +17,16 @@ module EVTest
   class TimerTest < MiniTest::Test
     def test_that_one_shot_timer_works
       count = 0
-      t = EV::Timer.new(0.01, 0) { count += 1}
+      t = EV::Timer.new(0.01, 0)
+      t.start { count += 1}
       EV.run
       assert_equal(1, count)
     end
 
     def test_that_repeating_timer_works
       count = 0
-      t = EV::Timer.new(0.001, 0.001) { count += 1; t.stop if count >= 3}
+      t = EV::Timer.new(0.001, 0.001)
+      t.start { count += 1; t.stop if count >= 3}
       EV.run
       assert_equal(3, count)
     end
@@ -32,11 +35,12 @@ module EVTest
     def test_that_reading_works
       i, o = IO.pipe
       data = +''
-      w = EV::IO.new(i, :r, true) do
+      w = EV::IO.new(i, :r)
+      w.start do
         i.read_nonblock(8192, data)
         w.stop unless data.empty?
       end
-      EV::Timer.new(0, 0) { o << 'hello' }
+      EV::Timer.new(0, 0).start { o << 'hello' }
       EV.run
       assert_equal('hello', data)
     end
@@ -77,7 +81,7 @@ module EVTest
       Thread.new do
         sleep 0.001
         3.times { a.signal! }
-        EV::Timer.new(0.01, 0) { a.stop }
+        EV::Timer.new(0.01, 0).start { a.stop }
       end
       EV.run
       assert_equal(1, count)

@@ -3,6 +3,8 @@ require 'modulation'
 
 module CoreTest
   Core        = import('../lib/nuclear/core')
+  Core.dont_auto_run!
+
   CancelScope = import('../lib/nuclear/core/cancel_scope')
 
   class AsyncAwaitTest < Minitest::Test
@@ -50,7 +52,8 @@ module CoreTest
       task = proc do
         task_started = true
         fiber = Fiber.current
-        timer = EV::Timer.new(0.01, 0) do
+        timer = EV::Timer.new(0.01, 0)
+        timer.start do
           timer_fired = true
           fiber.resume('hello')
         end
@@ -90,7 +93,7 @@ module CoreTest
       ctx = {}
       spawn do
         begin
-          EV::Timer.new(0.005, 0) { ctx[:cancel_scope]&.cancel! }
+          EV::Timer.new(0.005, 0).start { ctx[:cancel_scope]&.cancel! }
           sleep_with_cancel(ctx)
         rescue Exception => e
           ctx[:result] = e
@@ -109,7 +112,7 @@ module CoreTest
     def test_that_cancel_scope_cancels_async_op_with_move_on
       ctx = {}
       spawn do
-        EV::Timer.new(0, 0) { ctx[:cancel_scope].cancel! }
+        EV::Timer.new(0, 0).start { ctx[:cancel_scope].cancel! }
         sleep_with_cancel(ctx, :move_on)
       end
       
@@ -167,16 +170,16 @@ module CoreTest
   end
 
   class NexusTest < MiniTest::Test
-    def sleep(ctx, idx)
+    def sleep_and_set(ctx, idx)
       async do
-        await Core.sleep(0.001 * idx)
+        await sleep(0.001 * idx)
         ctx[idx] = true
       end
     end
 
     def parallel_sleep(ctx)
       nexus do |n|
-        (1..3).each { |idx| n << sleep(ctx, idx) }
+        (1..3).each { |idx| n << sleep_and_set(ctx, idx) }
       end
     end
     
@@ -200,7 +203,7 @@ module CoreTest
           spawn do
             3.times do |i|
               await Core.sleep(0.001)
-              n << async { await Core.sleep(0.002); result << i }
+              n << async { await sleep(0.002); result << i }
             end
             watcher.signal!
           end
