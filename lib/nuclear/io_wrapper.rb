@@ -7,16 +7,6 @@ require 'openssl'
 
 Core = import('./core')
 
-class ::EV::IO
-  def await!(fiber)
-    start do
-      stop
-      fiber.resume
-    end
-    suspend
-  end
-end
-
 class IOWrapper
   def initialize(io, opts = {})
     @io = io
@@ -29,12 +19,26 @@ class IOWrapper
     @io.close
   end
 
+  ZERO_LINGER = [0, 0].pack("ii")
+
+  def dont_linger
+    @io.setsockopt(Socket::SOL_SOCKET, Socket::SO_LINGER, ZERO_LINGER)
+  end
+
+  def set_no_delay
+    @io.setsockopt(Socket::SOL_IPPROTO_TCP, Socket::SO_TCP_NODELAY, 1)
+  end
+
+  def reuse_addr
+    @io.setsockopt(Socket::SOL_SOCKET, SOCKET::SO_REUSEADDR, 1)
+  end
+
   def read_watcher
-    @read_watcher ||= EV::IO.new(@io, :r, false) { }
+    @read_watcher ||= EV::IO.new(@io, :r)
   end
 
   def write_watcher
-    @write_watcher ||= EV::IO.new(@io, :w, false) { }
+    @write_watcher ||= EV::IO.new(@io, :w)
   end
 
   NO_EXCEPTION_OPTS = { exception: false }.freeze
@@ -44,12 +48,11 @@ class IOWrapper
   end
 
   def read_async(max)
-    fiber = Fiber.current
     loop do
       result = @io.read_nonblock(max, NO_EXCEPTION_OPTS)
       case result
       when nil            then raise IOError
-      when :wait_readable then read_watcher.await!(fiber)
+      when :wait_readable then read_watcher.await
       else                return result
       end
     end
@@ -62,12 +65,11 @@ class IOWrapper
   end
 
   def write_async(data)
-    fiber = Fiber.current
     loop do
       result = @io.write_nonblock(data, exception: false)
       case result
       when nil            then raise IOError
-      when :wait_writable then write_watcher.await!(fiber)
+      when :wait_writable then write_watcher.await
       else
         (result == data.bytesize) ? (return result) : (data = data[result..-1])
       end
@@ -97,12 +99,11 @@ class SocketWrapper < IOWrapper
 
   def connect_async(host, port)
     addr = ::Socket.sockaddr_in(port, host)
-    fiber = Fiber.current
     loop do
       result = @io.connect_nonblock(addr, exception: false)
       case result
       when 0              then return result
-      when :wait_writable then write_watcher.await!(fiber)
+      when :wait_writable then write_watcher.await
       else                raise IOError
       end
     end
@@ -112,13 +113,12 @@ class SocketWrapper < IOWrapper
 
   def connect_ssl_handshake_async
     @io = OpenSSL::SSL::SSLSocket.new(@io, @opts[:secure_context])
-    fiber = Fiber.current
     loop do
       result = @io.connect_nonblock(exception: false)
       case result
       when OpenSSL::SSL::SSLSocket  then return true
-      when :wait_readable           then read_watcher.await!(fiber)
-      when :wait_writable           then write_watcher.await!(fiber)
+      when :wait_readable           then read_watcher.await
+      when :wait_writable           then write_watcher.await
       else                          
         raise IOError, "Failed SSL handshake: #{result.inspect}"
       end
@@ -140,12 +140,11 @@ class SocketWrapper < IOWrapper
   end
 
   def accept_async
-    fiber = Fiber.current
     loop do
       result, client_addr = @io.accept_nonblock(exception: false)
       case result
       when Socket         then return result
-      when :wait_readable then read_watcher.await!(fiber)
+      when :wait_readable then read_watcher.await
       else                     raise "failed to accept (#{result.inspect})"
       end
     end
