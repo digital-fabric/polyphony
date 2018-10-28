@@ -32,12 +32,17 @@ class CancelScope
     @opts = opts
     @cancel_error_class = opts[:mode] == :move_on ? ::MoveOn : ::Cancelled
 
-    @timeout = EV::Timer.new(opts[:timeout], 0) { cancel! } if @opts[:timeout]
+    @timeout = EV::Timer.new(opts[:timeout], 0) if @opts[:timeout]
+  end
+
+  def on_cancel(&block)
+    @on_cancel = block
   end
 
   # Runs the given block inside the cancellation scope
   # @return [any] result of given block
   def run
+    @timeout&.start(&method(:cancel!))
     yield(self)
   rescue MoveOn => e
     raise e unless e.cancel_scope == self
@@ -52,6 +57,7 @@ class CancelScope
   # @param value [any] value to pass if moving on
   # @return [void]
   def cancel!(value = nil)
+    @on_cancel&.call
     @fiber.cancelled = true
     @cancelled = true
     @fiber.resume @cancel_error_class.new(self, value)
