@@ -69,7 +69,9 @@ static void EV_Timer_mark(struct EV_Timer *timer) {
 }
 
 static void EV_Timer_free(struct EV_Timer *timer) {
-  ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
+  if (timer->active) {
+    ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
+  }
   xfree(timer);
 }
 
@@ -151,13 +153,20 @@ static VALUE EV_Timer_stop(VALUE self) {
 
 static VALUE EV_Timer_reset(VALUE self) {
   struct EV_Timer *timer;
+  int prev_active;
   GetEV_Timer(self, timer);
 
-  ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
+  prev_active = timer->active;
+
+  if (prev_active) {
+    ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
+  }
   ev_timer_set(&timer->ev_timer, timer->after, timer->repeat);
   ev_timer_start(EV_DEFAULT, &timer->ev_timer);
-  timer->active = 1;
-  EV_add_watcher_ref(self);
+  if (!prev_active) {
+    timer->active = 1;
+    EV_add_watcher_ref(self);
+  }
 
   return self;
 }
