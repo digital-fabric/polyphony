@@ -11,6 +11,7 @@ GEM
   specs:
     http-2 (0.10.0)
     http_parser.rb (0.6.0)
+    minitest (5.11.3)
     modulation (0.15)
     rake (12.3.1)
     rake-compiler (1.0.5)
@@ -20,6 +21,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  minitest (= 5.11.3)
   nuclear!
   rake-compiler (= 1.0.5)
 
