@@ -4,24 +4,7 @@ export_default :CancelScope
 
 require 'fiber'
 
-# Exception representing a cancellation that should raise an error
-class ::Cancelled < ::Exception
-  attr_reader :cancel_scope
-
-  def initialize(cancel_scope, _value)
-    @cancel_scope = cancel_scope
-  end
-end
-
-# Exception representing a cancellation that should not raise an error
-class ::MoveOn < ::Exception
-  attr_reader :cancel_scope, :value
-
-  def initialize(cancel_scope, value)
-    @cancel_scope = cancel_scope
-    @value = value
-  end
-end
+Exceptions = import('./exceptions')
 
 # A cancellation scope that can be used to cancel an asynchronous task
 class CancelScope
@@ -30,7 +13,8 @@ class CancelScope
   def initialize(opts = {})
     @fiber = Fiber.current
     @opts = opts
-    @cancel_error_class = opts[:mode] == :move_on ? ::MoveOn : ::Cancelled
+    @cancel_error_class = opts[:mode] == :stop ?
+      Exceptions::Stopped : Exceptions::Cancelled
 
     @timeout = EV::Timer.new(opts[:timeout], 0) if @opts[:timeout]
   end
@@ -44,8 +28,8 @@ class CancelScope
   def run
     @timeout&.start(&method(:cancel!))
     yield(self)
-  rescue MoveOn => e
-    raise e unless e.cancel_scope == self
+  rescue Exceptions::Stopped => e
+    raise e unless e.scope == self
     nil
   ensure
     @timeout&.stop
@@ -60,7 +44,7 @@ class CancelScope
     @on_cancel&.call
     @fiber.cancelled = true
     @cancelled = true
-    @fiber.resume @cancel_error_class.new(self, value)
+    @fiber.resume @cancel_error_class.new(self)
   end
 
   # Returns true whether the scope was cancelled

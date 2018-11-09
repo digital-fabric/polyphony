@@ -65,6 +65,7 @@ def fiber_loop
     @checked_out << fiber
     job = @next_job
     @next_job = nil
+    fiber.cancelled = nil
     job&.(fiber)
     job = nil
     @pool << fiber
@@ -72,5 +73,6 @@ def fiber_loop
     break if Fiber.yield == :stop
   end
 ensure
+  @checked_out.delete(fiber)
   @count -= 1
 end

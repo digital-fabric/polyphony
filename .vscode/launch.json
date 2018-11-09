@@ -5,6 +5,21 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "http1",
+      "type": "Ruby",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "program": "${workspaceRoot}/examples/io/http_1_server.rb"
+
+    },
+    {
+      "name": "pulse",
+      "type": "Ruby",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "program": "${workspaceRoot}/examples/core/pulse.rb"
+    },
+    {
       "name": "Test",
       "type": "Ruby",
       "request": "launch",

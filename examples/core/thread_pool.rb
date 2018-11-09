@@ -38,9 +38,9 @@ def compare_performance
     count = 0
     10.times do
       t0 = Time.now
-      await nexus do |n|
+      await supervise do |s|
         X.times do
-          n << Nuclear::ThreadPool.process { lengthy_op }
+          s << Nuclear::ThreadPool.process { lengthy_op }
         end
       end
       thread_pool_perf = X / (Time.now - t0)

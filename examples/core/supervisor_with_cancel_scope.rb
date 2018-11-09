@@ -14,12 +14,12 @@ end
 spawn do
   puts "#{Time.now} going to sleep..."
   move_on_after(0.5) do
-    await Nuclear.nexus do |f|
-      f << my_sleep(1)
-      f << my_sleep(2)
-      f << my_sleep(3)
+    await supervise do |s|
+      s << my_sleep(1)
+      s << my_sleep(2)
+      s << my_sleep(3)
     end
-    puts "nexus done"
+    puts "supervisor done"
   end
   puts "#{Time.now} woke up"
 end

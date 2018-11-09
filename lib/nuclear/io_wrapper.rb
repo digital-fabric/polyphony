@@ -26,11 +26,11 @@ class IOWrapper
   end
 
   def set_no_delay
-    @io.setsockopt(Socket::SOL_IPPROTO_TCP, Socket::SO_TCP_NODELAY, 1)
+    @io.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
   end
 
   def reuse_addr
-    @io.setsockopt(Socket::SOL_SOCKET, SOCKET::SO_REUSEADDR, 1)
+    @io.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
   end
 
   def read_watcher

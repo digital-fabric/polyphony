@@ -2,12 +2,14 @@
 
 export :spawn
 
+Exceptions = import('./exceptions')
+
 # Runs the given block in a separate thread, returning a promise fulfilled
 # once the thread is done. The signalling for the thread is done using an
 # I/O pipe.
 # @return [Proc]
 def spawn(&block)
-  proc do
+  async do
     ctx = {
       fiber:    Fiber.current,
       watcher:  EV::Async.new { complete_thread_task(ctx) },
@@ -21,7 +23,7 @@ end
 
 def wait_for_thread(ctx)
   suspend
-rescue Cancelled, MoveOn => e
+rescue Exceptions::TaskInterrupted => e
   ctx[:fiber] = nil
   ctx[:thread]&.raise(e)
   raise e

@@ -11,14 +11,14 @@ async def my_sleep(t)
 end
 
 spawn do
-  puts "#{Time.now} going to sleep..."
-  await Nuclear.nexus do |n|
-    n << my_sleep(1)
-    n << my_sleep(2)
-    n << my_sleep(3)
-    n << async {
+  puts "#{Time.now} waiting..."
+  await supervise do |s|
+    s << my_sleep(1)
+    s << my_sleep(2)
+    s << my_sleep(3)
+    s << async {
       puts "fiber count: #{Nuclear::FiberPool.size}"
     }
   end
-  puts "#{Time.now} woke up"
+  puts "#{Time.now} done waiting"
 end

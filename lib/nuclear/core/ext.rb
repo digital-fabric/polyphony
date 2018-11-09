@@ -5,7 +5,8 @@ export :set_fiber_local_resource
 Async       = import('./async')
 CancelScope = import('./cancel_scope')
 FiberPool   = import('./fiber_pool')
-Nexus       = import('./nexus')
+Supervisor  = import('./supervisor')
+Task        = import('./task')
 
 # Kernel extensions (methods available to all objects)
 module ::Kernel
@@ -13,24 +14,19 @@ module ::Kernel
     if sym
       Async.async_decorate(is_a?(Class) ? self : singleton_class, sym)
     else
-      Async.async_task(&block)
+      Task.new(&block)
     end
   end
 
-  def spawn(&block)
-    EV.next_tick do
-      if block.async
-        yield
-      else
-        FiberPool.spawn(&block)
-      end
-    end
+  def spawn(task = nil, &block)
+    task.is_a?(Task) ? task.start : Task.new(&(block || task)).start
   end
 
-  def await(proc, &block)
+  def await(task, &block)
     return nil if Fiber.current.cancelled
 
-    Async.call_proc_with_optional_block(proc, block)
+    task.is_a?(Task) ?
+      task.await(&block) : Async.call_proc_with_optional_block(task, block)
   end
 
   def cancel_after(timeout, &block)
@@ -41,12 +37,13 @@ module ::Kernel
     CancelScope.new.run(&block)
   end
 
-  def move_on_after(timeout, &block)
-    CancelScope.new(timeout: timeout, mode: :move_on).run(&block)
+  def stop_after(timeout, &block)
+    CancelScope.new(timeout: timeout, mode: :stop).run(&block)
   end
+  alias_method :move_on_after, :stop_after
 
-  def nexus(tasks = nil, &block)
-    Nexus.new(tasks, &block).to_proc
+  def supervise(&block)
+    Supervisor.new(&block)
   end
 
   # yields from current fiber, raising error if resumed value is an exception
@@ -87,8 +84,9 @@ module ::Kernel
     timer.start { fiber.resume freq }
     proc do
       suspend
-    ensure
+    rescue Exception => e
       timer.stop
+      raise e
     end
   end
 end

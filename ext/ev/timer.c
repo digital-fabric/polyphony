@@ -101,6 +101,7 @@ static VALUE EV_Timer_initialize(VALUE self, VALUE after, VALUE repeat) {
 
 void EV_Timer_callback(ev_loop *ev_loop, struct ev_timer *ev_timer, int revents) {
   VALUE fiber;
+  VALUE resume_value;
   struct EV_Timer *timer = (struct EV_Timer*)ev_timer;
 
   if (!timer->repeat) {
@@ -114,7 +115,8 @@ void EV_Timer_callback(ev_loop *ev_loop, struct ev_timer *ev_timer, int revents)
     timer->active = 0;
     fiber = timer->fiber;
     timer->fiber = Qnil;
-    rb_fiber_resume(fiber, 0, 0);
+    resume_value = DBL2NUM(timer->after);
+    rb_fiber_resume(fiber, 1, &resume_value);
   }
   else if (timer->callback != Qnil) {
     rb_funcall(timer->callback, ID_call, 1, Qtrue);
@@ -189,6 +191,6 @@ static VALUE EV_Timer_await(VALUE self) {
     return rb_funcall(ret, rb_intern("raise"), 1, ret);
   }
   else {
-    return Qnil;
+    return ret;
   }
 }

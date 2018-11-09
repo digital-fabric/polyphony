@@ -65,6 +65,8 @@ spawn do
   end
 rescue Exception => e
   puts "uncaught exception: #{e.inspect}"
+  puts e.backtrace.join("\n")
+  exit!
   server.close
 end
 

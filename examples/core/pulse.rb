@@ -6,8 +6,8 @@ Nuclear = import('../../lib/nuclear')
 
 spawn do
   move_on_after(3) do
-    pulse = Nuclear.pulse(1)
-    while await pulse
+    pulser = pulse(1)
+    while await pulser
       puts Time.now
     end
   end

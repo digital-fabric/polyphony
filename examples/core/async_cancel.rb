@@ -11,7 +11,7 @@ spawn do
       await sleep 2
     end
   end
-rescue Cancelled => e
+rescue Nuclear::Cancelled => e
   puts "got error: #{e}"
 ensure
   puts "woke up"

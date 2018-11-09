@@ -12,15 +12,16 @@ end
 
 spawn do
   puts "#{Time.now} going to sleep..."
-  result = await Nuclear.nexus do |n|
+  result = await supervise do |s|
     fiber = Fiber.current
     spawn do
       await sleep(0.5)
-      n.move_on!(42)
+      puts "stopping supervisor..."
+      s.stop!
     end
-    n << my_sleep(1)
-    n << my_sleep(2)
-    n << my_sleep(3)
+    s << my_sleep(1)
+    s << my_sleep(2)
+    s << my_sleep(3)
   end
   puts "#{Time.now} woke up with #{result.inspect}"
 end
