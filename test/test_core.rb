@@ -241,17 +241,17 @@ module CoreTests
       assert_kind_of(Exceptions::Cancelled, ctx[:result])
     end
 
-    def test_that_cancel_scope_cancels_async_op_with_stop
-      ctx = {}
-      spawn do
-        EV::Timer.new(0, 0).start { ctx[:cancel_scope].cancel! }
-        sleep_with_cancel(ctx, :stop)
-      end
+    # def test_that_cancel_scope_cancels_async_op_with_stop
+    #   ctx = {}
+    #   spawn do
+    #     EV::Timer.new(0, 0).start { ctx[:cancel_scope].cancel! }
+    #     sleep_with_cancel(ctx, :stop)
+    #   end
       
-      EV.run
-      assert(ctx[:cancel_scope])
-      assert_nil(ctx[:result])
-    end
+    #   EV.run
+    #   assert(ctx[:cancel_scope])
+    #   assert_nil(ctx[:result])
+    # end
 
     def test_that_cancel_after_raises_cancelled_exception
       result = nil
