@@ -8,6 +8,8 @@ require 'openssl'
 Core = import('./core')
 
 class IOWrapper
+  attr_reader :io
+
   def initialize(io, opts = {})
     @io = io
     @opts = opts

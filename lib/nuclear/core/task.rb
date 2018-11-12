@@ -39,10 +39,10 @@ class Task
     return if @result
 
     @fiber = Fiber.current
-    @result = @block.()
+    @result = @block.(self)
     @awaiting_fiber&.resume(@result)
-  rescue Exceptions::Stopped
-    @awaiting_fiber&.resume(nil)
+  rescue Exceptions::Stopped => e
+    @awaiting_fiber&.resume(e.value)
   rescue Exception => e
     @result = e
     if @awaiting_fiber
@@ -55,6 +55,9 @@ class Task
     @supervisor&.task_stopped(self, @result)
   end
 
+  def execute
+  end
+
   def running?
     @fiber
   end
@@ -63,10 +66,16 @@ class Task
     @result.is_a?(Exceptions::Cancelled)
   end
 
-  def stop!
-    return unless @fiber
+  def interrupt(exception)
+    @fiber&.resume exception
+  end
 
-    @fiber.resume Exceptions::Stopped.new
+  def stop!
+    if @fiber
+      @fiber.resume Exceptions::Stopped.new
+    else
+      @result = Exceptions::Stopped.new
+    end
   end
 
   def cancel!

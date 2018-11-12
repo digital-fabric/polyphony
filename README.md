@@ -1,21 +1,40 @@
 # Introduction
 
-Nuclear is a framework for building concurrent applications in Ruby. Nuclear provides a simple and lightweight API for asynchronous I/O processing, designed to maximize both developer happiness and performance.
+Nuclear is a framework for building concurrent applications in Ruby. Nuclear 
+provides a simple and lightweight API for asynchronous I/O processing, designed
+to maximize both developer happiness and performance.
 
-Under the hood, Nuclear uses [libev](https://github.com/enki/libev) as a high-performance event reactor that provides timer, I/O and other primitives that allow concurrent programming without using threads.
+Nuclear harnesses the power of
+[Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to provide a
+cooperative, sequential coroutine-based concurrency model that is much easier
+to write, read, and reason about. Under the hood, Nuclear uses
+[libev](https://github.com/enki/libev) as a high-performance event reactor that
+provides timer and I/O watchers and other synchronization primitives.
 
-Nuclear a functional API based solely on [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html), eschewing such patterns as callbacks, promises or actors. The resulting code is easier to read and understand, and 
+## An echo server in Nuclear
 
-Nuclear uses the libev event reactor in association with [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to achieve concurrency without having to use multiple threads, locking mechanisms, or callbacks.
+```ruby
+require 'nuclear'
+
+spawn do
+  server = Nuclear::Net.tcp_serve(1234)
+  while client = await server.accept do
+    spawn do
+      while data = await client.read
+        await client.write(data)
+      end
+    end
+  end
+end
+```
 
 ## Features
 
-* Asynchronous programming 
-* Asynchronous I/O processing.
 * `async`/`await` API for writing asynchronous software in a synchronous style.
-* TCP sockets with built-in support for TLS \(secure sockets\).
+* non-blocking I/O and networking operations
 * One-shot and recurring timers.
-* Various promise-based abstractions such as `generator`, `pulse`, `sleep` etc.
+* Supervisor API for supervising short-lived and long-running tasks
+* TCP sockets with built-in support for TLS \(secure sockets\).
 * HTTP client/server implementation:
   * Keep-alive connections
   * Rack interface
@@ -33,8 +52,6 @@ Nuclear uses the libev event reactor in association with [Ruby fibers](https://r
 * [EventMachine](https://github.com/eventmachine/eventmachine)
 * [Trio](https://trio.readthedocs.io/)
 
-## An echo server in nuclear
-
 ## Installation
 
 ```bash
@@ -45,9 +62,10 @@ $ gem install nuclear
 require 'nuclear'
 
 spawn do
+  puts 
+  await sleep(1)
+  puts Time.now
   loop do
-    Nuclear.await sleep(1)
-    puts Time.now
   end
 end
 ```

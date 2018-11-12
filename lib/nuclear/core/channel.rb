@@ -2,32 +2,37 @@
 
 export_default :Channel
 
+Exceptions = import('./exceptions')
+
 class Channel
   def initialize
-    @queue = []
-    @async_watcher = EV::Async.new
+    @payload_queue = []
+    @waiting_queue = []
   end
 
   def close
-    @async_watcher.stop
-    if @waiting_fiber
-      @waiting_fiber.resume Stopped.new
-    end
+    stop = Exceptions::Stopped.new
+    @waiting_queue.slice(0..-1).each { |f| f.resume(stop) }
   end
 
   def <<(o)
-    @queue << o
-    @async_watcher.signal!
+    if @waiting_queue.empty?
+      @payload_queue << o
+    else
+      @waiting_queue.shift&.resume(o)
+    end
   end
 
   def receive
     proc do
-      @waiting_fiber = Fiber.current
-      @async_watcher.await
-      @waiting_fiber = nil
-      o = @queue.shift
-      @async_watcher.signal! unless @queue.empty?
-      o
+      if @payload_queue.empty?
+        @waiting_queue << Fiber.current
+      else
+        payload = @payload_queue.shift
+        fiber = Fiber.current
+        EV.next_tick { fiber.resume(payload) }
+      end
+      suspend
     end
   end
 end

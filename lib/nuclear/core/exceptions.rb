@@ -3,10 +3,11 @@
 export :TaskInterrupted, :Stopped, :Cancelled
 
 class TaskInterrupted < ::Exception
-  attr_reader :scope
+  attr_reader :scope, :value
 
-  def initialize(scope = nil)
+  def initialize(scope = nil, value = nil)
     @scope = scope
+    @value = value
   end
 end
 

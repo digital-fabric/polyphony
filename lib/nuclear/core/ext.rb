@@ -4,6 +4,7 @@ export :set_fiber_local_resource
 
 Async       = import('./async')
 CancelScope = import('./cancel_scope')
+Exceptions  = import('./exceptions')
 FiberPool   = import('./fiber_pool')
 Supervisor  = import('./supervisor')
 Task        = import('./task')
@@ -27,6 +28,12 @@ module ::Kernel
 
     task.is_a?(Task) ?
       task.await(&block) : Async.call_proc_with_optional_block(task, block)
+  rescue Exceptions::TaskInterrupted => e
+    if task.is_a?(Task) && task.running?
+      task.interrupt(e)
+    else
+      raise e
+    end
   end
 
   def cancel_after(timeout, &block)
