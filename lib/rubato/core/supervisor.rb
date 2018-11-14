@@ -2,58 +2,71 @@
 
 export_default :Supervisor
 
+Coroutine   = import('./coroutine')
 Exceptions  = import('./exceptions')
-FiberPool   = import('./fiber_pool')
-Task        = import('./task')
 
-class Supervisor < Task
-  def initialize(opts = {}, &block)
-    @children = []
-    @pending = []
-    @opts = {}
-    @block = block
+class Supervisor
+  def initialize
+    @coroutines = []
   end
 
-  # Adds the given task to the supervisor. This method is usually called inside
-  # Kernel#supervise, i.e.:
-  #
-  #     await supervise do |s|
-  #       s << async { ... }
-  #       ...
-  #     end
-  #
-  # @param task [Task, Proc] asynchronous task
-  # @return [void]
-  def <<(task)
-    task = async(&task) unless task.is_a?(Task)
-    task.supervisor = self
-    @children << task
-    @pending << task
-    task.start unless task.running?
+  def call(&block)
+    proc do |&block2|
+      @supervisor_fiber = Fiber.current
+      (block || block2).(self)
+      suspend
+    rescue Exceptions::MoveOn => e
+      e.value
+    ensure
+      stop_all_tasks
+      suspend if still_running?
+    end
   end
 
-  def run
-    @fiber = Fiber.current
-    @block&.(self)
-  ensure
-    @fiber = nil
+  def spawn(proc = nil, &block)
+    if proc.is_a?(Coroutine)
+      spawn_coroutine(proc)
+    else
+      spawn_proc(block || proc)
+    end
   end
 
-  def task_stopped(task, result)
-    @pending.delete(task)
-    @awaiting_fiber&.resume(@result) if @pending.empty?
+  def spawn_coroutine(proc)
+    @coroutines << proc
+    proc.when_done { task_completed(proc) }
+    proc.run unless proc.running?
+  end
+
+  def spawn_proc(proc)
+    @coroutines << Object.spawn do |coroutine|
+      proc.call(coroutine)
+      task_completed(coroutine)
+    rescue Exception => e
+      task_completed(coroutine)
+    end
+  end
+
+  def still_running?
+    !@coroutines.empty?
   end
 
   def stop!(result = nil)
-    @fiber&.resume Exceptions::Stopped.new
-    EV.next_tick {
-      puts "set result: #{result.inspect}"
-      @result = result
-      @pending.slice(0..-1).each(&:stop!)
-    }
+    return unless @supervisor_fiber
+  
+    @supervisor_fiber&.resume Exceptions::MoveOn.new(nil, result)
   end
 
-  def cancel!
-    @pending.slice(0..-1).each(&:cancel!)
+  def stop_all_tasks
+    exception = Exceptions::Stop.new
+    @coroutines.each do |c|
+      EV.next_tick { c.interrupt(exception) }
+    end
+  end
+
+  def task_completed(coroutine)
+    return unless @coroutines.include?(coroutine)
+    
+    @coroutines.delete(coroutine)
+    @supervisor_fiber&.resume if @coroutines.empty?
   end
 end

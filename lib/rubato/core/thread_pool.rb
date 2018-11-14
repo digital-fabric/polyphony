@@ -39,7 +39,7 @@ end
 def resolve_from_queue
   until @resolve_queue.empty?
     (fiber, result) = @resolve_queue.pop(true)
-    fiber.resume result unless fiber.cancelled
+    fiber.resume result unless fiber.cancelled?
   end
 end
 

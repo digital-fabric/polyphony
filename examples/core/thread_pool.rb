@@ -40,7 +40,7 @@ def compare_performance
       t0 = Time.now
       await supervise do |s|
         X.times do
-          s << Rubato::ThreadPool.process { lengthy_op }
+          s.spawn Rubato::ThreadPool.process { lengthy_op }
         end
       end
       thread_pool_perf = X / (Time.now - t0)

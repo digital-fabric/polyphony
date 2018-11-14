@@ -22,8 +22,8 @@ PLATFORMS
 
 DEPENDENCIES
   minitest (= 5.11.3)
-  rubato!
   rake-compiler (= 1.0.5)
+  rubato!
 
 BUNDLED WITH
    1.16.5

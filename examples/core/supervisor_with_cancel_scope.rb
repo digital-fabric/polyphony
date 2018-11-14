@@ -15,9 +15,10 @@ spawn do
   puts "#{Time.now} going to sleep..."
   move_on_after(0.5) do
     await supervise do |s|
-      s << my_sleep(1)
-      s << my_sleep(2)
-      s << my_sleep(3)
+      puts "supervise block"
+      s.spawn my_sleep(1)
+      s.spawn my_sleep(2)
+      s.spawn my_sleep(3)
     end
     puts "supervisor done"
   end

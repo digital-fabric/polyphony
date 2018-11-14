@@ -21,7 +21,7 @@ class ResourcePool
     resource = wait
     yield resource
   ensure
-    @available << resource
+    @available << resource if resource
     dequeue
   end
 

@@ -7,9 +7,9 @@ Rubato = import('../../lib/rubato')
 spawn do
   puts "going to sleep..."
   cancel_after(1) do
-    await sleep 60
+    await sleep(60)
   end
-rescue Rubato::Cancelled => e
+rescue Rubato::Cancel => e
   puts "got error: #{e}"
 ensure
   puts "woke up"

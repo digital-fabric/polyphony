@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-export :TaskInterrupted, :Stopped, :Cancelled
+export :CoroutineInterrupt, :MoveOn, :Stop, :Cancel
 
-class TaskInterrupted < ::Exception
+class CoroutineInterrupt < ::Exception
   attr_reader :scope, :value
 
   def initialize(scope = nil, value = nil)
@@ -11,8 +11,6 @@ class TaskInterrupted < ::Exception
   end
 end
 
-class Stopped < TaskInterrupted
-end
-
-class Cancelled < TaskInterrupted
-end
+class Stop < CoroutineInterrupt; end
+class MoveOn < CoroutineInterrupt; end
+class Cancel < CoroutineInterrupt; end

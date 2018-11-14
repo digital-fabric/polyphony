@@ -11,7 +11,7 @@ class Channel
   end
 
   def close
-    stop = Exceptions::Stopped.new
+    stop = Exceptions::MoveOn.new
     @waiting_queue.slice(0..-1).each { |f| f.resume(stop) }
   end
 

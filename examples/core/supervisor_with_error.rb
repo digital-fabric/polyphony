@@ -12,9 +12,9 @@ end
 spawn do
   puts "#{Time.now} going to sleep..."
   result = await supervise do |s|
-    s << my_sleep(1)
-    s << my_sleep(2)
-    s << my_sleep(3)
+    s.spawn my_sleep(1)
+    s.spawn my_sleep(2)
+    s.spawn my_sleep(3)
   end
 rescue => e
   puts "exception from supervisor: #{e}"

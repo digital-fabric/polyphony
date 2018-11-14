@@ -13,10 +13,10 @@ end
 spawn do
   puts "#{Time.now} waiting..."
   await supervise do |s|
-    s << my_sleep(1)
-    s << my_sleep(2)
-    s << my_sleep(3)
-    s << async {
+    s.spawn my_sleep(1)
+    s.spawn my_sleep(2)
+    s.spawn my_sleep(3)
+    s.spawn {
       puts "fiber count: #{Rubato::FiberPool.size}"
     }
   end

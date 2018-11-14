@@ -4,12 +4,12 @@ require 'modulation'
 
 Rubato = import('../../lib/rubato')
 
-async def my_sleep(t)
+def error(t)
   raise "hello"
 end
 
 spawn do
-  await my_sleep(1)
+  await { error(1) }
 end
 
-puts "after async"
+puts "after spawn"

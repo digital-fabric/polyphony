@@ -19,9 +19,9 @@ spawn do
       puts "stopping supervisor..."
       s.stop!
     end
-    s << my_sleep(1)
-    s << my_sleep(2)
-    s << my_sleep(3)
+    s.spawn my_sleep(1)
+    s.spawn my_sleep(2)
+    s.spawn my_sleep(3)
   end
   puts "#{Time.now} woke up with #{result.inspect}"
 end

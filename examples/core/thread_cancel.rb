@@ -6,9 +6,10 @@ require 'socket'
 
 Rubato     = import('../../lib/rubato')
 
-hey = nil
+@op_count = 0
 
 def lengthy_op
+  @op_count += 1
   acc = 0
   count = 0
   100.times { acc += IO.read('../../docs/reality-ui.bmpr').bytesize; count += 1; p count }
@@ -24,6 +25,6 @@ spawn do
 rescue Exception => e
   puts "error: #{e}"
 ensure
-  p hey
+  p @op_count
 end
 

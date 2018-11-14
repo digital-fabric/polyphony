@@ -11,7 +11,7 @@ async def sleep_and_cancel
       await sleep 60
     ensure
       puts "in ensure (is it going to block?)"
-      # this will also obey the cancel scope
+      # this should not block, since we're still in the scope, and it was cancelled
       await sleep 10
     end
   end

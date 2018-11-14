@@ -4,12 +4,12 @@ require 'modulation'
 
 Rubato = import('../../lib/rubato')
 
-async def my_sleep(t)
+def my_sleep(t)
   puts "going to sleep..."
   await sleep t
   puts "woke up"
 end
 
 spawn do
-  await my_sleep(1)
+  await { my_sleep(1) }
 end

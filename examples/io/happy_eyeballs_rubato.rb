@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative '../core/rubato'
-require_relative '../core/rubato_io'
+require 'modulation'
+Rubato = import('../../lib/rubato')
 
 def connect(host, port)
   proc do
     socket = ::Socket.new(:INET, :STREAM)
-    SocketWrapper.new(socket).tap do |o|
+    Rubato::IO::SocketWrapper.new(socket).tap do |o|
       # await sleep(rand * 0.5)
       await o.connect(host, port)
     end

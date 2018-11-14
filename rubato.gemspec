@@ -2,7 +2,7 @@ require_relative './lib/rubato/version'
 
 Gem::Specification.new do |s|
   s.name        = 'rubato'
-  s.version     = rubato::VERSION
+  s.version     = Rubato::VERSION
   s.licenses    = ['MIT']
   s.summary     = 'Rubato: lightweight async for Ruby'
   s.author      = 'Sharon Rosner'
