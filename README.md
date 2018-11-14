@@ -1,23 +1,23 @@
 # Introduction
 
-Nuclear is a framework for building concurrent applications in Ruby. Nuclear 
+Rubato is a framework for building concurrent applications in Ruby. Rubato 
 provides a simple and lightweight API for asynchronous I/O processing, designed
 to maximize both developer happiness and performance.
 
-Nuclear harnesses the power of
+Rubato harnesses the power of
 [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to provide a
 cooperative, sequential coroutine-based concurrency model that is much easier
-to write, read, and reason about. Under the hood, Nuclear uses
+to write, read, and reason about. Under the hood, Rubato uses
 [libev](https://github.com/enki/libev) as a high-performance event reactor that
 provides timer and I/O watchers and other synchronization primitives.
 
-## An echo server in Nuclear
+## An echo server in Rubato
 
 ```ruby
-require 'nuclear'
+require 'rubato'
 
 spawn do
-  server = Nuclear::Net.tcp_serve(1234)
+  server = Rubato::Net.tcp_serve(1234)
   while client = await server.accept do
     spawn do
       while data = await client.read
@@ -55,11 +55,11 @@ end
 ## Installation
 
 ```bash
-$ gem install nuclear
+$ gem install Rubato
 ```
 
 ```ruby
-require 'nuclear'
+require 'Rubato'
 
 spawn do
   puts 
@@ -70,28 +70,28 @@ spawn do
 end
 ```
 
-## Nuclear Timers
+## Rubato Timers
 
-Nuclear timers allow scheduling of tasks at specific times, optionally with a specific frequency for recurring timers. In addition, a task can be scheduled to be run on the next iteration of the reactor loop using `Nuclear.next_tick`.
+Rubato timers allow scheduling of tasks at specific times, optionally with a specific frequency for recurring timers. In addition, a task can be scheduled to be run on the next iteration of the reactor loop using `Rubato.next_tick`.
 
-### Nuclear.timeout\(timeout\)
+### Rubato.timeout\(timeout\)
 
 Schedules a task to be run after the given timeout:
 
 ```ruby
-Nuclear.timeout(5) { puts "5 seconds have elapsed" }
+Rubato.timeout(5) { puts "5 seconds have elapsed" }
 ```
 
-### Nuclear.interval\(interval, offset = nil\)
+### Rubato.interval\(interval, offset = nil\)
 
 Schedules a task to be run repeatedly at the given frequency. The `offset` argument can be used to specify the interval for running the given task for the first time:
 
 ```ruby
-Nuclear.interval(1) { puts Time.now }
-Nuclear.interval(1, 0.5) { puts "in between..." }
+Rubato.interval(1) { puts Time.now }
+Rubato.interval(1, 0.5) { puts "in between..." }
 ```
 
-### Nuclear.next\_tick
+### Rubato.next\_tick
 
 Schedules a task to be run in the next iteration of the reactor loop:
 
@@ -101,7 +101,7 @@ Schedules a task to be run in the next iteration of the reactor loop:
 def counter
   @count += 1
   puts @count if @count % 100000 == 0
-  Nuclear.next_tick { counter }
+  Rubato.next_tick { counter }
 end
 counter
 ```

@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 def loop_it(number, lock)
   loop do
@@ -14,7 +14,7 @@ def loop_it(number, lock)
   end
 end
 
-lock = Nuclear::Sync::Mutex.new
+lock = Rubato::Sync::Mutex.new
 spawn { loop_it(1, lock) }
 spawn { loop_it(2, lock) }
 spawn { loop_it(3, lock) }

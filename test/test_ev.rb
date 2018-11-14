@@ -2,7 +2,7 @@ require 'minitest/autorun'
 require 'modulation'
 
 module EVTest
-  Core = import('../lib/nuclear/core')
+  Core = import('../lib/rubato/core')
   Core.dont_auto_run!
 
   class RunTest < Minitest::Test

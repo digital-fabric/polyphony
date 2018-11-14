@@ -5,12 +5,12 @@ require 'json'
 require 'localhost/authority'
 require 'time'
 
-Server = import('../../lib/nuclear/http/server')
+Server = import('../../lib/rubato/http/server')
 
 H_SERVER = 'Server'
 H_DATE = 'Date'
 
-SERVER_NAME = 'nuclear/0.6'
+SERVER_NAME = 'rubato/0.6'
 HELLO_WORLD = 'Hello World'
 
 server = Server.new do |request, response|

@@ -2,13 +2,13 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 def connect(host, port)
   proc do
     socket = ::Socket.new(::Socket::AF_INET, ::Socket::SOCK_STREAM)
     # socket = OpenSSL::SSL::SSLSocket.new(socket)
-    Nuclear::IO::SocketWrapper.new(socket, secure: true).tap do |o|
+    Rubato::IO::SocketWrapper.new(socket, secure: true).tap do |o|
       await o.connect(host, port)
     end
   end

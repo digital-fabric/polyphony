@@ -2,14 +2,14 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 spawn do
   puts "going to sleep"
   result = await async do
     await async do
       await async do
-        puts "Fiber count: #{Nuclear::FiberPool.size}"
+        puts "Fiber count: #{Rubato::FiberPool.size}"
         await sleep(1)
       end
     end

@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 async def my_sleep(t)
   await sleep(t)

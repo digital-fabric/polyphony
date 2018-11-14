@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
-module Nuclear
+module Rubato
   VERSION = '0.8'
 end

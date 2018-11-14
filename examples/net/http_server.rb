@@ -4,13 +4,13 @@ require 'modulation'
 require 'json'
 require 'time'
 
-Nuclear = import('../../lib/nuclear')
-Server = import('../../lib/nuclear/http/server')
+Rubato = import('../../lib/rubato')
+Server = import('../../lib/rubato/http/server')
 
 H_SERVER = 'Server'
 H_DATE = 'Date'
 
-SERVER_NAME = 'nuclear/0.6'
+SERVER_NAME = 'rubato/0.6'
 HELLO_WORLD = 'Hello World'
 
 # cache server time for Date header (#httpdate is really expensive!)

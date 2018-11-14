@@ -5,7 +5,7 @@ require 'json'
 require 'localhost/authority'
 require 'time'
 
-Rack = import('../../lib/nuclear/http/rack')
+Rack = import('../../lib/rubato/http/rack')
 
 server = Rack.load_app(File.expand_path('./config.ru', __dir__))
 

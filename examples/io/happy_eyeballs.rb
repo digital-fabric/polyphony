@@ -2,11 +2,11 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 async def connect(host, port)
   socket = ::Socket.new(:INET, :STREAM)
-  Nuclear::IO::SocketWrapper.new(socket).tap do |o|
+  Rubato::IO::SocketWrapper.new(socket).tap do |o|
     await sleep(rand * 0.5)
     await o.connect(host, port)
   end
@@ -24,7 +24,7 @@ rescue Exception => e
 end
 
 def getaddrinfo(host, port)
-  Nuclear::ThreadPool.process { Socket.getaddrinfo(host, port, :INET, :STREAM) }
+  Rubato::ThreadPool.process { Socket.getaddrinfo(host, port, :INET, :STREAM) }
 end
 
 async def open_tcp_socket(hostname, port, max_wait_time: 0.25)

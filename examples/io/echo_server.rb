@@ -2,11 +2,11 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 spawn do
   socket = ::Socket.new(:INET, :STREAM)
-  server = Nuclear::IO::SocketWrapper.new(socket)
+  server = Rubato::IO::SocketWrapper.new(socket)
   await server.bind('127.0.0.1', 1234)
   await server.listen
   puts "listening on port 1234..."

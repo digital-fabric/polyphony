@@ -4,13 +4,13 @@ require 'modulation'
 require 'digest'
 require 'socket'
 
-Nuclear     = import('../../lib/nuclear')
+Rubato     = import('../../lib/rubato')
 
 def lengthy_op
   IO.read('../../docs/reality-ui.bmpr')
 end
 
 spawn do
-  data = await Nuclear::Thread.spawn { lengthy_op }
+  data = await Rubato::Thread.spawn { lengthy_op }
   puts "read #{data.bytesize} bytes"
 end

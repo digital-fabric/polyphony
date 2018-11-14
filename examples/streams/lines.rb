@@ -2,26 +2,26 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
-LineReader  = import('../../lib/nuclear/line_reader')
+Rubato = import('../../lib/rubato')
+LineReader  = import('../../lib/rubato/line_reader')
 
 buffer = +''
 reader = LineReader.new
 
-Nuclear.interval(0.2) { buffer << "#{Time.now.to_f}\n" }
-Nuclear.interval(0.3) do
+Rubato.interval(0.2) { buffer << "#{Time.now.to_f}\n" }
+Rubato.interval(0.3) do
 
   reader.push(buffer.slice!(0, buffer.bytesize / 10 * 10))
 end
 
-Nuclear.async do
+Rubato.async do
   reader.lines.each do |line|
     puts "* #{line}"
   end
   puts "no more lines"
 end
 
-Nuclear.timeout(2) do
-  Nuclear.cancel_all_timers
+Rubato.timeout(2) do
+  Rubato.cancel_all_timers
   reader.close
 end

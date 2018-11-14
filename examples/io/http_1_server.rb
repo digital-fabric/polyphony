@@ -3,7 +3,7 @@
 require 'modulation'
 require 'http/parser'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 $client_count = 0
 $request_count = 0
@@ -50,7 +50,7 @@ end
 
 spawn do
   socket = ::Socket.new(:INET, :STREAM)
-  server = Nuclear::IO::SocketWrapper.new(socket)
+  server = Rubato::IO::SocketWrapper.new(socket)
   server.reuse_addr
   server.dont_linger
   await server.bind('0.0.0.0', 1234)
@@ -73,7 +73,7 @@ end
 t0 = Time.now
 last_t = Time.now
 last_request_count = 0
-Nuclear.every(5) do
+Rubato.every(5) do
   now = Time.now
   if now > last_t
     rate = ($request_count - last_request_count) / (now - last_t)
@@ -88,12 +88,12 @@ Nuclear.every(5) do
     (Time.now - t0).to_i,
     $client_count,
     rate,
-    Nuclear::FiberPool.available,
-    Nuclear::FiberPool.checked_out,
-    Nuclear::FiberPool.size
+    Rubato::FiberPool.available,
+    Rubato::FiberPool.checked_out,
+    Rubato::FiberPool.size
   ]
 end
 
-Nuclear.every(1) do
+Rubato.every(1) do
   GC.start
 end

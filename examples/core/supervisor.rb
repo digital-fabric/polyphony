@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 async def my_sleep(t)
   puts "#{t} start"
@@ -17,7 +17,7 @@ spawn do
     s << my_sleep(2)
     s << my_sleep(3)
     s << async {
-      puts "fiber count: #{Nuclear::FiberPool.size}"
+      puts "fiber count: #{Rubato::FiberPool.size}"
     }
   end
   puts "#{Time.now} done waiting"

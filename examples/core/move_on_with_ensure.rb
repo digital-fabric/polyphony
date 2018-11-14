@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 async def sleep_and_cancel
   puts "going to sleep..."

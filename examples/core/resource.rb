@@ -2,10 +2,10 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 resource_count = 0
-Pool = Nuclear::ResourcePool.new(limit: 3) do
+Pool = Rubato::ResourcePool.new(limit: 3) do
   :"resource#{resource_count += 1}"
 end
 

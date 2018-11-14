@@ -30,7 +30,7 @@ def try_connect(supervisor, target)
 end
 
 def getaddrinfo(host, port)
-  # Nuclear::ThreadPool.process { Socket.getaddrinfo(host, port, :INET, :STREAM) }
+  # Rubato::ThreadPool.process { Socket.getaddrinfo(host, port, :INET, :STREAM) }
   proc do
     Socket.getaddrinfo(host, port, :INET, :STREAM)
   end

@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
-Postgres =  import('../../lib/nuclear/interfaces/postgres')
+Rubato = import('../../lib/rubato')
+Postgres =  import('../../lib/rubato/interfaces/postgres')
 
 DB = Postgres::Client.new(
   host:     '/tmp',
@@ -14,15 +14,15 @@ DB = Postgres::Client.new(
 )
 
 def get_records
-  res = Nuclear.await DB.query("select 1 as test")
+  res = Rubato.await DB.query("select 1 as test")
   puts "got #{res.ntuples} records: #{res.to_a}"
 rescue => e
   puts "got error: #{e.inspect}"
   puts e.backtrace.join("\n")
 end
 
-Nuclear.async { get_records }
+Rubato.async { get_records }
 
-Nuclear.interval(1) do
-  Nuclear.async { get_records }
+Rubato.interval(1) do
+  Rubato.async { get_records }
 end

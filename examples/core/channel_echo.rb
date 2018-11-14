@@ -2,18 +2,18 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 async def echo(rchan, wchan)
   while msg = (await rchan.receive)
     puts "got #{msg}"
     wchan << "you said: #{msg}"
   end
-rescue Nuclear::Stopped
+rescue Rubato::Stopped
   puts "echoer stopped"
 end
 
-chan1, chan2 = Nuclear::Channel.new, Nuclear::Channel.new
+chan1, chan2 = Rubato::Channel.new, Rubato::Channel.new
 
 echoer = spawn echo(chan1, chan2)
 

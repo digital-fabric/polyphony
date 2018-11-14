@@ -2,14 +2,14 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 def echo_connection(socket)
   puts "connected: #{socket}"
-  Nuclear.await socket.write("Echo server!\n")
-  Nuclear::LineReader.new(socket).each_line do |line|
+  Rubato.await socket.write("Echo server!\n")
+  Rubato::LineReader.new(socket).each_line do |line|
     break unless line
-    Nuclear.await socket.write("You said: #{line}")
+    Rubato.await socket.write("You said: #{line}")
   end
   puts "disconnected: #{socket}"
 rescue => e
@@ -18,9 +18,9 @@ rescue => e
   puts e.backtrace.join("\n")
 end
 
-server = Nuclear::Net::Server.new
+server = Rubato::Net::Server.new
 server.on(:connection) do |socket|
-  Nuclear.async { echo_connection(socket) }
+  Rubato.async { echo_connection(socket) }
 end
 server.listen(port: 1234)
 puts "listening on port 1234"

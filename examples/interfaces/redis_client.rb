@@ -2,23 +2,23 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
-Redis   = import('../../lib/nuclear/interfaces/redis')
+Rubato = import('../../lib/rubato')
+Redis   = import('../../lib/rubato/interfaces/redis')
 
 redis = Redis::Connection.new
 
-Nuclear.async do
-  Nuclear.await redis.connect
+Rubato.async do
+  Rubato.await redis.connect
   puts "connected"
 
-  puts "redis server time: #{Nuclear.await redis.time}"
+  puts "redis server time: #{Rubato.await redis.time}"
 
-  puts "abc = #{Nuclear.await redis.get('abc')}"
+  puts "abc = #{Rubato.await redis.get('abc')}"
 
   puts "updating value..."
-  Nuclear.await redis.set('abc', Time.now.to_s)
+  Rubato.await redis.set('abc', Time.now.to_s)
 
-  puts "abc = #{Nuclear.await redis.get('abc')}"
+  puts "abc = #{Rubato.await redis.get('abc')}"
 
   redis.close
 end

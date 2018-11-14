@@ -2,11 +2,11 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 class IO
   def read_some(max = 8192)
-    Nuclear::Task.new do |t|
+    Rubato::Task.new do |t|
       read_from_io(t, max)
     end
   end

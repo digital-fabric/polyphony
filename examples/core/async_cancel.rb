@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 spawn do
   puts "going to sleep..."
@@ -11,7 +11,7 @@ spawn do
       await sleep 2
     end
   end
-rescue Nuclear::Cancelled => e
+rescue Rubato::Cancelled => e
   puts "got error: #{e}"
 ensure
   puts "woke up"

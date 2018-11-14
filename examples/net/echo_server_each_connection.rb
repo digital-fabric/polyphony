@@ -2,20 +2,20 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
 def echo_connection(socket)
-  Nuclear.await socket.write("Echo server!\n")
-  Nuclear::LineReader.new(socket).each_line do |line|
+  Rubato.await socket.write("Echo server!\n")
+  Rubato::LineReader.new(socket).each_line do |line|
     break unless line
-    Nuclear.await socket.write("You said: #{line}")
+    Rubato.await socket.write("You said: #{line}")
   end
 end
 
-server = Nuclear::Net::Server.new
-Nuclear.async do
+server = Rubato::Net::Server.new
+Rubato.async do
   server.each_connection do |socket|
-    Nuclear.async { echo_connection(socket) }
+    Rubato.async { echo_connection(socket) }
   end
 end
 

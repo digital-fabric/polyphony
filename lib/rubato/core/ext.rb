@@ -137,7 +137,7 @@ Fiber.current.root = true
 # Sets a fiber-local value, adding a global accessor to Object. The value will
 # be accessible using the given key, e.g.:
 #
-#     FiberExt = import('./nuclear/ext/fiber')
+#     FiberExt = import('./rubato/ext/fiber')
 #     async do
 #       FiberExt.set_fiber_local_resource(:my_db, db_connection)
 #       ...

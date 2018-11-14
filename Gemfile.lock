@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    nuclear (0.8)
+    rubato (0.8)
       http-2 (= 0.10.0)
       http_parser.rb (= 0.6.0)
       modulation (= 0.15)
@@ -22,7 +22,7 @@ PLATFORMS
 
 DEPENDENCIES
   minitest (= 5.11.3)
-  nuclear!
+  rubato!
   rake-compiler (= 1.0.5)
 
 BUNDLED WITH

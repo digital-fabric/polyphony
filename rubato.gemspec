@@ -1,18 +1,18 @@
-require_relative './lib/nuclear/version'
+require_relative './lib/rubato/version'
 
 Gem::Specification.new do |s|
-  s.name        = 'nuclear'
-  s.version     = Nuclear::VERSION
+  s.name        = 'rubato'
+  s.version     = rubato::VERSION
   s.licenses    = ['MIT']
-  s.summary     = 'Nuclear: lightweight async for Ruby'
+  s.summary     = 'Rubato: lightweight async for Ruby'
   s.author      = 'Sharon Rosner'
   s.email       = 'ciconia@gmail.com'
   s.files       = `git ls-files README.md CHANGELOG.md lib`.split
-  s.homepage    = 'http://github.com/ciconia/nuclear'
+  s.homepage    = 'http://github.com/ciconia/rubato'
   s.metadata    = {
-    "source_code_uri" => "https://github.com/ciconia/nuclear"
+    "source_code_uri" => "https://github.com/ciconia/rubato"
   }
-  s.rdoc_options = ["--title", "Nuclear", "--main", "README.md"]
+  s.rdoc_options = ["--title", "rubato", "--main", "README.md"]
   s.extra_rdoc_files = ["README.md"]
   s.extensions = ["ext/ev/extconf.rb"]
   s.require_paths = ["lib"]

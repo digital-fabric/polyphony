@@ -2,17 +2,17 @@
 
 require 'modulation'
 
-Nuclear = import('../../lib/nuclear')
+Rubato = import('../../lib/rubato')
 
-input = Nuclear::IO.lines(Nuclear::IO.stdin)
+input = Rubato::IO.lines(Rubato::IO.stdin)
 
-Nuclear.async do
-  Nuclear.interval(1) { puts Time.now }
+Rubato.async do
+  Rubato.interval(1) { puts Time.now }
 
   loop do
-    Nuclear::IO.stdout << "Say something: "
-    l = Nuclear.await(input)
+    Rubato::IO.stdout << "Say something: "
+    l = Rubato.await(input)
     break unless l
-    Nuclear::IO.stdout << "You said: #{l}"
+    Rubato::IO.stdout << "You said: #{l}"
   end
 end

@@ -2,11 +2,11 @@ require 'minitest/autorun'
 require 'modulation'
 
 module CoreTests
-  CancelScope = import('../lib/nuclear/core/cancel_scope')
-  Core        = import('../lib/nuclear/core')
-  Exceptions  = import('../lib/nuclear/core/exceptions')
-  Supervisor  = import('../lib/nuclear/core/supervisor')
-  Task        = import('../lib/nuclear/core/task')
+  CancelScope = import('../lib/rubato/core/cancel_scope')
+  Core        = import('../lib/rubato/core')
+  Exceptions  = import('../lib/rubato/core/exceptions')
+  Supervisor  = import('../lib/rubato/core/supervisor')
+  Task        = import('../lib/rubato/core/task')
 
   Core.dont_auto_run!
 

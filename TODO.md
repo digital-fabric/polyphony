@@ -42,14 +42,14 @@ end
 *exception.rb*
 ```ruby
 require 'modulation'
-Nuclear = import('../../lib/nuclear')
-Nuclear.interval(1) { raise 'hi!' }
+Rubato = import('../../lib/rubato')
+Rubato.interval(1) { raise 'hi!' }
 ```
 
 Exception: hi
 examples/timers/exception.rb:3:in `block in <main>'
-/Users/sharon/repo/nuclear/lib/nuclear/core.rb:50:in `run'
-/Users/sharon/repo/nuclear/lib/nuclear/ev.rb:xxx:in `interval'
+/Users/sharon/repo/rubato/lib/rubato/core.rb:50:in `run'
+/Users/sharon/repo/rubato/lib/rubato/ev.rb:xxx:in `interval'
 examples/timers/exception.rb:3:in `<main>'
 
 ## Net
@@ -121,7 +121,7 @@ Prior art:
 ### DNS server
 
 ```ruby
-Server = import('../../lib/nuclear/dns/server')
+Server = import('../../lib/rubato/dns/server')
 
 server = Server.new do |transaction|
   puts "got query from #{transaction.info[:client_ip_address]}"
