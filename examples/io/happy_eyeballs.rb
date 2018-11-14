@@ -16,8 +16,11 @@ async def try_connect(supervisor, target)
   socket = await connect(target[2], 80)
   supervisor.stop!([target[2], socket])
 rescue => e
-  puts "#try_connect exception (#{target[2]}): #{e}"
+  puts "#try_connect error (#{target[2]}): #{e}"
   # raise e
+rescue Exception => e
+  puts "#try_connect exception (#{target[2]}): #{e}"
+  raise e
 end
 
 def getaddrinfo(host, port)
@@ -29,9 +32,10 @@ async def open_tcp_socket(hostname, port, max_wait_time: 0.25)
   success = await supervise do |supervisor|
     last_target = nil
     targets.each do |t|
-      await sleep max_wait_time if last_target
+      puts "target #{t}"
+      await sleep(max_wait_time) if last_target
       puts "spawn #{t[2]}"
-      supervisor << try_connect(supervisor, t)
+      supervisor.spawn try_connect(supervisor, t)
       last_target = t
     end
   end
