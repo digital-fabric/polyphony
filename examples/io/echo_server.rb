@@ -5,24 +5,25 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 
 spawn do
-  socket = ::Socket.new(:INET, :STREAM)
-  server = Rubato::IO::SocketWrapper.new(socket)
-  await server.bind('127.0.0.1', 1234)
-  await server.listen
+  server = await Rubato::Net.tcp_listen(nil, 1234, reuse_addr: true, dont_linger: true)
+  server.reuse_addr
+  server.dont_linger
   puts "listening on port 1234..."
 
   loop do
     client = await server.accept
-    puts "accept #{client.inspect}"
     spawn do
-      move_on_after(60) do |scope|
+      move_on_after(3) do |scope|
         loop do
           await client.write("Say something...\n")
           data = await client.read
           scope.reset_timeout
           await client.write("You said: #{data}")
         end
-        puts "moved on due to inactivity"
+      rescue Rubato::MoveOn
+        move_on_after(1) do
+          await client.write "Disconnecting due to inactivity\n"
+        end
       end
     rescue => e
       puts "client error: #{e.inspect}"
@@ -32,5 +33,5 @@ spawn do
   end
 rescue Exception => e
   puts "uncaught exception: #{e.inspect}"
-  server.close
+  server&.close
 end

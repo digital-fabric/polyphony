@@ -30,6 +30,7 @@ class CancelScope
   def call
     start_timeout if @opts[:timeout]
     @fiber = Fiber.current
+    @fiber.cancelled = nil
     yield self
   rescue Exceptions::MoveOn => e
     e.scope == self ? e.value : raise(e)

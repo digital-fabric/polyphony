@@ -1,25 +1,21 @@
 # frozen_string_literal: true
 
 require 'modulation'
-
 Rubato = import('../../lib/rubato')
 
-async def connect(host, port)
-  socket = ::Socket.new(:INET, :STREAM)
-  Rubato::IO::SocketWrapper.new(socket).tap do |o|
-    await sleep(rand * 0.5)
-    await o.connect(host, port)
-  end
-end
+# frozen_string_literal: true
 
 async def try_connect(supervisor, target)
-  socket = await connect(target[2], 80)
+  puts "try_connect #{target[2]}"
+  t0 = Time.now
+  socket = await Rubato::Net.tcp_connect(target[2], 80)
+  puts "connected to #{target[2]} (#{Time.now - t0}s)"
   supervisor.stop!([target[2], socket])
 rescue => e
   puts "#try_connect error (#{target[2]}): #{e}"
   # raise e
 rescue Exception => e
-  puts "#try_connect exception (#{target[2]}): #{e}"
+  puts "stop connection to #{target[2]}"
   raise e
 end
 
@@ -27,20 +23,25 @@ def getaddrinfo(host, port)
   Rubato::ThreadPool.process { Socket.getaddrinfo(host, port, :INET, :STREAM) }
 end
 
-async def open_tcp_socket(hostname, port, max_wait_time: 0.25)
+async def happy_eyeballs(hostname, port, max_wait_time: 0.025)
   targets = await getaddrinfo(hostname, port)
-  success = await supervise do |supervisor|
-    last_target = nil
-    targets.each do |t|
-      puts "target #{t}"
-      await sleep(max_wait_time) if last_target
-      puts "spawn #{t[2]}"
-      supervisor.spawn try_connect(supervisor, t)
-      last_target = t
+  t0 = Time.now
+  cancel_after(5) do
+    success = await supervise do |supervisor|
+      last_target = nil
+      targets.each do |t|
+        await sleep(max_wait_time) if last_target
+        supervisor.spawn try_connect(supervisor, t)
+        last_target = t
+      end
+    end
+    if success
+      puts "success: #{success[0]} #{success[1]} (#{Time.now - t0}s)"
+    else
+      puts "timed out (#{Time.now - t0}s)"
     end
   end
-  puts "success: #{success[0]} #{success[1]}"
 end
 
 # Let's try it out:
-spawn open_tcp_socket("debian.org", "https")
+spawn happy_eyeballs("debian.org", "https")

@@ -5,7 +5,7 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 
 class IO
-  def read_some(max = 8192)
+  async def read_some(max = 8192)
     Rubato::Task.new do |t|
       read_from_io(t, max)
     end
@@ -42,13 +42,15 @@ class IO
 end
 
 spawn do
-  begin
-    puts "Write something..."
+  stdin = Rubato::IOWrapper.new(STDIN)
+  puts "Write something..."
+  cancel_after(10) do |scope|
     loop do
-      buffer = cancel_after(10) { await STDIN.read_some }
+      data = await stdin.read
+      scope.reset_timeout
       puts "you wrote: #{buffer}"
     end
-  rescue Cancelled
-    puts "quitting due to inactivity"
   end
+rescue Cancelled
+  puts "quitting due to inactivity"
 end

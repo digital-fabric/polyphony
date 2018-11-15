@@ -16,7 +16,7 @@ module Rubato
   IO            = import('./rubato/io')
   LineReader    = import('./rubato/line_reader')
   MoveOn        = Exceptions::MoveOn
-  # Net           = import('./rubato/net')
+  Net           = import('./rubato/net')
   ResourcePool  = import('./rubato/resource_pool')
   Stream        = import('./rubato/stream')
   Supervisor    = import('./rubato/core/supervisor')

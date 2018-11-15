@@ -7,7 +7,7 @@ export :process, :setup, :size=, :busy?
 def process(&block)
   setup unless @task_queue
 
-  async { start_task_on_thread(block) }
+  proc { start_task_on_thread(block) }
 end
 
 def start_task_on_thread(block)

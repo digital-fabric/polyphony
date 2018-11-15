@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :IOWrapper, :SocketWrapper
+export :IOWrapper
 
 require 'socket'
 require 'openssl'
@@ -78,92 +78,5 @@ class IOWrapper
     end
   ensure
     @write_watcher&.stop
-  end
-end
-
-class SocketWrapper < IOWrapper
-  def initialize(io, opts = {})
-    super
-    if @opts[:secure_context] && !@opts[:secure]
-      @opts[:secure] = true
-    elsif @opts[:secure] && !@opts[:secure_context]
-      @opts[:secure_context] = OpenSSL::SSL::SSLContext.new
-      @opts[:secure_context].set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
-    end
-  end
-
-  def connect(host, port)
-    proc do
-      connect_async(host, port)
-      connect_ssl_handshake_async if @opts[:secure]
-    end
-  end
-
-  def connect_async(host, port)
-    addr = ::Socket.sockaddr_in(port, host)
-    loop do
-      result = @io.connect_nonblock(addr, exception: false)
-      case result
-      when 0              then return result
-      when :wait_writable then write_watcher.await
-      else                raise IOError
-      end
-    end
-  ensure
-    @write_watcher&.stop
-  end
-
-  def connect_ssl_handshake_async
-    @io = OpenSSL::SSL::SSLSocket.new(@io, @opts[:secure_context])
-    loop do
-      result = @io.connect_nonblock(exception: false)
-      case result
-      when OpenSSL::SSL::SSLSocket  then return true
-      when :wait_readable           then read_watcher.await
-      when :wait_writable           then write_watcher.await
-      else                          
-        raise IOError, "Failed SSL handshake: #{result.inspect}"
-      end
-    end
-  ensure
-    @read_watcher&.stop
-    @write_watcher&.stop
-  end
-
-  def accept
-    proc do
-      socket = accept_async
-      if @opts[:secure]
-        accept_ssl_handshake_async(socket)
-      else
-        SocketWrapper.new(socket, @opts)
-      end
-    end
-  end
-
-  def accept_async
-    loop do
-      result, client_addr = @io.accept_nonblock(exception: false)
-      case result
-      when Socket         then return result
-      when :wait_readable then read_watcher.await
-      else                     raise "failed to accept (#{result.inspect})"
-      end
-    end
-  ensure
-    @read_watcher&.stop
-  end
-
-  def bind(host, port)
-    proc {
-      addr = ::Socket.sockaddr_in(port, host)
-      @io.bind(addr)
-    }
-  end
-
-  def listen(backlog = 0)
-    proc {
-      @io.listen(backlog)
-    }
   end
 end
