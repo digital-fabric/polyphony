@@ -165,8 +165,12 @@ static VALUE EV_IO_await(VALUE self) {
   ev_io_start(EV_DEFAULT, &io->ev_io);
   ret = rb_fiber_yield(0, 0);
 
-  // fiber is resumed
+  // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
+    if (io->active) {
+      io->active = 0;
+      ev_io_stop(EV_DEFAULT, &io->ev_io);
+    }
     return rb_funcall(ret, rb_intern("raise"), 1, ret);
   }
   else {

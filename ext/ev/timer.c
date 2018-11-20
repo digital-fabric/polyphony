@@ -186,8 +186,12 @@ static VALUE EV_Timer_await(VALUE self) {
 
   ret = rb_fiber_yield(0, 0);
 
-  // fiber is resumed
+  // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
+    if (timer->active) {
+      timer->active = 0;
+      ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
+    }
     return rb_funcall(ret, rb_intern("raise"), 1, ret);
   }
   else {
