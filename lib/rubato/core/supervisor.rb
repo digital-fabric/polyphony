@@ -18,6 +18,7 @@ class Supervisor
     rescue Exceptions::MoveOn => e
       e.value
     ensure
+      @supervisor_fiber = nil
       stop_all_tasks
       suspend if still_running?
     end
@@ -35,6 +36,7 @@ class Supervisor
     @coroutines << proc
     proc.when_done { task_completed(proc) }
     proc.run unless proc.running?
+    proc
   end
 
   def spawn_proc(proc)

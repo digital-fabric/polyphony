@@ -13,26 +13,14 @@ class IOWrapper
   def initialize(io, opts = {})
     @io = io
     @opts = opts
+    @read_buffer = +''
   end
 
   def close
     @read_watcher&.stop
     @write_watcher&.stop
     @io.close
-  end
-
-  ZERO_LINGER = [0, 0].pack("ii")
-
-  def dont_linger
-    @io.setsockopt(Socket::SOL_SOCKET, Socket::SO_LINGER, ZERO_LINGER)
-  end
-
-  def set_no_delay
-    @io.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
-  end
-
-  def reuse_addr
-    @io.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
+    @read_buffer = nil
   end
 
   def read_watcher
@@ -43,7 +31,7 @@ class IOWrapper
     @write_watcher ||= EV::IO.new(@io, :w)
   end
 
-  NO_EXCEPTION_OPTS = { exception: false }.freeze
+  NO_EXCEPTION = { exception: false }.freeze
 
   def read(max = 8192)
     proc { read_async(max) }
@@ -51,7 +39,7 @@ class IOWrapper
 
   def read_async(max)
     loop do
-      result = @io.read_nonblock(max, NO_EXCEPTION_OPTS)
+      result = @io.read_nonblock(max, @read_buffer, NO_EXCEPTION)
       case result
       when nil            then raise IOError
       when :wait_readable then read_watcher.await

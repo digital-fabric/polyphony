@@ -14,16 +14,14 @@ spawn do
     client = await server.accept
     spawn do
       move_on_after(3) do |scope|
-        loop do
-          await client.write("Say something...\n")
-          data = await client.read
-          scope.reset_timeout
-          await client.write("You said: #{data}")
-        end
-      rescue Rubato::MoveOn
-        move_on_after(1) do
+        scope.when_cancelled do
           await client.write "Disconnecting due to inactivity\n"
         end
+        loop do
+          data = await client.read
+          scope.reset_timeout
+          await client.write(data)
+        end  
       end
     rescue => e
       puts "client error: #{e.inspect}"

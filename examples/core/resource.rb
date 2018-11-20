@@ -9,7 +9,7 @@ Pool = Rubato::ResourcePool.new(limit: 3) do
   :"resource#{resource_count += 1}"
 end
 
-def user(number)
+async def user(number)
   loop do
     # puts "user #{number} >"
     Pool.acquire do |r|
@@ -22,7 +22,7 @@ def user(number)
 end
 
 100.times do |x|
-  spawn { user(x) }
+  spawn user(x)
 end
 
 t0 = Time.now

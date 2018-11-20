@@ -45,6 +45,20 @@ class SocketWrapper < RubatoIO::IOWrapper
     end
   end
 
+  ZERO_LINGER = [0, 0].pack("ii")
+
+  def dont_linger
+    @io.setsockopt(Socket::SOL_SOCKET, Socket::SO_LINGER, ZERO_LINGER)
+  end
+
+  def no_delay
+    @io.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
+  end
+
+  def reuse_addr
+    @io.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
+  end
+
   def connect(host, port)
     proc do
       connect_async(host, port)
@@ -89,7 +103,7 @@ class SocketWrapper < RubatoIO::IOWrapper
       if @opts[:secure]
         accept_ssl_handshake_async(socket)
       else
-        SocketWrapper.new(socket, @opts)
+        SocketWrapper.new(socket, accept_opts)
       end
     end
   end
@@ -105,6 +119,10 @@ class SocketWrapper < RubatoIO::IOWrapper
     end
   ensure
     @read_watcher&.stop
+  end
+
+  def accept_opts
+    @accept_opts ||= @opts.merge(reuse_addr: nil, dont_linger: nil)
   end
 
   def bind(host, port)

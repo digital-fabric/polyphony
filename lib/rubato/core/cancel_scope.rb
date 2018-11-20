@@ -14,6 +14,7 @@ class CancelScope
   end
 
   def cancel!
+    @cancelled = true
     @fiber.cancelled = true
     @fiber.resume @error_class.new(self, @opts[:value])
   end
@@ -27,6 +28,10 @@ class CancelScope
     @timeout.reset
   end
 
+  def disable
+    @timeout&.stop
+  end
+
   def call
     start_timeout if @opts[:timeout]
     @fiber = Fiber.current
@@ -36,5 +41,17 @@ class CancelScope
     e.scope == self ? e.value : raise(e)
   ensure
     @timeout&.stop
+    protect(&@when_cancelled) if @cancelled && @when_cancelled
+  end
+
+  def when_cancelled(&block)
+    @when_cancelled = block
+  end
+
+  def protect(&block)
+    @fiber.cancelled = false
+    block.()
+  ensure
+    @fiber.cancelled = @cancelled
   end
 end

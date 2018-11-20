@@ -7,13 +7,15 @@ Exceptions  = import('./exceptions')
 
 # Encapsulates an asynchronous task
 class Coroutine
-  attr_reader :result
+  attr_reader :result, :fiber
+
+
   def initialize(&block)
     @block = block
   end
 
   def run(&block2)
-    @fiber = Fiber.new do
+    @fiber = FiberPool.spawn do
       @result = (@block || block2).call(self)
     rescue Exceptions::MoveOn, Exceptions::Stop => e
       @result = e.value
@@ -22,8 +24,8 @@ class Coroutine
       @awaiting_fiber&.resume @result
       @when_done&.()
     end
-    
-    @ran = true
+
+    @ran = true    
     EV.next_tick { @fiber.resume }
     self
   end
