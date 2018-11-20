@@ -5,6 +5,7 @@ CancelScope = import('./cancel_scope')
 Coroutine   = import('./coroutine')
 Exceptions  = import('./exceptions')
 Supervisor  = import('./supervisor')
+Throttler   = import('./throttler')
 
 # Kernel extensions (methods available to all objects)
 module ::Kernel
@@ -64,12 +65,6 @@ module ::Kernel
     end
   end
 
-  def snooze
-    fiber = Fiber.current
-    EV.next_tick { fiber.resume }
-    Fiber.yield
-  end
-
   def spawn(proc = nil, &block)
     if proc.is_a?(Coroutine)
       proc.run
@@ -87,6 +82,17 @@ module ::Kernel
     result.is_a?(Exception) ? raise(result) : result
   end
 
+  def throttled_loop(rate, &block)
+    throttler = Throttler.new(rate)
+    loop do
+      throttler.(&block)
+    end
+  end
+
+  def throttle(rate)
+    Throttler.new(rate)
+  end
+
   def timeout(duration, opts = {}, &block)
     CancelScope.new(opts.merge(timeout: duration)).(&block)
   end
@@ -94,6 +100,7 @@ end
 
 class ::Fiber
   attr_writer :cancelled
+  attr_accessor :next_job
 
   def cancelled?
     @cancelled
