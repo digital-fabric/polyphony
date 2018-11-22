@@ -27,4 +27,5 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency  'rake-compiler',  '1.0.5'
   s.add_development_dependency  'minitest',       '5.11.3'
+  s.add_development_dependency  'localhost',      '1.1.4'
 end

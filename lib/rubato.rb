@@ -18,7 +18,6 @@ module Rubato
   MoveOn        = Exceptions::MoveOn
   Net           = import('./rubato/net')
   ResourcePool  = import('./rubato/resource_pool')
-  Stream        = import('./rubato/stream')
   Supervisor    = import('./rubato/core/supervisor')
   Sync          = import('./rubato/core/sync')
   Thread        = import('./rubato/core/thread')

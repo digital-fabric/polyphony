@@ -25,16 +25,21 @@ module Core
     @exit_tasks.each { |t| t.call rescue nil }
   end
 
-  def self.run
+  def self.trap_int_signal
     @sigint_watcher = trap(:int) do
       puts
       EV.break
     end
     EV.unref # the signal trap should not keep the loop running
+  end
+
+  def self.run
+    trap_int_signal
+    
     EV.run
     Core.run_exit_procs
   ensure
-    @sigint_watcher.stop
+    @sigint_watcher&.stop
     @sigint_watcher = nil
   end
 

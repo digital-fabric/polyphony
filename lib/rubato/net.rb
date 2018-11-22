@@ -37,12 +37,7 @@ class SocketWrapper < RubatoIO::IOWrapper
     reuse_addr   if opts[:reuse_addr]
     dont_linger  if opts[:dont_linger]
 
-    if @opts[:secure_context] && !@opts[:secure]
-      @opts[:secure] = true
-    elsif @opts[:secure] && !@opts[:secure_context]
-      @opts[:secure_context] = OpenSSL::SSL::SSLContext.new
-      @opts[:secure_context].set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
-    end
+    setup_secure_context if @opts[:secure] || @opts[:secure_context]
   end
 
   ZERO_LINGER = [0, 0].pack("ii")
@@ -57,6 +52,24 @@ class SocketWrapper < RubatoIO::IOWrapper
 
   def reuse_addr
     @io.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
+  end
+
+  def setup_secure_context
+    if @opts[:secure_context] && !@opts[:secure]
+      @opts[:secure] = true
+    elsif @opts[:secure] && !@opts[:secure_context]
+      @opts[:secure_context] = OpenSSL::SSL::SSLContext.new
+      @opts[:secure_context].set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
+      setup_alpn(opts[:alpn_protocols]) if opts[:alpn_protocols]
+    end
+  end
+
+  def setup_alpn(protocols)
+    @secure_context.alpn_protocols = protocols
+    @secure_context.alpn_select_cb = proc do |peer_protocols|
+      # select first common protocol
+      (protocols & peer_protocols).first
+    end
   end
 
   def connect(host, port)
@@ -100,10 +113,8 @@ class SocketWrapper < RubatoIO::IOWrapper
   def accept
     proc do
       socket = accept_async
-      if @opts[:secure]
-        accept_ssl_handshake_async(socket)
-      else
-        SocketWrapper.new(socket, accept_opts)
+      SocketWrapper.new(socket, accept_opts).tap do |wrapper|
+        await wrapper.accept_ssl_handshake if @opts[:secure]
       end
     end
   end
@@ -114,11 +125,38 @@ class SocketWrapper < RubatoIO::IOWrapper
       case result
       when Socket         then return result
       when :wait_readable then read_watcher.await
-      else                     raise "failed to accept (#{result.inspect})"
+      else
+        raise "failed to accept (#{result.inspect})"
       end
     end
   ensure
     @read_watcher&.stop
+  end
+
+  def accept_ssl_handshake
+    proc do
+      @io_raw = @io
+      @io = OpenSSL::SSL::SSLSocket.new(@io_raw, @opts[:secure_context])
+  
+      accept_ssl_handshake_async
+    end
+  end
+
+  def accept_ssl_handshake_async
+    loop do
+      result = @io.accept_nonblock(exception: false)
+      case result
+      when :wait_readable
+        read_watcher.await
+      when :wait_writable
+        write_watcher.await
+      else
+        break true
+      end
+    end
+  ensure
+    @read_watcher&.stop
+    @write_watcher&.stop
   end
 
   def accept_opts

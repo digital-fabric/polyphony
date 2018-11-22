@@ -1,4 +1,4 @@
-# Introduction
+# Rubato - Async Programming Framework for Ruby
 
 Rubato is a framework for building concurrent applications in Ruby. Rubato 
 provides a simple and lightweight API for asynchronous I/O processing, designed
@@ -6,10 +6,16 @@ to maximize both developer happiness and performance.
 
 Rubato harnesses the power of
 [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to provide a
-cooperative, sequential coroutine-based concurrency model that is much easier
-to write, read, and reason about. Under the hood, Rubato uses
+cooperative, sequential coroutine-based concurrency model that is easier to
+write, read, and reason about. Under the hood, Rubato uses
 [libev](https://github.com/enki/libev) as a high-performance event reactor that
-provides timer and I/O watchers and other synchronization primitives.
+provides timers, I/O watchers and other asynchronous event primitives.
+
+## Features
+
+* Co-operative scheduling of asynchronous tasks using Ruby fibers.
+* High-performance event reactor for handling I/O events and timers.
+* Abstractions for supervising, cancelling and throttling asynchronous tasks.
 
 ## An echo server in Rubato
 
@@ -17,10 +23,10 @@ provides timer and I/O watchers and other synchronization primitives.
 require 'rubato'
 
 spawn do
-  server = Rubato::Net.tcp_serve(1234)
-  while client = await server.accept do
+  server = Rubato::Net.tcp_listen('0.0.0.0', 1234)
+  while client = await server.accept
     spawn do
-      while data = await client.read
+      while data = (await client.read rescue nil)
         await client.write(data)
       end
     end

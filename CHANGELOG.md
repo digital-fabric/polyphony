@@ -1,3 +1,14 @@
+0.10 2018-11-20
+---------------
+
+* Rewrite Rubato core for simpler code and better performance
+* Implement EV.snooze (sleep until next tick)
+* Coroutine encapsulates a task spawned on a separate fiber
+* Supervisor supervises multiple coroutines
+* CancelScope used to cancel an ongoing task (usually with a timeout)
+* Rate throttling
+* Implement async SSL server
+
 0.9 2018-11-14
 --------------
 
