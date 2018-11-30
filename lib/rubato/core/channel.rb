@@ -24,15 +24,13 @@ class Channel
   end
 
   def receive
-    proc do
-      if @payload_queue.empty?
-        @waiting_queue << Fiber.current
-      else
-        payload = @payload_queue.shift
-        fiber = Fiber.current
-        EV.next_tick { fiber.resume(payload) }
-      end
-      suspend
+    if @payload_queue.empty?
+      @waiting_queue << Fiber.current
+    else
+      payload = @payload_queue.shift
+      fiber = Fiber.current
+      EV.next_tick { fiber.resume(payload) }
     end
+    suspend
   end
 end

@@ -9,7 +9,7 @@ def error(t)
 end
 
 spawn do
-  await { error(1) }
+  async { error(1) }.await
 end
 
 puts "after spawn"

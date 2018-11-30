@@ -8,6 +8,21 @@ Request = import('./request')
 Response = import('./response')
 HTTP2 = import('./http2')
 
+class Http::Parser
+  def async!
+    self.on_message_complete = proc { @request_complete = true }
+    self
+  end
+
+  def parse(data)
+    self << data
+    return nil unless @request_complete
+
+    @request_complete = nil
+    self
+  end
+end
+
 # Sets up parsing and handling of request/response cycle
 # @param socket [Net::Socket] socket
 # @param handler [Proc] request handler
@@ -18,10 +33,20 @@ def start(socket, handler)
   ctx = connection_context(socket, handler)
   ctx[:response] = Response.new(socket) { response_did_finish(ctx) }
 
-  ctx[:parser].on_message_complete = proc { handle_request(ctx) }
+  # ctx[:parser].on_message_complete = proc { handle_request(ctx) }
   ctx[:parser].on_body = proc { |chunk| handle_body_chunk(ctx, chunk) }
 
-  socket.on(:data) { |data| parse_incoming_data(ctx, data) }
+  loop do
+    data = await socket.read
+    if request = ctx[:parser].parse(data)
+      break unless handle_request(ctx)
+      EV.snooze
+    end
+  end
+rescue IOError, SystemCallError => e
+  # do nothing
+ensure
+  socket.close
 end
 
 # Returns a context hash for the given socket. This hash contains references
@@ -34,10 +59,18 @@ def connection_context(socket, handler)
     count:    0,
     socket:   socket,
     handler:  handler,
-    parser:   Http::Parser.new,
+    parser:   Http::Parser.new.async!,
     body:     nil,
     request:  {}
   }
+end
+
+# Adds given chunk to request body
+# @param ctx [Hash] connection context
+# @return [void]
+def handle_body_chunk(context, chunk)
+  context[:body] ||= +''
+  context[:body] << chunk
 end
 
 # Resets the connection context and performs cleanup after response was finished
@@ -52,28 +85,25 @@ def response_did_finish(ctx)
   end
 end
 
-# Parses incoming data
-# @param ctx [Hash] connection context
-# @return [void]
-def parse_incoming_data(ctx, data)
-  ctx[:parser] << data
-rescue StandardError => e
-  puts "HTTP 1 parsing error: #{e.inspect}"
-  puts e.backtrace.join("\n")
-  ctx[:socket].close
-end
-
 # Handles request, upgrading the connection if possible
 # @param ctx [Hash] connection context
-# @return [void]
+# @return [boolean] true if HTTP 1 loop should continue handling socket
 def handle_request(ctx)
-  # ctx[:count] += 1
-  return if ctx[:socket].opts[:can_upgrade] && upgrade_connection(ctx)
+  return nil if ctx[:socket].opts[:can_upgrade] && upgrade_connection(ctx)
 
+  # allow upgrading the connection only on first request
   ctx[:socket].opts[:can_upgrade] = false
   request = make_request(ctx)
   Request.prepare(request)
   ctx[:handler].(request, ctx[:response])
+  
+  if ctx[:parser].keep_alive?
+    ctx[:response].reset!
+    ctx[:body] = nil
+    true
+  else
+    nil
+  end
 end
 
 UPGRADE_MESSAGE = [
@@ -95,7 +125,7 @@ S_HTTP2_SETTINGS  = 'HTTP2-Settings'
 def upgrade_connection(ctx)
   return false unless ctx[:parser].headers[S_UPGRADE] == S_H2C
 
-  ctx[:socket] << UPGRADE_MESSAGE
+  await ctx[:socket].write(UPGRADE_MESSAGE)
 
   interface = HTTP2.start(ctx[:socket], ctx[:handler])
   settings = ctx[:parser].headers[S_HTTP2_SETTINGS]
@@ -110,12 +140,6 @@ def make_request(ctx)
   request[:headers]      = ctx[:parser].headers
   request[:body]         = ctx[:body]
   request
-  # {
-  #   method:       ctx[:parser].http_method,
-  #   request_url:  ctx[:parser].request_url,
-  #   headers:      ctx[:parser].headers,
-  #   body:         ctx[:body]
-  # }
 end
 
 S_SCHEME      = ':scheme'
@@ -137,10 +161,3 @@ def upgraded_request(ctx)
   }.merge(ctx[:parser].headers)
 end
 
-# Adds given chunk to request body
-# @param ctx [Hash] connection context
-# @return [void]
-def handle_body_chunk(context, chunk)
-  context[:body] ||= +''
-  context[:body] << chunk
-end

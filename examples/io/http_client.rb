@@ -14,17 +14,18 @@ def connect(host, port)
   end
 end
 
-
 spawn do
-  io = await connect('google.com', 443)
-  t0 = Time.now
-  await io.write("GET / HTTP/1.1\r\nHost: google.com\r\n\r\n")
-  puts "write time: #{Time.now - t0}"
-  t0 = Time.now
-  reply = await io.read(2**16)
-  puts "read time: #{Time.now - t0}"
-  puts
-  puts reply
-rescue Cancelled
+  cancel_after(3) do
+    io = Rubato::Net.tcp_connect('google.com', 443, secure: true)
+    t0 = Time.now
+    io.write("GET / HTTP/1.1\r\nHost: google.com\r\n\r\n")
+    puts "write time: #{Time.now - t0}"
+    t0 = Time.now
+    reply = io.read(2**16)
+    puts "read time: #{Time.now - t0}"
+    puts
+    puts reply
+  end
+rescue Rubato::Cancel
   puts "quitting due to inactivity"
 end

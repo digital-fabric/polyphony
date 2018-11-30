@@ -5,9 +5,9 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 
 spawn do
-  await async {
+  async {
     puts "going to sleep..."
-    await sleep 1
+    sleep 1
     puts "woke up"
-  }
+  }.await
 end

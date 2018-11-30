@@ -2,7 +2,8 @@
 
 export  :SocketWrapper,
         :tcp_connect,
-        :tcp_listen
+        :tcp_listen,
+        :getaddrinfo
 
 require 'socket'
 require 'openssl'
@@ -10,24 +11,24 @@ require 'openssl'
 RubatoIO = import('./io')
 
 def tcp_connect(host, port, opts = {})
-  proc do
-    socket = ::Socket.new(:INET, :STREAM)
-    SocketWrapper.new(socket, opts).tap do |o|
-      await o.connect(host, port)
-    end
+  socket = ::Socket.new(:INET, :STREAM)
+  SocketWrapper.new(socket, opts).tap do |o|
+    o.connect(host, port)
   end
 end
 
 def tcp_listen(host = '0.0.0.0', port = nil, opts = {})
   host ||= '0.0.0.0'
   raise "Port number not specified" unless port
-  proc do
-    socket = ::Socket.new(:INET, :STREAM)
-    SocketWrapper.new(socket, opts).tap do |server|
-      await server.bind(host, port)
-      await server.listen
-    end
+  socket = ::Socket.new(:INET, :STREAM)
+  SocketWrapper.new(socket, opts).tap do |server|
+    server.bind(host, port)
+    server.listen
   end
+end
+
+def getaddrinfo(host, port)
+  Rubato::ThreadPool.process { Socket.getaddrinfo(host, port, :INET, :STREAM) }
 end
 
 class SocketWrapper < RubatoIO::IOWrapper
@@ -60,41 +61,39 @@ class SocketWrapper < RubatoIO::IOWrapper
     elsif @opts[:secure] && !@opts[:secure_context]
       @opts[:secure_context] = OpenSSL::SSL::SSLContext.new
       @opts[:secure_context].set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
-      setup_alpn(opts[:alpn_protocols]) if opts[:alpn_protocols]
     end
+    setup_alpn(opts[:alpn_protocols]) if opts[:alpn_protocols]
   end
 
   def setup_alpn(protocols)
-    @secure_context.alpn_protocols = protocols
-    @secure_context.alpn_select_cb = proc do |peer_protocols|
+    @opts[:secure_context].alpn_protocols = protocols
+    @opts[:secure_context].alpn_select_cb = proc do |peer_protocols|
       # select first common protocol
       (protocols & peer_protocols).first
     end
   end
 
   def connect(host, port)
-    proc do
-      connect_async(host, port)
-      connect_ssl_handshake_async if @opts[:secure]
-    end
-  end
-
-  def connect_async(host, port)
     addr = ::Socket.sockaddr_in(port, host)
+    puts "*" * 40
+    p addr
     loop do
       result = @io.connect_nonblock(addr, exception: false)
       case result
-      when 0              then return result
+      when 0              then break
       when :wait_writable then write_watcher.await
       else                raise IOError
       end
     end
+    connect_ssl_handshake if @opts[:secure]
   ensure
     @write_watcher&.stop
   end
 
-  def connect_ssl_handshake_async
-    @io = OpenSSL::SSL::SSLSocket.new(@io, @opts[:secure_context])
+  def connect_ssl_handshake
+    puts "connect_ssl_handshake"
+    @io_raw = @io
+    @io = OpenSSL::SSL::SSLSocket.new(@io_raw, @opts[:secure_context])
     loop do
       result = @io.connect_nonblock(exception: false)
       case result
@@ -111,15 +110,13 @@ class SocketWrapper < RubatoIO::IOWrapper
   end
 
   def accept
-    proc do
-      socket = accept_async
-      SocketWrapper.new(socket, accept_opts).tap do |wrapper|
-        await wrapper.accept_ssl_handshake if @opts[:secure]
-      end
+    socket = accept_socket
+    SocketWrapper.new(socket, accept_opts).tap do |wrapper|
+      wrapper.accept_ssl_handshake if @opts[:secure]
     end
   end
 
-  def accept_async
+  def accept_socket
     loop do
       result, client_addr = @io.accept_nonblock(exception: false)
       case result
@@ -134,15 +131,9 @@ class SocketWrapper < RubatoIO::IOWrapper
   end
 
   def accept_ssl_handshake
-    proc do
-      @io_raw = @io
-      @io = OpenSSL::SSL::SSLSocket.new(@io_raw, @opts[:secure_context])
-  
-      accept_ssl_handshake_async
-    end
-  end
+    @io_raw = @io
+    @io = OpenSSL::SSL::SSLSocket.new(@io_raw, @opts[:secure_context])
 
-  def accept_ssl_handshake_async
     loop do
       result = @io.accept_nonblock(exception: false)
       case result
@@ -159,20 +150,20 @@ class SocketWrapper < RubatoIO::IOWrapper
     @write_watcher&.stop
   end
 
+  def alpn_protocol
+    @opts[:secure] && @io.alpn_protocol
+  end
+
   def accept_opts
     @accept_opts ||= @opts.merge(reuse_addr: nil, dont_linger: nil)
   end
 
   def bind(host, port)
-    proc {
-      addr = ::Socket.sockaddr_in(port, host)
-      @io.bind(addr)
-    }
+    addr = ::Socket.sockaddr_in(port, host)
+    @io.bind(addr)
   end
 
   def listen(backlog = 0)
-    proc {
-      @io.listen(backlog)
-    }
+    @io.listen(backlog)
   end
 end

@@ -16,7 +16,7 @@ X = 1_000_000
 # sleep
 # spawn do
 #   t0 = Time.now
-#   X.times { await sleep(0) }
+#   X.times { sleep(0) }
 #   dt = Time.now - t0
 #   puts "#{X / dt.to_f}/s"
 # end

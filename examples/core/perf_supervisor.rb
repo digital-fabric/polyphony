@@ -8,7 +8,7 @@ FIBERS      = 1_000
 
 spawn do
   t0 = Time.now
-  await supervise do |s|
+  supervise do |s|
     FIBERS.times do
       s.spawn do
         ITERATIONS.times { EV.snooze }

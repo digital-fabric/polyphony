@@ -6,13 +6,13 @@ Rubato = import('../../lib/rubato')
 
 async def my_sleep(t)
   puts "#{t} start"
-  await sleep(t)
+  sleep(t)
   puts "#{t} done"
 end
 
 spawn do
   puts "#{Time.now} waiting..."
-  await supervise do |s|
+  supervise do |s|
     s.spawn my_sleep(1)
     s.spawn my_sleep(2)
     s.spawn my_sleep(3)

@@ -27,7 +27,7 @@ async def handle_client(socket)
   parser = Http::Parser.new
   parser.setup_async
   loop do
-    data = await socket.read
+    data = socket.read
     if request = parser.parse(data)
       handle_request(socket, nil)
       EV.snooze
@@ -47,17 +47,17 @@ def handle_request(client, parser)
   status_code = 200
   data = "Hello world!\n"
   headers = "Content-Length: #{data.bytesize}\r\n"
-  await client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
+  client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
 end
 
 spawn do
-  server = await Rubato::Net.tcp_listen(nil, 1234,
+  server = Rubato::Net.tcp_listen(nil, 1234,
     reuse_addr: true, dont_linger: true
   )
   puts "listening on port 1234..."
 
   loop do
-    client = await server.accept
+    client = server.accept
     spawn handle_client(client)
   end
 rescue Exception => e

@@ -6,10 +6,10 @@ Rubato = import('../../lib/rubato')
 
 def loop_it(number, lock)
   loop do
-    await sleep(rand*0.2)
-    await lock.synchronize do
+    sleep(rand*0.2)
+    lock.synchronize do
       puts "child #{number} has the lock"
-      await sleep(rand*0.05)
+      sleep(rand*0.05)
     end
   end
 end

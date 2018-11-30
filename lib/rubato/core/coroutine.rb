@@ -36,8 +36,8 @@ class Coroutine
 
   # Kernel.await expects the given argument / block to be a callable, so #call
   # in fact waits for the coroutine to finish
-  def call(&block)
-    run(&block) unless @ran
+  def await
+    run unless @ran
     if @fiber
       @awaiting_fiber = Fiber.current
       suspend
@@ -50,10 +50,6 @@ class Coroutine
       EV.next_tick { @fiber&.resume(Exceptions::MoveOn.new) }
       suspend
     end
-  end
-
-  def to_proc
-    -> { call }
   end
 
   def when_done(&block)

@@ -6,13 +6,13 @@ Rubato = import('../../lib/rubato')
 
 spawn do
   puts "going to sleep"
-  result = await async do
-    await async do
-      await async do
+  result = async do
+    async do
+      async do
         puts "Fiber count: #{Rubato::FiberPool.size}"
-        await sleep(1)
-      end
-    end
-  end
+        sleep(1)
+      end.await
+    end.await
+  end.await
   puts "result: #{result}"
 end

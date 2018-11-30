@@ -9,14 +9,12 @@ class Mutex
   end
 
   def synchronize
-    proc do |&block|
-      fiber = Fiber.current
-      @waiting << fiber
-      suspend if @waiting.size > 1
-      block.()
-    ensure
-      @waiting.delete(fiber)
-      EV.next_tick { @waiting[0]&.resume } unless @waiting.empty?
-    end
+    fiber = Fiber.current
+    @waiting << fiber
+    suspend if @waiting.size > 1
+    yield
+  ensure
+    @waiting.delete(fiber)
+    EV.next_tick { @waiting[0]&.resume } unless @waiting.empty?
   end
 end

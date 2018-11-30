@@ -8,7 +8,7 @@ require 'openssl'
 import('./core/ext')
 
 class IOWrapper
-  attr_reader :io
+  attr_reader :io, :opts
 
   def initialize(io, opts = {})
     @io = io
@@ -34,10 +34,6 @@ class IOWrapper
   NO_EXCEPTION = { exception: false }.freeze
 
   def read(max = 8192)
-    proc { read_async(max) }
-  end
-
-  def read_async(max)
     loop do
       result = @io.read_nonblock(max, @read_buffer, NO_EXCEPTION)
       case result
@@ -51,10 +47,6 @@ class IOWrapper
   end
 
   def write(data)
-    proc { write_async(data) }
-  end
-
-  def write_async(data)
     loop do
       result = @io.write_nonblock(data, exception: false)
       case result

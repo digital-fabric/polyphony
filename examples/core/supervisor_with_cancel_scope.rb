@@ -6,7 +6,7 @@ Rubato = import('../../lib/rubato')
 
 async def my_sleep(t)
   puts "start: #{t}"
-  r = await sleep(t)
+  r = sleep(t)
   puts "my_sleep result #{r.inspect}"
   puts "done: #{t}"
 end
@@ -14,7 +14,7 @@ end
 spawn do
   puts "#{Time.now} going to sleep..."
   move_on_after(0.5) do
-    await supervise do |s|
+    supervise do |s|
       puts "supervise block"
       s.spawn my_sleep(1)
       s.spawn my_sleep(2)

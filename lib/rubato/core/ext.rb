@@ -21,15 +21,15 @@ module ::Kernel
     end
   end
 
-  def await(proc = nil, &block)
-    return if Fiber.current.cancelled?
+  # def await(proc = nil, &block)
+  #   return if Fiber.current.cancelled?
 
-    if proc && block
-      proc.(&block)
-    else
-      (block || proc).()
-    end
-  end
+  #   if proc && block
+  #     proc.(&block)
+  #   else
+  #     (block || proc).()
+  #   end
+  # end
 
   def cancel_after(duration, &block)
     CancelScope.new(timeout: duration, mode: :cancel).(&block)
@@ -43,26 +43,35 @@ module ::Kernel
     CancelScope.new(timeout: duration).(&block)
   end
 
-  def pulse(freq)
-    fiber = Fiber.current
-    timer = EV::Timer.new(freq, freq)
-    timer.start { fiber.resume freq }
-    proc do
+  class Pulser
+    def initialize(freq)
+      fiber = Fiber.current
+      @timer = EV::Timer.new(freq, freq)
+      @timer.start { fiber.resume freq }
+    end
+
+    def await
       suspend
     rescue Exception => e
-      timer.stop
+      @timer.stop
       raise e
     end
+
+    def stop
+      @timer.stop
+    end
+  end
+
+  def pulse(freq)
+    Pulser.new(freq)
   end
 
   alias_method :sync_sleep, :sleep
   def sleep(duration)
-    proc do
-      timer = EV::Timer.new(duration, 0)
-      timer.await
-    ensure
-      timer.stop
-    end
+    timer = EV::Timer.new(duration, 0)
+    timer.await
+  ensure
+    timer.stop
   end
 
   def spawn(proc = nil, &block)
@@ -74,7 +83,7 @@ module ::Kernel
   end
 
   def supervise(&block)
-    Supervisor.new.(&block)
+    Supervisor.new.await(&block)
   end
 
   def suspend

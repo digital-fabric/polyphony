@@ -48,6 +48,10 @@ class CancelScope
     @when_cancelled = block
   end
 
+  def cancelled?
+    @cancelled
+  end
+
   def protect(&block)
     @fiber.cancelled = false
     block.()

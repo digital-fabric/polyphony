@@ -5,7 +5,7 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 
 def echo(rchan, wchan)
-  while msg = (await rchan.receive)
+  while msg = rchan.receive
     puts "got #{msg}"
     wchan << "you said: #{msg}"
   end
@@ -22,7 +22,7 @@ spawn do
   chan1 << "world"
   
   2.times do
-    msg = await chan2.receive
+    msg = chan2.receive
     puts msg
   end
 

@@ -10,17 +10,18 @@ class Supervisor
     @coroutines = []
   end
 
-  def call(&block)
-    proc do |&block2|
-      @supervisor_fiber = Fiber.current
-      (block || block2).(self)
-      suspend
-    rescue Exceptions::MoveOn => e
-      e.value
-    ensure
-      @supervisor_fiber = nil
+  def await(&block)
+    @supervisor_fiber = Fiber.current
+    block&.(self)
+    suspend
+  rescue Exceptions::MoveOn => e
+    e.value
+  ensure
+    if still_running?
       stop_all_tasks
-      suspend if still_running?
+      suspend
+    else
+      @supervisor_fiber = nil
     end
   end
 

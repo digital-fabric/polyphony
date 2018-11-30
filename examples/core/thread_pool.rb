@@ -26,7 +26,7 @@ def compare_performance
     1.times do
       t0 = Time.now
       X.times do
-        await Rubato::ThreadPool.process { lengthy_op }
+        Rubato::ThreadPool.process { lengthy_op }
       end
       async_perf = X / (Time.now - t0)
       puts "seq thread pool performance: %g (X %0.2f)" % [
@@ -36,9 +36,9 @@ def compare_performance
 
     acc = 0
     count = 0
-    10.times do
+    10.times do |i|
       t0 = Time.now
-      await supervise do |s|
+      supervise do |s|
         X.times do
           s.spawn Rubato::ThreadPool.process { lengthy_op }
         end

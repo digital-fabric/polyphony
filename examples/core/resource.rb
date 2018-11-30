@@ -14,7 +14,7 @@ async def user(number)
     # puts "user #{number} >"
     Pool.acquire do |r|
       puts "user #{number} #{r.inspect} >"
-      await sleep(0.05 + rand * 0.2)
+      sleep(0.05 + rand * 0.2)
       # STDOUT << '.'
       # puts "#{number}: #{r.inspect}"
     end

@@ -7,7 +7,7 @@ Rubato = import('../../lib/rubato')
 spawn do
   move_on_after(3) do
     pulser = pulse(1)
-    while await pulser
+    while pulser.await
       puts Time.now
     end
   end

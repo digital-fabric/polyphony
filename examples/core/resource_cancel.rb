@@ -19,7 +19,7 @@ def user(number)
       Pool.acquire do |r|
         scope.disable
         puts "#{number} #{r.inspect} >"
-        await sleep(0.4 + rand * 0.2)
+        sleep(0.4 + rand * 0.2)
         puts "#{number} #{r.inspect} <"
       end
     end
