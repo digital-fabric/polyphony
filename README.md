@@ -1,9 +1,10 @@
-# Rubato - Fiber-based Concurrency for Ruby
+# Rubato - Fiber-Based Concurrency for Ruby
 
 [INSTALL](#installing-rubato) |
-[OVERVIEW](#how-rubato-works-a-technical-overview) |
+[OVERVIEW](#how-rubato-works---a-technical-overview) |
 [EXAMPLES](examples) |
-[REFERENCE](#api-reference)
+[REFERENCE](#api-reference) |
+[EXTENDING](#extending-rubato)
 
 **Note**: Rubato is still in alpha and is not ready for production use.
 
@@ -112,8 +113,6 @@ class IO
       else                     return result
       end
     end
-  ensure
-    @read_watcher&.stop
   end
 end
 ```
@@ -203,6 +202,17 @@ def echoer(client)
 }
 ```
 
+`ThreadPool` - a pool of threads used to run any operation that cannot be
+implemented using non-blocking calls, such as file system calls. The operation
+is offloaded to a worker thread, allowing the event loop to continue processing
+other tasks. For example, `IO.read` and `File.stat` are both reimplemented
+using the Rubato thread pool. You can easily use the thread pool to run your
+own blocking operations as follows:
+
+```ruby
+result = Rubato::ThreadPool.process { long_running_process }
+```
+
 ### Prior Art
 
 Rubato draws inspiration from the following, in no particular order:
@@ -215,3 +225,92 @@ Rubato draws inspiration from the following, in no particular order:
 ## API Reference
 
 To be continued...
+
+## Extending Rubato
+
+Rubato was designed to ease the transition from blocking APIs and
+callback-based API to non-blocking, fiber-based ones. It is important to
+understand that not all blocking calls can be easily converted into
+non-blocking calls. That might be the case with Ruby gems based on
+C-extensions, such as database libraries. In that case, Rubato's built-in
+[thread pool](#threadpool) might be used for offloading such blocking calls.
+
+### Adapting callback-based APIs
+
+Some of the most common patterns in Ruby APIs is the callback pattern, in which
+the API takes a block as a callback to be called upon completion of a task. One
+such example can be found in the excellent
+[http_parser.rb](https://github.com/tmm1/http_parser.rb/) gem, which is used by
+Rubato itself to provide HTTP 1 functionality. The `HTTP:Parser` provides 
+multiple hooks, or callbacks, for being notified when an HTTP request is
+complete. The typical callback-based setup is as follows:
+
+```ruby
+require 'http/parser'
+@parser = Http::Parser.new
+
+def on_receive(data)
+  @parser < data
+end
+
+@parser.on_message_complete do |env|
+  process_request(env)
+end
+```
+
+A program using `http_parser.rb` in conjunction with Rubato might do the
+following:
+
+```ruby
+require 'http/parser'
+require 'modulation'
+
+def handle_client(client)
+  parser = Http::Parser.new
+  req = nil
+  parser.on_message_complete { |env| req = env }
+  loop do
+    parser << client.read
+    if req
+      handle_request(req)
+      req = nil
+    end
+  end
+end
+```
+
+Another possibility would be to monkey-patch `Http::Parser` in order to
+encapsulate the state of the request:
+
+```ruby
+class Http::Parser
+  def setup
+    self.on_message_complete = proc { @request_complete = true }
+  end
+
+  def parser(data)
+    self << data
+    return nil unless @request_complete
+
+    @request_complete = nil
+    self
+  end
+end
+
+def handle_client(client)
+  parser = Http::Parser.new
+  loop do
+    if req == parser.parse(client.read)
+      handle_request(req)
+    end
+  end
+end
+```
+
+### Contributing to Rubato
+
+If there's some blocking behavior you'd like to see handled by Rubato, please
+let us know by
+[creating an issue](https://github.com/digital-fabric/rubato/issues). Our aim
+is for Rubato to be a comprehensive solution for writing concurrent Ruby
+programs.
