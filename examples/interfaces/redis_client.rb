@@ -3,22 +3,19 @@
 require 'modulation'
 
 Rubato = import('../../lib/rubato')
-Redis   = import('../../lib/rubato/interfaces/redis')
+import('../../lib/rubato/interfaces/redis')
 
-redis = Redis::Connection.new
+redis = Redis.new
 
-Rubato.async do
-  Rubato.await redis.connect
-  puts "connected"
+spawn do
+  t0 = Time.now
+  1000.times { redis.get('abc') }
+  puts "get rate: #{1000 / (Time.now - t0)} reqs/s"
 
-  puts "redis server time: #{Rubato.await redis.time}"
-
-  puts "abc = #{Rubato.await redis.get('abc')}"
+  puts "abc = #{redis.get('abc')}"
 
   puts "updating value..."
-  Rubato.await redis.set('abc', Time.now.to_s)
+  redis.set('abc', Time.now.to_s)
 
-  puts "abc = #{Rubato.await redis.get('abc')}"
-
-  redis.close
+  puts "abc = #{redis.get('abc')}"
 end

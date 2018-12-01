@@ -5,7 +5,7 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 Postgres =  import('../../lib/rubato/interfaces/postgres')
 
-DB = Postgres::Client.new(
+$db = PG.connect(
   host:     '/tmp',
   user:     'reality',
   password: nil,
@@ -14,15 +14,21 @@ DB = Postgres::Client.new(
 )
 
 def get_records
-  res = Rubato.await DB.query("select 1 as test")
-  puts "got #{res.ntuples} records: #{res.to_a}"
+  res = $db.query("select 1 as test")
+  # puts "got #{res.ntuples} records: #{res.to_a}"
 rescue => e
   puts "got error: #{e.inspect}"
   puts e.backtrace.join("\n")
 end
 
-Rubato.async { get_records }
+spawn do
+  t0 = Time.now
+  1000.times { get_records }
+  puts "query rate: #{1000 / (Time.now - t0)} reqs/s"
 
-Rubato.interval(1) do
-  Rubato.async { get_records }
+  # get_records
 end
+
+# every(1) do
+#   spawn { get_records }
+# end

@@ -5,7 +5,7 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 
 spawn do
-  stdin = Rubato::IO::IOWrapper.new(STDIN)
+  stdin = STDIN#Rubato::IO::IOWrapper.new(STDIN)
   puts "Write something..."
   cancel_after(10) do |scope|
     loop do

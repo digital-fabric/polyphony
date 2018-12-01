@@ -1,41 +1,30 @@
 # frozen_string_literal: true
 
-export :IOWrapper
-
 require 'socket'
 require 'openssl'
 
 import('./core/ext')
 
-class IOWrapper
-  attr_reader :io, :opts
-
-  def initialize(io, opts = {})
-    @io = io
-    @opts = opts
-    @read_buffer = +''
-  end
-
-  def close
-    @read_watcher&.stop
-    @write_watcher&.stop
-    @io.close
-    @read_buffer = nil
-  end
-
+class ::IO
   def read_watcher
-    @read_watcher ||= EV::IO.new(@io, :r)
+    @read_watcher ||= EV::IO.new(self, :r)
   end
 
   def write_watcher
-    @write_watcher ||= EV::IO.new(@io, :w)
+    @write_watcher ||= EV::IO.new(self, :w)
+  end
+
+  def stop_watchers
+    @read_watcher&.stop
+    @write_watcher&.stop
   end
 
   NO_EXCEPTION = { exception: false }.freeze
 
   def read(max = 8192)
+    @read_buffer ||= +''
     loop do
-      result = @io.read_nonblock(max, @read_buffer, NO_EXCEPTION)
+      result = read_nonblock(max, @read_buffer, NO_EXCEPTION)
       case result
       when nil            then raise IOError
       when :wait_readable then read_watcher.await
@@ -48,7 +37,7 @@ class IOWrapper
 
   def write(data)
     loop do
-      result = @io.write_nonblock(data, exception: false)
+      result = write_nonblock(data, exception: false)
       case result
       when nil            then raise IOError
       when :wait_writable then write_watcher.await

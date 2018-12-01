@@ -3,33 +3,32 @@
 require 'modulation'
 
 Rubato = import('../../lib/rubato')
-Rubato::ThreadPool.setup; sleep 0.2
 
-PATH = File.expand_path('../../doc/Promise.html', __dir__)
+PATH = File.expand_path('../../../../docs/dev-journal.md', __dir__)
 
 def raw_read_file(x)
   t0 = Time.now
-  x.times { IO.read(PATH) }
+  x.times { IO.orig_read(PATH) }
   puts "raw_read_file: #{Time.now - t0}"
 end
 
-def read_file
-  await Rubato::FS.read(PATH)
+X = 100
+Y = 10
+
+async def async_read_file
+  X.times { IO.read(PATH) }
 end
 
-def do_read(nexus, x)
+def do_read(supervisor, x)
   x.times { nexus << async { read_file } }
 end
 
-X = 100
-
-raw_read_file(X)
+raw_read_file(X * Y)
 
 spawn do
   t0 = Time.now
-  await nexus do |n|
-    # n << async { Rubato.pulse(1) { puts Time.now } }
-    do_read(n, X)
+  supervise do |s|
+    4.times { s.spawn async_read_file }
   end
   puts "thread_pool_read_file: #{Time.now - t0}"
 rescue Exception => e

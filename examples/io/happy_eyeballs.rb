@@ -13,7 +13,9 @@ rescue IOError, SystemCallError
 end
 
 async def happy_eyeballs(hostname, port, max_wait_time: 0.025)
-  targets = Rubato::Net.getaddrinfo(hostname, port)
+  targets = Socket.getaddrinfo(hostname, port, :INET, :STREAM)
+  puts "*" * 40
+  p targets
   t0 = Time.now
   cancel_after(5) do
     success = supervise do |supervisor|

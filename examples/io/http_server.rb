@@ -36,7 +36,6 @@ async def handle_client(socket)
 rescue IOError, SystemCallError => e
   # do nothing
 ensure
-  puts "  done(#{socket})"
   $client_count -= 1
   socket.close rescue nil
   parser.reset!
@@ -71,23 +70,23 @@ t0 = Time.now
 last_t = Time.now
 last_request_count = 0
 
-# every(5) do
-#   now = Time.now
-#   if now > last_t
-#     rate = ($request_count - last_request_count) / (now - last_t)
-#     last_request_count = $request_count
-#     last_t = now
-#   else
-#     rate = 0
-#   end
+every(1) do
+  now = Time.now
+  if now > last_t
+    rate = ($request_count - last_request_count) / (now - last_t)
+    last_request_count = $request_count
+    last_t = now
+  else
+    rate = 0
+  end
 
-#   puts "pid: %d uptime: %d clients: %d req/s: %d" % [
-#     Process.pid,
-#     (Time.now - t0).to_i,
-#     $client_count,
-#     rate
-#   ]
-# end
+  puts "pid: %d uptime: %d clients: %d req/s: %d" % [
+    Process.pid,
+    (Time.now - t0).to_i,
+    $client_count,
+    rate
+  ]
+end
 
 # Rubato.every(1) do
 #   GC.start

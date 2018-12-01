@@ -114,4 +114,14 @@ class ::Fiber
   def cancelled?
     @cancelled
   end
+
+  def root?
+    @root
+  end
+
+  def set_root!
+    @root = true
+  end
 end
+
+Fiber.current.set_root!
