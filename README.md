@@ -63,7 +63,8 @@ spawn {
 This example demonstrates several features of Rubato:
 
 - The code uses `TCPServer`, a class from Ruby's stdlib, to setup a TCP server.
-  The result of `server.accept` is also There are no wrapper classes being used.
+  The result of `server.accept` is also a plain `TCPSocket` object. There are
+  no wrapper classes being used.
 - The only hint of the code being concurrent is the use of `Kernel.spawn`,
   which starts a new coroutine on a dedicated fiber. This allows serving
   multiple clients at once. Whenever a blocking call is issued, such as
