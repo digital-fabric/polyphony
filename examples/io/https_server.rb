@@ -28,7 +28,7 @@ async def handle_client(socket)
   parser = Http::Parser.new
   parser.setup_async
   loop do
-    data = await socket.read
+    data = socket.read
     if request = parser.parse(data)
       handle_request(socket, nil)
       EV.snooze
@@ -47,19 +47,19 @@ def handle_request(client, parser)
   status_code = 200
   data = "Hello world!\n"
   headers = "Content-Length: #{data.bytesize}\r\n"
-  await client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
+  client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
 end
 
 spawn do
   authority = Localhost::Authority.fetch
-  server = await Rubato::Net.tcp_listen(nil, 1234,
+  server = Rubato::Net.tcp_listen(nil, 1234,
     reuse_addr: true, dont_linger: true,
     secure_context: authority.server_context
   )
   puts "listening (HTTPS) on port 1234..."
 
   loop do
-    client = await server.accept
+    client = server.accept
     spawn handle_client(client)
   rescue => e
     puts "error in accept: #{e}"
@@ -71,26 +71,26 @@ rescue Exception => e
   server.close
 end
 
-t0 = Time.now
-last_t = Time.now
-last_request_count = 0
+# t0 = Time.now
+# last_t = Time.now
+# last_request_count = 0
 
-puts "pid: #{Process.pid}"
+# puts "pid: #{Process.pid}"
 
-every(5) do
-  now = Time.now
-  if now > last_t
-    rate = ($request_count - last_request_count) / (now - last_t)
-    last_request_count = $request_count
-    last_t = now
-  else
-    rate = 0
-  end
+# every(5) do
+#   now = Time.now
+#   if now > last_t
+#     rate = ($request_count - last_request_count) / (now - last_t)
+#     last_request_count = $request_count
+#     last_t = now
+#   else
+#     rate = 0
+#   end
 
-  puts "pid: %d uptime: %d clients: %d req/s: %d" % [
-    Process.pid,
-    (Time.now - t0).to_i,
-    $client_count,
-    rate
-  ]
-end
+#   puts "pid: %d uptime: %d clients: %d req/s: %d" % [
+#     Process.pid,
+#     (Time.now - t0).to_i,
+#     $client_count,
+#     rate
+#   ]
+# end

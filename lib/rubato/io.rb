@@ -37,7 +37,7 @@ class ::IO
 
   def write(data)
     loop do
-      result = write_nonblock(data, exception: false)
+      result = write_nonblock(data, NO_EXCEPTION)
       case result
       when nil            then raise IOError
       when :wait_writable then write_watcher.await
