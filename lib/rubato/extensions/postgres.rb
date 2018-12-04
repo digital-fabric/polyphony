@@ -5,11 +5,9 @@ export :Client
 require 'pg'
 
 Core  = import('../core')
-IO    = import('../io')
 
 module ::PG
   def self.connect(*args)
-    puts "connect"
     connect_method = Fiber.current.root? ? :connect_sync : :connect_async
     Connection.connect_start(*args).tap(&method(connect_method))
   end

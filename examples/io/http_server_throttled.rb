@@ -22,7 +22,7 @@ class Http::Parser
   end
 end
 
-$throttler = throttle(4000)
+$throttler = throttle(1000)
 
 async def handle_client(socket)
   $client_count += 1

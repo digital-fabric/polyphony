@@ -13,8 +13,6 @@ module Rubato
   Coroutine     = import('./rubato/core/coroutine')
   FiberPool     = import('./rubato/core/fiber_pool')
   FS            = import('./rubato/fs')
-  IO            = import('./rubato/io')
-  LineReader    = import('./rubato/line_reader')
   MoveOn        = Exceptions::MoveOn
   Net           = import('./rubato/net')
   ResourcePool  = import('./rubato/resource_pool')

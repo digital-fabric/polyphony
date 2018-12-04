@@ -5,7 +5,7 @@ export_default :Core
 require 'fiber'
 require_relative '../ev_ext'
 
-Ext = import('./core/ext')
+import('./extensions/kernel')
 
 # Core module, containing async and reactor methods
 module Core

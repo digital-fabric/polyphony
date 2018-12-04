@@ -3,7 +3,7 @@
 require 'modulation'
 
 Rubato = import('../../lib/rubato')
-import('../../lib/rubato/interfaces/redis')
+import('../../lib/rubato/extensions/redis')
 
 redis = Redis.new
 

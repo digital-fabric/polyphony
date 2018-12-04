@@ -17,9 +17,11 @@ class Throttler
     now = clock
     dt = now - @last_iteration_clock
     if dt < @min_dt
-      await sleep(@min_dt - dt)
+      sleep(@min_dt - dt)
     end
     @last_iteration_clock = dt > @min_dt ? now : @last_iteration_clock + @min_dt
     block.call(self)
   end
+
+  alias_method :process, :call
 end

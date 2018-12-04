@@ -36,9 +36,10 @@ like `Socket#accept` or `IO#read` is issued.
 - Co-operative scheduling of concurrent tasks using Ruby fibers.
 - High-performance event reactor for handling I/O events and timers.
 - Constructs for controlling the execution of concurrent code, including
-  supervision and cancellation of concurrent tasks.
-- Uses native I/O classes, growing support for gems such as `pg` and `redis`.
-- Comprehensive HTTP 1 and HTTP 2 client and server.
+  supervision, cancellation and throttling of concurrent tasks.
+- Uses native classes and libraries, growing support for gems such as `pg` and
+  `redis`.
+- Comprehensive HTTP 1 and HTTP 2 client and server APIs.
 
 ## An echo server in Rubato
 
@@ -212,6 +213,28 @@ own blocking operations as follows:
 
 ```ruby
 result = Rubato::ThreadPool.process { long_running_process }
+```
+
+`Throttler` - a mechanism for throttling an arbitrary task, such as sending of
+emails, or crawling a website. A throttler is normally created using 
+`Kernel.throttle`, and can even be used to throttle operations across multiple
+coroutines:
+
+```ruby
+spawn {
+  server = Net.tcp_listen(1234)
+  throttler = throttle(10) # up to 10 times per second
+  
+  while client = server.accept
+    spawn {
+      throttler.process {
+        while data = client.read
+          client.write(data)
+        end
+      }
+    }
+  end
+}
 ```
 
 ### Prior Art

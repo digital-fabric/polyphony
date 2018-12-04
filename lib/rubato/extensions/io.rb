@@ -1,10 +1,5 @@
 # frozen_string_literal: true
 
-require 'socket'
-require 'openssl'
-
-import('./core/ext')
-
 class ::IO
   def read_watcher
     @read_watcher ||= EV::IO.new(self, :r)

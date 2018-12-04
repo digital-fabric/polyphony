@@ -3,7 +3,7 @@
 require 'modulation'
 
 Rubato = import('../../lib/rubato')
-Postgres =  import('../../lib/rubato/interfaces/postgres')
+Postgres =  import('../../lib/rubato/extensions/postgres')
 
 $db = PG.connect(
   host:     '/tmp',

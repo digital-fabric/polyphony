@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
-Async       = import('./async')
-CancelScope = import('./cancel_scope')
-Coroutine   = import('./coroutine')
-Exceptions  = import('./exceptions')
-Supervisor  = import('./supervisor')
-Throttler   = import('./throttler')
+CancelScope = import('../core/cancel_scope')
+Coroutine   = import('../core/coroutine')
+Exceptions  = import('../core/exceptions')
+Supervisor  = import('../core/supervisor')
+Throttler   = import('../core/throttler')
 
 # Kernel extensions (methods available to all objects)
 module ::Kernel
@@ -15,9 +14,22 @@ module ::Kernel
 
   def async(sym = nil, &block)
     if sym
-      Async.async_decorate(is_a?(Class) ? self : singleton_class, sym)
+      async_decorate(is_a?(Class) ? self : singleton_class, sym)
     else
       Coroutine.new(&block)
+    end
+  end
+
+  # Converts a regular method into an async method, i.e. a method that returns a
+  # proc that eventually executes the original code.
+  # @param receiver [Object] object receiving the method call
+  # @param sym [Symbol] method name
+  # @return [void]
+  def async_decorate(receiver, sym)
+    sync_sym = :"sync_#{sym}"
+    receiver.alias_method(sync_sym, sym)
+    receiver.define_method(sym) do |*args, &block|
+      Coroutine.new { send(sync_sym, *args, &block) }
     end
   end
 
