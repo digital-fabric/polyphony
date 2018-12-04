@@ -30,7 +30,7 @@ async def handle_client(socket)
     data = socket.read
     if request = parser.parse(data)
       handle_request(socket, nil)
-      EV.snooze
+      request.keep_alive? ? EV.snooze : break
     end
   end
 rescue IOError, SystemCallError => e
