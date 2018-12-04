@@ -35,12 +35,12 @@ def tcp_listen(host = nil, port = nil, opts = {})
 end
 
 DEFAULT_SSL_CONTEXT = OpenSSL::SSL::SSLContext.new
-DEFAULT_SSL_CONTEXT.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
+# DEFAULT_SSL_CONTEXT.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
 
 def secure_socket(socket, context, opts)
   context ||= DEFAULT_SSL_CONTEXT
   setup_alpn(context, opts[:alpn_protocols]) if opts[:alpn_protocols]
-  OpenSSL::SSL::SSLSocket.new(socket, context)
+  OpenSSL::SSL::SSLSocket.new(socket, context).tap { |s| s.connect }
 end
 
 def secure_server(socket, context, opts)
@@ -138,34 +138,44 @@ class ::OpenSSL::SSL::SSLSocket
     io.stop_watchers
   end
 
-  # def read(max = 8192)
-  #   @read_buffer ||= +''
-  #   loop do
-  #     result = read_nonblock(max, @read_buffer, ::IO::NO_EXCEPTION)
-  #     case result
-  #     when nil            then raise ::IOError
-  #     when :wait_readable then io.read_watcher.await
-  #     else                return result
-  #     end
-  #   end
-  # ensure
-  #   io.stop_watchers
-  # end
+  def connect
+    loop do
+      result = connect_nonblock(::IO::NO_EXCEPTION)
+      case result
+      when :wait_readable then io.read_watcher.await
+      when :wait_writable then io.write_watcher.await
+      else                     return true
+      end
+    end
+  ensure
+    io.stop_watchers
+  end
 
-  # def write(data)
-  #   Kernel.puts "SSLSocket#write"
-  #   Kernel.puts "data size: #{data.bytesize}"
-  #   loop do
-  #     result = write_nonblock(data, ::IO::NO_EXCEPTION)
-  #     Kernel.puts "result: #{result.inspect}"
-  #     case result
-  #     when nil            then raise ::IOError
-  #     when :wait_writable then io.write_watcher.await
-  #     else
-  #       (result == data.bytesize) ? (return result) : (data = data[result..-1])
-  #     end
-  #   end
-  # ensure
-  #   io.stop_watchers
-  # end
+  def read(max = 8192)
+    @read_buffer ||= +''
+    loop do
+      result = read_nonblock(max, @read_buffer, ::IO::NO_EXCEPTION)
+      case result
+      when nil            then raise ::IOError
+      when :wait_readable then io.read_watcher.await
+      else                return result
+      end
+    end
+  ensure
+    io.stop_watchers
+  end
+
+  def write(data)
+    loop do
+      result = write_nonblock(data, ::IO::NO_EXCEPTION)
+      case result
+      when nil            then raise ::IOError
+      when :wait_writable then io.write_watcher.await
+      else
+        (result == data.bytesize) ? (return result) : (data = data[result..-1])
+      end
+    end
+  ensure
+    io.stop_watchers
+  end
 end
