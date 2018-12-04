@@ -4,7 +4,7 @@ require 'modulation/gem'
 
 export_default :Rubato
 
-rubato = import('./rubato/core')
+Rubato = import('./rubato/core')
 Exceptions = import('./rubato/core/exceptions')
 
 module Rubato

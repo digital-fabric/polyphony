@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
-export :spawn, :size, :available, :checked_out
+export  :available,
+        :checked_out,
+        :reset!,
+        :size,
+        :spawn
 
 require 'fiber'
 
@@ -48,6 +52,12 @@ def spawn(&block)
   fiber = @pool.empty? ? new_fiber : @pool.shift
   fiber.next_job = block
   fiber
+end
+
+def reset!
+  @count = 0
+  @pool = []
+  @checked_out = []
 end
 
 # Creates a new fiber to be added to the pool

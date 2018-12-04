@@ -7,6 +7,8 @@ require_relative '../ev_ext'
 
 import('./extensions/kernel')
 
+FiberPool = import('./core/fiber_pool')
+
 # Core module, containing async and reactor methods
 module Core
   def self.trap(sig, &callback)
@@ -44,16 +46,26 @@ module Core
   end
 
   def self.auto_run
-    return if @auto_ran
-    @auto_ran = true
+    return if @disable_auto_run
   
     return if $!
 
     run
   end
 
-  def self.dont_auto_run!
-    @auto_ran = true
+  def self.auto_run=(value)
+    @disable_auto_run = !value
+  end
+
+  def self.fork(&block)
+    Kernel.fork do
+      self.auto_run = false
+      FiberPool.reset!
+      EV.post_fork
+
+      block.()
+      run
+    end
   end
 end
 

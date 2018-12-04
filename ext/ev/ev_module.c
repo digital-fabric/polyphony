@@ -10,6 +10,7 @@ static VALUE EV_unref(VALUE self);
 
 static VALUE EV_next_tick(VALUE self);
 static VALUE EV_snooze(VALUE self);
+static VALUE EV_post_fork(VALUE self);
 
 static VALUE watcher_refs;
 static VALUE next_tick_procs;
@@ -30,6 +31,7 @@ void Init_EV() {
   rb_define_singleton_method(mEV, "unref", EV_unref, 0);
   rb_define_singleton_method(mEV, "next_tick", EV_next_tick, 0);
   rb_define_singleton_method(mEV, "snooze", EV_snooze, 0);
+  rb_define_singleton_method(mEV, "post_fork", EV_post_fork, 0);
 
   ID_call   = rb_intern("call");
   ID_each   = rb_intern("each");
@@ -104,6 +106,11 @@ static VALUE EV_snooze(VALUE self) {
   else {
     return ret;
   }
+}
+
+static VALUE EV_post_fork(VALUE self) {
+  ev_loop_fork(EV_DEFAULT);
+  return Qnil;
 }
 
 VALUE EV_next_tick_caller(VALUE proc, VALUE data, int argc, VALUE* argv) {
