@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
-export :start
+export :run
 
 require 'http/parser'
 
 Request = import('./request')
-Response = import('./response')
 HTTP2 = import('./http2')
 
 class Http::Parser
@@ -27,17 +26,14 @@ end
 # @param socket [Net::Socket] socket
 # @param handler [Proc] request handler
 # @return [void]
-def start(socket, handler)
+def run(socket, handler)
   socket.opts[:can_upgrade] = true
 
   ctx = connection_context(socket, handler)
-  ctx[:response] = Response.new(socket) { response_did_finish(ctx) }
-
-  # ctx[:parser].on_message_complete = proc { handle_request(ctx) }
   ctx[:parser].on_body = proc { |chunk| handle_body_chunk(ctx, chunk) }
 
   loop do
-    data = await socket.read
+    data = socket.read
     if request = ctx[:parser].parse(data)
       break unless handle_request(ctx)
       EV.snooze

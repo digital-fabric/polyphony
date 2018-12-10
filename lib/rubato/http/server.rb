@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :listen
+export :serve
 
 Net   = import('../net')
 HTTP1 = import('./http1')
@@ -9,22 +9,23 @@ HTTP2 = import('./http2')
 ALPN_PROTOCOLS = %w[h2 http/1.1].freeze
 H2_PROTOCOL = 'h2'
 
-async def listen(host, port, opts = {}, &handler)
+async def serve(host, port, opts = {}, &handler)
   opts[:alpn_protocols] = ALPN_PROTOCOLS
-  server = await Net.tcp_listen(host, port, opts)
+  server = Net.tcp_listen(host, port, opts)
 
-  loop do
-    client = await server.accept
-    spawn client_task(client, handler) if client
+  while client = server.accept
+    spawn client_task(client, handler)
   end
 end
 
 async def client_task(client, handler)
   client.no_delay
   
-  protocol_module(client).start(client, handler)
+  protocol_module(client).run(client, handler)
 end
 
 def protocol_module(socket)
-  socket.alpn_protocol == H2_PROTOCOL ? HTTP2 : HTTP1
+  use_http2 = socket.respond_to?(:alpn_protocol) &&
+              socket.alpn_protocol == H2_PROTOCOL
+  use_http2 ? HTTP2 : HTTP1
 end
