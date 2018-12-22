@@ -75,7 +75,7 @@ def fiber_loop
     job, fiber.next_job = fiber.next_job, nil
     @checked_out << fiber
     fiber.cancelled = nil
-
+    
     job&.(fiber)
 
     @pool << fiber

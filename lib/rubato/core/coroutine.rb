@@ -16,18 +16,36 @@ class Coroutine
 
   def run(&block2)
     @fiber = FiberPool.spawn do
+      @fiber.coroutine = self
       @result = (@block || block2).call(self)
     rescue Exceptions::MoveOn, Exceptions::Stop => e
       @result = e.value
     ensure
+      @fiber.coroutine = nil
       @fiber = nil
       @awaiting_fiber&.resume @result
       @when_done&.()
     end
 
-    @ran = true    
+    @ran = true
     EV.next_tick { @fiber.resume }
     self
+  end
+
+  def <<(o)
+    @queue ||= []
+    @queue << o
+    EV.next_tick { @fiber&.resume if @receive_waiting } if @receive_waiting
+    EV.snooze
+  end
+
+  def receive
+    @receive_waiting = true
+    EV.next_tick { @fiber&.resume } if @queue && @queue.size > 0
+    suspend
+    @queue.shift
+  ensure
+    @receive_waiting = nil
   end
 
   def running?
@@ -62,5 +80,9 @@ class Coroutine
 
   def cancel!
     interrupt(Exceptions::Cancel.new)
+  end
+
+  def self.current
+    Fiber.current.coroutine
   end
 end

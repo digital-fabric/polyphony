@@ -5,6 +5,8 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 
 spawn do
+  puts "current coroutine: #{Rubato::Coroutine.current.inspect}"
+
   puts "going to sleep..."
   cancel_after(1) do
     sleep(60)

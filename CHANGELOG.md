@@ -1,3 +1,8 @@
+* Example implementation of erlang-style generic server pattern (showing API )
+* Implement coroutine mailboxes, Coroutine#<<, Coroutine#receive, Kernel.receive
+  for message passing
+* Add Coroutine.current for getting current coroutine
+
 0.10 2018-11-20
 ---------------
 

@@ -78,6 +78,10 @@ module ::Kernel
     Pulser.new(freq)
   end
 
+  def receive
+    Fiber.current.coroutine.receive
+  end
+
   alias_method :sync_sleep, :sleep
   def sleep(duration)
     timer = EV::Timer.new(duration, 0)
@@ -121,7 +125,7 @@ end
 
 class ::Fiber
   attr_writer :cancelled
-  attr_accessor :next_job
+  attr_accessor :next_job, :coroutine
 
   def cancelled?
     @cancelled
