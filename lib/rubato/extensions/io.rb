@@ -43,4 +43,20 @@ class ::IO
   ensure
     @write_watcher&.stop
   end
+
+  def write_list(*list)
+    list.each do |data|
+      loop do
+        result = write_nonblock(data, NO_EXCEPTION)
+        case result
+        when nil            then raise IOError
+        when :wait_writable then write_watcher.await
+        else
+          (result == data.bytesize) ? (break result) : (data = data[result..-1])
+        end
+      end
+    end
+  ensure
+    @write_watcher&.stop
+  end
 end

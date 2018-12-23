@@ -23,6 +23,8 @@ def tcp_listen(host = nil, port = nil, opts = {})
   host ||= '0.0.0.0'
   raise "Port number not specified" unless port
   socket = ::Socket.new(:INET, :STREAM).tap { |s|
+    s.reuse_addr if opts[:reuse_addr]
+    s.dont_linger if opts[:dont_linger]
     addr = ::Socket.sockaddr_in(port, host)
     s.bind(addr)
     s.listen(0)

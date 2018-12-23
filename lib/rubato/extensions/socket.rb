@@ -46,6 +46,20 @@ class ::Socket
     @read_watcher&.stop
   end
 
+  ZERO_LINGER = [0, 0].pack("ii")
+
+  def dont_linger
+    setsockopt(Socket::SOL_SOCKET, Socket::SO_LINGER, ZERO_LINGER)
+  end
+
+  def no_delay
+    setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
+  end
+
+  def reuse_addr
+    setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
+  end
+
   class << self
     alias_method :orig_getaddrinfo, :getaddrinfo
     def getaddrinfo(*args)
