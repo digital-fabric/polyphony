@@ -15,3 +15,4 @@ spawn do
 end
 
 puts "pid: #{Process.pid}"
+puts "Listening on port 1234..."

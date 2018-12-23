@@ -3,9 +3,24 @@
 export_default :Request
 
 class Request
-  
-end
+  def method
+  end
 
+  def headers
+  end
+
+  def path
+  end
+
+  def query
+  end
+
+  def body
+  end
+
+  def respond(*args)
+  end
+end
 
 # export :prepare
 

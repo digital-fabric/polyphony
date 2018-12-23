@@ -244,7 +244,8 @@ Rubato draws inspiration from the following, in no particular order:
 * [nio4r](https://github.com/socketry/nio4r/)
 * [EventMachine](https://github.com/eventmachine/eventmachine)
 * [Trio](https://trio.readthedocs.io/)
-* [Erlang supervisors](http://erlang.org/doc/man/supervisor.html)
+* [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) (and actually,
+  Erlang in general)
 
 ## API Reference
 

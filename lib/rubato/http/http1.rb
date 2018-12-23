@@ -4,7 +4,7 @@ export :run
 
 require 'http/parser'
 
-Request = import('./request')
+Request = import('./http1_request')
 HTTP2 = import('./http2')
 
 class Http::Parser
@@ -27,14 +27,12 @@ end
 # @param handler [Proc] request handler
 # @return [void]
 def run(socket, handler)
-  socket.opts[:can_upgrade] = true
-
   ctx = connection_context(socket, handler)
   ctx[:parser].on_body = proc { |chunk| handle_body_chunk(ctx, chunk) }
 
   loop do
     data = socket.read
-    if request = ctx[:parser].parse(data)
+    if ctx[:parser].parse(data)
       break unless handle_request(ctx)
       EV.snooze
     end
@@ -52,12 +50,13 @@ end
 # @return [Hash]
 def connection_context(socket, handler)
   {
-    count:    0,
-    socket:   socket,
-    handler:  handler,
-    parser:   Http::Parser.new.async!,
-    body:     nil,
-    request:  {}
+    can_upgrade:  true,
+    count:        0,
+    socket:       socket,
+    handler:      handler,
+    parser:       Http::Parser.new.async!,
+    body:         nil,
+    request:      Request.new
   }
 end
 
@@ -74,7 +73,6 @@ end
 # @return [void]
 def response_did_finish(ctx)
   if ctx[:parser].keep_alive?
-    ctx[:response].reset!
     ctx[:body] = nil
   else
     ctx[:socket].close
@@ -85,16 +83,14 @@ end
 # @param ctx [Hash] connection context
 # @return [boolean] true if HTTP 1 loop should continue handling socket
 def handle_request(ctx)
-  return nil if ctx[:socket].opts[:can_upgrade] && upgrade_connection(ctx)
+  return nil if ctx[:can_upgrade] && upgrade_connection(ctx)
 
   # allow upgrading the connection only on first request
-  ctx[:socket].opts[:can_upgrade] = false
+  ctx[:can_upgrade] = false
   request = make_request(ctx)
-  Request.prepare(request)
-  ctx[:handler].(request, ctx[:response])
+  ctx[:handler].(request)
   
   if ctx[:parser].keep_alive?
-    ctx[:response].reset!
     ctx[:body] = nil
     true
   else
@@ -130,12 +126,14 @@ def upgrade_connection(ctx)
 end
 
 def make_request(ctx)
-  request = ctx[:request]
-  request[:method]       = ctx[:parser].http_method
-  request[:request_url]  = ctx[:parser].request_url
-  request[:headers]      = ctx[:parser].headers
-  request[:body]         = ctx[:body]
-  request
+  ctx[:request].setup(ctx[:socket], ctx[:parser], ctx[:body])
+
+  # request = ctx[:request]
+  # request[:method]       = ctx[:parser].http_method
+  # request[:request_url]  = ctx[:parser].request_url
+  # request[:headers]      = ctx[:parser].headers
+  # request[:body]         = ctx[:body]
+  ctx[:request]
 end
 
 S_SCHEME      = ':scheme'
