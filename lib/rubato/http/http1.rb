@@ -64,19 +64,9 @@ end
 # @param ctx [Hash] connection context
 # @return [void]
 def handle_body_chunk(context, chunk)
+
   context[:body] ||= +''
   context[:body] << chunk
-end
-
-# Resets the connection context and performs cleanup after response was finished
-# @param ctx [Hash] connection context
-# @return [void]
-def response_did_finish(ctx)
-  if ctx[:parser].keep_alive?
-    ctx[:body] = nil
-  else
-    ctx[:socket].close
-  end
 end
 
 # Handles request, upgrading the connection if possible
@@ -87,8 +77,8 @@ def handle_request(ctx)
 
   # allow upgrading the connection only on first request
   ctx[:can_upgrade] = false
-  request = make_request(ctx)
-  ctx[:handler].(request)
+  ctx[:request].setup(ctx[:socket], ctx[:parser], ctx[:body])
+  ctx[:handler].(ctx[:request])
   
   if ctx[:parser].keep_alive?
     ctx[:body] = nil
@@ -98,18 +88,15 @@ def handle_request(ctx)
   end
 end
 
-UPGRADE_MESSAGE = [
-  'HTTP/1.1 101 Switching Protocols',
-  'Connection: Upgrade',
-  'Upgrade: h2c',
-  '',
-  ''
-].join("\r\n")
-
 S_EMPTY           = ''
 S_UPGRADE         = 'Upgrade'
 S_H2C             = 'h2c'
-S_HTTP2_SETTINGS  = 'HTTP2-Settings'
+S_SCHEME          = ':scheme'
+S_METHOD          = ':method'
+S_AUTHORITY       = ':authority'
+S_PATH            = ':path'
+S_HTTP            = 'http'
+S_HOST            = 'Host'
 
 # Upgrades an HTTP 1 connection to HTTP 2 on client request
 # @param ctx [Hash] connection context
@@ -117,41 +104,21 @@ S_HTTP2_SETTINGS  = 'HTTP2-Settings'
 def upgrade_connection(ctx)
   return false unless ctx[:parser].headers[S_UPGRADE] == S_H2C
 
-  await ctx[:socket].write(UPGRADE_MESSAGE)
-
-  interface = HTTP2.start(ctx[:socket], ctx[:handler])
-  settings = ctx[:parser].headers[S_HTTP2_SETTINGS]
-  interface.upgrade(settings, upgraded_request(ctx), ctx[:body] || S_EMPTY)
+  request = http2_upgraded_request(ctx)
+  body = ctx[:body] || S_EMPTY
+  HTTP2.upgrade(ctx[:socket], ctx[:handler], request, body)
   true
 end
-
-def make_request(ctx)
-  ctx[:request].setup(ctx[:socket], ctx[:parser], ctx[:body])
-
-  # request = ctx[:request]
-  # request[:method]       = ctx[:parser].http_method
-  # request[:request_url]  = ctx[:parser].request_url
-  # request[:headers]      = ctx[:parser].headers
-  # request[:body]         = ctx[:body]
-  ctx[:request]
-end
-
-S_SCHEME      = ':scheme'
-S_METHOD      = ':method'
-S_AUTHORITY   = ':authority'
-S_PATH        = ':path'
-S_HTTP        = 'http'
-S_HOST        = 'Host'
 
 # Returns a request hash for handling by upgraded HTTP 2 connection
 # @param ctx [Hash] connection context
 # @return [Hash]
-def upgraded_request(ctx)
-  {
+def http2_upgraded_request(ctx)
+  headers = ctx[:parser].headers
+  headers.merge(
     S_SCHEME    => S_HTTP,
     S_METHOD    => ctx[:parser].http_method,
-    S_AUTHORITY => ctx[:parser].headers[S_HOST],
+    S_AUTHORITY => headers[S_HOST],
     S_PATH      => ctx[:parser].request_url
-  }.merge(ctx[:parser].headers)
+  )
 end
-
