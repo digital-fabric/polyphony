@@ -58,4 +58,16 @@ class ::OpenSSL::SSL::SSLSocket
   ensure
     io.stop_watchers
   end
+
+  def dont_linger
+    io.dont_linger
+  end
+
+  def no_delay
+    io.no_delay
+  end
+
+  def reuse_addr
+    io.reuse_addr
+  end
 end

@@ -13,9 +13,17 @@ async def serve(host, port, opts = {}, &handler)
   opts[:alpn_protocols] = ALPN_PROTOCOLS
   server = Net.tcp_listen(host, port, opts)
 
-  while client = server.accept
+  accept_loop(server, handler)
+end
+
+def accept_loop(server, handler)
+  while true
+    client = server.accept
     spawn client_task(client, handler)
   end
+rescue OpenSSL::SSL::SSLError
+  # disregard
+  retry
 end
 
 async def client_task(client, handler)
