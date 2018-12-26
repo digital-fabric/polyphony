@@ -29,7 +29,11 @@ static VALUE EV_Timer_await(VALUE self);
 
 void EV_Timer_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
 
-static ID ID_call = Qnil;
+static ID ID_call     = Qnil;
+static ID ID_raise    = Qnil;
+static ID ID_transfer = Qnil;
+
+static VALUE EV_reactor_fiber = Qnil;
 
 /* Timer encapsulates an timer watcher */
 void Init_EV_Timer() {
@@ -42,9 +46,12 @@ void Init_EV_Timer() {
   rb_define_method(cEV_Timer, "stop", EV_Timer_stop, 0);
   rb_define_method(cEV_Timer, "reset", EV_Timer_reset, 0);
   rb_define_method(cEV_Timer, "await", EV_Timer_await, 0);
-  
 
-  ID_call = rb_intern("call");
+  ID_call     = rb_intern("call");
+  ID_raise    = rb_intern("raise");
+  ID_transfer = rb_intern("transfer");
+
+  EV_reactor_fiber = rb_fiber_current();
 }
 
 static const rb_data_type_t EV_Timer_type = {
@@ -116,7 +123,7 @@ void EV_Timer_callback(ev_loop *ev_loop, struct ev_timer *ev_timer, int revents)
     fiber = timer->fiber;
     timer->fiber = Qnil;
     resume_value = DBL2NUM(timer->after);
-    rb_fiber_resume(fiber, 1, &resume_value);
+    SCHEDULE_FIBER(fiber, 1, resume_value);
   }
   else if (timer->callback != Qnil) {
     rb_funcall(timer->callback, ID_call, 1, Qtrue);
@@ -184,7 +191,7 @@ static VALUE EV_Timer_await(VALUE self) {
   ev_timer_start(EV_DEFAULT, &timer->ev_timer);
   EV_add_watcher_ref(self);
 
-  ret = rb_fiber_yield(0, 0);
+  ret = YIELD_TO_REACTOR();
 
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
@@ -192,7 +199,7 @@ static VALUE EV_Timer_await(VALUE self) {
       timer->active = 0;
       ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
     }
-    return rb_funcall(ret, rb_intern("raise"), 1, ret);
+    return rb_funcall(ret, ID_raise, 1, ret);
   }
   else {
     return ret;

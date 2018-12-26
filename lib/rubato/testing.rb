@@ -20,7 +20,7 @@ module Core
     if promise.completed?
       return_value = promise.clear_result
     else
-      ReactorLoopFiber.resume until promise.completed?
+      ReactorLoopFiber.transfer until promise.completed?
       return_value = promise.result
     end
     return_value.is_a?(Exception) ? raise(return_value) : return_value

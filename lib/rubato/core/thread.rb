@@ -32,7 +32,7 @@ ensure
 end
 
 def complete_thread_task(ctx)
-  ctx[:fiber]&.resume ctx[:value]
+  ctx[:fiber]&.transfer ctx[:value]
 end
 
 # Runs the given block, passing the result or exception to the given context

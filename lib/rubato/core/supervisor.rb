@@ -56,7 +56,7 @@ class Supervisor
   def stop!(result = nil)
     return unless @supervisor_fiber
   
-    @supervisor_fiber&.resume Exceptions::MoveOn.new(nil, result)
+    @supervisor_fiber&.transfer Exceptions::MoveOn.new(nil, result)
   end
 
   def stop_all_tasks
@@ -70,6 +70,6 @@ class Supervisor
     return unless @coroutines.include?(coroutine)
     
     @coroutines.delete(coroutine)
-    @supervisor_fiber&.resume if @coroutines.empty?
+    @supervisor_fiber&.transfer if @coroutines.empty?
   end
 end

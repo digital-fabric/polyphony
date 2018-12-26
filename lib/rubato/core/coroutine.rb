@@ -23,25 +23,25 @@ class Coroutine
     ensure
       @fiber.coroutine = nil
       @fiber = nil
-      @awaiting_fiber&.resume @result
+      @awaiting_fiber&.transfer @result
       @when_done&.()
     end
 
     @ran = true
-    EV.next_tick { @fiber.resume }
+    EV.next_tick { @fiber.transfer }
     self
   end
 
   def <<(o)
     @queue ||= []
     @queue << o
-    EV.next_tick { @fiber&.resume if @receive_waiting } if @receive_waiting
+    EV.next_tick { @fiber&.transfer if @receive_waiting } if @receive_waiting
     EV.snooze
   end
 
   def receive
     @receive_waiting = true
-    EV.next_tick { @fiber&.resume } if @queue && @queue.size > 0
+    EV.next_tick { @fiber&.transfer } if @queue && @queue.size > 0
     suspend
     @queue.shift
   ensure
@@ -65,7 +65,7 @@ class Coroutine
   ensure
     # if awaiting was interrupted and the coroutine is still running, we need to stop it
     if @fiber
-      EV.next_tick { @fiber&.resume(Exceptions::MoveOn.new) }
+      EV.next_tick { @fiber&.transfer(Exceptions::MoveOn.new) }
       suspend
     end
   end
@@ -75,7 +75,7 @@ class Coroutine
   end
 
   def interrupt(value = Exceptions::MoveOn.new)
-    @fiber&.resume(value)
+    @fiber&.transfer(value)
   end
 
   def cancel!

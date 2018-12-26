@@ -37,7 +37,7 @@ def downsize
   return if @count < 5
   max_available = @count >= 5 ? @count / 5 : 2
   if @pool.count > max_available
-    @pool.slice!(max_available, 50).each { |f| f.resume :stop }
+    @pool.slice!(max_available, 50).each { |f| f.transfer :stop }
   end
 end
 
@@ -80,7 +80,7 @@ def fiber_loop
 
     @pool << fiber
     @checked_out.delete(fiber)
-    break if Fiber.yield == :stop
+    break if Fiber.root.transfer == :stop
   end
 ensure
   @checked_out.delete(fiber)

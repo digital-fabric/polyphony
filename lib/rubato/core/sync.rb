@@ -15,6 +15,6 @@ class Mutex
     yield
   ensure
     @waiting.delete(fiber)
-    EV.next_tick { @waiting[0]&.resume } unless @waiting.empty?
+    EV.next_tick { @waiting[0]&.transfer } unless @waiting.empty?
   end
 end

@@ -33,9 +33,13 @@ void EV_IO_callback(ev_loop *ev_loop, struct ev_io *io, int revents);
 static int EV_IO_symbol2event_mask(VALUE sym);
 
 static ID ID_call     = Qnil;
+static ID ID_raise    = Qnil;
+static ID ID_transfer = Qnil;
 static ID ID_R        = Qnil;
 static ID ID_W        = Qnil;
 static ID ID_RW       = Qnil;
+
+static VALUE EV_reactor_fiber = Qnil;
 
 void Init_EV_IO() {
   mEV = rb_define_module("EV");
@@ -47,10 +51,14 @@ void Init_EV_IO() {
   rb_define_method(cEV_IO, "stop", EV_IO_stop, 0);
   rb_define_method(cEV_IO, "await", EV_IO_await, 0);
 
-  ID_call = rb_intern("call");
-  ID_R = rb_intern("r");
-  ID_W = rb_intern("w");
-  ID_RW = rb_intern("rw");
+  ID_call     = rb_intern("call");
+  ID_raise    = rb_intern("raise");
+  ID_transfer = rb_intern("transfer");
+  ID_R        = rb_intern("r");
+  ID_W        = rb_intern("w");
+  ID_RW       = rb_intern("rw");
+
+  EV_reactor_fiber = rb_fiber_current();
 }
 
 static const rb_data_type_t EV_IO_type = {
@@ -116,7 +124,7 @@ void EV_IO_callback(ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
     io->active = 0;
     fiber = io->fiber;
     io->fiber = Qnil;
-    rb_fiber_resume(fiber, 0, 0);
+    SCHEDULE_FIBER(fiber, 0);
   }
   else if (io->callback != Qnil) {
     rb_funcall(io->callback, ID_call, 1, INT2NUM(revents));
@@ -163,7 +171,7 @@ static VALUE EV_IO_await(VALUE self) {
   io->fiber = rb_fiber_current();
   io->active = 1;
   ev_io_start(EV_DEFAULT, &io->ev_io);
-  ret = rb_fiber_yield(0, 0);
+  ret = YIELD_TO_REACTOR();
 
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
@@ -171,7 +179,7 @@ static VALUE EV_IO_await(VALUE self) {
       io->active = 0;
       ev_io_stop(EV_DEFAULT, &io->ev_io);
     }
-    return rb_funcall(ret, rb_intern("raise"), 1, ret);
+    return rb_funcall(ret, ID_raise, 1, ret);
   }
   else {
     return Qnil;

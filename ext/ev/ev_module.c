@@ -21,6 +21,10 @@ void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents
 
 static ID ID_call;
 static ID ID_each;
+static ID ID_raise;
+static ID ID_transfer;
+
+static VALUE EV_reactor_fiber = Qnil;
 
 void Init_EV() {
   mEV = rb_define_module("EV");
@@ -33,8 +37,12 @@ void Init_EV() {
   rb_define_singleton_method(mEV, "snooze", EV_snooze, 0);
   rb_define_singleton_method(mEV, "post_fork", EV_post_fork, 0);
 
-  ID_call   = rb_intern("call");
-  ID_each   = rb_intern("each");
+  ID_call     = rb_intern("call");
+  ID_each     = rb_intern("each");
+  ID_raise    = rb_intern("raise");
+  ID_transfer = rb_intern("transfer");
+
+  EV_reactor_fiber = rb_fiber_current();
 
   watcher_refs = rb_hash_new();
   rb_global_variable(&watcher_refs);
@@ -96,12 +104,12 @@ static VALUE EV_snooze(VALUE self) {
     ev_timer_start(EV_DEFAULT, &next_tick_timer);
   }
 
-  ret = rb_fiber_yield(0, 0);
+  ret = YIELD_TO_REACTOR();
   
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
     rb_ary_delete(next_tick_procs, fiber);
-    return rb_funcall(ret, rb_intern("raise"), 1, ret);
+    return rb_funcall(ret, ID_raise, 1, ret);
   }
   else {
     return ret;
@@ -118,7 +126,7 @@ VALUE EV_next_tick_caller(VALUE proc, VALUE data, int argc, VALUE* argv) {
     rb_funcall(proc, ID_call, 1, Qtrue);
   }
   else {
-    rb_fiber_resume(proc, 0, 0);
+    SCHEDULE_FIBER(proc, 0);
   }
   return Qnil;
 }

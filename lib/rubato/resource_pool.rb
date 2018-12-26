@@ -36,7 +36,7 @@ class ResourcePool
 
   def dequeue
     return unless (resource = from_stock)
-    EV.next_tick { @waiting[0]&.resume(resource) }
+    EV.next_tick { @waiting[0]&.transfer(resource) }
   end
 
   def from_stock

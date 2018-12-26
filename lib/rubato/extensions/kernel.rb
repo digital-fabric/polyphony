@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'fiber'
+
 CancelScope = import('../core/cancel_scope')
 Coroutine   = import('../core/coroutine')
 Exceptions  = import('../core/exceptions')
@@ -59,7 +61,7 @@ module ::Kernel
     def initialize(freq)
       fiber = Fiber.current
       @timer = EV::Timer.new(freq, freq)
-      @timer.start { fiber.resume freq }
+      @timer.start { fiber.transfer freq }
     end
 
     def await
@@ -103,7 +105,7 @@ module ::Kernel
   end
 
   def suspend
-    result = Fiber.yield
+    result = Fiber.root.transfer
     result.is_a?(Exception) ? raise(result) : result
   end
 
@@ -138,6 +140,11 @@ class ::Fiber
   def set_root!
     @root = true
   end
-end
 
-Fiber.current.set_root!
+  def self.root
+    @@root
+  end
+
+  @@root = Fiber.current
+  @@root.set_root!
+end

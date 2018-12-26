@@ -16,7 +16,7 @@ class CancelScope
   def cancel!
     @cancelled = true
     @fiber.cancelled = true
-    @fiber.resume @error_class.new(self, @opts[:value])
+    @fiber.transfer @error_class.new(self, @opts[:value])
   end
 
   def start_timeout

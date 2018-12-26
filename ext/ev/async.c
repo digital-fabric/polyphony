@@ -26,7 +26,11 @@ static VALUE EV_Async_await(VALUE self);
 
 void EV_Async_callback(ev_loop *ev_loop, struct ev_async *async, int revents);
 
-static ID ID_call;
+static ID ID_call     = Qnil;
+static ID ID_raise    = Qnil;
+static ID ID_transfer = Qnil;
+
+static VALUE EV_reactor_fiber = Qnil;
 
 /* async encapsulates an async watcher */
 void Init_EV_Async() {
@@ -41,7 +45,11 @@ void Init_EV_Async() {
   rb_define_method(cEV_Async, "signal!", EV_Async_signal, 0);
   rb_define_method(cEV_Async, "await", EV_Async_await, 0);
 
-  ID_call = rb_intern("call");
+  ID_call     = rb_intern("call");
+  ID_raise    = rb_intern("raise");
+  ID_transfer = rb_intern("transfer");
+
+  EV_reactor_fiber = rb_fiber_current();
 }
 
 static const rb_data_type_t EV_Async_type = {
@@ -102,7 +110,7 @@ void EV_Async_callback(ev_loop *ev_loop, struct ev_async *ev_async, int revents)
     async->active = 0;
     fiber = async->fiber;
     async->fiber = Qnil;
-    rb_fiber_resume(fiber, 0, 0);
+    SCHEDULE_FIBER(fiber, 0);
   }
   else if (async->callback != Qnil) {
     rb_funcall(async->callback, ID_call, 1, Qtrue);
@@ -154,11 +162,11 @@ static VALUE EV_Async_await(VALUE self) {
     ev_async_start(EV_DEFAULT, &async->ev_async);
   }
 
-  ret = rb_fiber_yield(0, 0);
+  ret = YIELD_TO_REACTOR();
 
   // fiber is resumed
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    return rb_funcall(ret, rb_intern("raise"), 1, ret);
+    return rb_funcall(ret, ID_raise, 1, ret);
   }
   else {
     return Qnil;

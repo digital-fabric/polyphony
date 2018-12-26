@@ -27,7 +27,11 @@ static VALUE EV_Child_await(VALUE self);
 
 void EV_Child_callback(ev_loop *ev_loop, struct ev_child *child, int revents);
 
-static ID ID_call = Qnil;
+static ID ID_call     = Qnil;
+static ID ID_raise    = Qnil;
+static ID ID_transfer = Qnil;
+
+static VALUE EV_reactor_fiber = Qnil;
 
 /* Child encapsulates an child watcher */
 void Init_EV_Child() {
@@ -40,8 +44,11 @@ void Init_EV_Child() {
   rb_define_method(cEV_Child, "stop", EV_Child_stop, 0);
   rb_define_method(cEV_Child, "await", EV_Child_await, 0);
   
+  ID_call     = rb_intern("call");
+  ID_raise    = rb_intern("raise");
+  ID_transfer = rb_intern("transfer");
 
-  ID_call = rb_intern("call");
+  EV_reactor_fiber = rb_fiber_current();
 }
 
 static const rb_data_type_t EV_Child_type = {
@@ -108,7 +115,7 @@ void EV_Child_callback(ev_loop *ev_loop, struct ev_child *ev_child, int revents)
   if (child->fiber != Qnil) {
     fiber = child->fiber;
     child->fiber = Qnil;
-    rb_fiber_resume(fiber, 1, &resume_value);
+    SCHEDULE_FIBER(fiber, 1, resume_value);
   }
   else if (child->callback != Qnil) {
     rb_funcall(child->callback, ID_call, 1, resume_value);
@@ -156,7 +163,7 @@ static VALUE EV_Child_await(VALUE self) {
   ev_child_start(EV_DEFAULT, &child->ev_child);
   EV_add_watcher_ref(self);
 
-  ret = rb_fiber_yield(0, 0);
+  ret = YIELD_TO_REACTOR();
 
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
@@ -164,7 +171,7 @@ static VALUE EV_Child_await(VALUE self) {
       child->active = 0;
       ev_child_stop(EV_DEFAULT, &child->ev_child);
     }
-    return rb_funcall(ret, rb_intern("raise"), 1, ret);
+    return rb_funcall(ret, ID_raise, 1, ret);
   }
   else {
     return ret;
