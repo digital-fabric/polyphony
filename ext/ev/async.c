@@ -166,6 +166,10 @@ static VALUE EV_Async_await(VALUE self) {
 
   // fiber is resumed
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
+    if (async->active) {
+      async->active = 0;
+      ev_async_stop(EV_DEFAULT, &async->ev_async);
+    }
     return rb_funcall(ret, ID_raise, 1, ret);
   }
   else {

@@ -12,6 +12,8 @@ static VALUE EV_next_tick(VALUE self);
 static VALUE EV_snooze(VALUE self);
 static VALUE EV_post_fork(VALUE self);
 
+static VALUE EV_suspend(VALUE self);
+
 static VALUE watcher_refs;
 static VALUE next_tick_procs;
 
@@ -36,6 +38,8 @@ void Init_EV() {
   rb_define_singleton_method(mEV, "next_tick", EV_next_tick, 0);
   rb_define_singleton_method(mEV, "snooze", EV_snooze, 0);
   rb_define_singleton_method(mEV, "post_fork", EV_post_fork, 0);
+
+  rb_define_method(rb_mKernel, "suspend", EV_suspend, 0);
 
   ID_call     = rb_intern("call");
   ID_each     = rb_intern("each");
@@ -140,4 +144,12 @@ void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents
   } else {
     next_tick_active = 0;
   }
+}
+
+static VALUE EV_suspend(VALUE self) {
+  VALUE ret = YIELD_TO_REACTOR();
+
+  // fiber is resumed, check if resumed value is an exception
+  return RTEST(rb_obj_is_kind_of(ret, rb_eException)) ?
+    rb_funcall(ret, ID_raise, 1, ret) : ret;
 }

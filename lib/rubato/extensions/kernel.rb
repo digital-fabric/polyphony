@@ -8,6 +8,30 @@ Exceptions  = import('../core/exceptions')
 Supervisor  = import('../core/supervisor')
 Throttler   = import('../core/throttler')
 
+class ::Fiber
+  attr_writer :cancelled
+  attr_accessor :next_job, :coroutine
+
+  def cancelled?
+    @cancelled
+  end
+
+  def root?
+    @root
+  end
+
+  def set_root!
+    @root = true
+  end
+
+  def self.root
+    @@root
+  end
+
+  @@root = Fiber.current
+  @@root.set_root!
+end
+
 # Kernel extensions (methods available to all objects)
 module ::Kernel
   def after(duration, &block)
@@ -104,10 +128,12 @@ module ::Kernel
     Supervisor.new.await(&block)
   end
 
-  def suspend
-    result = Fiber.root.transfer
-    result.is_a?(Exception) ? raise(result) : result
-  end
+  # @@reactor_fiber = Fiber.root
+
+  # def suspend
+  #   result = @@reactor_fiber.transfer
+  #   result.is_a?(Exception) ? raise(result) : result
+  # end
 
   def throttled_loop(rate, &block)
     throttler = Throttler.new(rate)
@@ -125,26 +151,3 @@ module ::Kernel
   end
 end
 
-class ::Fiber
-  attr_writer :cancelled
-  attr_accessor :next_job, :coroutine
-
-  def cancelled?
-    @cancelled
-  end
-
-  def root?
-    @root
-  end
-
-  def set_root!
-    @root = true
-  end
-
-  def self.root
-    @@root
-  end
-
-  @@root = Fiber.current
-  @@root.set_root!
-end
