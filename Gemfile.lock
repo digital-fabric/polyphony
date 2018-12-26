@@ -14,7 +14,7 @@ GEM
     localhost (1.1.4)
     minitest (5.11.3)
     modulation (0.15)
-    rake (12.3.1)
+    rake (12.3.2)
     rake-compiler (1.0.5)
       rake
 
@@ -28,4 +28,4 @@ DEPENDENCIES
   rubato!
 
 BUNDLED WITH
-   2.0.0
+   1.17.2
