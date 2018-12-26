@@ -45,11 +45,12 @@ class Request
     @headers ||= @parser.headers
   end
 
-  S_CONTENT_LENGTH = 'Content-Length'
+  S_CONTENT_LENGTH  = 'Content-Length'
+  S_STATUS          = ':status'
   EMPTY_LINE = "\r\n"
 
   def respond(body, headers = {})
-    status = headers.delete(:status) || 200
+    status = headers.delete(S_STATUS) || 200
     data = +"HTTP/1.1 #{status}\r\n"
     headers[S_CONTENT_LENGTH] = body.bytesize if body
     headers.each do |k, v|

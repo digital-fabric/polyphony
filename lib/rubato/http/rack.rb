@@ -1,31 +1,27 @@
 # frozen_string_literal: true
 
-export :run, :load_app
-
-Server = import('./server')
+export :load
 
 def run(app)
-  Server.new { |req, resp| handle(req, resp, app) }
+  ->(req) {
+    response = app.(env(req))
+    respond(req, response)
+  }
 end
 
-require 'fileutils'
-
-def load_app(path)
+def load(path)
   src = IO.read(path)
   instance_eval(src)
 end
 
-def handle(request, response, app)
-  render_rack_response response, app.(rack_env(request))
+def env(request)
+  { }
 end
 
-def rack_env(request)
-  {
+S_STATUS = ':status'
 
-  }
-end
-
-def render_rack_response(response, (status_code, headers, body))
-  response.write_head(status_code, headers)
-  response.finish(body.first)
+def respond(request, (status_code, headers, body))
+  headers[S_STATUS] = status_code.to_s
+  body = body.first
+  request.respond(body, headers)
 end

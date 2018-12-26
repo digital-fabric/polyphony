@@ -32,6 +32,8 @@ def run(socket, handler)
 
   loop do
     data = socket.read
+    puts "*" * 40
+    puts data
     if ctx[:parser].parse(data)
       break unless handle_request(ctx)
       EV.snooze
