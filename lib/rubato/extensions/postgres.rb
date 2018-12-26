@@ -69,5 +69,29 @@ class ::PG::Connection
     end
   end
 
+  SQL_BEGIN = 'begin'
+  SQL_COMMIT = 'commit'
+  SQL_ROLLBACK = 'rollback'
+
+  # Starts a transaction, runs given block, and commits transaction. If an
+  # error is raised, the transaction is rolled back and the error is raised
+  # again.
+  # @return [void]
+  def transaction
+    began = false
+    return yield if @transaction # allow nesting of calls to #transactions
+
+    query(SQL_BEGIN)
+    began = true
+    @transaction = true
+    yield
+    query(SQL_COMMIT)
+  rescue StandardError => e
+    (query(SQL_ROLLBACK) rescue nil) if began
+    raise e
+  ensure
+    @transaction = false if began
+  end
+
   self.async_api = true
 end

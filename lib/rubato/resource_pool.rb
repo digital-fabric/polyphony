@@ -49,4 +49,8 @@ class ResourcePool
     @count += 1
     @allocator.()
   end
+
+  def preheat!
+    (@limit - @count).times { @available << from_stock }
+  end
 end
