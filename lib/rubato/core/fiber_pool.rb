@@ -41,7 +41,7 @@ def downsize
   end
 end
 
-@downsize_timer = EV::Timer.new(10, 10)
+@downsize_timer = EV::Timer.new(5, 5)
 @downsize_timer.start { downsize }
 EV.unref
 
@@ -85,4 +85,9 @@ def fiber_loop
 ensure
   @checked_out.delete(fiber)
   @count -= 1
+
+  # We need to explicitly transfer control to reactor fiber, otherwise it will
+  # be transferred to the main fiber, which would normally be blocking on 
+  # something
+  $__reactor_fiber__.transfer
 end
