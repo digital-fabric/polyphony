@@ -1,3 +1,6 @@
+0.11 2018-12-27
+---------------
+
 * Moved reactor loop to secondary fiber, allow blocking operations on main
   fiber.
 * Example implementation of erlang-style generic server pattern (implement
