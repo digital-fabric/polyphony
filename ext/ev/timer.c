@@ -33,8 +33,6 @@ static ID ID_call     = Qnil;
 static ID ID_raise    = Qnil;
 static ID ID_transfer = Qnil;
 
-static VALUE EV_reactor_fiber = Qnil;
-
 /* Timer encapsulates an timer watcher */
 void Init_EV_Timer() {
   mEV = rb_define_module("EV");
@@ -50,8 +48,6 @@ void Init_EV_Timer() {
   ID_call     = rb_intern("call");
   ID_raise    = rb_intern("raise");
   ID_transfer = rb_intern("transfer");
-
-  EV_reactor_fiber = rb_gv_get("__reactor_fiber__");
 }
 
 static const rb_data_type_t EV_Timer_type = {

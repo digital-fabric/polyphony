@@ -18,13 +18,22 @@ module Core
   end
 
   def self.fork(&block)
-    Kernel.fork do
+    EV.break
+    pid = Kernel.fork do
       FiberPool.reset!
       EV.post_fork
+      Fiber.current.coroutine = Coroutine.new(Fiber.current)
 
       block.()
-      run
+
+      # We cannot simply depend on the at_exit block (see below) to yield to the
+      # reactor fiber. Doing that will raise a FiberError complaining: "fiber
+      # called across stack rewinding barrier". Apparently this is a bug in
+      # Ruby, so the workaround is to yield just before exiting.
+      suspend
     end
+    EV.restart
+    pid
   end
 end
 
@@ -32,5 +41,5 @@ at_exit do
   # in most cases, by the main fiber is done there are still pending or other
   # or asynchronous operations going on. If the reactor loop is not done, we
   # suspend the root fiber until it is done
-  suspend if EV.reactor_fiber.alive?
+  suspend if $__reactor_fiber__.alive?
 end

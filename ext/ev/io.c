@@ -39,8 +39,6 @@ static ID ID_R        = Qnil;
 static ID ID_W        = Qnil;
 static ID ID_RW       = Qnil;
 
-static VALUE EV_reactor_fiber = Qnil;
-
 void Init_EV_IO() {
   mEV = rb_define_module("EV");
   cEV_IO = rb_define_class_under(mEV, "IO", rb_cData);
@@ -57,8 +55,6 @@ void Init_EV_IO() {
   ID_R        = rb_intern("r");
   ID_W        = rb_intern("w");
   ID_RW       = rb_intern("rw");
-
-  EV_reactor_fiber = rb_gv_get("__reactor_fiber__");
 }
 
 static const rb_data_type_t EV_IO_type = {

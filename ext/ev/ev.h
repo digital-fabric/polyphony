@@ -12,4 +12,7 @@ void EV_async_free(void *p);
 #define SCHEDULE_FIBER(obj, args...) rb_funcall(obj, ID_transfer, args)
 #define YIELD_TO_REACTOR() rb_funcall(EV_reactor_fiber, ID_transfer, 0)
 
+extern VALUE EV_reactor_fiber;
+extern VALUE EV_root_fiber;
+
 #endif /* RUBY_EV_H */

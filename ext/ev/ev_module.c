@@ -4,6 +4,7 @@ static VALUE mEV = Qnil;
 
 static VALUE EV_run(VALUE self);
 static VALUE EV_break(VALUE self);
+static VALUE EV_restart(VALUE self);
 
 static VALUE EV_ref(VALUE self);
 static VALUE EV_unref(VALUE self);
@@ -23,18 +24,23 @@ static int next_tick_active;
 void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
 
 static ID ID_call             = Qnil;
+static ID ID_clear            = Qnil;
 static ID ID_each             = Qnil;
 static ID ID_raise            = Qnil;
 static ID ID_scheduled_value  = Qnil;
 static ID ID_transfer         = Qnil;
 
-static VALUE EV_reactor_fiber = Qnil;
-static VALUE EV_root_fiber    = Qnil;
+static VALUE cFiber = Qnil;
+
+VALUE EV_reactor_fiber = Qnil;
+VALUE EV_root_fiber    = Qnil;
 
 void Init_EV() {
   mEV = rb_define_module("EV");
+  cFiber = rb_define_class("Fiber", rb_cObject);
 
   rb_define_singleton_method(mEV, "break", EV_break, 0);
+  rb_define_singleton_method(mEV, "restart", EV_restart, 0);
   rb_define_singleton_method(mEV, "ref", EV_ref, 0);
   rb_define_singleton_method(mEV, "unref", EV_unref, 0);
   rb_define_singleton_method(mEV, "next_tick", EV_next_tick, 0);
@@ -45,14 +51,16 @@ void Init_EV() {
   rb_define_method(rb_mKernel, "suspend", EV_suspend, 0);
 
   ID_call             = rb_intern("call");
+  ID_clear            = rb_intern("clear");
   ID_each             = rb_intern("each");
   ID_raise            = rb_intern("raise");
   ID_scheduled_value  = rb_intern("scheduled_value");
   ID_transfer         = rb_intern("transfer");
 
-  EV_reactor_fiber = rb_fiber_new(EV_run, Qnil);
   EV_root_fiber = rb_fiber_current();
+  EV_reactor_fiber = rb_fiber_new(EV_run, Qnil);
   rb_gv_set("__reactor_fiber__", EV_reactor_fiber);
+  
 
   watcher_refs = rb_hash_new();
   rb_global_variable(&watcher_refs);
@@ -70,7 +78,18 @@ static VALUE EV_run(VALUE self) {
 }
 
 static VALUE EV_break(VALUE self) {
+  // make sure reactor fiber is alive
+  if (!RTEST(rb_fiber_alive_p(EV_reactor_fiber))) {
+    return Qnil;
+  }
+
   ev_break(EV_DEFAULT, EVBREAK_ALL);
+  return YIELD_TO_REACTOR();
+}
+
+static VALUE EV_restart(VALUE self) {
+  EV_reactor_fiber = rb_fiber_new(EV_run, Qnil);
+  rb_gv_set("__reactor_fiber__", EV_reactor_fiber);
   return Qnil;
 }
 
@@ -128,6 +147,11 @@ static VALUE EV_snooze(VALUE self) {
 
 static VALUE EV_post_fork(VALUE self) {
   ev_loop_fork(EV_DEFAULT);
+  
+  EV_reactor_fiber = rb_fiber_new(EV_run, Qnil);
+  rb_gv_set("__reactor_fiber__", EV_reactor_fiber);
+  EV_root_fiber = rb_fiber_current();
+
   return Qnil;
 }
 
@@ -142,8 +166,8 @@ VALUE EV_next_tick_caller(VALUE proc, VALUE data, int argc, VALUE* argv) {
 }
 
 void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents) {
-  VALUE scheduled_procs = next_tick_procs;
-  next_tick_procs = rb_ary_new();
+  VALUE scheduled_procs = rb_ary_dup(next_tick_procs);
+  rb_funcall(next_tick_procs, ID_clear, 0);
   rb_block_call(scheduled_procs, ID_each, 0, NULL, EV_next_tick_caller, Qnil);
   if (rb_array_len(next_tick_procs) > 0) {
     ev_timer_start(EV_DEFAULT, &next_tick_timer);
