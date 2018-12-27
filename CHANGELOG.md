@@ -1,3 +1,5 @@
+* Moved reactor loop to secondary fiber, allow blocking operations on main
+  fiber.
 * Example implementation of erlang-style generic server pattern (implement
   async API to a coroutine)
 * Implement coroutine mailboxes, Coroutine#<<, Coroutine#receive, Kernel.receive
