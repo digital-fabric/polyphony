@@ -19,7 +19,7 @@ end
 def listen(host, port, opts = {}, &handler)
   opts[:alpn_protocols] = ALPN_PROTOCOLS
   server = Net.tcp_listen(host, port, opts)
-  -> (corotine) { accept_loop(server, handler) }
+  proc { accept_loop(server, handler) }
 end
 
 def accept_loop(server, handler)
@@ -28,13 +28,11 @@ def accept_loop(server, handler)
     spawn client_task(client, handler)
   end
 rescue OpenSSL::SSL::SSLError
-  # disregard
-  retry
+  retry # disregard
 end
 
 async def client_task(client, handler)
   client.no_delay
-  
   protocol_module(client).run(client, handler)
 end
 

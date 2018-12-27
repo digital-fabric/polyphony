@@ -15,11 +15,9 @@ def happy_eyeballs(hostname, port, max_wait_time: 0.025)
   t0 = Time.now
   cancel_after(5) do
     success = supervise do |supervisor|
-      last_target = nil
-      targets.each do |t|
-        sleep(max_wait_time) if last_target
+      targets.each_with_index do |t, idx|
+        sleep(max_wait_time) if idx > 0
         supervisor.spawn try_connect(supervisor, t)
-        last_target = t
       end
     end
     if success
