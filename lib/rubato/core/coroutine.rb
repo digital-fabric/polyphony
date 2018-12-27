@@ -71,8 +71,6 @@ class Coroutine
     # if awaiting was interrupted and the coroutine is still running, we need to stop it
     if @fiber
       @fiber&.schedule(Exceptions::MoveOn.new)
-      puts "@fiber: #{@fiber.inspect}"
-      puts "reactor: #{EV.reactor_fiber.inspect}"
       suspend
     end
   end
@@ -84,6 +82,7 @@ class Coroutine
   def interrupt(value = Exceptions::MoveOn.new)
     @fiber&.schedule(value)
   end
+  alias_method :stop, :interrupt
 
   def cancel!
     interrupt(Exceptions::Cancel.new)

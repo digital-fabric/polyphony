@@ -8,8 +8,7 @@ Core  = import('../core')
 
 module ::PG
   def self.connect(*args)
-    connect_method = Fiber.current.root? ? :connect_sync : :connect_async
-    Connection.connect_start(*args).tap(&method(connect_method))
+    Connection.connect_start(*args).tap(&method(:connect_async))
   end
   
   def self.connect_async(conn)
