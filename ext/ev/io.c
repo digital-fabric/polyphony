@@ -58,7 +58,7 @@ void Init_EV_IO() {
   ID_W        = rb_intern("w");
   ID_RW       = rb_intern("rw");
 
-  EV_reactor_fiber = rb_fiber_current();
+  EV_reactor_fiber = rb_gv_get("__reactor_fiber__");
 }
 
 static const rb_data_type_t EV_IO_type = {
@@ -85,7 +85,6 @@ static void EV_IO_mark(struct EV_IO *io) {
 
 static void EV_IO_free(struct EV_IO *io) {
   ev_io_stop(EV_DEFAULT, &io->ev_io);
-  // free(io->ev_io);
   xfree(io);
 }
 

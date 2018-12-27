@@ -13,6 +13,7 @@ static VALUE EV_snooze(VALUE self);
 static VALUE EV_post_fork(VALUE self);
 
 static VALUE EV_suspend(VALUE self);
+static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value);
 
 static VALUE watcher_refs;
 static VALUE next_tick_procs;
@@ -21,32 +22,37 @@ static struct ev_timer next_tick_timer;
 static int next_tick_active;
 void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
 
-static ID ID_call;
-static ID ID_each;
-static ID ID_raise;
-static ID ID_transfer;
+static ID ID_call             = Qnil;
+static ID ID_each             = Qnil;
+static ID ID_raise            = Qnil;
+static ID ID_scheduled_value  = Qnil;
+static ID ID_transfer         = Qnil;
 
 static VALUE EV_reactor_fiber = Qnil;
+static VALUE EV_root_fiber    = Qnil;
 
 void Init_EV() {
   mEV = rb_define_module("EV");
 
-  rb_define_singleton_method(mEV, "run", EV_run, 0);
   rb_define_singleton_method(mEV, "break", EV_break, 0);
   rb_define_singleton_method(mEV, "ref", EV_ref, 0);
   rb_define_singleton_method(mEV, "unref", EV_unref, 0);
   rb_define_singleton_method(mEV, "next_tick", EV_next_tick, 0);
   rb_define_singleton_method(mEV, "snooze", EV_snooze, 0);
   rb_define_singleton_method(mEV, "post_fork", EV_post_fork, 0);
+  rb_define_singleton_method(mEV, "schedule_fiber", EV_schedule_fiber, 2);
 
   rb_define_method(rb_mKernel, "suspend", EV_suspend, 0);
 
-  ID_call     = rb_intern("call");
-  ID_each     = rb_intern("each");
-  ID_raise    = rb_intern("raise");
-  ID_transfer = rb_intern("transfer");
+  ID_call             = rb_intern("call");
+  ID_each             = rb_intern("each");
+  ID_raise            = rb_intern("raise");
+  ID_scheduled_value  = rb_intern("scheduled_value");
+  ID_transfer         = rb_intern("transfer");
 
-  EV_reactor_fiber = rb_fiber_current();
+  EV_reactor_fiber = rb_fiber_new(EV_run, Qnil);
+  EV_root_fiber = rb_fiber_current();
+  rb_gv_set("__reactor_fiber__", EV_reactor_fiber);
 
   watcher_refs = rb_hash_new();
   rb_global_variable(&watcher_refs);
@@ -130,7 +136,7 @@ VALUE EV_next_tick_caller(VALUE proc, VALUE data, int argc, VALUE* argv) {
     rb_funcall(proc, ID_call, 1, Qtrue);
   }
   else {
-    SCHEDULE_FIBER(proc, 0);
+    SCHEDULE_FIBER(proc, 1, rb_ivar_get(proc, ID_scheduled_value));
   }
   return Qnil;
 }
@@ -147,9 +153,26 @@ void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents
 }
 
 static VALUE EV_suspend(VALUE self) {
+  // make sure reactor fiber is alive
+  if (!RTEST(rb_fiber_alive_p(EV_reactor_fiber))) {
+    return Qnil;
+  }
+
   VALUE ret = YIELD_TO_REACTOR();
 
   // fiber is resumed, check if resumed value is an exception
   return RTEST(rb_obj_is_kind_of(ret, rb_eException)) ?
     rb_funcall(ret, ID_raise, 1, ret) : ret;
+}
+
+static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+  rb_ivar_set(fiber, ID_scheduled_value, value);
+
+  rb_ary_push(next_tick_procs, fiber);
+  if (!next_tick_active) {
+    next_tick_active = 1;
+    ev_timer_start(EV_DEFAULT, &next_tick_timer);
+  }
+
+  return Qnil;
 }

@@ -80,7 +80,7 @@ def fiber_loop
 
     @pool << fiber
     @checked_out.delete(fiber)
-    break if Fiber.root.transfer == :stop
+    break if suspend == :stop
   end
 ensure
   @checked_out.delete(fiber)

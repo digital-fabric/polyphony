@@ -12,25 +12,27 @@ class Channel
 
   def close
     stop = Exceptions::MoveOn.new
-    @waiting_queue.slice(0..-1).each { |f| f.transfer(stop) }
+    @waiting_queue.slice(0..-1).each { |f| f.schedule(stop) }
   end
 
   def <<(o)
     if @waiting_queue.empty?
       @payload_queue << o
     else
-      @waiting_queue.shift&.transfer(o)
+      @waiting_queue.shift&.schedule(o)
     end
   end
 
   def receive
+    EV.ref
     if @payload_queue.empty?
       @waiting_queue << Fiber.current
     else
       payload = @payload_queue.shift
-      fiber = Fiber.current
-      EV.next_tick { fiber.transfer(payload) }
+      Fiber.current.schedule(payload)
     end
     suspend
+  ensure
+    EV.unref
   end
 end

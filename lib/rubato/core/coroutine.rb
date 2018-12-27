@@ -2,6 +2,8 @@
 
 export_default :Coroutine
 
+import('../extensions/kernel')
+
 FiberPool   = import('./fiber_pool')
 Exceptions  = import('./exceptions')
 
@@ -10,7 +12,8 @@ class Coroutine
   attr_reader :result, :fiber
 
 
-  def initialize(&block)
+  def initialize(fiber = nil, &block)
+    @fiber = fiber
     @block = block
   end
 
@@ -23,28 +26,30 @@ class Coroutine
     ensure
       @fiber.coroutine = nil
       @fiber = nil
-      @awaiting_fiber&.transfer @result
+      @awaiting_fiber&.schedule @result
       @when_done&.()
     end
 
     @ran = true
-    EV.next_tick { @fiber.transfer }
+    @fiber.schedule
     self
   end
 
   def <<(o)
-    @queue ||= []
-    @queue << o
-    EV.next_tick { @fiber&.transfer if @receive_waiting } if @receive_waiting
+    @mailbox ||= []
+    @mailbox << o
+    @fiber&.schedule if @receive_waiting
     EV.snooze
   end
 
   def receive
+    EV.ref
     @receive_waiting = true
-    EV.next_tick { @fiber&.transfer } if @queue && @queue.size > 0
+    @fiber&.schedule if @mailbox && @mailbox.size > 0
     suspend
-    @queue.shift
+    @mailbox.shift
   ensure
+    EV.unref
     @receive_waiting = nil
   end
 
@@ -65,7 +70,9 @@ class Coroutine
   ensure
     # if awaiting was interrupted and the coroutine is still running, we need to stop it
     if @fiber
-      EV.next_tick { @fiber&.transfer(Exceptions::MoveOn.new) }
+      @fiber&.schedule(Exceptions::MoveOn.new)
+      puts "@fiber: #{@fiber.inspect}"
+      puts "reactor: #{EV.reactor_fiber.inspect}"
       suspend
     end
   end
@@ -75,7 +82,7 @@ class Coroutine
   end
 
   def interrupt(value = Exceptions::MoveOn.new)
-    @fiber&.transfer(value)
+    @fiber&.schedule(value)
   end
 
   def cancel!

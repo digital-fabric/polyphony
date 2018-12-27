@@ -63,8 +63,6 @@ class Request
   def respond(body, headers = {})
     headers[S_STATUS] ||= S_STATUS_200
 
-    puts "respond: #{body}"
-
     @stream.headers(headers, end_stream: false)
     @stream.data(body, end_stream: true)
   end

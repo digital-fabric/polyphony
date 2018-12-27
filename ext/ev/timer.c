@@ -51,7 +51,7 @@ void Init_EV_Timer() {
   ID_raise    = rb_intern("raise");
   ID_transfer = rb_intern("transfer");
 
-  EV_reactor_fiber = rb_fiber_current();
+  EV_reactor_fiber = rb_gv_get("__reactor_fiber__");
 }
 
 static const rb_data_type_t EV_Timer_type = {

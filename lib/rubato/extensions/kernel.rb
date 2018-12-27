@@ -8,6 +8,7 @@ Exceptions  = import('../core/exceptions')
 Supervisor  = import('../core/supervisor')
 Throttler   = import('../core/throttler')
 
+# Fiber extensions
 class ::Fiber
   attr_writer :cancelled
   attr_accessor :next_job, :coroutine
@@ -20,6 +21,10 @@ class ::Fiber
     @root
   end
 
+  def schedule(value = nil)
+    EV.schedule_fiber(self, value)
+  end
+
   def set_root!
     @root = true
   end
@@ -30,6 +35,9 @@ class ::Fiber
 
   @@root = Fiber.current
   @@root.set_root!
+
+  # Associate a (pseudo-)coroutine with the main fiber
+  current.coroutine = Coroutine.new(Fiber.current)
 end
 
 # Kernel extensions (methods available to all objects)
@@ -58,16 +66,6 @@ module ::Kernel
       Coroutine.new { send(sync_sym, *args, &block) }
     end
   end
-
-  # def await(proc = nil, &block)
-  #   return if Fiber.current.cancelled?
-
-  #   if proc && block
-  #     proc.(&block)
-  #   else
-  #     (block || proc).()
-  #   end
-  # end
 
   def cancel_after(duration, &block)
     CancelScope.new(timeout: duration, mode: :cancel).(&block)
