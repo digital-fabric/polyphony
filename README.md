@@ -1,22 +1,21 @@
 # Rubato - Fiber-Based Concurrency for Ruby
 
 [INSTALL](#installing-rubato) |
-[OVERVIEW](#how-rubato-works---a-technical-overview) |
+[TUTORIAL](#getting-started) |
 [EXAMPLES](examples) |
+[TEHNICAL OVERVIEW](#how-rubato-works---a-technical-overview) |
 [REFERENCE](#api-reference) |
 [EXTENDING](#extending-rubato)
 
-**Note**: Rubato is still in alpha and is not ready for production use.
+**Note**: Rubato is designed to work with recent versions of Ruby and supports
+Linux and MacOS only. This is experimental software at the alpha stage and
+should not be used in production.
 
 > Rubato | rʊˈbɑːtəʊ | *Music* - the temporary disregarding of strict tempo to
 > allow an expressive quickening or slackening, usually without altering the
 > overall pace.
 
-### Installing Rubato
-
-```bash
-$ gem install rubato
-```
+## What is Rubato
 
 Rubato is a library for building concurrent applications in Ruby. Rubato
 harnesses the power of
@@ -33,16 +32,77 @@ like `Socket#accept` or `IO#read` is issued.
 
 ## Features
 
-- Co-operative scheduling of concurrent tasks using Ruby fibers.
+- Concurrency by co-operative scheduling of concurrent operations using Ruby
+  fibers.
 - High-performance event reactor for handling I/O events and timers.
-- Constructs for controlling the execution of concurrent code, including
-  supervision, cancellation and throttling of concurrent tasks.
+- Natural, sequential programming style that makes it easy to reason about
+  concurrent code.
+- Higher-order constructs for controlling the execution of concurrent code,
+  including supervision, cancellation and throttling of concurrent tasks.
 - Uses native classes and libraries, growing support for gems such as `pg` and
   `redis`.
-- Comprehensive HTTP 1 and HTTP 2 client and server APIs.
+- Comprehensive HTTP 1.0 / 1.1 / 2 client and server APIs.
+- Excellent performance and scalability characteristics, in terms of both
+  throughput and memory consumption.
+
+## Prior Art
+
+Rubato draws inspiration from the following, in no particular order:
+
+* [nio4r](https://github.com/socketry/nio4r/)
+* [EventMachine](https://github.com/eventmachine/eventmachine)
+* [Trio](https://trio.readthedocs.io/)
+* [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) (and actually,
+  Erlang in general)
+
+## Installing Rubato
+
+```bash
+$ gem install rubato
+```
+
+## Getting Started
+
+Rubato is designed to help you write high-performance, concurrent code in Ruby.
+It does so by turning every call which might block, such as `sleep` or `read`
+into a concurrent operation, which yields control to an event reactor. The
+reactor, in turn, may schedule other operations once they can be resumed. In
+that manner, multiple ongiong operations may be processed concurrently.
+
+There are multiple ways to start a concurrent operation, the most common of
+which is `Kernel#spawn`:
+
+```ruby
+require 'rubato'
+
+spawn do
+  puts "A going to sleep"
+  sleep 1
+  puts "A woken up"
+end
+
+spawn do
+  puts "B going to sleep"
+  sleep 1
+  puts "B woken up"
+end
+```
+
+In the above example, both `sleep` calls will be executed concurrently, and thus
+the program will take approximately only 1 second to execute. Note the lack of
+any boilerplate relating to concurrency. Each `spawn` block starts a
+*coroutine*, and is executed in sequential manner.
+
+> **Coroutines - the basic unit of concurrency** In Rubato, concurrent
+> operations take place inside coroutines. A `Coroutine` is executed on top of a
+> `Fiber`, which allows it to be suspended whenever a blocking operation is
+> called, and resumed once that operation has been completed. Coroutines offer
+> significant advantages over threads - they consume much less memory, and are
+> effectively only limited by available memory.
 
 ## An echo server in Rubato
 
+To take matters further, let's see how networking can be done using Rubato.
 Here's a bare-bones echo server written using Rubato:
 
 ```ruby
@@ -64,7 +124,7 @@ This example demonstrates several features of Rubato:
 - The code uses `TCPServer`, a class from Ruby's stdlib, to setup a TCP server.
   The result of `server.accept` is also a plain `TCPSocket` object. There are
   no wrapper classes being used.
-- The only hint of the code being concurrent is the use of `Kernel.spawn`,
+- The only hint of the code being concurrent is the use of `Kernel#spawn`,
   which starts a new coroutine on a dedicated fiber. This allows serving
   multiple clients at once. Whenever a blocking call is issued, such as
   `#accept` or `#read`, execution is *yielded* to the event loop, which will
@@ -74,21 +134,27 @@ This example demonstrates several features of Rubato:
   threads), and must be dealt with explicitly. An unhandled exception will
   always cause the Ruby process to exit.
 
+## Going further
+
+To learn more about using Rubato to build concurrent applications, read the
+technical overview below, or look at the [included examples](examples). A
+thorough reference is forthcoming.
+
 ## How Rubato Works - a Technical Overview
 
 ### Fiber-based concurrency
 
 The built-in `Fiber` class provides a very elegant foundation for implementing
 cooperative, light-weight concurrency (it can also be used for other stuff
-like generators). Fiber-based concurrency can be considered as the
-[*third way*](https://en.wikipedia.org/wiki/Fiber_(computer_science))
+like generators). Fiber or continuation-based concurrency can be considered as
+the [*third way*](https://en.wikipedia.org/wiki/Fiber_(computer_science))
 of writing concurrent programs (the other two being multi-process concurrency
 and multi-thread concurrency), and can provide very good performance
 characteristics for I/O-bound applications.
 
-In contrast to callback-based concurrency (e.g. Node.js or EventMachine),
-fibers allow writing concurrent code in a sequential manner without having to
-split your logic into different locations, or submitting to
+In contrast to callback-based concurrency (e.g. Node.js or EventMachine), fibers
+allow writing concurrent code in a sequential manner without having to split
+your logic into different locations, or submitting to
 [callback hell](http://callbackhell.com/).
 
 Rubato builds on the foundation of Ruby fibers in order to facilitate writing
@@ -155,7 +221,7 @@ constructs that make it easier to spawn concurrent tasks and to control them.
 
 `Coroutine` - a class encapsulating a task running on a dedicated fiber. A
 coroutine can be short- or long-lived. It can be suspended and resumed, awaited
-and cancelled. It is usually started using `Kernel.spawn`:
+and cancelled. It is usually started using `Kernel#spawn`:
 
 ```ruby
 10.times do
@@ -222,7 +288,7 @@ throttler = throttle(10) # up to 10 times per second
 
 while client = server.accept
   spawn {
-    throttler.process {
+    throttler.call {
       while data = client.read
         client.write(data)
       end
@@ -230,16 +296,6 @@ while client = server.accept
   }
 end
 ```
-
-### Prior Art
-
-Rubato draws inspiration from the following, in no particular order:
-
-* [nio4r](https://github.com/socketry/nio4r/)
-* [EventMachine](https://github.com/eventmachine/eventmachine)
-* [Trio](https://trio.readthedocs.io/)
-* [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) (and actually,
-  Erlang in general)
 
 ## API Reference
 
