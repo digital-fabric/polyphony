@@ -48,17 +48,15 @@ Here's a bare-bones echo server written using Rubato:
 ```ruby
 require 'rubato'
 
-# spawn starts a new coroutine on a separate thread
-spawn {
-  server = TCPServer.open(1234)
-  while client = server.accept
-    spawn {
-      while data = client.read rescue nil
-        client.write(data)
-      end
-    }
-  end
-}
+server = TCPServer.open(1234)
+while client = server.accept
+  # spawn starts a new coroutine on a separate fiber
+  spawn {
+    while data = client.read rescue nil
+      client.write(data)
+    end
+  }
+end
 ```
 
 This example demonstrates several features of Rubato:
@@ -174,14 +172,12 @@ used for awaiting the completion of multiple coroutines. It is usually started
 using `Kernel.supervise`:
 
 ```ruby
-spawn {
-  supervise { |s|
-    s.spawn { sleep 1 }
-    s.spawn { sleep 2 }
-    s.spawn { sleep 3 }
-  }
-  puts "done sleeping"
+supervise { |s|
+  s.spawn { sleep 1 }
+  s.spawn { sleep 2 }
+  s.spawn { sleep 3 }
 }
+puts "done sleeping"
 ```
 
 `CancelScope` - an abstraction used to cancel the execution of one or more
@@ -221,20 +217,18 @@ emails, or crawling a website. A throttler is normally created using
 coroutines:
 
 ```ruby
-spawn {
-  server = Net.tcp_listen(1234)
-  throttler = throttle(10) # up to 10 times per second
-  
-  while client = server.accept
-    spawn {
-      throttler.process {
-        while data = client.read
-          client.write(data)
-        end
-      }
+server = Net.tcp_listen(1234)
+throttler = throttle(10) # up to 10 times per second
+
+while client = server.accept
+  spawn {
+    throttler.process {
+      while data = client.read
+        client.write(data)
+      end
     }
-  end
-}
+  }
+end
 ```
 
 ### Prior Art

@@ -4,12 +4,10 @@ require 'modulation'
 
 Rubato = import('../../lib/rubato')
 
-spawn do
-  move_on_after(3) do
-    pulser = pulse(1)
-    while pulser.await
-      puts Time.now
-    end
+move_on_after(3) do
+  pulser = pulse(1)
+  while pulser.await
+    puts Time.now
   end
-  puts "done!"
 end
+puts "done!"

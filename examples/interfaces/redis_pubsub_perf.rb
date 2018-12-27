@@ -44,7 +44,7 @@ end
 
 spawn do
   redis = Redis.new
-  throttled_loop(100) do
+  throttled_loop(1000) do
     redis.publish('events', {path: "node#{rand(X_NODES)}"}.to_json)
   end
 end
@@ -61,3 +61,5 @@ spawn do
     last_count = $update_count
   end
 end
+
+Rubato.trap(:int) { puts "bye..."; exit! }

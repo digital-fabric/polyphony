@@ -23,36 +23,15 @@ rescue => e
   puts e.backtrace.join("\n")
 end
 
-CONCURRENCY = 10
+CONCURRENCY = ARGV.first ? ARGV.first.to_i : 10
+puts "concurrency: #{CONCURRENCY}"
 
-spawn do
-  DBPOOL.preheat!
-  t0 = Time.now
-  count = 0
-  coprocs = CONCURRENCY.times.map {
-    spawn { loop { DBPOOL.acquire { |db| get_records(db); count += 1 } } }
-  }
-  sleep 3
-  puts "count: #{count} query rate: #{count / (Time.now - t0)} queries/s"
-  coprocs.each(&:interrupt)
-end
-
-# spawn do
-#   $db = PG.connect(
-#     host:     '/tmp',
-#     user:     'reality',
-#     password: nil,
-#     dbname:   'reality',
-#     sslmode:  'require'
-#   )
-  
-#   t0 = Time.now
-#   10000.times { get_records }
-#   puts "query rate: #{10000 / (Time.now - t0)} reqs/s"
-
-#   # get_records
-# end
-
-# every(1) do
-#   spawn { get_records }
-# end
+DBPOOL.preheat!
+t0 = Time.now
+count = 0
+coprocs = CONCURRENCY.times.map {
+  spawn { loop { DBPOOL.acquire { |db| get_records(db); count += 1 } } }
+}
+sleep 3
+puts "count: #{count} query rate: #{count / (Time.now - t0)} queries/s"
+coprocs.each(&:interrupt)

@@ -7,15 +7,15 @@ import('../../lib/rubato/extensions/redis')
 
 redis = Redis.new
 
-spawn do
-  t0 = Time.now
-  1000.times { redis.get('abc') }
-  puts "get rate: #{1000 / (Time.now - t0)} reqs/s"
+X = 10000
 
-  puts "abc = #{redis.get('abc')}"
+t0 = Time.now
+X.times { redis.get('abc') }
+puts "get rate: #{X / (Time.now - t0)} reqs/s"
 
-  puts "updating value..."
-  redis.set('abc', Time.now.to_s)
+puts "abc = #{redis.get('abc')}"
 
-  puts "abc = #{redis.get('abc')}"
-end
+puts "updating value..."
+redis.set('abc', Time.now.to_s)
+
+puts "abc = #{redis.get('abc')}"

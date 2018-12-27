@@ -4,16 +4,12 @@ require 'modulation'
 
 Rubato = import('../../lib/rubato')
 
-spawn do
-  stdin = STDIN#Rubato::IO::IOWrapper.new(STDIN)
-  puts "Write something..."
-  cancel_after(10) do |scope|
-    loop do
-      data = stdin.read
-      scope.reset_timeout
-      puts "you wrote: #{data}"
-    end
+puts "Write something..."
+move_on_after(5) do |scope|
+  loop do
+    data = STDIN.read
+    scope.reset_timeout
+    puts "you wrote: #{data}"
   end
-rescue Rubato::Cancel
-  puts "quitting due to inactivity"
 end
+puts "quitting due to inactivity"

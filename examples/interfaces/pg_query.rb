@@ -28,7 +28,5 @@ rescue => e
   puts "error: #{e.inspect}"
 end
 
-spawn do
-  perform(true)
-  perform(false)
-end
+perform(true)
+perform(false)

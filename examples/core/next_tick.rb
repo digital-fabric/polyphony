@@ -5,8 +5,9 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 
 EV.next_tick do
-  puts "hello from next_tick"
-  EV.next_tick { puts "111" }
+  puts "two"
+  EV.next_tick { puts "four" }
+  puts "three"
 end
 
-Rubato.every(1) { puts Time.now }
+puts "one"

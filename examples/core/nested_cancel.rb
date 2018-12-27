@@ -36,8 +36,6 @@ async def sleep_and_move_on
   puts "#{Time.now} woke up"
 end
 
-spawn do
-  sleep_and_cancel.await
-  puts
-  sleep_and_move_on.await
-end
+sleep_and_cancel.await
+puts
+sleep_and_move_on.await

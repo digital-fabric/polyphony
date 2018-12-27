@@ -5,17 +5,13 @@ Rubato = import('../../lib/rubato')
 
 async def try_connect(supervisor, target)
   puts "trying #{target[2]}"
-  t0 = Time.now
   socket = Rubato::Net.tcp_connect(target[2], 80)
   supervisor.stop!([target[2], socket])
 rescue IOError, SystemCallError
-  # ignore I/O, system errors
 end
 
-async def happy_eyeballs(hostname, port, max_wait_time: 0.025)
+def happy_eyeballs(hostname, port, max_wait_time: 0.025)
   targets = Socket.getaddrinfo(hostname, port, :INET, :STREAM)
-  puts "*" * 40
-  p targets
   t0 = Time.now
   cancel_after(5) do
     success = supervise do |supervisor|
@@ -35,4 +31,4 @@ async def happy_eyeballs(hostname, port, max_wait_time: 0.025)
 end
 
 # Let's try it out:
-spawn happy_eyeballs("debian.org", "https")
+happy_eyeballs("debian.org", "https")

@@ -5,8 +5,8 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 
 def echo(rchan, wchan)
+  puts "start echoer"
   while msg = rchan.receive
-    puts "got #{msg}"
     wchan << "you said: #{msg}"
   end
 ensure
@@ -18,14 +18,23 @@ chan1, chan2 = Rubato::Channel.new, Rubato::Channel.new
 echoer = spawn { echo(chan1, chan2) }
 
 spawn do
-  chan1 << "hello"
-  chan1 << "world"
-  
-  2.times do
-    msg = chan2.receive
+  puts "start receiver"
+  while msg = chan2.receive
     puts msg
   end
+ensure
+  puts "receiver stopped"
+end
 
+spawn do
+  puts "send hello"
+  chan1 << "hello"
+  puts "send world"
+  chan1 << "world"
+
+  sleep 0.1
+  
+  puts "closing channels"
   chan1.close
   chan2.close
 end

@@ -11,16 +11,14 @@ async def my_sleep(t)
   puts "done: #{t}"
 end
 
-spawn do
-  puts "#{Time.now} going to sleep..."
-  move_on_after(0.5) do
-    supervise do |s|
-      puts "supervise block"
-      s.spawn my_sleep(1)
-      s.spawn my_sleep(2)
-      s.spawn my_sleep(3)
-    end
-    puts "supervisor done"
+puts "#{Time.now} going to sleep..."
+move_on_after(0.5) do
+  supervise do |s|
+    puts "supervise block"
+    s.spawn my_sleep(1)
+    s.spawn my_sleep(2)
+    s.spawn my_sleep(3)
   end
-  puts "#{Time.now} woke up"
+  puts "supervisor done"
 end
+puts "#{Time.now} woke up"

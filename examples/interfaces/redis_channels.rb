@@ -89,7 +89,7 @@ class RedisChannel < Rubato::Channel
   end
 
   def did_receive(o)
-    @waiting_queue.shift&.resume(o)
+    @waiting_queue.shift&.schedule(o)
   end
 
   def receive

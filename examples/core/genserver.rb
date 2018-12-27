@@ -15,6 +15,7 @@ class GenServer
       end
     end
     build_api(coroutine, receiver)
+    EV.snooze
     coroutine
   end
 
@@ -48,26 +49,26 @@ module Map
   end
 
   def self.get(state, key)
-    return state[key], state
+    [state[key], state]
   end
 
   def self.put!(state, key, value)
     state[key] = value
-    return :noreply, state
+    [:noreply, state]
   end
 end
 
 map_server = GenServer.start(Map, {foo: :bar})
 
-spawn do
-  puts "getting value from map server"
-  v = map_server.get(:foo)
-  puts "value: #{v.inspect}"
+puts "getting value from map server"
+v = map_server.get(:foo)
+puts "value: #{v.inspect}"
 
-  puts "putting value in map server"
-  map_server.put!(:foo, 42)
+puts "putting value in map server"
+map_server.put!(:foo, 42)
 
-  puts "getting value from map server"
-  v = map_server.get(:foo)
-  puts "value: #{v.inspect}"
-end
+puts "getting value from map server"
+v = map_server.get(:foo)
+puts "value: #{v.inspect}"
+
+map_server.stop
