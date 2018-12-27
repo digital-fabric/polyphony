@@ -67,7 +67,7 @@ Rubato is designed to help you write high-performance, concurrent code in Ruby.
 It does so by turning every call which might block, such as `sleep` or `read`
 into a concurrent operation, which yields control to an event reactor. The
 reactor, in turn, may schedule other operations once they can be resumed. In
-that manner, multiple ongiong operations may be processed concurrently.
+that manner, multiple ongoing operations may be processed concurrently.
 
 There are multiple ways to start a concurrent operation, the most common of
 which is `Kernel#spawn`:
