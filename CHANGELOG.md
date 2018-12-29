@@ -1,7 +1,9 @@
+* Implement HTTP 1.1/2 client agent with connection management
+
 0.11 2018-12-27
 ---------------
 
-* Moved reactor loop to secondary fiber, allow blocking operations on main
+* Move reactor loop to secondary fiber, allow blocking operations on main
   fiber.
 * Example implementation of erlang-style generic server pattern (implement
   async API to a coroutine)

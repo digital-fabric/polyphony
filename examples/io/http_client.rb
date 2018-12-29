@@ -3,15 +3,17 @@
 require 'modulation'
 
 Rubato = import('../../lib/rubato')
+Agent = import('../../lib/rubato/http/agent')
 
-spawn do
-  t0 = Time.now
-  io = Rubato::Net.tcp_connect('google.com', 80)
-  io.write("GET / HTTP/1.1\r\nHost: google.com\r\n\r\n")
-  reply = io.read(2**16)
-  puts "time: #{Time.now - t0}"
-  puts
-  puts reply
-rescue => e
-  p e
+def get_server_time
+  Agent.get('https://ui.realiteq.net/', q: :time).json
 end
+
+X = 50
+puts "Making #{X} requests..."
+t0 = Time.now
+supervise do |s|
+  X.times { get_server_time }
+end
+elapsed = Time.now - t0
+puts "count: #{X} elapsed: #{elapsed} rate: #{X / elapsed} reqs/s"

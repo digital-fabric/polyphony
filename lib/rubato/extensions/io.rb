@@ -16,10 +16,10 @@ class ::IO
 
   NO_EXCEPTION = { exception: false }.freeze
 
-  def read(max = 8192)
-    @read_buffer ||= +''
+  def read(max = 8192, outbuf = nil)
+    outbuf ||= (@read_buffer ||= +'')
     loop do
-      result = read_nonblock(max, @read_buffer, NO_EXCEPTION)
+      result = read_nonblock(max, outbuf, NO_EXCEPTION)
       case result
       when nil            then raise IOError
       when :wait_readable then read_watcher.await

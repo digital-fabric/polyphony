@@ -37,7 +37,7 @@ def tcp_listen(host = nil, port = nil, opts = {})
 end
 
 DEFAULT_SSL_CONTEXT = OpenSSL::SSL::SSLContext.new
-# DEFAULT_SSL_CONTEXT.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
+DEFAULT_SSL_CONTEXT.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
 
 def secure_socket(socket, context, opts)
   context ||= DEFAULT_SSL_CONTEXT
