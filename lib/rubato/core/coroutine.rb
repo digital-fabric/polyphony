@@ -23,11 +23,16 @@ class Coroutine
       @result = (@block || block2).call(self)
     rescue Exceptions::MoveOn, Exceptions::Stop => e
       @result = e.value
+    rescue Exception => e
+      @result = e
     ensure
       @fiber.coroutine = nil
       @fiber = nil
       @awaiting_fiber&.schedule @result
       @when_done&.()
+
+      # if result is an error and nobody's waiting on us, we need to raise it
+      raise @result if @result.is_a?(Exception) && !@awaiting_fiber
     end
 
     @ran = true

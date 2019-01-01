@@ -5,11 +5,19 @@ require 'modulation'
 Rubato = import('../../lib/rubato')
 
 def error(t)
-  raise "hello"
+  raise "hello #{t}"
 end
 
 spawn do
-  async { error(1) }.await
+  error(1)
+rescue => e
+  puts "error: #{e.inspect}"
 end
 
-puts "after spawn"
+spawn do
+  async { error(2) }.await
+rescue => e
+  puts "error: #{e.inspect}"
+end
+
+puts "done spawning"

@@ -12,7 +12,7 @@ require 'fiber'
 @pool = []
 
 # Array of fibers in use
-@checked_out = []
+@checked_out = {}
 
 # Fiber count
 @count = 0
@@ -57,7 +57,7 @@ end
 def reset!
   @count = 0
   @pool = []
-  @checked_out = []
+  @checked_out = {}
 end
 
 # Creates a new fiber to be added to the pool
@@ -71,9 +71,10 @@ end
 def fiber_loop
   fiber = Fiber.current
   @count += 1
+  error = nil
   loop do
     job, fiber.next_job = fiber.next_job, nil
-    @checked_out << fiber
+    @checked_out[fiber] = true
     fiber.cancelled = nil
     
     job&.(fiber)
@@ -82,12 +83,16 @@ def fiber_loop
     @checked_out.delete(fiber)
     break if suspend == :stop
   end
+rescue => e
+  # uncaught error
+  error = e
 ensure
+  @pool.delete(self)
   @checked_out.delete(fiber)
   @count -= 1
 
   # We need to explicitly transfer control to reactor fiber, otherwise it will
   # be transferred to the main fiber, which would normally be blocking on 
   # something
-  $__reactor_fiber__.transfer
+  $__reactor_fiber__.transfer unless error
 end
