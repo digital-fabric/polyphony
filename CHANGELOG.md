@@ -1,3 +1,11 @@
+0.12 2019-01-01
+---------------
+
+* Add Coroutine#resume
+* Improve startup time
+* Accept rate: or interval: arguments for throttle
+* Set correct backtrace for errors
+* Improve handling of uncaught raised errors
 * Implement HTTP 1.1/2 client agent with connection management
 
 0.11 2018-12-27
