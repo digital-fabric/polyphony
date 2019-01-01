@@ -27,10 +27,6 @@ static VALUE EV_Child_await(VALUE self);
 
 void EV_Child_callback(ev_loop *ev_loop, struct ev_child *child, int revents);
 
-static ID ID_call     = Qnil;
-static ID ID_raise    = Qnil;
-static ID ID_transfer = Qnil;
-
 /* Child encapsulates an child watcher */
 void Init_EV_Child() {
   mEV = rb_define_module("EV");
@@ -41,10 +37,6 @@ void Init_EV_Child() {
   rb_define_method(cEV_Child, "start", EV_Child_start, 0);
   rb_define_method(cEV_Child, "stop", EV_Child_stop, 0);
   rb_define_method(cEV_Child, "await", EV_Child_await, 0);
-  
-  ID_call     = rb_intern("call");
-  ID_raise    = rb_intern("raise");
-  ID_transfer = rb_intern("transfer");
 }
 
 static const rb_data_type_t EV_Child_type = {

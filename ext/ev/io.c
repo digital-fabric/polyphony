@@ -32,13 +32,6 @@ void EV_IO_callback(ev_loop *ev_loop, struct ev_io *io, int revents);
 
 static int EV_IO_symbol2event_mask(VALUE sym);
 
-static ID ID_call     = Qnil;
-static ID ID_raise    = Qnil;
-static ID ID_transfer = Qnil;
-static ID ID_R        = Qnil;
-static ID ID_W        = Qnil;
-static ID ID_RW       = Qnil;
-
 void Init_EV_IO() {
   mEV = rb_define_module("EV");
   cEV_IO = rb_define_class_under(mEV, "IO", rb_cData);
@@ -48,13 +41,6 @@ void Init_EV_IO() {
   rb_define_method(cEV_IO, "start", EV_IO_start, 0);
   rb_define_method(cEV_IO, "stop", EV_IO_stop, 0);
   rb_define_method(cEV_IO, "await", EV_IO_await, 0);
-
-  ID_call     = rb_intern("call");
-  ID_raise    = rb_intern("raise");
-  ID_transfer = rb_intern("transfer");
-  ID_R        = rb_intern("r");
-  ID_W        = rb_intern("w");
-  ID_RW       = rb_intern("rw");
 }
 
 static const rb_data_type_t EV_IO_type = {

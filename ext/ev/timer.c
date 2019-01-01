@@ -29,10 +29,6 @@ static VALUE EV_Timer_await(VALUE self);
 
 void EV_Timer_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
 
-static ID ID_call     = Qnil;
-static ID ID_raise    = Qnil;
-static ID ID_transfer = Qnil;
-
 /* Timer encapsulates an timer watcher */
 void Init_EV_Timer() {
   mEV = rb_define_module("EV");
@@ -44,10 +40,6 @@ void Init_EV_Timer() {
   rb_define_method(cEV_Timer, "stop", EV_Timer_stop, 0);
   rb_define_method(cEV_Timer, "reset", EV_Timer_reset, 0);
   rb_define_method(cEV_Timer, "await", EV_Timer_await, 0);
-
-  ID_call     = rb_intern("call");
-  ID_raise    = rb_intern("raise");
-  ID_transfer = rb_intern("transfer");
 }
 
 static const rb_data_type_t EV_Timer_type = {

@@ -15,4 +15,16 @@ void EV_async_free(void *p);
 extern VALUE EV_reactor_fiber;
 extern VALUE EV_root_fiber;
 
+extern ID ID_call;
+extern ID ID_caller;
+extern ID ID_clear;
+extern ID ID_each;
+extern ID ID_raise;
+extern ID ID_scheduled_value;
+extern ID ID_set_backtrace;
+extern ID ID_transfer;
+extern ID ID_R;
+extern ID ID_W;
+extern ID ID_RW;
+
 #endif /* RUBY_EV_H */

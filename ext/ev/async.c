@@ -26,10 +26,6 @@ static VALUE EV_Async_await(VALUE self);
 
 void EV_Async_callback(ev_loop *ev_loop, struct ev_async *async, int revents);
 
-static ID ID_call     = Qnil;
-static ID ID_raise    = Qnil;
-static ID ID_transfer = Qnil;
-
 /* async encapsulates an async watcher */
 void Init_EV_Async() {
   mEV = rb_define_module("EV");
@@ -42,10 +38,6 @@ void Init_EV_Async() {
   rb_define_method(cEV_Async, "stop", EV_Async_stop, 0);
   rb_define_method(cEV_Async, "signal!", EV_Async_signal, 0);
   rb_define_method(cEV_Async, "await", EV_Async_await, 0);
-
-  ID_call     = rb_intern("call");
-  ID_raise    = rb_intern("raise");
-  ID_transfer = rb_intern("transfer");
 }
 
 static const rb_data_type_t EV_Async_type = {

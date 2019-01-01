@@ -24,8 +24,6 @@ static VALUE EV_Signal_stop(VALUE self);
 
 void EV_Signal_callback(ev_loop *ev_loop, struct ev_signal *signal, int revents);
 
-static ID ID_call = Qnil;
-
 /* Signal encapsulates a signal watcher */
 void Init_EV_Signal() {
   mEV = rb_define_module("EV");
@@ -35,8 +33,6 @@ void Init_EV_Signal() {
   rb_define_method(cEV_Signal, "initialize", EV_Signal_initialize, 1);
   rb_define_method(cEV_Signal, "start", EV_Signal_start, 0);
   rb_define_method(cEV_Signal, "stop", EV_Signal_stop, 0);
-
-  ID_call = rb_intern("call");
 }
 
 static const rb_data_type_t EV_Signal_type = {

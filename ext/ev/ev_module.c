@@ -23,23 +23,23 @@ static struct ev_timer next_tick_timer;
 static int next_tick_active;
 void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
 
-static ID ID_call             = Qnil;
-static ID ID_caller           = Qnil;
-static ID ID_clear            = Qnil;
-static ID ID_each             = Qnil;
-static ID ID_raise            = Qnil;
-static ID ID_scheduled_value  = Qnil;
-static ID ID_set_backtrace    = Qnil;
-static ID ID_transfer         = Qnil;
+VALUE EV_reactor_fiber;
+VALUE EV_root_fiber;
 
-static VALUE cFiber = Qnil;
-
-VALUE EV_reactor_fiber = Qnil;
-VALUE EV_root_fiber    = Qnil;
+ID ID_call;
+ID ID_caller;
+ID ID_clear;
+ID ID_each;
+ID ID_raise;
+ID ID_scheduled_value;
+ID ID_set_backtrace;
+ID ID_transfer;
+ID ID_R;
+ID ID_W;
+ID ID_RW;
 
 void Init_EV() {
   mEV = rb_define_module("EV");
-  cFiber = rb_define_class("Fiber", rb_cObject);
 
   rb_define_singleton_method(mEV, "break", EV_break, 0);
   rb_define_singleton_method(mEV, "restart", EV_restart, 0);
@@ -60,6 +60,9 @@ void Init_EV() {
   ID_scheduled_value  = rb_intern("scheduled_value");
   ID_set_backtrace    = rb_intern("set_backtrace");
   ID_transfer         = rb_intern("transfer");
+  ID_R                = rb_intern("r");
+  ID_W                = rb_intern("w");
+  ID_RW               = rb_intern("rw");
 
   EV_root_fiber = rb_fiber_current();
   EV_reactor_fiber = rb_fiber_new(EV_run, Qnil);
