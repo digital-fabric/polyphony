@@ -84,6 +84,10 @@ class Coroutine
     @when_done = block
   end
 
+  def resume(value = nil)
+    @fiber&.schedule(value)
+  end
+
   def interrupt(value = Exceptions::MoveOn.new)
     @fiber&.schedule(value)
   end

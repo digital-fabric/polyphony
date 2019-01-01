@@ -21,20 +21,23 @@ spawn do
   puts "start receiver"
   while msg = chan2.receive
     puts msg
+    $main.resume if msg =~ /world/
   end
 ensure
   puts "receiver stopped"
 end
 
-spawn do
+$main = spawn do
+  t0 = Time.now
   puts "send hello"
   chan1 << "hello"
   puts "send world"
   chan1 << "world"
 
-  sleep 0.1
+  suspend
   
   puts "closing channels"
   chan1.close
   chan2.close
+  puts "done #{Time.now - t0}"
 end
