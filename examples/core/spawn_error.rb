@@ -14,10 +14,6 @@ rescue => e
   puts "error: #{e.inspect}"
 end
 
-spawn do
-  async { error(2) }.await
-rescue => e
-  puts "error: #{e.inspect}"
-end
+async { error(2) }.await
 
 puts "done spawning"

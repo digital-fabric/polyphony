@@ -24,10 +24,12 @@ static int next_tick_active;
 void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
 
 static ID ID_call             = Qnil;
+static ID ID_caller           = Qnil;
 static ID ID_clear            = Qnil;
 static ID ID_each             = Qnil;
 static ID ID_raise            = Qnil;
 static ID ID_scheduled_value  = Qnil;
+static ID ID_set_backtrace    = Qnil;
 static ID ID_transfer         = Qnil;
 
 static VALUE cFiber = Qnil;
@@ -51,10 +53,12 @@ void Init_EV() {
   rb_define_method(rb_mKernel, "suspend", EV_suspend, 0);
 
   ID_call             = rb_intern("call");
+  ID_caller           = rb_intern("caller");
   ID_clear            = rb_intern("clear");
   ID_each             = rb_intern("each");
   ID_raise            = rb_intern("raise");
   ID_scheduled_value  = rb_intern("scheduled_value");
+  ID_set_backtrace    = rb_intern("set_backtrace");
   ID_transfer         = rb_intern("transfer");
 
   EV_root_fiber = rb_fiber_current();
@@ -185,8 +189,14 @@ static VALUE EV_suspend(VALUE self) {
   VALUE ret = YIELD_TO_REACTOR();
 
   // fiber is resumed, check if resumed value is an exception
-  return RTEST(rb_obj_is_kind_of(ret, rb_eException)) ?
-    rb_funcall(ret, ID_raise, 1, ret) : ret;
+  if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
+    VALUE caller = rb_funcall(rb_mKernel, ID_caller, 0);
+    rb_funcall(ret, ID_set_backtrace, 1, caller);
+    return rb_funcall(ret, ID_raise, 1, ret);
+  }
+  else {
+    return ret;
+  }
 }
 
 static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
