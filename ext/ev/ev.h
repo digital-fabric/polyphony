@@ -21,7 +21,6 @@ extern ID ID_clear;
 extern ID ID_each;
 extern ID ID_raise;
 extern ID ID_scheduled_value;
-extern ID ID_set_backtrace;
 extern ID ID_transfer;
 extern ID ID_R;
 extern ID ID_W;

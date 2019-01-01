@@ -32,7 +32,6 @@ ID ID_clear;
 ID ID_each;
 ID ID_raise;
 ID ID_scheduled_value;
-ID ID_set_backtrace;
 ID ID_transfer;
 ID ID_R;
 ID ID_W;
@@ -52,17 +51,16 @@ void Init_EV() {
 
   rb_define_method(rb_mKernel, "suspend", EV_suspend, 0);
 
-  ID_call             = rb_intern("call");
-  ID_caller           = rb_intern("caller");
-  ID_clear            = rb_intern("clear");
-  ID_each             = rb_intern("each");
-  ID_raise            = rb_intern("raise");
-  ID_scheduled_value  = rb_intern("scheduled_value");
-  ID_set_backtrace    = rb_intern("set_backtrace");
-  ID_transfer         = rb_intern("transfer");
-  ID_R                = rb_intern("r");
-  ID_W                = rb_intern("w");
-  ID_RW               = rb_intern("rw");
+  ID_call                 = rb_intern("call");
+  ID_caller               = rb_intern("caller");
+  ID_clear                = rb_intern("clear");
+  ID_each                 = rb_intern("each");
+  ID_raise                = rb_intern("raise");
+  ID_scheduled_value      = rb_intern("scheduled_value");
+  ID_transfer             = rb_intern("transfer");
+  ID_R                    = rb_intern("r");
+  ID_W                    = rb_intern("w");
+  ID_RW                   = rb_intern("rw");
 
   EV_root_fiber = rb_fiber_current();
   EV_reactor_fiber = rb_fiber_new(EV_run, Qnil);
@@ -192,14 +190,8 @@ static VALUE EV_suspend(VALUE self) {
   VALUE ret = YIELD_TO_REACTOR();
 
   // fiber is resumed, check if resumed value is an exception
-  if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    VALUE caller = rb_funcall(rb_mKernel, ID_caller, 0);
-    rb_funcall(ret, ID_set_backtrace, 1, caller);
-    return rb_funcall(ret, ID_raise, 1, ret);
-  }
-  else {
-    return ret;
-  }
+  return RTEST(rb_obj_is_kind_of(ret, rb_eException)) ? 
+    rb_funcall(ret, ID_raise, 1, ret) : ret;
 }
 
 static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {

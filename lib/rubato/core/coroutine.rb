@@ -18,12 +18,15 @@ class Coroutine
   end
 
   def run(&block2)
+    @caller = caller if ::Rubato.debug
+
     @fiber = FiberPool.spawn do
       @fiber.coroutine = self
       @result = (@block || block2).call(self)
     rescue Exceptions::MoveOn, Exceptions::Stop => e
       @result = e.value
     rescue Exception => e
+      e.cleanup_backtrace(@caller) if ::Rubato.debug
       @result = e
     ensure
       @fiber.coroutine = nil

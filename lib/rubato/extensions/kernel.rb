@@ -40,6 +40,16 @@ class ::Fiber
   current.coroutine = Coroutine.new(Fiber.current)
 end
 
+class ::Exception
+  SANITIZE_RE = /lib\/rubato/.freeze
+  SANITIZE_PROC = proc  { |l| l !~ SANITIZE_RE }
+
+  def cleanup_backtrace(caller = nil)
+    combined = caller ? backtrace + caller : backtrace
+    set_backtrace(combined.select(&SANITIZE_PROC))
+  end
+end
+
 # Kernel extensions (methods available to all objects)
 module ::Kernel
   def after(duration, &block)
