@@ -6,7 +6,6 @@ require 'fiber'
 require_relative '../ev_ext'
 
 import('./extensions/kernel')
-
 FiberPool = import('./core/fiber_pool')
 
 # Core module, containing async and reactor methods

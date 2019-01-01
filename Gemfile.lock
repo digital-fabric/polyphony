@@ -4,7 +4,7 @@ PATH
     rubato (0.11)
       http-2 (= 0.10.0)
       http_parser.rb (= 0.6.0)
-      modulation (= 0.15)
+      modulation (= 0.18)
 
 GEM
   remote: https://rubygems.org/
@@ -13,7 +13,7 @@ GEM
     http_parser.rb (0.6.0)
     localhost (1.1.4)
     minitest (5.11.3)
-    modulation (0.15)
+    modulation (0.18)
     rake (12.3.2)
     rake-compiler (1.0.5)
       rake

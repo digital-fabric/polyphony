@@ -9,15 +9,18 @@ Exceptions = import('./rubato/core/exceptions')
 
 module Rubato
   Cancel        = Exceptions::Cancel
-  Channel       = import('./rubato/core/channel')
-  Coroutine     = import('./rubato/core/coroutine')
-  FiberPool     = import('./rubato/core/fiber_pool')
-  FS            = import('./rubato/fs')
   MoveOn        = Exceptions::MoveOn
-  Net           = import('./rubato/net')
-  ResourcePool  = import('./rubato/resource_pool')
-  Supervisor    = import('./rubato/core/supervisor')
-  Sync          = import('./rubato/core/sync')
-  Thread        = import('./rubato/core/thread')
-  ThreadPool    = import('./rubato/core/thread_pool')
+
+  auto_import(
+    Channel:      './rubato/core/channel',
+    Coroutine:    './rubato/core/coroutine',
+    Sync:         './rubato/core/sync',
+    Thread:       './rubato/core/thread',
+    ThreadPool:   './rubato/core/thread_pool',
+  
+    FS:           './rubato/fs',
+    Net:          './rubato/net',
+    ResourcePool: './rubato/resource_pool',
+    Supervisor:   './rubato/supervisor'
+  )
 end
