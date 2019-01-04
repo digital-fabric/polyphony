@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
-HTTPServer = import('../../lib/rubato/http/server')
+Polyphony = import('../../lib/polyphony')
+HTTPServer = import('../../lib/polyphony/http/server')
 
 opts = { reuse_addr: true, dont_linger: true }
 server = HTTPServer.serve('0.0.0.0', 1234, opts) do |req|

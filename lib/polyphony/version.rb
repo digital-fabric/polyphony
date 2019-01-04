@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
-module Rubato
+module Polyphony
   VERSION = '0.12'
 end

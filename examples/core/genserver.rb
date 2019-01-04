@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 class GenServer
   def self.start(receiver, *args)
@@ -34,11 +34,11 @@ class GenServer
   end
 
   def self.cast(process, method, *args)
-    process << {from: Rubato::Coroutine.current, method: method, args: args}
+    process << {from: Polyphony::Coroutine.current, method: method, args: args}
   end
 
   def self.call(process, method, *args)
-    process << {from: Rubato::Coroutine.current, method: method, args: args}
+    process << {from: Polyphony::Coroutine.current, method: method, args: args}
     receive
   end
 end

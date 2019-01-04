@@ -37,7 +37,7 @@ Prior art:
 ### DNS server
 
 ```ruby
-Server = import('../../lib/rubato/dns/server')
+Server = import('../../lib/polyphony/dns/server')
 
 server = Server.new do |transaction|
   puts "got query from #{transaction.info[:client_ip_address]}"

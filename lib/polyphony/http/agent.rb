@@ -202,9 +202,9 @@ class Agent
   def connect(key)
     case key[:scheme]
     when S_HTTP
-      Rubato::Net.tcp_connect(key[:host], key[:port])
+      Polyphony::Net.tcp_connect(key[:host], key[:port])
     when S_HTTPS
-      Rubato::Net.tcp_connect(key[:host], key[:port], SECURE_OPTS).tap do |socket|
+      Polyphony::Net.tcp_connect(key[:host], key[:port], SECURE_OPTS).tap do |socket|
         socket.post_connection_check(key[:host])
       end
     else

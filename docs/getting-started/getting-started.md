@@ -3,7 +3,7 @@
 ## Installing
 
 ```bash
-$ gem install rubato
+$ gem install polyphony
 ```
 
 ## Tutorial

@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 def echo(rchan, wchan)
   puts "start echoer"
@@ -13,7 +13,7 @@ ensure
   puts "echoer stopped"
 end
 
-chan1, chan2 = Rubato::Channel.new, Rubato::Channel.new
+chan1, chan2 = Polyphony::Channel.new, Polyphony::Channel.new
 
 echoer = spawn { echo(chan1, chan2) }
 

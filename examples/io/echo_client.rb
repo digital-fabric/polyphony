@@ -2,9 +2,9 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
-socket = Rubato::Net.tcp_connect('127.0.0.1', 1234)
+socket = Polyphony::Net.tcp_connect('127.0.0.1', 1234)
 
 writer = spawn do
   throttled_loop(1) { socket << "#{Time.now}\n" }

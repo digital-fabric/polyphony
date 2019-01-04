@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
-Postgres =  import('../../lib/rubato/extensions/postgres')
+Polyphony = import('../../lib/polyphony')
+Postgres =  import('../../lib/polyphony/extensions/postgres')
 
 PGOPTS = {
   host:     '/tmp',
@@ -13,7 +13,7 @@ PGOPTS = {
   sslmode:  'require'
 }
 
-DBPOOL = Rubato::ResourcePool.new(limit: 8) { PG.connect(PGOPTS) }
+DBPOOL = Polyphony::ResourcePool.new(limit: 8) { PG.connect(PGOPTS) }
 
 def get_records(db)
   res = db.query("select pg_sleep(0.0001) as test")

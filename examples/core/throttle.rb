@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 spawn {
   throttled_loop(3) { STDOUT << '.' }

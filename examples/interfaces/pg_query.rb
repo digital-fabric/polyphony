@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
-Postgres =  import('../../lib/rubato/extensions/postgres')
+Polyphony = import('../../lib/polyphony')
+Postgres =  import('../../lib/polyphony/extensions/postgres')
 
 DB = PG.connect(
   host:     '/tmp',

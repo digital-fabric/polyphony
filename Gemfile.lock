@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    rubato (0.12)
+    polyphony (0.12)
       http-2 (= 0.10.0)
       http_parser.rb (= 0.6.0)
       modulation (= 0.18)
@@ -24,8 +24,8 @@ PLATFORMS
 DEPENDENCIES
   localhost (= 1.1.4)
   minitest (= 5.11.3)
+  polyphony!
   rake-compiler (= 1.0.5)
-  rubato!
 
 BUNDLED WITH
    1.17.2

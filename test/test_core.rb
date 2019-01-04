@@ -2,22 +2,24 @@ require 'minitest/autorun'
 require 'modulation'
 
 module CoreTests
-  CancelScope = import('../lib/rubato/core/cancel_scope')
-  Core        = import('../lib/rubato/core')
-  Coroutine   = import('../lib/rubato/core/coroutine')
-  Exceptions  = import('../lib/rubato/core/exceptions')
-  Supervisor  = import('../lib/rubato/core/supervisor')
-
-  Core.dont_auto_run!
+  CancelScope = import('../lib/polyphony/core/cancel_scope')
+  Core        = import('../lib/polyphony/core')
+  Coroutine   = import('../lib/polyphony/core/coroutine')
+  Exceptions  = import('../lib/polyphony/core/exceptions')
+  Supervisor  = import('../lib/polyphony/core/supervisor')
 
   class SpawnTest < MiniTest::Test
+    def setup
+      EV.rerun
+    end
+
     def test_that_spawn_returns_a_coroutine
       result = nil
       coroutine = spawn { result = 42 }
 
       assert_kind_of(Coroutine, coroutine)
       assert_nil(result)
-      EV.run
+      suspend
       assert_equal(42, result)
     end
 
@@ -27,7 +29,7 @@ module CoreTests
       spawn coroutine
 
       assert_nil(result)
-      EV.run
+      suspend
       assert_equal(42, result)
     end
 
@@ -36,7 +38,7 @@ module CoreTests
 
       assert_kind_of(Coroutine, coroutine)
       assert_nil(coroutine.result)
-      EV.run
+      suspend
       assert_equal(42, coroutine.result)
     end
 
@@ -44,19 +46,23 @@ module CoreTests
       result = nil
       coroutine = spawn { sleep(1); 42 }
       EV.next_tick { coroutine.interrupt }
-      EV.run
+      suspend
       assert_nil(coroutine.result)
     end
   end
 
   class CoroutineTest < MiniTest::Test
+    def setup
+      EV.rerun
+    end
+
     def test_that_coroutine_can_be_awaited
       result = nil
       spawn do
         coroutine = Coroutine.new { sleep(0.001); 42 }
         result = coroutine.await
       end
-      EV.run
+      suspend
       assert_equal(42, result)
     end
 
@@ -67,7 +73,7 @@ module CoreTests
         result = 42
       end
       EV.next_tick { coroutine.interrupt }
-      EV.run
+      suspend
       assert_nil(result)
     end
 
@@ -81,7 +87,7 @@ module CoreTests
       end
       EV.next_tick { coroutine.cancel! }
 
-      EV.run
+      suspend
 
       assert_kind_of(Exceptions::Cancel, result)
       assert_kind_of(Exceptions::Cancel, coroutine.result)
@@ -100,7 +106,7 @@ module CoreTests
         result && result += 1
       end
       EV.next_tick { coroutine.interrupt }
-      EV.run
+      suspend
       assert_nil(result)
       assert_nil(coroutine.running?)
       assert_nil(coroutine2.running?)
@@ -119,7 +125,7 @@ module CoreTests
         result && result += 1
       end
       
-      EV.run
+      suspend
       
       assert_nil(result)
       assert_nil(coroutine.running?)
@@ -127,96 +133,11 @@ module CoreTests
     end
   end
 
-  # class AwaitTest < Minitest::Test
-  #   def test_that_await_passes_block_to_given_coroutine
-  #     coroutine = spawn do
-  #       await { 42 }
-  #     end
-  #     EV.run
-  #     assert_equal(42, coroutine.result)
-  #   end
-
-  #   def test_that_await_works_with_an_already_spawned_coroutine
-  #     coroutine = spawn do
-  #       t = spawn { 42 }
-  #       await t
-  #     end
-  #     EV.run
-  #     assert_equal(42, coroutine.result)
-  #   end
-
-  #   def test_that_await_blocks_execution
-  #     coroutine_started = nil
-  #     timer_fired = nil
-  #     result = nil
-  #     coroutine = proc do
-  #       coroutine_started = true
-  #       fiber = Fiber.current
-  #       timer = EV::Timer.new(0.01, 0)
-  #       timer.start do
-  #         timer_fired = true
-  #         fiber.resume('hello')
-  #       end
-  #       suspend
-  #     end
-  #     assert_nil(coroutine_started)
-      
-  #     spawn { result = await coroutine }
-  #     EV.run
-  #     assert(coroutine_started)
-  #     assert(timer_fired)
-  #     assert_equal('hello', result)
-  #   end
-
-  #   def test_that_await_accepts_block_and_passes_it_to_given_coroutine
-  #     result = nil
-  #     spawn do
-  #       result = await { 42 }
-  #     end
-  #     # async returns a coroutine that uses an EV signal to resolve, so we need to run
-  #     # the event loop
-  #     EV.run 
-  #     assert_equal(42, result)
-  #   end
-  # end
-
-  # class AsyncTest < MiniTest::Test
-  #   def test_that_async_returns_a_coroutine
-  #     result = nil
-  #     o = async { result = 1 }
-  #     assert_kind_of(Coroutine, o)
-
-  #     # async should not by itself run the given block
-  #     EV.run
-  #     assert_nil(result)
-  #   end
-
-  #   def add(x, y)
-  #     x + y
-  #   end
-    
-  #   def test_that_async_decorates_a_given_method
-  #     assert(respond_to?(:sync_add))
-  #     assert_equal(5, sync_add(2, 3))
-
-  #     o = add(3, 4)
-  #     assert_kind_of(Coroutine, o)
-  #     result = nil
-  #     spawn do
-  #       result = await o
-  #     end
-  #     assert_nil(result)
-  #     EV.run
-  #     assert_equal(7, result)
-
-  #     result = nil
-  #     spawn { result = await add(2, 3) }
-  #     EV.run
-  #     assert_equal(5, result)
-  #   end
-  # end
-
   class CancelScopeTest < Minitest::Test
+    def setup
+      EV.rerun
+    end
+
     def sleep_with_cancel(ctx, mode = nil)
       CancelScope.new(mode: mode).call do |c|
         ctx[:cancel_scope] = c
@@ -236,7 +157,7 @@ module CoreTests
       # async operation will only begin on next iteration of event loop
       assert_nil(ctx[:cancel_scope])
       
-      EV.run
+      suspend
       assert_kind_of(CancelScope, ctx[:cancel_scope])
       assert_kind_of(Exceptions::Cancel, ctx[:result])
     end
@@ -248,7 +169,7 @@ module CoreTests
     #     sleep_with_cancel(ctx, :stop)
     #   end
       
-    #   EV.run
+    #   suspend
     #   assert(ctx[:cancel_scope])
     #   assert_nil(ctx[:result])
     # end
@@ -263,7 +184,7 @@ module CoreTests
       rescue Exceptions::Cancel
         result = :cancelled
       end
-      EV.run
+      suspend
       assert_equal(:cancelled, result)
     end
 
@@ -279,9 +200,11 @@ module CoreTests
         end
         outer_result = 42
       end
-      EV.run
+      suspend
       assert_nil(inner_result)
       assert_equal(42, outer_result)
+
+      EV.rerun
 
       outer_result = nil
       spawn do
@@ -293,13 +216,17 @@ module CoreTests
         end
         outer_result = 42
       end
-      EV.run
+      suspend
       assert_equal(42, inner_result)
       assert_equal(42, outer_result)
     end
   end
 
   class SupervisorTest < MiniTest::Test
+    def setup
+      EV.rerun
+    end
+
     def sleep_and_set(ctx, idx)
       proc do
         sleep(0.001 * idx)
@@ -318,7 +245,7 @@ module CoreTests
       spawn do
         parallel_sleep(ctx)
       end
-      EV.run
+      suspend
       assert(ctx[1])
       assert(ctx[2])
       assert(ctx[3])
@@ -340,7 +267,7 @@ module CoreTests
         supervisor.await
       end
 
-      EV.run
+      suspend
       assert_equal([0, 1, 2], result)
     end
   end

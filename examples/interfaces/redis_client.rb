@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
-import('../../lib/rubato/extensions/redis')
+Polyphony = import('../../lib/polyphony')
+import('../../lib/polyphony/extensions/redis')
 
 redis = Redis.new
 

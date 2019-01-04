@@ -4,7 +4,7 @@ require 'modulation'
 require 'digest'
 require 'socket'
 
-Rubato     = import('../../lib/rubato')
+Polyphony     = import('../../lib/polyphony')
 
 def lengthy_op
   IO.read('../../docs/reality-ui.bmpr')
@@ -21,8 +21,8 @@ end
 
 def threaded
   t0 = Time.now
-  data = Rubato::Thread.spawn { lengthy_op }.await
-  X.times { Rubato::Thread.spawn { lengthy_op }.await }
+  data = Polyphony::Thread.spawn { lengthy_op }.await
+  X.times { Polyphony::Thread.spawn { lengthy_op }.await }
   puts "read threaded #{data.bytesize} bytes (#{Time.now - t0}s)"
 end
 

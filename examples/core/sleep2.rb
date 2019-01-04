@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 spawn {
   puts "going to sleep..."

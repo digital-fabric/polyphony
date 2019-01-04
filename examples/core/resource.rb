@@ -2,10 +2,10 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 resource_count = 0
-Pool = Rubato::ResourcePool.new(limit: 3) do
+Pool = Polyphony::ResourcePool.new(limit: 3) do
   :"resource#{resource_count += 1}"
 end
 

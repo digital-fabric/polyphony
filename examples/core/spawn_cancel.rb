@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 spawn do
   puts "going to sleep..."
@@ -11,7 +11,7 @@ spawn do
       sleep(2)
     }.await
   end
-rescue Rubato::Cancel => e
+rescue Polyphony::Cancel => e
   puts "got error: #{e}"
 ensure
   puts "woke up"

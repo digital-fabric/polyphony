@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 require 'modulation'
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 puts "parent pid: #{Process.pid}"
 
-pid = Rubato.fork do
+pid = Polyphony.fork do
   puts "child pid: #{Process.pid}"
 
   spawn do

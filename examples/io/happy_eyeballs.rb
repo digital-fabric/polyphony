@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 require 'modulation'
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 async def try_connect(supervisor, target)
   puts "trying #{target[2]}"
-  socket = Rubato::Net.tcp_connect(target[2], 80)
+  socket = Polyphony::Net.tcp_connect(target[2], 80)
   supervisor.stop!([target[2], socket])
 rescue IOError, SystemCallError
 end

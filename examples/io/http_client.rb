@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
-Agent = import('../../lib/rubato/http/agent')
+Polyphony = import('../../lib/polyphony')
+Agent = import('../../lib/polyphony/http/agent')
 
 def get_server_time
   Agent.get('https://ui.realiteq.net/', q: :time).json

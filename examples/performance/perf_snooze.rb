@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'modulation'
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 X = 1_000_000
 

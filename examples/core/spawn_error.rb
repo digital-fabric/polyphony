@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
-Rubato.debug = true
+Polyphony = import('../../lib/polyphony')
+Polyphony.debug = true
 
 def error(t)
   raise "hello #{t}"

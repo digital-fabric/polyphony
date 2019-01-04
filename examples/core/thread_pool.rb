@@ -4,7 +4,7 @@ require 'modulation'
 require 'digest'
 require 'socket'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 def lengthy_op
   data = IO.read('../../docs/reality-ui.bmpr')
@@ -26,7 +26,7 @@ def compare_performance
     1.times do
       t0 = Time.now
       X.times do
-        Rubato::ThreadPool.process { lengthy_op }
+        Polyphony::ThreadPool.process { lengthy_op }
       end
       async_perf = X / (Time.now - t0)
       puts "seq thread pool performance: %g (X %0.2f)" % [
@@ -40,7 +40,7 @@ def compare_performance
       t0 = Time.now
       supervise do |s|
         X.times do
-          s.spawn Rubato::ThreadPool.process { lengthy_op }
+          s.spawn Polyphony::ThreadPool.process { lengthy_op }
         end
       end
       thread_pool_perf = X / (Time.now - t0)

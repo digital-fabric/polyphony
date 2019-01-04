@@ -2,8 +2,8 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
-HTTPServer = import('../../lib/rubato/http/server')
+Polyphony = import('../../lib/polyphony')
+HTTPServer = import('../../lib/polyphony/http/server')
 
 $throttler = throttle(1000)
 opts = { reuse_addr: true, dont_linger: true }

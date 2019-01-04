@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'modulation'
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 server = TCPServer.open(1234)
 puts "Echoing on port 1234..."

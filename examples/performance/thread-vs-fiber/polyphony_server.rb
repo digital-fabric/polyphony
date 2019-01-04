@@ -3,7 +3,7 @@
 require 'modulation'
 require 'http/parser'
 
-Rubato = import('../../../lib/rubato')
+Polyphony = import('../../../lib/polyphony')
 
 class Http::Parser
   def setup_async

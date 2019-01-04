@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 def loop_it(number, lock)
   loop do
@@ -14,7 +14,7 @@ def loop_it(number, lock)
   end
 end
 
-lock = Rubato::Sync::Mutex.new
+lock = Polyphony::Sync::Mutex.new
 spawn { loop_it(1, lock) }
 spawn { loop_it(2, lock) }
 spawn { loop_it(3, lock) }

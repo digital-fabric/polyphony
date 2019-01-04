@@ -2,17 +2,17 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
-input = Rubato::IO.lines(Rubato::IO.stdin)
+input = Polyphony::IO.lines(Polyphony::IO.stdin)
 
-Rubato.async do
-  Rubato.interval(1) { puts Time.now }
+Polyphony.async do
+  Polyphony.interval(1) { puts Time.now }
 
   loop do
-    Rubato::IO.stdout << "Say something: "
-    l = Rubato.await(input)
+    Polyphony::IO.stdout << "Say something: "
+    l = Polyphony.await(input)
     break unless l
-    Rubato::IO.stdout << "You said: #{l}"
+    Polyphony::IO.stdout << "You said: #{l}"
   end
 end

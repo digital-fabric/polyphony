@@ -10,13 +10,11 @@ FiberPool = import('./core/fiber_pool')
 
 # Core module, containing async and reactor methods
 module Core
-  def self.debug=(v); @debug = v; end
-  def self.debug; @debug; end
-
   def self.trap(sig, ref = false, &callback)
     sig = Signal.list[sig.to_s.upcase] if sig.is_a?(Symbol)
-    EV::Signal.new(sig, &callback)
+    watcher = EV::Signal.new(sig, &callback)
     EV.unref unless ref
+    watcher
   end
 
   def self.fork(&block)

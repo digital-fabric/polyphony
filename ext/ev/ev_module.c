@@ -5,6 +5,7 @@ static VALUE mEV = Qnil;
 static VALUE EV_run(VALUE self);
 static VALUE EV_break(VALUE self);
 static VALUE EV_restart(VALUE self);
+static VALUE EV_rerun(VALUE self);
 
 static VALUE EV_ref(VALUE self);
 static VALUE EV_unref(VALUE self);
@@ -42,6 +43,7 @@ void Init_EV() {
 
   rb_define_singleton_method(mEV, "break", EV_break, 0);
   rb_define_singleton_method(mEV, "restart", EV_restart, 0);
+  rb_define_singleton_method(mEV, "rerun", EV_rerun, 0);
   rb_define_singleton_method(mEV, "ref", EV_ref, 0);
   rb_define_singleton_method(mEV, "unref", EV_unref, 0);
   rb_define_singleton_method(mEV, "next_tick", EV_next_tick, 0);
@@ -79,6 +81,7 @@ void Init_EV() {
 
 static VALUE EV_run(VALUE self) {
   ev_run(EV_DEFAULT, 0);
+  rb_gv_set("__reactor_fiber__", Qnil);
   return Qnil;
 }
 
@@ -95,6 +98,12 @@ static VALUE EV_break(VALUE self) {
 static VALUE EV_restart(VALUE self) {
   EV_reactor_fiber = rb_fiber_new(EV_run, Qnil);
   rb_gv_set("__reactor_fiber__", EV_reactor_fiber);
+  return Qnil;
+}
+
+static VALUE EV_rerun(VALUE self) {
+  EV_break(self);
+  EV_restart(self);
   return Qnil;
 }
 

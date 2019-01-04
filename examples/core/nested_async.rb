@@ -2,14 +2,14 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 spawn do
   puts "going to sleep"
   result = async do
     async do
       async do
-        puts "Fiber count: #{Rubato::FiberPool.size}"
+        puts "Fiber count: #{Polyphony::FiberPool.size}"
         sleep(1)
       end.await
     end.await

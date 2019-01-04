@@ -63,7 +63,7 @@ class ::Socket
   class << self
     alias_method :orig_getaddrinfo, :getaddrinfo
     def getaddrinfo(*args)
-      Rubato::ThreadPool.process { orig_getaddrinfo(*args) }
+      Polyphony::ThreadPool.process { orig_getaddrinfo(*args) }
     end
   end
 end

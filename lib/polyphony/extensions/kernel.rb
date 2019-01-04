@@ -41,7 +41,7 @@ class ::Fiber
 end
 
 class ::Exception
-  SANITIZE_RE = /lib\/rubato/.freeze
+  SANITIZE_RE = /lib\/polyphony/.freeze
   SANITIZE_PROC = proc  { |l| l !~ SANITIZE_RE }
 
   def cleanup_backtrace(caller = nil)

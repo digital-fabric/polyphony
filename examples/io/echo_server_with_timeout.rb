@@ -2,10 +2,10 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 begin
-  server = Rubato::Net.tcp_listen(nil, 1234, reuse_addr: true, dont_linger: true)
+  server = Polyphony::Net.tcp_listen(nil, 1234, reuse_addr: true, dont_linger: true)
   puts "listening on port 1234..."
 
   loop do

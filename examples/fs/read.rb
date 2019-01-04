@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 PATH = File.expand_path('../../../../docs/dev-journal.md', __dir__)
 

@@ -3,8 +3,8 @@
 require 'modulation'
 require 'localhost/authority'
 
-Rubato = import('../../lib/rubato')
-HTTPServer = import('../../lib/rubato/http/server')
+Polyphony = import('../../lib/polyphony')
+HTTPServer = import('../../lib/polyphony/http/server')
 
 spawn do
   authority = Localhost::Authority.fetch

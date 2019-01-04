@@ -1,18 +1,18 @@
-require_relative './lib/rubato/version'
+require_relative './lib/polyphony/version'
 
 Gem::Specification.new do |s|
-  s.name        = 'rubato'
-  s.version     = Rubato::VERSION
+  s.name        = 'polyphony'
+  s.version     = Polyphony::VERSION
   s.licenses    = ['MIT']
-  s.summary     = 'Rubato: Fiber-based Concurrency for Ruby'
+  s.summary     = 'Polyphony: Fiber-based Concurrency for Ruby'
   s.author      = 'Sharon Rosner'
   s.email       = 'ciconia@gmail.com'
   s.files       = `git ls-files README.md CHANGELOG.md lib`.split
-  s.homepage    = 'http://github.com/ciconia/rubato'
+  s.homepage    = 'http://github.com/ciconia/polyphony'
   s.metadata    = {
-    "source_code_uri" => "https://github.com/ciconia/rubato"
+    "source_code_uri" => "https://github.com/ciconia/polyphony"
   }
-  s.rdoc_options = ["--title", "rubato", "--main", "README.md"]
+  s.rdoc_options = ["--title", "polyphony", "--main", "README.md"]
   s.extra_rdoc_files = ["README.md"]
   s.extensions = ["ext/ev/extconf.rb"]
   s.require_paths = ["lib"]

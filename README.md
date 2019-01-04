@@ -1,79 +1,77 @@
-# Rubato - Fiber-Based Concurrency for Ruby
+# Polyphony - Fiber-Based Concurrency for Ruby
 
-[INSTALL](#installing-rubato) |
+[INSTALL](#installing-polyphony) |
 [TUTORIAL](#getting-started) |
 [EXAMPLES](examples) |
-[TEHNICAL OVERVIEW](#how-rubato-works---a-technical-overview) |
+[TEHNICAL OVERVIEW](#how-polyphony-works---a-technical-overview) |
 [REFERENCE](#api-reference) |
-[EXTENDING](#extending-rubato)
+[EXTENDING](#extending-polyphony)
 
-**Note**: Rubato is designed to work with recent versions of Ruby and supports
-Linux and MacOS only. This is experimental software at the alpha stage and
-should not be used in production.
+> Polyphony | pəˈlɪf(ə)ni | *Music* - the style of simultaneously combining a
+> number of parts, each forming an individual melody and harmonizing with each
+> other.
 
-> Rubato | rʊˈbɑːtəʊ | *Music* - the temporary disregarding of strict tempo to
-> allow an expressive quickening or slackening, usually without altering the
-> overall pace.
+**Note**: Polyphony is designed to work with recent versions of Ruby and
+supports Linux and MacOS only. This software is currently at the alpha stage.
 
-## What is Rubato
+## What is Polyphony
 
-Rubato is a library for building concurrent applications in Ruby. Rubato
+Polyphony is a library for building concurrent applications in Ruby. Polyphony
 harnesses the power of
 [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to provide a
 cooperative, sequential coroutine-based concurrency model. Under the hood,
-Rubato uses [libev](https://github.com/enki/libev) as a high-performance event
+Polyphony uses [libev](https://github.com/enki/libev) as a high-performance event
 reactor that provides timers, I/O watchers and other asynchronous event
 primitives.
 
-Rubato makes it possible to use normal Ruby built-in classes like `IO`,
-and `Socket` in a concurrent fashion without having to resort to threads.
-Rubato takes care of context-switching automatically whenever a blocking call
-like `Socket#accept` or `IO#read` is issued.
+Polyphony makes it possible to use normal Ruby built-in classes like `IO`, and
+`Socket` in a concurrent fashion without having to resort to threads. Polyphony
+takes care of context-switching automatically whenever a blocking call like
+`Socket#accept` or `IO#read` is issued.
 
 ## Features
 
-- Concurrency by co-operative scheduling of concurrent operations using Ruby
-  fibers.
+- Co-operative scheduling of concurrent tasks using Ruby fibers.
 - High-performance event reactor for handling I/O events and timers.
 - Natural, sequential programming style that makes it easy to reason about
   concurrent code.
-- Higher-order constructs for controlling the execution of concurrent code,
-  including supervision, cancellation and throttling of concurrent tasks.
-- Uses native classes and libraries, growing support for gems such as `pg` and
-  `redis`.
+- Higher-order constructs for controlling the execution of concurrent code:
+  coprocesses, supervisors, cancel scopes, throttling, resource pools etc.
+- Code can use native networking classes and libraries, growing support for
+  third-party gems such as `pg` and `redis`.
 - Comprehensive HTTP 1.0 / 1.1 / 2 client and server APIs.
 - Excellent performance and scalability characteristics, in terms of both
   throughput and memory consumption.
 
 ## Prior Art
 
-Rubato draws inspiration from the following, in no particular order:
+Polyphony draws inspiration from the following, in no particular order:
 
-* [nio4r](https://github.com/socketry/nio4r/)
+* [nio4r](https://github.com/socketry/nio4r/) and [async](https://github.com/socketry/async)
 * [EventMachine](https://github.com/eventmachine/eventmachine)
 * [Trio](https://trio.readthedocs.io/)
 * [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) (and actually,
   Erlang in general)
 
-## Installing Rubato
+## Installing Polyphony
 
 ```bash
-$ gem install rubato
+$ gem install polyphony
 ```
 
 ## Getting Started
 
-Rubato is designed to help you write high-performance, concurrent code in Ruby.
-It does so by turning every call which might block, such as `sleep` or `read`
-into a concurrent operation, which yields control to an event reactor. The
-reactor, in turn, may schedule other operations once they can be resumed. In
+Polyphony is designed to help you write high-performance, concurrent code in
+Ruby. It does so by turning every call which might block, such as `sleep` or
+`read` into a concurrent operation, which yields control to an event reactor.
+The reactor, in turn, may schedule other operations once they can be resumed. In
 that manner, multiple ongoing operations may be processed concurrently.
 
 There are multiple ways to start a concurrent operation, the most common of
 which is `Kernel#spawn`:
 
 ```ruby
-require 'rubato'
+require 'polyphony'
 
 spawn do
   puts "A going to sleep"
@@ -93,20 +91,25 @@ the program will take approximately only 1 second to execute. Note the lack of
 any boilerplate relating to concurrency. Each `spawn` block starts a
 *coroutine*, and is executed in sequential manner.
 
-> **Coroutines - the basic unit of concurrency** In Rubato, concurrent
+> **Coroutines - the basic unit of concurrency**: In Polyphony, concurrent
 > operations take place inside coroutines. A `Coroutine` is executed on top of a
 > `Fiber`, which allows it to be suspended whenever a blocking operation is
 > called, and resumed once that operation has been completed. Coroutines offer
-> significant advantages over threads - they consume much less memory, and are
-> effectively only limited by available memory.
+> significant advantages over threads - they consume only about 10KB, switching
+> between them is much faster than switching threads, and literally millions of
+> them can be spawned without affecting performance*. Besides, Ruby does not yet
+> allow parallel execution of threads.
+> 
+> \* *This is a totally unsubstantiated claim which has not been proved in
+> practice*.
 
-## An echo server in Rubato
+## An echo server in Polyphony
 
-To take matters further, let's see how networking can be done using Rubato.
-Here's a bare-bones echo server written using Rubato:
+To take matters further, let's see how networking can be done using Polyphony.
+Here's a bare-bones echo server written using Polyphony:
 
 ```ruby
-require 'rubato'
+require 'polyphony'
 
 server = TCPServer.open(1234)
 while client = server.accept
@@ -119,11 +122,11 @@ while client = server.accept
 end
 ```
 
-This example demonstrates several features of Rubato:
+This example demonstrates several features of Polyphony:
 
-- The code uses `TCPServer`, a class from Ruby's stdlib, to setup a TCP server.
-  The result of `server.accept` is also a plain `TCPSocket` object. There are
-  no wrapper classes being used.
+- The code uses the native `TCPServer` class from Ruby's stdlib, to setup a TCP
+  server. The result of `server.accept` is also a native `TCPSocket` object.
+  There are no wrapper classes being used.
 - The only hint of the code being concurrent is the use of `Kernel#spawn`,
   which starts a new coroutine on a dedicated fiber. This allows serving
   multiple clients at once. Whenever a blocking call is issued, such as
@@ -131,23 +134,23 @@ This example demonstrates several features of Rubato:
   resume only those coroutines which are ready to be resumed.
 - Exception handling is done using the normal Ruby constructs `raise`, `rescue`
   and `ensure`. Exceptions never go unhandled (as might be the case with Ruby
-  threads), and must be dealt with explicitly. An unhandled exception will
-  always cause the Ruby process to exit.
+  threads), and must be dealt with explicitly. An unhandled exception will cause
+  the Ruby process to exit.
 
 ## Going further
 
-To learn more about using Rubato to build concurrent applications, read the
+To learn more about using Polyphony to build concurrent applications, read the
 technical overview below, or look at the [included examples](examples). A
 thorough reference is forthcoming.
 
-## How Rubato Works - a Technical Overview
+## How Polyphony Works - a Technical Overview
 
 ### Fiber-based concurrency
 
-The built-in `Fiber` class provides a very elegant foundation for implementing
-cooperative, light-weight concurrency (it can also be used for other stuff
-like generators). Fiber or continuation-based concurrency can be considered as
-the [*third way*](https://en.wikipedia.org/wiki/Fiber_(computer_science))
+The built-in `Fiber` class provides a very elegant, if low-level, foundation for 
+implementing cooperative, light-weight concurrency (it can also be used for other stuff like generators). Fiber or continuation-based concurrency can be 
+considered as the
+[*third way*](https://en.wikipedia.org/wiki/Fiber_(computer_science))
 of writing concurrent programs (the other two being multi-process concurrency
 and multi-thread concurrency), and can provide very good performance
 characteristics for I/O-bound applications.
@@ -157,16 +160,16 @@ allow writing concurrent code in a sequential manner without having to split
 your logic into different locations, or submitting to
 [callback hell](http://callbackhell.com/).
 
-Rubato builds on the foundation of Ruby fibers in order to facilitate writing
+Polyphony builds on the foundation of Ruby fibers in order to facilitate writing
 high-performance I/O-bound applications in Ruby.
 
 ### Context-switching on blocking calls
 
-Ruby monkey-patches existing methods such as `IO#read` to setup an IO watcher
-and suspend the current fiber until the IO object is ready to be read. Once
-the IO watcher is signalled, the associated fiber is resumed and the method
-call can continue. Here's a simplified implementation of
-[`IO#read`](lib/rubato/io.rb#24-36):
+Ruby monkey-patches existing methods such as `sleep` or `IO#read` to setup an
+IO watcher and suspend the current fiber until the IO object is ready to be  
+read. Once the IO watcher is signalled, the associated fiber is resumed and the 
+method call can continue. Here's a simplified implementation of
+[`IO#read`](lib/polyphony/io.rb#24-36):
 
 ```ruby
 class IO
@@ -192,59 +195,33 @@ class IOWatcher
   def await
     @fiber = Fiber.current
     start
-    Fiber.yield
+    yield_to_reactor_fiber
   end
 end
 ```
 
-### Running a high-performance event loop
+> **Running a high-performance event loop**: Polyphony  runs a libev-based event
+> loop that watches events such as IO-readiness, elapsed timers, received
+> signals and other asynchronous happenings, and uses them to control fiber
+> execution. The event loop itself is run on a separate fiber, allowing the main
+> fiber as well to perform blocking operations.
 
-Rubato  runs a libev-based event loop that watches events such as IO-readiness,
-elapsed timers, received signals and other asynchronous happenings, and uses
-them to control fiber execution. The magic continues the IO watcher is
-[signalled](ext/ev/io.c#110-127): the fiber associated with the watcher is
-resumed, and control is given back to the calling method. Here's a naïve
-implementation:
+When the IO watcher is [signalled](ext/ev/io.c#99-116): the fiber associated 
+with the  watcher is resumed, and control is given back to the calling method. 
+Here's a naïve implementation:
 
 ```ruby
 class IOWatcher
-  def fire
-    @fiber.resume
+  def signal
+    @fiber.transfer
   end
 end
 ```
 
 ### Additional concurrency constructs
 
-In order to facilitate writing concurrent code, Rubato provides additional
+In order to facilitate writing concurrent code, Polyphony provides additional
 constructs that make it easier to spawn concurrent tasks and to control them.
-
-`Coroutine` - a class encapsulating a task running on a dedicated fiber. A
-coroutine can be short- or long-lived. It can be suspended and resumed, awaited
-and cancelled. It is usually started using `Kernel#spawn`:
-
-```ruby
-10.times do
-  spawn {
-    sleep 1
-    puts "done sleeping"
-  }
-end
-```
-
-`Supervisor` - a class used to control one or more `Coroutine`s. It can be used
-to start, stop and restart multiple coroutines. A supervisor can also be
-used for awaiting the completion of multiple coroutines. It is usually started
-using `Kernel.supervise`:
-
-```ruby
-supervise { |s|
-  s.spawn { sleep 1 }
-  s.spawn { sleep 2 }
-  s.spawn { sleep 3 }
-}
-puts "done sleeping"
-```
 
 `CancelScope` - an abstraction used to cancel the execution of one or more
 coroutines or supervisors. It usually works by defining a timeout for the 
@@ -266,15 +243,47 @@ def echoer(client)
 }
 ```
 
+`ResourcePool` - a class used to control access to shared resources. It can be
+used to control concurrent access to database connections, or to limit 
+concurrent requests to an external API:
+
+```ruby
+# up to 5 concurrent connections
+Pool = Polyphony::ResourcePool.new(limit: 5) {
+  # the block sets up the resource
+  PG.connect(...)
+}
+
+1000.times {
+  spawn {
+    Pool.acquire { |db| p db.query('select 1') }
+  }
+}
+```
+
+`Supervisor` - a class used to control one or more `Coroutine`s. It can be used
+to start, stop and restart multiple coroutines. A supervisor can also be
+used for awaiting the completion of multiple coroutines. It is usually started
+using `Kernel.supervise`:
+
+```ruby
+supervise { |s|
+  s.spawn { sleep 1 }
+  s.spawn { sleep 2 }
+  s.spawn { sleep 3 }
+}
+puts "done sleeping"
+```
+
 `ThreadPool` - a pool of threads used to run any operation that cannot be
 implemented using non-blocking calls, such as file system calls. The operation
 is offloaded to a worker thread, allowing the event loop to continue processing
 other tasks. For example, `IO.read` and `File.stat` are both reimplemented
-using the Rubato thread pool. You can easily use the thread pool to run your
+using the Polyphony thread pool. You can easily use the thread pool to run your
 own blocking operations as follows:
 
 ```ruby
-result = Rubato::ThreadPool.process { long_running_process }
+result = Polyphony::ThreadPool.process { long_running_process }
 ```
 
 `Throttler` - a mechanism for throttling an arbitrary task, such as sending of
@@ -284,7 +293,7 @@ coroutines:
 
 ```ruby
 server = Net.tcp_listen(1234)
-throttler = throttle(10) # up to 10 times per second
+throttler = throttle(rate: 10) # up to 10 times per second
 
 while client = server.accept
   spawn {
@@ -301,13 +310,13 @@ end
 
 To be continued...
 
-## Extending Rubato
+## Extending Polyphony
 
-Rubato was designed to ease the transition from blocking APIs and
+Polyphony was designed to ease the transition from blocking APIs and 
 callback-based API to non-blocking, fiber-based ones. It is important to
-understand that not all blocking calls can be easily converted into
-non-blocking calls. That might be the case with Ruby gems based on
-C-extensions, such as database libraries. In that case, Rubato's built-in
+understand that not all blocking calls can be easily converted into 
+non-blocking calls. That might be the case with Ruby gems based on C-extensions,
+such as database libraries. In that case, Polyphony's built-in
 [thread pool](#threadpool) might be used for offloading such blocking calls.
 
 ### Adapting callback-based APIs
@@ -316,7 +325,7 @@ Some of the most common patterns in Ruby APIs is the callback pattern, in which
 the API takes a block as a callback to be called upon completion of a task. One
 such example can be found in the excellent
 [http_parser.rb](https://github.com/tmm1/http_parser.rb/) gem, which is used by
-Rubato itself to provide HTTP 1 functionality. The `HTTP:Parser` provides 
+Polyphony itself to provide HTTP 1 functionality. The `HTTP:Parser` provides 
 multiple hooks, or callbacks, for being notified when an HTTP request is
 complete. The typical callback-based setup is as follows:
 
@@ -333,7 +342,7 @@ end
 end
 ```
 
-A program using `http_parser.rb` in conjunction with Rubato might do the
+A program using `http_parser.rb` in conjunction with Polyphony might do the
 following:
 
 ```ruby
@@ -382,10 +391,10 @@ def handle_client(client)
 end
 ```
 
-### Contributing to Rubato
+### Contributing to Polyphony
 
-If there's some blocking behavior you'd like to see handled by Rubato, please
+If there's some blocking behavior you'd like to see handled by Polyphony, please
 let us know by
-[creating an issue](https://github.com/digital-fabric/rubato/issues). Our aim
-is for Rubato to be a comprehensive solution for writing concurrent Ruby
+[creating an issue](https://github.com/digital-fabric/polyphony/issues). Our aim
+is for Polyphony to be a comprehensive solution for writing concurrent Ruby
 programs.

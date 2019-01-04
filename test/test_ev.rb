@@ -2,24 +2,33 @@ require 'minitest/autorun'
 require 'modulation'
 
 module EVTest
-  Core = import('../lib/rubato/core')
-  Core.dont_auto_run!
+  Core = import('../lib/polyphony/core')
 
   class RunTest < Minitest::Test
+    def setup
+      EV.break
+      EV.restart
+    end
+
     def test_that_run_loop_returns_immediately_if_no_watchers
       t0 = Time.now
-      EV.run
+      suspend
       t1 = Time.now
       assert (t1 - t0) < 0.001
     end
   end
 
   class TimerTest < MiniTest::Test
+    def setup
+      EV.break
+      EV.restart
+    end
+
     def test_that_one_shot_timer_works
       count = 0
       t = EV::Timer.new(0.01, 0)
       t.start { count += 1}
-      EV.run
+      suspend
       assert_equal(1, count)
     end
 
@@ -27,11 +36,17 @@ module EVTest
       count = 0
       t = EV::Timer.new(0.001, 0.001)
       t.start { count += 1; t.stop if count >= 3}
-      EV.run
+      suspend
       assert_equal(3, count)
     end
   end
+  
   class IOTest < MiniTest::Test
+    def setup
+      EV.break
+      EV.restart
+    end
+
     def test_that_reading_works
       i, o = IO.pipe
       data = +''
@@ -41,49 +56,61 @@ module EVTest
         w.stop unless data.empty?
       end
       EV::Timer.new(0, 0).start { o << 'hello' }
-      EV.run
+      suspend
       assert_equal('hello', data)
     end
   end
 
   class SignalTest < MiniTest::Test
+    def setup
+      EV.break
+      EV.restart
+    end
+
     def test_that_signal_watcher_receives_signal
       sig = Signal.list['USR1']
       count = 0
       w = EV::Signal.new(sig) { count += 1; w.stop }
-      Thread.new { sleep 0.001; Process.kill(:USR1, Process.pid) }
-      EV.run
+      Thread.new { sync_sleep 0.001; Process.kill(:USR1, Process.pid) }
+      suspend
       assert_equal(1, count)
     end
 
     def test_that_signal_watcher_receives_signal
       count = 0
-      w = Core.trap(:usr1) { count += 1; w.stop }
+      w = Core.trap(:usr1, true) { count += 1; w.stop }
       assert_kind_of(EV::Signal, w)
-      Thread.new { sleep 0.001; Process.kill(:USR1, Process.pid) }
-      EV.run
+      Thread.new { sync_sleep 0.001; Process.kill(:USR1, Process.pid) }
+      suspend
       assert_equal(1, count)
     end
   end
 
   class AsyncTest < MiniTest::Test
+    def setup
+      EV.break
+      EV.restart
+    end
+
     def test_that_async_watcher_receives_signal_across_threads
       count = 0
       a = EV::Async.new { count += 1; a.stop }
-      Thread.new { sleep 0.001; a.signal! }
-      EV.run
+      Thread.new { sync_sleep 0.001; a.signal! }
+      suspend
       assert_equal(1, count)
     end
 
     def test_that_async_watcher_coalesces_signals
       count = 0
-      a = EV::Async.new { count += 1 }
-      Thread.new do
-        sleep 0.001
-        3.times { a.signal! }
+      a = EV::Async.new do
+        count += 1
         EV::Timer.new(0.01, 0).start { a.stop }
       end
-      EV.run
+      Thread.new do
+        sync_sleep 0.001
+        3.times { a.signal! }
+      end
+      suspend
       assert_equal(1, count)
     end
   end

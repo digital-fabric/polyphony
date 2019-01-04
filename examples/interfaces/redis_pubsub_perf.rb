@@ -3,8 +3,8 @@
 require 'modulation'
 require 'json'
 
-Rubato = import('../../lib/rubato')
-import('../../lib/rubato/extensions/redis')
+Polyphony = import('../../lib/polyphony')
+import('../../lib/polyphony/extensions/redis')
 
 X_SESSIONS = 1000
 X_NODES = 10000
@@ -62,4 +62,4 @@ spawn do
   end
 end
 
-Rubato.trap(:int) { puts "bye..."; exit! }
+Polyphony.trap(:int) { puts "bye..."; exit! }

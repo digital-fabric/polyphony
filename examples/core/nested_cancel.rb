@@ -2,7 +2,7 @@
 
 require 'modulation'
 
-Rubato = import('../../lib/rubato')
+Polyphony = import('../../lib/polyphony')
 
 async def sleep_and_cancel
   puts "#{Time.now} going to sleep with cancel..."

@@ -4,7 +4,7 @@ Core = import('./core')
 
 # Fiber used for running reactor loop
 ReactorLoopFiber = Fiber.new do
-  Rubato.run_reactor
+  Polyphony.run_reactor
 end
 
 # Monkey-patch core module with async/await methods

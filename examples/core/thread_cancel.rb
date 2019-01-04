@@ -4,7 +4,7 @@ require 'modulation'
 require 'digest'
 require 'socket'
 
-Rubato     = import('../../lib/rubato')
+Polyphony     = import('../../lib/polyphony')
 
 @op_count = 0
 
@@ -19,7 +19,7 @@ end
 spawn do
   t0 = Time.now
   cancel_after(0.01) do
-    data = Rubato::Thread.spawn { lengthy_op }.await
+    data = Polyphony::Thread.spawn { lengthy_op }.await
     puts "read #{data.bytesize} bytes (#{Time.now - t0}s)"
   end
 rescue Exception => e
