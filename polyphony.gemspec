@@ -8,9 +8,9 @@ Gem::Specification.new do |s|
   s.author      = 'Sharon Rosner'
   s.email       = 'ciconia@gmail.com'
   s.files       = `git ls-files README.md CHANGELOG.md lib`.split
-  s.homepage    = 'http://github.com/ciconia/polyphony'
+  s.homepage    = 'http://github.com/digital-fabric/polyphony'
   s.metadata    = {
-    "source_code_uri" => "https://github.com/ciconia/polyphony"
+    "source_code_uri" => "https://github.com/digital-fabric/polyphony"
   }
   s.rdoc_options = ["--title", "polyphony", "--main", "README.md"]
   s.extra_rdoc_files = ["README.md"]

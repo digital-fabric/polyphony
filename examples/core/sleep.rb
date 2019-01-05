@@ -4,7 +4,6 @@ require 'modulation'
 
 Polyphony = import('../../lib/polyphony')
 
-x = 0.3
 puts "going to sleep..."
-sleep x
+sleep 1
 puts "woke up"
