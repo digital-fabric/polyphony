@@ -1,3 +1,6 @@
+0.13 2019-01-05
+---------------
+
 * Rename Rubato to Polyphony (I know, this is getting silly...)
 
 0.12 2019-01-01
