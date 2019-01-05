@@ -5,11 +5,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "http1",
+      "name": "sleep",
       "type": "Ruby",
       "request": "launch",
       "cwd": "${workspaceRoot}",
-      "program": "${workspaceRoot}/examples/io/http_1_server.rb"
+      "program": "${workspaceRoot}/examples/core/sleep.rb"
 
     },
     {
@@ -20,20 +20,6 @@
       "program": "${workspaceRoot}/examples/core/pulse.rb"
     },
     {
-      "name": "Test",
-      "type": "Ruby",
-      "request": "launch",
-      "cwd": "${workspaceRoot}",
-      "program": "${workspaceRoot}/test/test_promise.rb"
-    },
-    {
-      "name": "pg client",
-      "type": "Ruby",
-      "request": "launch",
-      "cwd": "${workspaceRoot}",
-      "program": "${workspaceRoot}/examples/interfaces/pg_client.rb"
-    },
-    {
       "name": "Listen for rdebug-ide",
       "type": "Ruby",
       "request": "attach",
@@ -41,16 +27,6 @@
       "remoteHost": "127.0.0.1",
       "remotePort": "1234",
       "remoteWorkspaceRoot": "${workspaceRoot}"
-    },
-    {
-      "name": "Rails server",
-      "type": "Ruby",
-      "request": "launch",
-      "cwd": "${workspaceRoot}",
-      "program": "${workspaceRoot}/bin/rails",
-      "args": [
-        "server"
-      ]
     },
     {
       "name": "RSpec - all",
@@ -75,12 +51,5 @@
         "${file}"
       ]
     },
-    {
-      "name": "Cucumber",
-      "type": "Ruby",
-      "request": "launch",
-      "cwd": "${workspaceRoot}",
-      "program": "${workspaceRoot}/bin/cucumber"
-    }
   ]
 }
