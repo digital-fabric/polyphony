@@ -10,7 +10,7 @@ Rake::ExtensionTask.new("ev_ext") do |ext|
   ext.ext_dir = "ext/ev"
 end
 
-task :default => :test
+task :default => [:compile, :test]
 task :test do
   Dir.glob('./test/test_*.rb').each { |file| require(file) }
 end

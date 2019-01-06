@@ -1,3 +1,5 @@
+* Rename `Coroutine` to `Coprocess`
+
 0.13 2019-01-05
 ---------------
 
@@ -18,8 +20,8 @@
 
 * Move reactor loop to secondary fiber, allow blocking operations on main
   fiber.
-* Example implementation of erlang-style generic server pattern (implement
-  async API to a coroutine)
+* Example implementation of erlang-style generic server pattern (implement async
+  API to a coroutine)
 * Implement coroutine mailboxes, Coroutine#<<, Coroutine#receive, Kernel.receive
   for message passing
 * Add Coroutine.current for getting current coroutine

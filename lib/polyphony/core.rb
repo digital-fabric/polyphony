@@ -22,7 +22,7 @@ module Core
     pid = Kernel.fork do
       FiberPool.reset!
       EV.post_fork
-      Fiber.current.coroutine = Coroutine.new(Fiber.current)
+      Fiber.current.coprocess = Coprocess.new(Fiber.current)
 
       block.()
 

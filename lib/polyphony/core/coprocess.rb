@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export_default :Coroutine
+export_default :Coprocess
 
 import('../extensions/kernel')
 
@@ -8,7 +8,7 @@ FiberPool   = import('./fiber_pool')
 Exceptions  = import('./exceptions')
 
 # Encapsulates an asynchronous task
-class Coroutine
+class Coprocess
   attr_reader :result, :fiber
 
 
@@ -21,7 +21,7 @@ class Coroutine
     @caller = caller if Exceptions.debug
 
     @fiber = FiberPool.spawn do
-      @fiber.coroutine = self
+      @fiber.coprocess = self
       @result = (@block || block2).call(self)
     rescue Exceptions::MoveOn, Exceptions::Stop => e
       @result = e.value
@@ -29,7 +29,7 @@ class Coroutine
       e.cleanup_backtrace(@caller) if Exceptions.debug
       @result = e
     ensure
-      @fiber.coroutine = nil
+      @fiber.coprocess = nil
       @fiber = nil
       @awaiting_fiber&.schedule @result
       @when_done&.()
@@ -66,7 +66,7 @@ class Coroutine
   end
 
   # Kernel.await expects the given argument / block to be a callable, so #call
-  # in fact waits for the coroutine to finish
+  # in fact waits for the coprocess to finish
   def await
     run unless @ran
     if @fiber
@@ -76,7 +76,7 @@ class Coroutine
       @result
     end
   ensure
-    # if awaiting was interrupted and the coroutine is still running, we need to stop it
+    # if awaiting was interrupted and the coprocess is still running, we need to stop it
     if @fiber
       @fiber&.schedule(Exceptions::MoveOn.new)
       suspend
@@ -101,6 +101,6 @@ class Coroutine
   end
 
   def self.current
-    Fiber.current.coroutine
+    Fiber.current.coprocess
   end
 end

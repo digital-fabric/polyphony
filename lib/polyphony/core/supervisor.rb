@@ -2,12 +2,12 @@
 
 export_default :Supervisor
 
-Coroutine   = import('./coroutine')
+Coprocess   = import('./coprocess')
 Exceptions  = import('./exceptions')
 
 class Supervisor
   def initialize
-    @coroutines = []
+    @coprocesss = []
   end
 
   def await(&block)
@@ -26,31 +26,31 @@ class Supervisor
   end
 
   def spawn(proc = nil, &block)
-    if proc.is_a?(Coroutine)
-      spawn_coroutine(proc)
+    if proc.is_a?(Coprocess)
+      spawn_coprocess(proc)
     else
       spawn_proc(block || proc)
     end
   end
 
-  def spawn_coroutine(proc)
-    @coroutines << proc
+  def spawn_coprocess(proc)
+    @coprocesss << proc
     proc.when_done { task_completed(proc) }
     proc.run unless proc.running?
     proc
   end
 
   def spawn_proc(proc)
-    @coroutines << Object.spawn do |coroutine|
-      proc.call(coroutine)
-      task_completed(coroutine)
+    @coprocesss << Object.spawn do |coprocess|
+      proc.call(coprocess)
+      task_completed(coprocess)
     rescue Exception => e
-      task_completed(coroutine)
+      task_completed(coprocess)
     end
   end
 
   def still_running?
-    !@coroutines.empty?
+    !@coprocesss.empty?
   end
 
   def stop!(result = nil)
@@ -61,15 +61,15 @@ class Supervisor
 
   def stop_all_tasks
     exception = Exceptions::Stop.new
-    @coroutines.each do |c|
+    @coprocesss.each do |c|
       EV.next_tick { c.interrupt(exception) }
     end
   end
 
-  def task_completed(coroutine)
-    return unless @coroutines.include?(coroutine)
+  def task_completed(coprocess)
+    return unless @coprocesss.include?(coprocess)
     
-    @coroutines.delete(coroutine)
-    @supervisor_fiber&.transfer if @coroutines.empty?
+    @coprocesss.delete(coprocess)
+    @supervisor_fiber&.transfer if @coprocesss.empty?
   end
 end

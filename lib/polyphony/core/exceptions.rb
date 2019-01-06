@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-export :CoroutineInterrupt, :MoveOn, :Stop, :Cancel, :debug, :debug=
+export :CoprocessInterrupt, :MoveOn, :Stop, :Cancel, :debug, :debug=
 
-class CoroutineInterrupt < ::Exception
+class CoprocessInterrupt < ::Exception
   attr_reader :scope, :value
 
   def initialize(scope = nil, value = nil)
@@ -11,9 +11,9 @@ class CoroutineInterrupt < ::Exception
   end
 end
 
-class Stop < CoroutineInterrupt; end
-class MoveOn < CoroutineInterrupt; end
-class Cancel < CoroutineInterrupt; end
+class Stop < CoprocessInterrupt; end
+class MoveOn < CoprocessInterrupt; end
+class Cancel < CoprocessInterrupt; end
 
 def debug
   @debug

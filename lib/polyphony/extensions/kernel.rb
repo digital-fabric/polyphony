@@ -3,7 +3,7 @@
 require 'fiber'
 
 CancelScope = import('../core/cancel_scope')
-Coroutine   = import('../core/coroutine')
+Coprocess   = import('../core/coprocess')
 Exceptions  = import('../core/exceptions')
 Supervisor  = import('../core/supervisor')
 Throttler   = import('../core/throttler')
@@ -11,7 +11,7 @@ Throttler   = import('../core/throttler')
 # Fiber extensions
 class ::Fiber
   attr_writer :cancelled
-  attr_accessor :next_job, :coroutine
+  attr_accessor :next_job, :coprocess
 
   def cancelled?
     @cancelled
@@ -36,8 +36,8 @@ class ::Fiber
   @@root = Fiber.current
   @@root.set_root!
 
-  # Associate a (pseudo-)coroutine with the main fiber
-  current.coroutine = Coroutine.new(Fiber.current)
+  # Associate a (pseudo-)coprocess with the main fiber
+  current.coprocess = Coprocess.new(Fiber.current)
 end
 
 class ::Exception
@@ -60,7 +60,7 @@ module ::Kernel
     if sym
       async_decorate(is_a?(Class) ? self : singleton_class, sym)
     else
-      Coroutine.new(&block)
+      Coprocess.new(&block)
     end
   end
 
@@ -73,7 +73,7 @@ module ::Kernel
     sync_sym = :"sync_#{sym}"
     receiver.alias_method(sync_sym, sym)
     receiver.define_method(sym) do |*args, &block|
-      Coroutine.new { send(sync_sym, *args, &block) }
+      Coprocess.new { send(sync_sym, *args, &block) }
     end
   end
 
@@ -113,7 +113,7 @@ module ::Kernel
   end
 
   def receive
-    Fiber.current.coroutine.receive
+    Fiber.current.coprocess.receive
   end
 
   alias_method :sync_sleep, :sleep
@@ -125,10 +125,10 @@ module ::Kernel
   end
 
   def spawn(proc = nil, &block)
-    if proc.is_a?(Coroutine)
+    if proc.is_a?(Coprocess)
       proc.run
     else
-      Coroutine.new(&(block || proc)).run
+      Coprocess.new(&(block || proc)).run
     end
   end
 

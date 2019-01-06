@@ -19,7 +19,7 @@ supports Linux and MacOS only. This software is currently at the alpha stage.
 Polyphony is a library for building concurrent applications in Ruby. Polyphony
 harnesses the power of
 [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to provide a
-cooperative, sequential coroutine-based concurrency model. Under the hood,
+cooperative, sequential coprocess-based concurrency model. Under the hood,
 Polyphony uses [libev](https://github.com/enki/libev) as a high-performance event
 reactor that provides timers, I/O watchers and other asynchronous event
 primitives.
@@ -89,12 +89,12 @@ end
 In the above example, both `sleep` calls will be executed concurrently, and thus
 the program will take approximately only 1 second to execute. Note the lack of
 any boilerplate relating to concurrency. Each `spawn` block starts a
-*coroutine*, and is executed in sequential manner.
+*coprocess*, and is executed in sequential manner.
 
-> **Coroutines - the basic unit of concurrency**: In Polyphony, concurrent
-> operations take place inside coroutines. A `Coroutine` is executed on top of a
+> **Coprocesss - the basic unit of concurrency**: In Polyphony, concurrent
+> operations take place inside coprocesss. A `Coprocess` is executed on top of a
 > `Fiber`, which allows it to be suspended whenever a blocking operation is
-> called, and resumed once that operation has been completed. Coroutines offer
+> called, and resumed once that operation has been completed. Coprocesss offer
 > significant advantages over threads - they consume only about 10KB, switching
 > between them is much faster than switching threads, and literally millions of
 > them can be spawned without affecting performance*. Besides, Ruby does not yet
@@ -113,7 +113,7 @@ require 'polyphony'
 
 server = TCPServer.open(1234)
 while client = server.accept
-  # spawn starts a new coroutine on a separate fiber
+  # spawn starts a new coprocess on a separate fiber
   spawn {
     while data = client.read rescue nil
       client.write(data)
@@ -128,10 +128,10 @@ This example demonstrates several features of Polyphony:
   server. The result of `server.accept` is also a native `TCPSocket` object.
   There are no wrapper classes being used.
 - The only hint of the code being concurrent is the use of `Kernel#spawn`,
-  which starts a new coroutine on a dedicated fiber. This allows serving
+  which starts a new coprocess on a dedicated fiber. This allows serving
   multiple clients at once. Whenever a blocking call is issued, such as
   `#accept` or `#read`, execution is *yielded* to the event loop, which will
-  resume only those coroutines which are ready to be resumed.
+  resume only those coprocesss which are ready to be resumed.
 - Exception handling is done using the normal Ruby constructs `raise`, `rescue`
   and `ensure`. Exceptions never go unhandled (as might be the case with Ruby
   threads), and must be dealt with explicitly. An unhandled exception will cause
@@ -224,9 +224,9 @@ In order to facilitate writing concurrent code, Polyphony provides additional
 constructs that make it easier to spawn concurrent tasks and to control them.
 
 `CancelScope` - an abstraction used to cancel the execution of one or more
-coroutines or supervisors. It usually works by defining a timeout for the 
+coprocesss or supervisors. It usually works by defining a timeout for the 
 completion of a task. Any blocking operation can be cancelled, including
-a coroutine or a supervisor. The developer may choose to cancel with or without
+a coprocess or a supervisor. The developer may choose to cancel with or without
 an exception with `cancel` or `move_on`, respectively. Cancel scopes are
 typically started using `Kernel.cancel_after` and `Kernel.move_on`:
 
@@ -261,9 +261,9 @@ Pool = Polyphony::ResourcePool.new(limit: 5) {
 }
 ```
 
-`Supervisor` - a class used to control one or more `Coroutine`s. It can be used
-to start, stop and restart multiple coroutines. A supervisor can also be
-used for awaiting the completion of multiple coroutines. It is usually started
+`Supervisor` - a class used to control one or more `Coprocess`s. It can be used
+to start, stop and restart multiple coprocesss. A supervisor can also be
+used for awaiting the completion of multiple coprocesss. It is usually started
 using `Kernel.supervise`:
 
 ```ruby
@@ -289,7 +289,7 @@ result = Polyphony::ThreadPool.process { long_running_process }
 `Throttler` - a mechanism for throttling an arbitrary task, such as sending of
 emails, or crawling a website. A throttler is normally created using 
 `Kernel.throttle`, and can even be used to throttle operations across multiple
-coroutines:
+coprocesss:
 
 ```ruby
 server = Net.tcp_listen(1234)

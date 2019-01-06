@@ -2,7 +2,7 @@
 
 export :async_decorate, :call_proc_with_optional_block
 
-Coroutine = import('./coroutine')
+Coprocess = import('./coprocess')
 FiberPool = import('./fiber_pool')
 
 # Converts a regular method into an async method, i.e. a method that returns a
@@ -14,7 +14,7 @@ def async_decorate(receiver, sym)
   sync_sym = :"sync_#{sym}"
   receiver.alias_method(sync_sym, sym)
   receiver.define_method(sym) do |*args, &block|
-    Coroutine.new { send(sync_sym, *args, &block) }
+    Coprocess.new { send(sync_sym, *args, &block) }
   end
 end
 

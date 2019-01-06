@@ -23,7 +23,7 @@ end
 
 def wait_for_thread(ctx)
   suspend
-rescue Exceptions::CoroutineInterrupt => e
+rescue Exceptions::CoprocessInterrupt => e
   ctx[:fiber] = nil
   ctx[:thread]&.raise(e)
   raise e

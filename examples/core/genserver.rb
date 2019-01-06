@@ -6,7 +6,7 @@ Polyphony = import('../../lib/polyphony')
 
 class GenServer
   def self.start(receiver, *args)
-    coroutine = spawn do
+    coprocess = spawn do
       state = receiver.initial_state(*args)
       loop do
         msg = receive
@@ -14,31 +14,31 @@ class GenServer
         msg[:from] << reply unless reply == :noreply
       end
     end
-    build_api(coroutine, receiver)
+    build_api(coprocess, receiver)
     EV.snooze
-    coroutine
+    coprocess
   end
 
-  def self.build_api(coroutine, receiver)
+  def self.build_api(coprocess, receiver)
     receiver.methods(false).each do |m|
       if m =~ /!$/
-        coroutine.define_singleton_method(m) do |*args|
-          GenServer.cast(coroutine, m, *args)
+        coprocess.define_singleton_method(m) do |*args|
+          GenServer.cast(coprocess, m, *args)
         end
       else
-        coroutine.define_singleton_method(m) do |*args|
-          GenServer.call(coroutine, m, *args)
+        coprocess.define_singleton_method(m) do |*args|
+          GenServer.call(coprocess, m, *args)
         end
       end
     end
   end
 
   def self.cast(process, method, *args)
-    process << {from: Polyphony::Coroutine.current, method: method, args: args}
+    process << {from: Polyphony::Coprocess.current, method: method, args: args}
   end
 
   def self.call(process, method, *args)
-    process << {from: Polyphony::Coroutine.current, method: method, args: args}
+    process << {from: Polyphony::Coprocess.current, method: method, args: args}
     receive
   end
 end

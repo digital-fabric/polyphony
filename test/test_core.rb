@@ -4,7 +4,7 @@ require 'modulation'
 module CoreTests
   CancelScope = import('../lib/polyphony/core/cancel_scope')
   Core        = import('../lib/polyphony/core')
-  Coroutine   = import('../lib/polyphony/core/coroutine')
+  Coprocess   = import('../lib/polyphony/core/coprocess')
   Exceptions  = import('../lib/polyphony/core/exceptions')
   Supervisor  = import('../lib/polyphony/core/supervisor')
 
@@ -13,123 +13,123 @@ module CoreTests
       EV.rerun
     end
 
-    def test_that_spawn_returns_a_coroutine
+    def test_that_spawn_returns_a_coprocess
       result = nil
-      coroutine = spawn { result = 42 }
+      coprocess = spawn { result = 42 }
 
-      assert_kind_of(Coroutine, coroutine)
+      assert_kind_of(Coprocess, coprocess)
       assert_nil(result)
       suspend
       assert_equal(42, result)
     end
 
-    def test_that_spawn_accepts_coroutine_argument
+    def test_that_spawn_accepts_coprocess_argument
       result = nil
-      coroutine = Coroutine.new { result = 42 }
-      spawn coroutine
+      coprocess = Coprocess.new { result = 42 }
+      spawn coprocess
 
       assert_nil(result)
       suspend
       assert_equal(42, result)
     end
 
-    def test_that_spawned_coroutine_saves_result
-      coroutine = spawn { 42 }
+    def test_that_spawned_coprocess_saves_result
+      coprocess = spawn { 42 }
 
-      assert_kind_of(Coroutine, coroutine)
-      assert_nil(coroutine.result)
+      assert_kind_of(Coprocess, coprocess)
+      assert_nil(coprocess.result)
       suspend
-      assert_equal(42, coroutine.result)
+      assert_equal(42, coprocess.result)
     end
 
-    def test_that_spawned_coroutine_can_be_interrupted
+    def test_that_spawned_coprocess_can_be_interrupted
       result = nil
-      coroutine = spawn { sleep(1); 42 }
-      EV.next_tick { coroutine.interrupt }
+      coprocess = spawn { sleep(1); 42 }
+      EV.next_tick { coprocess.interrupt }
       suspend
-      assert_nil(coroutine.result)
+      assert_nil(coprocess.result)
     end
   end
 
-  class CoroutineTest < MiniTest::Test
+  class CoprocessTest < MiniTest::Test
     def setup
       EV.rerun
     end
 
-    def test_that_coroutine_can_be_awaited
+    def test_that_coprocess_can_be_awaited
       result = nil
       spawn do
-        coroutine = Coroutine.new { sleep(0.001); 42 }
-        result = coroutine.await
+        coprocess = Coprocess.new { sleep(0.001); 42 }
+        result = coprocess.await
       end
       suspend
       assert_equal(42, result)
     end
 
-    def test_that_coroutine_can_be_stopped
+    def test_that_coprocess_can_be_stopped
       result = nil
-      coroutine = spawn do
+      coprocess = spawn do
         sleep(0.001)
         result = 42
       end
-      EV.next_tick { coroutine.interrupt }
+      EV.next_tick { coprocess.interrupt }
       suspend
       assert_nil(result)
     end
 
-    def test_that_coroutine_can_be_cancelled
+    def test_that_coprocess_can_be_cancelled
       result = nil
-      coroutine = spawn do
+      coprocess = spawn do
         sleep(0.001)
         result = 42
       rescue Exceptions::Cancel => e
         result = e
       end
-      EV.next_tick { coroutine.cancel! }
+      EV.next_tick { coprocess.cancel! }
 
       suspend
 
       assert_kind_of(Exceptions::Cancel, result)
-      assert_kind_of(Exceptions::Cancel, coroutine.result)
-      assert_nil(coroutine.running?)
+      assert_kind_of(Exceptions::Cancel, coprocess.result)
+      assert_nil(coprocess.running?)
     end
 
-    def test_that_inner_coroutine_can_be_interrupted
+    def test_that_inner_coprocess_can_be_interrupted
       result = nil
-      coroutine2 = nil
-      coroutine = spawn do
-        coroutine2 = spawn do
+      coprocess2 = nil
+      coprocess = spawn do
+        coprocess2 = spawn do
           sleep(0.001)
           result = 42
         end
-        coroutine2.await
+        coprocess2.await
         result && result += 1
       end
-      EV.next_tick { coroutine.interrupt }
+      EV.next_tick { coprocess.interrupt }
       suspend
       assert_nil(result)
-      assert_nil(coroutine.running?)
-      assert_nil(coroutine2.running?)
+      assert_nil(coprocess.running?)
+      assert_nil(coprocess2.running?)
     end
 
-    def test_that_inner_coroutine_can_interrupt_outer_coroutine
-      result, coroutine2 = nil
+    def test_that_inner_coprocess_can_interrupt_outer_coprocess
+      result, coprocess2 = nil
       
-      coroutine = spawn do
-        coroutine2 = spawn do
-          EV.next_tick { coroutine.interrupt }
+      coprocess = spawn do
+        coprocess2 = spawn do
+          EV.next_tick { coprocess.interrupt }
           sleep(0.001)
           result = 42
         end
-        coroutine2.await
+        coprocess2.await
         result && result += 1
       end
       
       suspend
       
       assert_nil(result)
-      assert_nil(coroutine.running?)
-      assert_nil(coroutine2.running?)
+      assert_nil(coprocess.running?)
+      assert_nil(coprocess2.running?)
     end
   end
 
@@ -145,7 +145,7 @@ module CoreTests
       end
     end
 
-    def test_that_cancel_scope_cancels_coroutine
+    def test_that_cancel_scope_cancels_coprocess
       ctx = {}
       spawn do
         EV::Timer.new(0.005, 0).start { ctx[:cancel_scope]&.cancel! }
@@ -240,7 +240,7 @@ module CoreTests
       end
     end
     
-    def test_that_supervisor_waits_for_all_nested_coroutines_to_complete
+    def test_that_supervisor_waits_for_all_nested_coprocesss_to_complete
       ctx = {}
       spawn do
         parallel_sleep(ctx)
@@ -251,7 +251,7 @@ module CoreTests
       assert(ctx[3])
     end
 
-    def test_that_supervisor_can_add_coroutines_after_having_started
+    def test_that_supervisor_can_add_coprocesss_after_having_started
       result = []
       spawn do
         supervisor = Supervisor.new

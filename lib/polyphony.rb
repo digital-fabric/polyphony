@@ -13,7 +13,7 @@ module Polyphony
 
   auto_import(
     Channel:      './polyphony/core/channel',
-    Coroutine:    './polyphony/core/coroutine',
+    Coprocess:    './polyphony/core/coprocess',
     Sync:         './polyphony/core/sync',
     Thread:       './polyphony/core/thread',
     ThreadPool:   './polyphony/core/thread_pool',
