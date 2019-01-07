@@ -91,8 +91,8 @@ class Coprocess
     @fiber&.schedule(value)
   end
 
-  def interrupt(value = Exceptions::MoveOn.new)
-    @fiber&.schedule(value)
+  def interrupt(value = nil)
+    @fiber&.schedule(Exceptions::MoveOn.new(nil, value))
   end
   alias_method :stop, :interrupt
 
