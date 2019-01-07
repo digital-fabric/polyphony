@@ -58,7 +58,7 @@ void Init_EV() {
   ID_clear                = rb_intern("clear");
   ID_each                 = rb_intern("each");
   ID_raise                = rb_intern("raise");
-  ID_scheduled_value      = rb_intern("scheduled_value");
+  ID_scheduled_value      = rb_intern("@scheduled_value");
   ID_transfer             = rb_intern("transfer");
   ID_R                    = rb_intern("r");
   ID_W                    = rb_intern("w");

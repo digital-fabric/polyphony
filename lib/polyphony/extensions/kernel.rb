@@ -17,27 +17,12 @@ class ::Fiber
     @cancelled
   end
 
-  def root?
-    @root
-  end
-
   def schedule(value = nil)
     EV.schedule_fiber(self, value)
   end
 
-  def set_root!
-    @root = true
-  end
-
-  def self.root
-    @@root
-  end
-
-  @@root = Fiber.current
-  @@root.set_root!
-
   # Associate a (pseudo-)coprocess with the main fiber
-  current.coprocess = Coprocess.new(Fiber.current)
+  current.coprocess = Coprocess.new(current)
 end
 
 class ::Exception
@@ -135,13 +120,6 @@ module ::Kernel
   def supervise(&block)
     Supervisor.new.await(&block)
   end
-
-  # @@reactor_fiber = Fiber.root
-
-  # def suspend
-  #   result = @@reactor_fiber.transfer
-  #   result.is_a?(Exception) ? raise(result) : result
-  # end
 
   def throttled_loop(rate, &block)
     throttler = Throttler.new(rate)
