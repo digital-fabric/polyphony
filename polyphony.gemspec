@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.summary     = 'Polyphony: Fiber-based Concurrency for Ruby'
   s.author      = 'Sharon Rosner'
   s.email       = 'ciconia@gmail.com'
-  s.files       = `git ls-files README.md CHANGELOG.md lib`.split
+  s.files       = `git ls-files`.split
   s.homepage    = 'http://github.com/digital-fabric/polyphony'
   s.metadata    = {
     "source_code_uri" => "https://github.com/digital-fabric/polyphony"
@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.extensions = ["ext/ev/extconf.rb"]
   s.require_paths = ["lib"]
 
-  s.add_runtime_dependency      'modulation',     '0.18'
+  s.add_runtime_dependency      'modulation',     '0.20'
   
   s.add_runtime_dependency      'http_parser.rb', '0.6.0'
   s.add_runtime_dependency      'http-2',         '0.10.0'
