@@ -26,8 +26,8 @@ end
 # @param socket [Net::Socket] socket
 # @param handler [Proc] request handler
 # @return [void]
-def run(socket, handler)
-  ctx = connection_context(socket, handler)
+def run(socket, opts, handler)
+  ctx = connection_context(socket, opts, handler)
   ctx[:parser].on_body = proc { |chunk| handle_body_chunk(ctx, chunk) }
 
   loop do
@@ -48,9 +48,10 @@ end
 # @param socket [Net::Socket] socket
 # @param handler [Proc] request handler
 # @return [Hash]
-def connection_context(socket, handler)
+def connection_context(socket, opts, handler)
   {
     can_upgrade:  true,
+    upgrade:      opts[:upgrade],
     count:        0,
     socket:       socket,
     handler:      handler,
@@ -98,12 +99,21 @@ S_PATH            = ':path'
 S_HTTP            = 'http'
 S_HOST            = 'Host'
 
-# Upgrades an HTTP 1 connection to HTTP 2 on client request
+# Upgrades an HTTP 1 connection to HTTP/2 or other protocol on client request
 # @param ctx [Hash] connection context
 # @return [Boolean] true if connection was upgraded
 def upgrade_connection(ctx)
-  return false unless ctx[:parser].headers[S_UPGRADE] == S_H2C
+  upgrade_protocol = ctx[:parser].headers[S_UPGRADE]
+  return false unless upgrade_protocol
 
+  if ctx[:upgrade] && ctx[:upgrade][upgrade_protocol.to_sym]
+    ctx[:upgrade][upgrade_protocol.to_sym].(ctx[:socket], ctx[:parser].headers)
+    return true
+  end
+
+  return false unless upgrade_protocol == S_H2C
+  
+  # upgrade to HTTP/2
   request = http2_upgraded_request(ctx)
   body = ctx[:body] || S_EMPTY
   HTTP2.upgrade(ctx[:socket], ctx[:handler], request, body)

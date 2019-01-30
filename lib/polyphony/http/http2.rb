@@ -30,7 +30,7 @@ def prepare(socket, handler)
   end
 end
 
-def run(socket, handler)
+def run(socket, opts, handler)
   interface = prepare(socket, handler)
   client_loop(socket, interface)
 end
