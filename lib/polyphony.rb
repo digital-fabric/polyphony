@@ -7,9 +7,14 @@ export_default :Polyphony
 Polyphony = import('./polyphony/core')
 Exceptions = import('./polyphony/core/exceptions')
 
+import('polyphony/extensions/socket')
+import('polyphony/extensions/ssl')
+
 module Polyphony
   Cancel        = Exceptions::Cancel
   MoveOn        = Exceptions::MoveOn
+
+  Net = import('./polyphony/net')
 
   auto_import(
     Channel:      './polyphony/core/channel',
@@ -19,7 +24,7 @@ module Polyphony
     ThreadPool:   './polyphony/core/thread_pool',
   
     FS:           './polyphony/fs',
-    Net:          './polyphony/net',
+    # Net:          './polyphony/net',
     ResourcePool: './polyphony/resource_pool',
     Supervisor:   './polyphony/supervisor'
   )
