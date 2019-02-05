@@ -5,9 +5,9 @@ export_default :Request
 require 'uri'
 
 class Request
-  def setup(conn, parser, body)
+  def initialize(conn, parser, body)
     @conn         = conn
-    @parser = parser
+    @parser       = parser
     @method       = parser.http_method
     @request_url  = parser.request_url
     @body         = body

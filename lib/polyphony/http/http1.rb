@@ -56,8 +56,7 @@ def connection_context(socket, opts, handler)
     socket:       socket,
     handler:      handler,
     parser:       Http::Parser.new.async!,
-    body:         nil,
-    request:      Request.new
+    body:         nil
   }
 end
 
@@ -78,8 +77,8 @@ def handle_request(ctx)
 
   # allow upgrading the connection only on first request
   ctx[:can_upgrade] = false
-  ctx[:request].setup(ctx[:socket], ctx[:parser], ctx[:body])
-  ctx[:handler].(ctx[:request])
+  request = Request.new(ctx[:socket], ctx[:parser], ctx[:body])
+  ctx[:handler].(request)
   
   if ctx[:parser].keep_alive?
     ctx[:body] = nil

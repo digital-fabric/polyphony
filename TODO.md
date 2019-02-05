@@ -1,8 +1,10 @@
+## ResourcePool delegation
+
+- Add `ResourcePool#method_missing` method
+
 ## Testing
 
-- test EV layer: `EV.run`, watchers: IO, timer, signal (and `Core.trap`), async
-- test promises / async constructs: async/await, generator, pulse etc.
-- test stream / IO
+- test IO
 - test TCP server / client
 - test thread / thread_pool modules
 
