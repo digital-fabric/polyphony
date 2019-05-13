@@ -133,7 +133,7 @@ module ::Kernel
   end
 
   def timeout(duration, opts = {}, &block)
-    CancelScope.new(opts.merge(timeout: duration)).(&block)
+    CancelScope.new(**opts, timeout: duration).(&block)
   end
 end
 
