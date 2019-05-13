@@ -31,7 +31,7 @@ class Request
     @uri ||= URI.parse(@parser.request_url || S_EMPTY)
     return @query if @query
   
-    if (q = u.query)
+    if (q = @uri.query)
       @query = q.split(S_AMPERSAND).each_with_object({}) do |kv, h|
         k, v = kv.split(S_EQUAL)
         h[k.to_sym] = URI.decode_www_form_component(v)
