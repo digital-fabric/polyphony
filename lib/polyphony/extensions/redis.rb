@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :Connection
+export :Driver
 
 require "redis"
 require "hiredis/reader"
