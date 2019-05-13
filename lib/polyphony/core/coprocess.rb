@@ -97,7 +97,7 @@ class Coprocess
   alias_method :stop, :interrupt
 
   def cancel!
-    interrupt(Exceptions::Cancel.new)
+    @fiber&.schedule(Exceptions::Cancel.new)
   end
 
   def self.current
