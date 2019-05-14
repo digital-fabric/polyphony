@@ -56,9 +56,10 @@ class ::PG::Connection
   alias_method :orig_async_exec, :async_exec
   def async_exec(*args, &block)
     send_query(*args)
-    result = get_result(&block)
+    get_result(&block)
+  ensure
+    # cleanup result in order to allow next query
     while get_result; end
-    result
   end
 
   def block(timeout = 0)
