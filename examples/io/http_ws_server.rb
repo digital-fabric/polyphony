@@ -30,29 +30,7 @@ opts = {
   }
 }
 
-HTML = <<~EOF
-<!doctype html>
-<html lang="en">
-<head>
-  <title>Websocket Client</title>
-</head>
-<body>
-  <script>
-    var exampleSocket = new WebSocket("ws://localhost:1234");
-    exampleSocket.onopen = function (event) {
-      document.querySelector('#status').innerText = 'connected';
-      exampleSocket.send("Can you hear me?"); 
-    };
-    exampleSocket.onmessage = function (event) {
-      document.querySelector('#msg').innerText = event.data;
-      console.log(event.data);
-    }
-  </script>
-  <h1 id="status"></h1>
-  <h1 id="msg"></h1>
-</body>
-</html>
-EOF
+HTML = IO.read(File.join(__dir__, 'ws_page.html'))
 
 server = HTTPServer.serve('0.0.0.0', 1234, opts) do |req|
   req.respond(HTML, 'Content-Type' => 'text/html')
