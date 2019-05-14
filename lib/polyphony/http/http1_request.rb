@@ -55,7 +55,7 @@ class Request
     headers[S_CONTENT_LENGTH] = body.bytesize if body
     headers.each do |k, v|
       if v.is_a?(Array)
-        v.each { |vv| data << "#{k}: #{vv}\r\n" }
+        v.each { |o| data << "#{k}: #{o}\r\n" }
       else
         data << "#{k}: #{v}\r\n"
       end
