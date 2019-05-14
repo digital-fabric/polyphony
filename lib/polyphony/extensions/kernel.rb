@@ -57,9 +57,7 @@ module ::Kernel
   def async_decorate(receiver, sym)
     sync_sym = :"sync_#{sym}"
     receiver.alias_method(sync_sym, sym)
-    receiver.define_method(sym) do |*args, &block|
-      Coprocess.new { send(sync_sym, *args, &block) }
-    end
+    receiver.class_eval("def #{sym}(*args, &block); Coprocess.new { send(#{sync_sym.inspect}, *args, &block) }; end")
   end
 
   def cancel_after(duration, &block)
