@@ -21,33 +21,26 @@ class Request
     end
   end
 
-  S_METHOD = ':method'
-
   def method
-    @method ||= @headers[S_METHOD]
+    @method ||= @headers[':method']
   end
 
   def scheme
     @scheme ||= @headers[':scheme']
   end
 
-  S_EMPTY     = ''
-
   def path
-    @uri ||= URI.parse(@headers[':path'] || S_EMPTY)
+    @uri ||= URI.parse(@headers[':path'] || '')
     @path ||= @uri.path
   end
 
-  S_AMPERSAND = '&'
-  S_EQUAL     = '='
-  
   def query
-    @uri ||= URI.parse(@headers[':path'] || S_EMPTY)
+    @uri ||= URI.parse(@headers[':path'] || '')
     return @query if @query
   
     if (q = u.query)
-      @query = q.split(S_AMPERSAND).each_with_object({}) do |kv, h|
-        k, v = kv.split(S_EQUAL)
+      @query = q.split('&').each_with_object({}) do |kv, h|
+        k, v = kv.split('=')
         h[k.to_sym] = URI.decode_www_form_component(v)
       end
     else
@@ -55,13 +48,8 @@ class Request
     end
   end
 
-  S_CONTENT_LENGTH = 'Content-Length'
-  S_STATUS = ':status'
-  S_STATUS_200 = '200'
-  EMPTY_LINE = "\r\n"
-
   def respond(body, headers = {})
-    headers[S_STATUS] ||= S_STATUS_200
+    headers[':status'] ||= '200'
 
     @stream.headers(headers, end_stream: false)
     @stream.data(body, end_stream: true)

@@ -47,8 +47,6 @@ class Agent
     request(url, method: :POST, query: query)
   end
 
-  S_LOCATION = 'Location'
-
   OPTS_DEFAULT = {}.freeze
 
   def request(url, opts = OPTS_DEFAULT)
@@ -57,7 +55,7 @@ class Agent
 
     case response[:status_code]
     when 301, 302
-      request(response[:headers][S_LOCATION])
+      request(response[:headers]['Location'])
     when 200, 204
       response.extend(ResponseMixin)
     else
@@ -99,10 +97,8 @@ class Agent
     end
   end
 
-  S_H2 = 'h2'
-
   def protocol_method(socket, ctx)
-    if socket.is_a?(::OpenSSL::SSL::SSLSocket) && (socket.alpn_protocol == S_H2)
+    if socket.is_a?(::OpenSSL::SSL::SSLSocket) && (socket.alpn_protocol == 'h2')
       :do_http2
     else
       :do_http1
@@ -195,15 +191,13 @@ class Agent
     }
   end
 
-  S_HTTP = 'http'
-  S_HTTPS = 'https'
   SECURE_OPTS = { secure: true, alpn_protocols: ['h2', 'http/1.1'] }
 
   def connect(key)
     case key[:scheme]
-    when S_HTTP
+    when 'http'
       Polyphony::Net.tcp_connect(key[:host], key[:port])
-    when S_HTTPS
+    when 'https'
       Polyphony::Net.tcp_connect(key[:host], key[:port], SECURE_OPTS).tap do |socket|
         socket.post_connection_check(key[:host])
       end

@@ -17,23 +17,18 @@ class Request
     @method ||= @parser.http_method
   end
 
-  S_EMPTY     = ''
-
   def path
-    @uri ||= URI.parse(@parser.request_url || S_EMPTY)
+    @uri ||= URI.parse(@parser.request_url || '')
     @path ||= @uri.path
   end
 
-  S_AMPERSAND = '&'
-  S_EQUAL     = '='
-  
   def query
-    @uri ||= URI.parse(@parser.request_url || S_EMPTY)
+    @uri ||= URI.parse(@parser.request_url || '')
     return @query if @query
   
     if (q = @uri.query)
-      @query = q.split(S_AMPERSAND).each_with_object({}) do |kv, h|
-        k, v = kv.split(S_EQUAL)
+      @query = q.split('&').each_with_object({}) do |kv, h|
+        k, v = kv.split('=')
         h[k.to_sym] = URI.decode_www_form_component(v)
       end
     else
@@ -45,14 +40,10 @@ class Request
     @headers ||= @parser.headers
   end
 
-  S_CONTENT_LENGTH  = 'Content-Length'
-  S_STATUS          = ':status'
-  EMPTY_LINE = "\r\n"
-
   def respond(body, headers = {})
-    status = headers.delete(S_STATUS) || 200
+    status = headers.delete(':status') || 200
     data = +"HTTP/1.1 #{status}\r\n"
-    headers[S_CONTENT_LENGTH] = body.bytesize if body
+    headers['Content-Length'] = body.bytesize if body
     headers.each do |k, v|
       if v.is_a?(Array)
         v.each { |o| data << "#{k}: #{o}\r\n" }
@@ -60,11 +51,8 @@ class Request
         data << "#{k}: #{v}\r\n"
       end
     end
-    if body
-      data << "\r\n#{body}"
-    else
-      data << EMPTY_LINE
-    end
+    data << "\r\n
+    data << body if body
 
     @conn << data
   end

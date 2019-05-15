@@ -88,21 +88,11 @@ def handle_request(ctx)
   end
 end
 
-S_EMPTY           = ''
-S_UPGRADE         = 'Upgrade'
-S_H2C             = 'h2c'
-S_SCHEME          = ':scheme'
-S_METHOD          = ':method'
-S_AUTHORITY       = ':authority'
-S_PATH            = ':path'
-S_HTTP            = 'http'
-S_HOST            = 'Host'
-
 # Upgrades an HTTP 1 connection to HTTP/2 or other protocol on client request
 # @param ctx [Hash] connection context
 # @return [Boolean] true if connection was upgraded
 def upgrade_connection(ctx)
-  upgrade_protocol = ctx[:parser].headers[S_UPGRADE]
+  upgrade_protocol = ctx[:parser].headers['Upgrade']
   return false unless upgrade_protocol
 
   if ctx[:upgrade] && ctx[:upgrade][upgrade_protocol.to_sym]
@@ -110,11 +100,11 @@ def upgrade_connection(ctx)
     return true
   end
 
-  return false unless upgrade_protocol == S_H2C
+  return false unless upgrade_protocol == 'h2c'
   
   # upgrade to HTTP/2
   request = http2_upgraded_request(ctx)
-  body = ctx[:body] || S_EMPTY
+  body = ctx[:body] || ''
   HTTP2.upgrade(ctx[:socket], ctx[:handler], request, body)
   true
 end
@@ -125,9 +115,9 @@ end
 def http2_upgraded_request(ctx)
   headers = ctx[:parser].headers
   headers.merge(
-    S_SCHEME    => S_HTTP,
-    S_METHOD    => ctx[:parser].http_method,
-    S_AUTHORITY => headers[S_HOST],
-    S_PATH      => ctx[:parser].request_url
+    ':scheme'     => 'http',
+    ':method'     => ctx[:parser].http_method,
+    ':authority'  => headers['Host'],
+    ':path'       => ctx[:parser].request_url
   )
 end

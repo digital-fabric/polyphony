@@ -6,8 +6,6 @@ require 'http/2'
 
 Request = import('./http2_request')
 
-S_HTTP2_SETTINGS  = 'HTTP2-Settings'
-
 UPGRADE_MESSAGE = <<~HTTP.gsub("\n", "\r\n")
   HTTP/1.1 101 Switching Protocols
   Connection: Upgrade
@@ -17,7 +15,7 @@ HTTP
 
 def upgrade(socket, handler, request, body)
   interface = prepare(socket, handler)
-  settings = request[S_HTTP2_SETTINGS]
+  settings = request['HTTP2-Settings']
   socket.write(UPGRADE_MESSAGE)
   interface.upgrade(settings, request, body)
   client_loop(socket, interface)

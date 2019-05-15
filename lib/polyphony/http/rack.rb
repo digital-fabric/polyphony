@@ -18,10 +18,8 @@ def env(request)
   { }
 end
 
-S_STATUS = ':status'
-
 def respond(request, (status_code, headers, body))
-  headers[S_STATUS] = status_code.to_s
+  headers[':status'] = status_code.to_s
   body = body.first
   request.respond(body, headers)
 end
