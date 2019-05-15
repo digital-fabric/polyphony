@@ -22,7 +22,7 @@ class ResourcePool
     yield resource
   ensure
     @available << resource if resource
-    dequeue
+    dequeue unless @waiting.empty?
   end
 
   def wait
@@ -41,6 +41,10 @@ class ResourcePool
 
   def from_stock
     @available.shift || (@count < @limit && allocate)
+  end
+
+  def method_missing(sym, *args, &block)
+    acquire { |r| r.send(sym, *args, &block) }
   end
 
   # Allocates a resource

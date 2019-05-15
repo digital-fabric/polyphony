@@ -1,7 +1,3 @@
-## ResourcePool delegation
-
-- Add `ResourcePool#method_missing` method
-
 ## Testing
 
 - test IO

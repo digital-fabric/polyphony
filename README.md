@@ -31,16 +31,18 @@ takes care of context-switching automatically whenever a blocking call like
 
 ## Features
 
+- **Full-blown, integrated, high-performance HTTP 1 / HTTP 2 / WebSocket server
+  with TLS/SSL termination and automatic ALPN protocol selection**.
 - Co-operative scheduling of concurrent tasks using Ruby fibers.
 - High-performance event reactor for handling I/O events and timers.
 - Natural, sequential programming style that makes it easy to reason about
   concurrent code.
-- Higher-order constructs for controlling the execution of concurrent code:
+- Abstractions and constructs for controlling the execution of concurrent code:
   coprocesses, supervisors, cancel scopes, throttling, resource pools etc.
 - Code can use native networking classes and libraries, growing support for
   third-party gems such as `pg` and `redis`.
-- Comprehensive HTTP 1.0 / 1.1 / 2 client and server APIs.
-- Excellent performance and scalability characteristics, in terms of both
+- HTTP 1 / HTTP 2 client
+- Competitive performance and scalability characteristics, in terms of both
   throughput and memory consumption.
 
 ## Prior Art
@@ -258,6 +260,21 @@ Pool = Polyphony::ResourcePool.new(limit: 5) {
   spawn {
     Pool.acquire { |db| p db.query('select 1') }
   }
+}
+```
+
+You can also call arbitrary methods on the resource pool, which will be
+delegated to the resource using `#method_missing`:
+
+```ruby
+# up to 5 concurrent connections
+Pool = Polyphony::ResourcePool.new(limit: 5) {
+  # the block sets up the resource
+  PG.connect(...)
+}
+
+1000.times {
+  spawn { p Pool.query('select 1') }
 }
 ```
 
