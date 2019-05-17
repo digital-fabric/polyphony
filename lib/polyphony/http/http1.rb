@@ -31,7 +31,8 @@ def run(socket, opts, handler)
   ctx[:parser].on_body = proc { |chunk| handle_body_chunk(ctx, chunk) }
 
   loop do
-    data = socket.read
+    data = socket.readpartial(8192)
+    break unless data
     if ctx[:parser].parse(data)
       break unless handle_request(ctx)
       EV.snooze

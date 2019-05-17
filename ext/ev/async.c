@@ -12,9 +12,9 @@ static VALUE cEV_Async = Qnil;
 
 /* Allocator/deallocator */
 static VALUE EV_Async_allocate(VALUE klass);
-static void EV_Async_mark(struct EV_Async *async);
-static void EV_Async_free(struct EV_Async *async);
-static size_t EV_Async_size(struct EV_Async *async);
+static void EV_Async_mark(void *ptr);
+static void EV_Async_free(void *ptr);
+static size_t EV_Async_size(const void *ptr);
 
 /* Methods */
 static VALUE EV_Async_initialize(VALUE self);
@@ -52,7 +52,8 @@ static VALUE EV_Async_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &EV_Async_type, async);
 }
 
-static void EV_Async_mark(struct EV_Async *async) {
+static void EV_Async_mark(void *ptr) {
+  struct EV_Async *async = ptr;
   if (async->callback != Qnil) {
     rb_gc_mark(async->callback);
   }
@@ -61,12 +62,13 @@ static void EV_Async_mark(struct EV_Async *async) {
   }
 }
 
-static void EV_Async_free(struct EV_Async *async) {
+static void EV_Async_free(void *ptr) {
+  struct EV_Async *async = ptr;
   ev_async_stop(EV_DEFAULT, &async->ev_async);
   xfree(async);
 }
 
-static size_t EV_Async_size(struct EV_Async *async) {
+static size_t EV_Async_size(const void *ptr) {
   return sizeof(struct EV_Async);
 }
 

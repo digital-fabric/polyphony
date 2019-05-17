@@ -14,9 +14,9 @@ static VALUE cEV_Child = Qnil;
 
 /* Allocator/deallocator */
 static VALUE EV_Child_allocate(VALUE klass);
-static void EV_Child_mark(struct EV_Child *child);
-static void EV_Child_free(struct EV_Child *child);
-static size_t EV_Child_size(struct EV_Child *child);
+static void EV_Child_mark(void *ptr);
+static void EV_Child_free(void *ptr);
+static size_t EV_Child_size(const void *ptr);
 
 /* Methods */
 static VALUE EV_Child_initialize(VALUE self, VALUE pid);
@@ -51,7 +51,8 @@ static VALUE EV_Child_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &EV_Child_type, child);
 }
 
-static void EV_Child_mark(struct EV_Child *child) {
+static void EV_Child_mark(void *ptr) {
+  struct EV_Child *child = ptr;
   if (child->callback != Qnil) {
     rb_gc_mark(child->callback);
   }
@@ -60,14 +61,15 @@ static void EV_Child_mark(struct EV_Child *child) {
   }
 }
 
-static void EV_Child_free(struct EV_Child *child) {
+static void EV_Child_free(void *ptr) {
+  struct EV_Child *child = ptr;
   if (child->active) {
     ev_child_stop(EV_DEFAULT, &child->ev_child);
   }
   xfree(child);
 }
 
-static size_t EV_Child_size(struct EV_Child *child) {
+static size_t EV_Child_size(const void *ptr) {
   return sizeof(struct EV_Child);
 }
 

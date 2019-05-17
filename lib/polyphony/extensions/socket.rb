@@ -5,9 +5,11 @@ require 'socket'
 import('./io')
 
 class ::Socket
+  NO_EXCEPTION = { exception: false }.freeze
+
   def accept
     loop do
-      result, client_addr = accept_nonblock(::IO::NO_EXCEPTION)
+      result, client_addr = accept_nonblock(NO_EXCEPTION)
       case result
       when Socket         then return result
       when :wait_readable then read_watcher.await
@@ -21,7 +23,7 @@ class ::Socket
 
   def connect(remotesockaddr)
     loop do
-      result = connect_nonblock(remotesockaddr, ::IO::NO_EXCEPTION)
+      result = connect_nonblock(remotesockaddr, NO_EXCEPTION)
       case result
       when 0              then return
       when :wait_writable then write_watcher.await
@@ -35,7 +37,7 @@ class ::Socket
   def recvfrom(maxlen, flags = 0)
     @read_buffer ||= +''
     loop do
-      result = recvfrom_nonblock(maxlen, flags, @read_buffer, ::IO::NO_EXCEPTION)
+      result = recvfrom_nonblock(maxlen, flags, @read_buffer, NO_EXCEPTION)
       case result
       when nil            then raise IOError
       when :wait_readable then read_watcher.await
@@ -69,9 +71,11 @@ class ::Socket
 end
 
 class ::TCPServer
+  NO_EXCEPTION = { exception: false }.freeze
+
   def accept
     loop do
-      result, client_addr = accept_nonblock(::IO::NO_EXCEPTION)
+      result, client_addr = accept_nonblock(NO_EXCEPTION)
       case result
       when TCPSocket         then return result
       when :wait_readable then read_watcher.await

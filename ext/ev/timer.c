@@ -15,9 +15,9 @@ static VALUE cEV_Timer = Qnil;
 
 /* Allocator/deallocator */
 static VALUE EV_Timer_allocate(VALUE klass);
-static void EV_Timer_mark(struct EV_Timer *timer);
-static void EV_Timer_free(struct EV_Timer *timer);
-static size_t EV_Timer_size(struct EV_Timer *timer);
+static void EV_Timer_mark(void *ptr);
+static void EV_Timer_free(void *ptr);
+static size_t EV_Timer_size(const void *ptr);
 
 /* Methods */
 static VALUE EV_Timer_initialize(VALUE self, VALUE after, VALUE repeat);
@@ -54,7 +54,8 @@ static VALUE EV_Timer_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &EV_Timer_type, timer);
 }
 
-static void EV_Timer_mark(struct EV_Timer *timer) {
+static void EV_Timer_mark(void *ptr) {
+  struct EV_Timer *timer = ptr;
   if (timer->callback != Qnil) {
     rb_gc_mark(timer->callback);
   }
@@ -63,14 +64,15 @@ static void EV_Timer_mark(struct EV_Timer *timer) {
   }
 }
 
-static void EV_Timer_free(struct EV_Timer *timer) {
+static void EV_Timer_free(void *ptr) {
+  struct EV_Timer *timer = ptr;
   if (timer->active) {
     ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
   }
   xfree(timer);
 }
 
-static size_t EV_Timer_size(struct EV_Timer *timer) {
+static size_t EV_Timer_size(const void *ptr) {
   return sizeof(struct EV_Timer);
 }
 

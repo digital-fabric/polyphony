@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 export  :tcp_connect,
-        :tcp_listen,
-        :getaddrinfo
+        :tcp_listen#,
+        # :getaddrinfo
 
 import('./extensions/socket')
 import('./extensions/ssl')

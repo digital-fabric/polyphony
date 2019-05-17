@@ -12,9 +12,9 @@ static VALUE cEV_Signal = Qnil;
 
 /* Allocator/deallocator */
 static VALUE EV_Signal_allocate(VALUE klass);
-static void EV_Signal_mark(struct EV_Signal *signal);
-static void EV_Signal_free(struct EV_Signal *signal);
-static size_t EV_Signal_size(struct EV_Signal *signal);
+static void EV_Signal_mark(void *ptr);
+static void EV_Signal_free(void *ptr);
+static size_t EV_Signal_size(const void *ptr);
 
 /* Methods */
 static VALUE EV_Signal_initialize(VALUE self, VALUE sig);
@@ -47,18 +47,20 @@ static VALUE EV_Signal_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &EV_Signal_type, signal);
 }
 
-static void EV_Signal_mark(struct EV_Signal *signal) {
+static void EV_Signal_mark(void *ptr) {
+  struct EV_Signal *signal = ptr;
   if (signal->callback != Qnil) {
     rb_gc_mark(signal->callback);
   }
 }
 
-static void EV_Signal_free(struct EV_Signal *signal) {
+static void EV_Signal_free(void *ptr) {
+  struct EV_Signal *signal = ptr;
   ev_signal_stop(EV_DEFAULT, &signal->ev_signal);
   xfree(signal);
 }
 
-static size_t EV_Signal_size(struct EV_Signal *signal) {
+static size_t EV_Signal_size(const void *ptr) {
   return sizeof(struct EV_Signal);
 }
 
