@@ -204,6 +204,7 @@ static int EV_IO_symbol2event_mask(VALUE sym) {
 }
 
 //////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 // the following is copied verbatim from the Ruby source code (io.c)
 struct io_internal_read_struct {
     int fd;
@@ -247,6 +248,7 @@ static void io_set_read_length(VALUE str, long n, int shrinkable) {
     if (shrinkable) io_shrink_read_string(str, n);
   }
 }
+//////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
 static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
@@ -398,29 +400,6 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
       }
     }
   }
-
-  // for (i = 0; i < argc; i++) {
-  //   VALUE str = argv[i];
-  //   if (!RB_TYPE_P(str, T_STRING))
-	//     str = rb_obj_as_string(str);
-  //   n = write(fptr->fd, RSTRING_PTR(str), RSTRING_LEN(str));
-  //   RB_GC_GUARD(str);
-
-  //   if (n < 0) {
-  //     int e = errno;
-  //     if (e == EWOULDBLOCK || e == EAGAIN) {
-  //       if (write_watcher == Qnil)
-  //         write_watcher = rb_funcall(io, ID_write_watcher, 0);
-  //       EV_IO_await(write_watcher);
-  //     }
-  //     else {
-  //       rb_syserr_fail(e, strerror(e));
-  //       // rb_syserr_fail_path(e, fptr->pathv);
-  //     }
-  //   }
-  //   else
-  //     total = total + n;
-  // }
 
   return LONG2FIX(total);
 }
