@@ -15,7 +15,6 @@ def ws_handler(conn)
     }
   }
   while msg = conn.recv
-    puts "recv #{msg}"
     # conn << "you said: #{msg}"
   end
 ensure

@@ -10,7 +10,7 @@
 
       exampleSocket.onopen = function (event) {
         document.querySelector('#status').innerText = 'connected';
-        exampleSocket.send("Can you hear me?"); 
+        exampleSocket.send("Can you hear me?");
       };
       exampleSocket.onclose = function (event) {
         console.log('onclose');

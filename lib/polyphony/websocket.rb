@@ -26,9 +26,13 @@ class WebsocketConnection
 
   def recv
     while true
-      @reader << @client.read
-      if data = @reader.next
-        break data.to_s
+      if (packet = @client.readpartial)
+        @reader << packet
+        if data = @reader.next
+          break data.to_s
+        end
+      else
+        break nil
       end
     end
   end
