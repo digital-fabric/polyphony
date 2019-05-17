@@ -1,3 +1,12 @@
+0.14 2019-05-17
+---------------
+
+* Use chunked encoding in HTTP 1 response
+* Rewrite IO#read, #readpartial, #write in C (about 30% performance improvement)
+* Add method delegation to `ResourcePool`
+* Optimize PG::Connection#async_exec
+* Fix Coprocess#cancel!
+* Preliminary support for websocket (see `examples/io/http_ws_server.rb`)
 * Rename `Coroutine` to `Coprocess`
 
 0.13 2019-01-05
