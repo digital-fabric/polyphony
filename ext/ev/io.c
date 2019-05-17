@@ -291,8 +291,8 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
       break;
     else {
       total = total + n;
-      buf = buf + n;
-      len = len - n;
+      buf += n;
+      len -= n;
       if (len == 0)
         break;
     }
@@ -370,24 +370,57 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
     VALUE str = argv[i];
     if (!RB_TYPE_P(str, T_STRING))
 	    str = rb_obj_as_string(str);
-    n = write(fptr->fd, RSTRING_PTR(str), RSTRING_LEN(str));
+    char *buf = RSTRING_PTR(str);
+    long len = RSTRING_LEN(str);
     RB_GC_GUARD(str);
+    while (1) {
+      n = write(fptr->fd, buf, len);
 
-    if (n < 0) {
-      int e = errno;
-      if (e == EWOULDBLOCK || e == EAGAIN) {
-        if (write_watcher == Qnil)
-          write_watcher = rb_funcall(io, ID_write_watcher, 0);
-        EV_IO_await(write_watcher);
+      if (n < 0) {
+        int e = errno;
+        if (e == EWOULDBLOCK || e == EAGAIN) {
+          if (write_watcher == Qnil)
+            write_watcher = rb_funcall(io, ID_write_watcher, 0);
+          EV_IO_await(write_watcher);
+        }
+        else {
+          rb_syserr_fail(e, strerror(e));
+          // rb_syserr_fail_path(e, fptr->pathv);
+        }
       }
       else {
-        rb_syserr_fail(e, strerror(e));
-        // rb_syserr_fail_path(e, fptr->pathv);
+        total += n;
+        if (n < len) {
+          buf += n;
+          len -= n;
+        }
+        else break;
       }
     }
-    else
-      total = total + n;
   }
+
+  // for (i = 0; i < argc; i++) {
+  //   VALUE str = argv[i];
+  //   if (!RB_TYPE_P(str, T_STRING))
+	//     str = rb_obj_as_string(str);
+  //   n = write(fptr->fd, RSTRING_PTR(str), RSTRING_LEN(str));
+  //   RB_GC_GUARD(str);
+
+  //   if (n < 0) {
+  //     int e = errno;
+  //     if (e == EWOULDBLOCK || e == EAGAIN) {
+  //       if (write_watcher == Qnil)
+  //         write_watcher = rb_funcall(io, ID_write_watcher, 0);
+  //       EV_IO_await(write_watcher);
+  //     }
+  //     else {
+  //       rb_syserr_fail(e, strerror(e));
+  //       // rb_syserr_fail_path(e, fptr->pathv);
+  //     }
+  //   }
+  //   else
+  //     total = total + n;
+  // }
 
   return LONG2FIX(total);
 }

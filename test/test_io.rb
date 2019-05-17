@@ -17,6 +17,7 @@ module IOTests
       [
         spawn {
           o.write("hello")
+          o.close
         },
 
         spawn {
