@@ -7,22 +7,18 @@
 ## UDP socket
 
 ```ruby
-socket = UDP.new
+socket = UDPSocket.new
+socket.bind("127.0.0.1", 1234)
 
-socket.on(:message) do |msg, info|
-  puts "got #{msg} from #{info[:address]}:#{info[:port]}"
-  socket.send("reply", **info)
-end
-
-socket.on(:listen) { puts "listening..." }
-
-socket.bind(1234) # localhost port 1234
+socket.send "message-to-self", 0, "127.0.0.1", 1234
+p socket.recvfrom(10)
+#=> ["message-to", ["AF_INET", 4913, "localhost", "127.0.0.1"]]
 ```
 
 ## DNS client
 
 ```ruby
-ip_address = await DNS.lookup('google.com', 'A')
+ip_address = DNS.lookup('google.com', 'A')
 ```
 
 Prior art:

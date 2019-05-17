@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :serve, :listen
+export :serve, :listener
 
 Net   = import('../net')
 HTTP1 = import('./http1')
@@ -16,10 +16,10 @@ async def serve(host, port, opts = {}, &handler)
   accept_loop(server, opts, handler)
 end
 
-def listen(host, port, opts = {}, &handler)
+def listener(host, port, opts = {}, &handler)
   opts[:alpn_protocols] = ALPN_PROTOCOLS
   server = Net.tcp_listen(host, port, opts)
-  proc { accept_loop(server, handler) }
+  proc { accept_loop(server, opts, handler) }
 end
 
 def accept_loop(server, opts, handler)

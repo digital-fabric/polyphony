@@ -13,6 +13,10 @@ class Request
     @body         = body
   end
 
+  def http_version
+    1
+  end
+
   def method
     @method ||= @parser.http_method
   end
@@ -40,20 +44,40 @@ class Request
     @headers ||= @parser.headers
   end
 
-  def respond(body, headers = {})
+  EMPTY_HASH = {}
+
+  def respond(chunk, headers = EMPTY_HASH)
     status = headers.delete(':status') || 200
-    data = +"HTTP/1.1 #{status}\r\n"
-    headers['Content-Length'] = body.bytesize if body
+    data = format_head(headers)
+    if chunk
+      data << "#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n0\r\n\r\n"
+    end
+    @conn << data
+  end
+
+  def format_head(headers)
+    status = headers[':status'] || 200
+    data = +"HTTP/1.1 #{status}\r\nTransfer-Encoding: chunked\r\n"
     headers.each do |k, v|
+      next if k =~ /^:/
       if v.is_a?(Array)
         v.each { |o| data << "#{k}: #{o}\r\n" }
       else
         data << "#{k}: #{v}\r\n"
       end
     end
-    data << "\r\n
-    data << body if body
+    data << "\r\n"
+  end
 
-    @conn << data
+  def write_head(headers = EMPTY_HASH)
+    @conn << format_head(headers)
+  end
+
+  def write(chunk)
+    data = +"#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n"
+  end
+
+  def finish
+    @conn << "0\r\n\r\n"
   end
 end

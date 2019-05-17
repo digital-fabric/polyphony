@@ -9,6 +9,10 @@ class Request
     @stream = stream
   end
 
+  def http_version
+    2
+  end
+
   def set_headers(headers)
     @headers = Hash[*headers.flatten]
   end
@@ -48,7 +52,9 @@ class Request
     end
   end
 
-  def respond(body, headers = {})
+  EMPTY_HASH = {}
+
+  def respond(body, headers = EMPTY_HASH)
     headers[':status'] ||= '200'
 
     @stream.headers(headers, end_stream: false)
