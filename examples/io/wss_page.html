@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Websocket Client</title>
+</head>
+<body>
+  <script>
+    var connect = function () {
+      var exampleSocket = new WebSocket("/");
+
+      exampleSocket.onopen = function (event) {
+        document.querySelector('#status').innerText = 'connected';
+        exampleSocket.send("Can you hear me?");
+      };
+      exampleSocket.onclose = function (event) {
+        console.log('onclose');
+        document.querySelector('#status').innerText = 'disconnected';
+        setTimeout(function () {
+          // exampleSocket.removeAllListeners();
+          connect();
+        }, 1000);
+      }
+      exampleSocket.onmessage = function (event) {
+        document.querySelector('#msg').innerText = event.data;
+        console.log(event.data);
+      }
+    };
+
+    connect();
+  </script>
+  <h1 id="status">disconnected</h1>
+  <h1 id="msg"></h1>
+</body>
+</html>
