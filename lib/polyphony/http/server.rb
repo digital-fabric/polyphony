@@ -32,7 +32,7 @@ rescue OpenSSL::SSL::SSLError
 end
 
 async def client_task(client, opts, handler)
-  client.no_delay
+  client.no_delay rescue nil
   protocol_module(client).run(client, opts, handler)
 end
 

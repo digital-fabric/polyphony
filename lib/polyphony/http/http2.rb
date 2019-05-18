@@ -36,6 +36,7 @@ end
 def client_loop(socket, interface)
   loop do
     data = socket.readpartial(8192)
+    break unless data
     interface << data
     EV.snooze
   end
