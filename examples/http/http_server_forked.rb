@@ -10,6 +10,10 @@ opts = {
   reuse_addr: true,
   dont_linger: true,
 }
+
+server = HTTPServer.listen('0.0.0.0', 1234, opts)
+
+
 runner = HTTPServer.listener('0.0.0.0', 1234, opts) do |req|
   req.respond("Hello world!\n")
 end
@@ -20,7 +24,8 @@ child_pids = []
 4.times do
   child_pids << Polyphony.fork do
     puts "forked pid: #{Process.pid}"
-    spawn(&runner)
+    spawn do
+      HTTPServer.accept_loop(server, opts)
   end
 end
 
