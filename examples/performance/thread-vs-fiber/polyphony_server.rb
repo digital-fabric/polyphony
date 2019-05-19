@@ -30,7 +30,7 @@ async def handle_client(socket)
     if req
       handle_request(socket, req)
       req = nil
-      EV.snooze
+      snooze
     end
   end
 rescue IOError, SystemCallError => e

@@ -21,7 +21,7 @@ class Channel
     else
       @waiting_queue.shift&.schedule(o)
     end
-    EV.snooze
+    snooze
   end
 
   def receive

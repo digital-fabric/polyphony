@@ -15,7 +15,7 @@ class GenServer
       end
     end
     build_api(coprocess, receiver)
-    EV.snooze
+    snooze
     coprocess
   end
 

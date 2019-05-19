@@ -47,7 +47,7 @@ class Coprocess
     @mailbox ||= []
     @mailbox << o
     @fiber&.schedule if @receive_waiting
-    EV.snooze
+    snooze
   end
 
   def receive

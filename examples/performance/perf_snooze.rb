@@ -24,7 +24,7 @@ X = 1_000_000
 # snooze
 spawn do
   t0 = Time.now
-  X.times { EV.snooze }
+  X.times { snooze }
   dt = Time.now - t0
   puts "#{X / dt.to_f}/s"
 end

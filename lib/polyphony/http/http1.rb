@@ -35,7 +35,7 @@ def run(socket, opts, handler)
     break unless data
     if ctx[:parser].parse(data)
       break unless handle_request(ctx)
-      EV.snooze
+      snooze
     end
   end
 rescue IOError, SystemCallError => e

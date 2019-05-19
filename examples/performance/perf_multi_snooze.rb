@@ -12,7 +12,7 @@ spawn do
   supervise do |s|
     FIBERS.times do
       s.spawn do
-        ITERATIONS.times { EV.snooze; count += 1 }
+        ITERATIONS.times { snooze; count += 1 }
       end
     end
   end

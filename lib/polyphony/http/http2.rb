@@ -38,7 +38,7 @@ def client_loop(socket, interface)
     data = socket.readpartial(8192)
     break unless data
     interface << data
-    EV.snooze
+    snooze
   end
 rescue IOError, SystemCallError => e
   # do nothing

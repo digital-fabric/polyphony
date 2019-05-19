@@ -55,6 +55,7 @@ void Init_EV() {
   rb_define_singleton_method(mEV, "schedule_fiber", EV_schedule_fiber, 2);
 
   rb_define_method(rb_mKernel, "suspend", EV_suspend, 0);
+  rb_define_method(rb_mKernel, "snooze", EV_snooze, 0);
 
   ID_call                 = rb_intern("call");
   ID_caller               = rb_intern("caller");
@@ -185,10 +186,26 @@ VALUE EV_next_tick_caller(VALUE proc, VALUE data, int argc, VALUE* argv) {
   return Qnil;
 }
 
+VALUE EV_next_tick_runner(VALUE proc) {
+  if (rb_obj_is_proc(proc)) {
+    rb_funcall(proc, ID_call, 1, Qtrue);
+  }
+  else {
+    SCHEDULE_FIBER(proc, 1, rb_ivar_get(proc, ID_scheduled_value));
+  }
+  return Qnil;
+}
+
 void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents) {
+  long i;
   VALUE scheduled_procs = rb_ary_dup(next_tick_procs);
   rb_funcall(next_tick_procs, ID_clear, 0);
-  rb_block_call(scheduled_procs, ID_each, 0, NULL, EV_next_tick_caller, Qnil);
+
+  for (i = 0; i < RARRAY_LEN(scheduled_procs); i++) {
+    EV_next_tick_runner(RARRAY_AREF(scheduled_procs, i));
+  }
+
+  // rb_block_call(scheduled_procs, ID_each, 0, NULL, EV_next_tick_caller, Qnil);
   if (rb_array_len(next_tick_procs) > 0) {
     ev_timer_start(EV_DEFAULT, &next_tick_timer);
   } else {
