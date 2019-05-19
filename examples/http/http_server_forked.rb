@@ -1,22 +1,15 @@
 # frozen_string_literal: true
 
 require 'modulation'
-require 'localhost/authority'
 
 Polyphony = import('../../lib/polyphony')
-HTTPServer = import('../../lib/polyphony/http/server')
 
 opts = {
   reuse_addr: true,
   dont_linger: true,
 }
 
-server = HTTPServer.listen('0.0.0.0', 1234, opts)
-
-
-runner = HTTPServer.listener('0.0.0.0', 1234, opts) do |req|
-  req.respond("Hello world!\n")
-end
+server = Polyphony::HTTP::Server.listen('0.0.0.0', 1234, opts)
 
 puts "Listening on port 1234"
 
@@ -24,8 +17,10 @@ child_pids = []
 4.times do
   child_pids << Polyphony.fork do
     puts "forked pid: #{Process.pid}"
-    spawn do
-      HTTPServer.accept_loop(server, opts)
+    Polyphony::HTTP::Server.accept_loop(server, opts) do |req|
+      req.respond("Hello world!\n")
+    end
+  rescue Interrupt
   end
 end
 

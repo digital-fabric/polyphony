@@ -1,10 +1,15 @@
 # frozen_string_literal: true
 
-export :run, :upgrade
+export :call, :upgrade
 
 require 'http/2'
 
 Request = import('./http2_request')
+
+def call(socket, opts, &handler)
+  interface = prepare(socket, handler)
+  client_loop(socket, interface)
+end
 
 UPGRADE_MESSAGE = <<~HTTP.gsub("\n", "\r\n")
   HTTP/1.1 101 Switching Protocols
@@ -26,11 +31,6 @@ def prepare(socket, handler)
     interface.on(:frame) { |bytes| socket << bytes }
     interface.on(:stream) { |stream| start_stream(stream, handler) }
   end
-end
-
-def run(socket, opts, handler)
-  interface = prepare(socket, handler)
-  client_loop(socket, interface)
 end
 
 def client_loop(socket, interface)

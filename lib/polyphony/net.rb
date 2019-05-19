@@ -8,6 +8,7 @@ import('./extensions/socket')
 import('./extensions/ssl')
 
 def tcp_connect(host, port, opts = {})
+  puts "tcp_connect(#{host.inspect}, #{port.inspect}, #{opts.inspect})"
   socket = ::Socket.new(:INET, :STREAM).tap { |s|
     addr = ::Socket.sockaddr_in(port, host)
     s.connect(addr)

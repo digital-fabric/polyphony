@@ -1,3 +1,8 @@
+## Full or almost full functionality of IO using monkey patching
+
+- stuff like gets, getc etc should be using the ev reactor
+
+
 ## Testing
 
 - test IO

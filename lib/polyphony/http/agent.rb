@@ -51,8 +51,8 @@ class Agent
 
   def request(url, opts = OPTS_DEFAULT)
     ctx = request_ctx(url, opts)
-    response = do_request(ctx)
 
+    response = do_request(ctx)
     case response[:status_code]
     when 301, 302
       request(response[:headers]['Location'])
@@ -115,7 +115,7 @@ class Agent
 
     state[:socket] << request
     while !done
-      parser << state[:socket].read
+      parser << state[:socket].readpartial(8192)
     end
 
     {
@@ -159,14 +159,14 @@ class Agent
     stream.on(:close) {
       done = true
       return {
-        protocol:     'http1.1',
+        protocol:     'http2',
         status_code:  headers && headers[':status'].to_i,
         headers:      headers || {},
         body:         body
       }
     }
 
-    while data = state[:socket].read
+    while data = state[:socket].readpartial(8192)
       state[:http2_client] << data
     end
   ensure

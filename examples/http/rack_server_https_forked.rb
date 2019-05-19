@@ -4,11 +4,9 @@ require 'modulation'
 require 'localhost/authority'
 
 Polyphony = import('../../lib/polyphony')
-HTTPServer = import('../../lib/polyphony/http/server')
-Rack = import('../../lib/polyphony/http/rack')
 
 app_path = ARGV.first || File.expand_path('./config.ru', __dir__)
-rack = Rack.load(app_path)
+app = Polyphony::HTTP::Rack.load(app_path)
 
 authority = Localhost::Authority.fetch
 opts = {
@@ -16,17 +14,15 @@ opts = {
   dont_linger: true,
   secure_context: authority.server_context
 }
-runner = HTTPServer.listener('0.0.0.0', 1234, opts, &rack)
+server = Polyphony::HTTP::Server.listen('0.0.0.0', 1234, opts)
 puts "Listening on port 1234"
 
 child_pids = []
 4.times do
   child_pids << Polyphony.fork do
     puts "forked pid: #{Process.pid}"
-    spawn(&runner)
+    Polyphony::HTTP::Server.accept_loop(server, opts, &app)
   end
 end
 
-spawn do
-  child_pids.each { |pid| EV::Child.new(pid).await }
-end
+child_pids.each { |pid| EV::Child.new(pid).await }

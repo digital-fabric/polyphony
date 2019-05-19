@@ -26,6 +26,15 @@ module Polyphony
     FS:           './polyphony/fs',
     # Net:          './polyphony/net',
     ResourcePool: './polyphony/resource_pool',
-    Supervisor:   './polyphony/supervisor'
+    Supervisor:   './polyphony/supervisor',
+    Websocket:    './polyphony/websocket'
   )
+
+  module HTTP
+    auto_import(
+      Agent:      './polyphony/http/agent',
+      Rack:       './polyphony/http/rack',
+      Server:     './polyphony/http/server',
+    )
+  end
 end

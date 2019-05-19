@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :run
+export :call
 
 require 'http/parser'
 
@@ -26,7 +26,7 @@ end
 # @param socket [Net::Socket] socket
 # @param handler [Proc] request handler
 # @return [void]
-def run(socket, opts, handler)
+def call(socket, opts, &handler)
   ctx = connection_context(socket, opts, handler)
   ctx[:parser].on_body = proc { |chunk| handle_body_chunk(ctx, chunk) }
 

@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# idea taken from the example given in trio:
+# https://www.youtube.com/watch?v=oLkfnc_UMcE
+
 require 'modulation'
 Polyphony = import('../../lib/polyphony')
 
@@ -21,7 +24,7 @@ def happy_eyeballs(hostname, port, max_wait_time: 0.025)
       end
     end
     if success
-      puts "success: #{success[0]} (#{Time.now - t0}s)"
+      puts "success: %s (%.3fs)" % [success[0], Time.now - t0]
     else
       puts "timed out (#{Time.now - t0}s)"
     end

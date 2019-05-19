@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :serve, :listener
+export :serve, :listen, :accept_loop
 
 Net   = import('../net')
 HTTP1 = import('./http1')
@@ -9,31 +9,29 @@ HTTP2 = import('./http2')
 ALPN_PROTOCOLS = %w[h2 http/1.1].freeze
 H2_PROTOCOL = 'h2'
 
-async def serve(host, port, opts = {}, &handler)
+def serve(host, port, opts = {}, &handler)
   opts[:alpn_protocols] = ALPN_PROTOCOLS
   server = Net.tcp_listen(host, port, opts)
-
-  accept_loop(server, opts, handler)
+  accept_loop(server, opts, &handler)
 end
 
-def listener(host, port, opts = {}, &handler)
+def listen(host, port, opts = {})
   opts[:alpn_protocols] = ALPN_PROTOCOLS
-  server = Net.tcp_listen(host, port, opts)
-  proc { accept_loop(server, opts, handler) }
+  Net.tcp_listen(host, port, opts)
 end
 
-def accept_loop(server, opts, handler)
+def accept_loop(server, opts, &handler)
   while true
     client = server.accept
-    spawn client_task(client, opts, handler)
+    spawn { client_task(client, opts, &handler) }
   end
 rescue OpenSSL::SSL::SSLError
   retry # disregard
 end
 
-async def client_task(client, opts, handler)
+def client_task(client, opts, &handler)
   client.no_delay rescue nil
-  protocol_module(client).run(client, opts, handler)
+  protocol_module(client).(client, opts, &handler)
 end
 
 def protocol_module(socket)

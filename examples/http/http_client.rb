@@ -9,7 +9,7 @@ def get_server_time
   Agent.get('https://ui.realiteq.net/', q: :time).json
 end
 
-X = 50
+X = 1
 puts "Making #{X} requests..."
 t0 = Time.now
 supervise do |s|
