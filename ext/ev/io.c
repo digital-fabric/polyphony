@@ -35,6 +35,7 @@ static int EV_IO_symbol2event_mask(VALUE sym);
 static VALUE IO_read(int argc, VALUE *argv, VALUE io);
 static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write(int argc, VALUE *argv, VALUE io);
+static VALUE IO_write_chevron(VALUE io, VALUE str);
 
 void Init_EV_IO() {
   mEV = rb_define_module("EV");
@@ -51,7 +52,7 @@ void Init_EV_IO() {
   rb_define_method(cIO, "readpartial", IO_readpartial, -1);
   rb_define_method(cIO, "write", IO_write, -1);
   rb_define_method(cIO, "write_nonblock", IO_write, -1);
-  rb_define_method(cIO, "<<", IO_write, -1);
+  rb_define_method(cIO, "<<", IO_write_chevron, 1);
 }
 
 static const rb_data_type_t EV_IO_type = {
@@ -402,4 +403,9 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
   }
 
   return LONG2FIX(total);
+}
+
+static VALUE IO_write_chevron(VALUE io, VALUE str) {
+  IO_write(1, &str, io);
+  return io;
 }
