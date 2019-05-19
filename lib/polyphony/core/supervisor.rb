@@ -54,9 +54,10 @@ class Supervisor
   end
 
   def stop!(result = nil)
-    return unless @supervisor_fiber
+    return unless @supervisor_fiber && !@stopped
   
-    @supervisor_fiber&.transfer Exceptions::MoveOn.new(nil, result)
+    @stopped = true
+    @supervisor_fiber.transfer Exceptions::MoveOn.new(nil, result)
   end
 
   def stop_all_tasks
