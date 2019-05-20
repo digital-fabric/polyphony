@@ -1,11 +1,20 @@
+0.15 2019-05-20
+---------------
+
+* Optimize `#next_tick` callback (about 6% faster than before)
+* Fix IO#<< to return self
+* Refactor HTTP code and examples
+* Fix race condition in `Supervisor#stop!`
+* Add `Kernel#snooze` method (`EV.snooze` will be deprecated eventually)
+
 0.14 2019-05-17
 ---------------
 
 * Use chunked encoding in HTTP 1 response
-* Rewrite IO#read, #readpartial, #write in C (about 30% performance improvement)
+* Rewrite `IO#read`, `#readpartial`, `#write` in C (about 30% performance improvement)
 * Add method delegation to `ResourcePool`
 * Optimize PG::Connection#async_exec
-* Fix Coprocess#cancel!
+* Fix `Coprocess#cancel!`
 * Preliminary support for websocket (see `examples/io/http_ws_server.rb`)
 * Rename `Coroutine` to `Coprocess`
 
