@@ -1,24 +1,59 @@
-## Full or almost full functionality of IO using monkey patching
+# Roadmap:
 
-- stuff like gets, getc etc should be using the ev reactor
+## 0.16 - Reogranize code:
 
+- get rid of modulation, just normal `require` with namespacing
+- different functionalities are loaded using `require`:
 
-## Testing
+  ```ruby
+  require 'polyphony/core'
+  require 'polyphony/http/server'
+  # The HTTP server module actually requires the core module, so the first
+  # require is superfluous.
+  require 'polyphony/postgres'
+  ...
+  ```
+- modules are organized as follows:
 
-- test IO
-- test TCP server / client
+  ```ruby
+  Polyphony::Core # loads extensions for `Kernel`, `IO`, `Socket`, `SSL`
+  Polyphony::HTTP
+    Polyphony::HTTP::Server
+    Polyphony::HTTP::Agent
+  Polyphony::Redis
+  ...
+  ```
+
+- Clean up code while moving it around
+
+## 0.17 Full or almost full functionality of `IO` using monkey patching
+
+- testing - check conformance to Ruby `IO` API (as described in the Ruby docs)
+- implement as much as possible in C
+
+## 0.18 Working net/http, httparty
+
+- implement `TCPSocket`/`TCPServer` functionality
+- test `socket` classes
+- test `Net::HTTP`
+- test `httparty`
+
+## 0.19 Full Rack adapter implementation
+
+- follow Rack specification (doesn't have to include stuff like streaming or
+  websockets)
+- find some demo Rack apps and test with Polyphony
+
+## 0.20 Working Rails application
+
+- benchmarks!
+
+## 0.21 Testing
+
 - test thread / thread_pool modules
+- report test coverage
 
-## UDP socket
-
-```ruby
-socket = UDPSocket.new
-socket.bind("127.0.0.1", 1234)
-
-socket.send "message-to-self", 0, "127.0.0.1", 1234
-p socket.recvfrom(10)
-#=> ["message-to", ["AF_INET", 4913, "localhost", "127.0.0.1"]]
-```
+# DNS
 
 ## DNS client
 
