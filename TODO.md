@@ -1,30 +1,5 @@
 # Roadmap:
 
-## 0.16 - Reogranize code:
-
-- different functionalities are loaded using `require`:
-
-  ```ruby
-  require 'polyphony'
-  require 'polyphony/http'
-  # The HTTP server module actually requires the core module, so the first
-  # require is superfluous.
-  require 'polyphony/postgres'
-  ...
-  ```
-- modules are organized as follows:
-
-  ```ruby
-  Polyphony::Core # loads extensions for `Kernel`, `IO`, `Socket`, `SSL`
-  Polyphony::HTTP
-    Polyphony::HTTP::Server
-    Polyphony::HTTP::Agent
-  Polyphony::Redis
-  ...
-  ```
-
-- Clean up code while moving it around
-
 ## 0.17 Full or almost full functionality of `IO` using monkey patching
 
 - testing - check conformance to Ruby `IO` API (as described in the Ruby docs)
@@ -51,6 +26,8 @@
 
 - test thread / thread_pool modules
 - report test coverage
+
+## 0.22 Documentation
 
 # DNS
 

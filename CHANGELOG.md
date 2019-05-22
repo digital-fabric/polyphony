@@ -1,3 +1,9 @@
+0.16 2019-05-22
+---------------
+
+* Reorganize and refactor code
+* Allow opening secure socket without OpenSSL context
+
 0.15 2019-05-20
 ---------------
 
