@@ -3,7 +3,7 @@
 ## Installing
 
 ```bash
-$ gem install polyphony
+$ gem install nuclear
 ```
 
 ## Tutorial
