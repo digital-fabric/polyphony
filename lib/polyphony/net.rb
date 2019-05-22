@@ -1,14 +1,12 @@
 # frozen_string_literal: true
 
 export  :tcp_connect,
-        :tcp_listen#,
-        # :getaddrinfo
+        :tcp_listen
 
 import('./extensions/socket')
-import('./extensions/ssl')
+import('./extensions/openssl')
 
 def tcp_connect(host, port, opts = {})
-  puts "tcp_connect(#{host.inspect}, #{port.inspect}, #{opts.inspect})"
   socket = ::Socket.new(:INET, :STREAM).tap { |s|
     addr = ::Socket.sockaddr_in(port, host)
     s.connect(addr)
@@ -37,17 +35,16 @@ def tcp_listen(host = nil, port = nil, opts = {})
   end
 end
 
-DEFAULT_SSL_CONTEXT = OpenSSL::SSL::SSLContext.new
-DEFAULT_SSL_CONTEXT.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
-
 def secure_socket(socket, context, opts)
-  context ||= DEFAULT_SSL_CONTEXT
-  setup_alpn(context, opts[:alpn_protocols]) if opts[:alpn_protocols]
-  OpenSSL::SSL::SSLSocket.new(socket, context).tap { |s| s.connect }
+  if context
+    setup_alpn(context, opts[:alpn_protocols]) if opts[:alpn_protocols]
+    OpenSSL::SSL::SSLSocket.new(socket, context).tap { |s| s.connect }
+  else
+    OpenSSL::SSL::SSLSocket.new(socket).tap { |s| s.connect }
+  end
 end
 
 def secure_server(socket, context, opts)
-  context ||= DEFAULT_SSL_CONTEXT
   setup_alpn(context, opts[:alpn_protocols]) if opts[:alpn_protocols]
   OpenSSL::SSL::SSLServer.new(socket, context)
 end
