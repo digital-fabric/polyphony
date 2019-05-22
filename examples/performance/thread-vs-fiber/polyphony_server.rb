@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-require 'modulation'
+require 'bundler/setup'
+require 'polyphony'
 require 'http/parser'
-
-Polyphony = import('../../../lib/polyphony')
 
 class Http::Parser
   def setup_async
@@ -25,8 +24,8 @@ async def handle_client(socket)
   parser.on_message_complete = proc do |env|
     req = parser
   end
-  loop do
-    parser << socket.read
+  while (data = socket.readpartial(8192)) do
+    parser << data
     if req
       handle_request(socket, req)
       req = nil

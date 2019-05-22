@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
-Postgres =  import('../../lib/polyphony/extensions/postgres')
+require 'bundler/setup'
+require 'polyphony/postgres'
 
 DB = PG.connect(
   host:     '/tmp',

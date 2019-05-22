@@ -2,12 +2,11 @@
 
 ## 0.16 - Reogranize code:
 
-- get rid of modulation, just normal `require` with namespacing
 - different functionalities are loaded using `require`:
 
   ```ruby
-  require 'polyphony/core'
-  require 'polyphony/http/server'
+  require 'polyphony'
+  require 'polyphony/http'
   # The HTTP server module actually requires the core module, so the first
   # require is superfluous.
   require 'polyphony/postgres'

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
+require 'polyphony/fs'
 
 PATH = File.expand_path('../../../../docs/dev-journal.md', __dir__)
 
@@ -12,26 +12,29 @@ def raw_read_file(x)
   puts "raw_read_file: #{Time.now - t0}"
 end
 
-X = 100
-Y = 10
-
-async def async_read_file
-  X.times { IO.read(PATH) }
+def threaded_read_file(x, y)
+  t0 = Time.now
+  threads = []
+  y.times {
+    threads << Thread.new { x.times { IO.orig_read(PATH) } }
+  }
+  threads.each(&:join)
+  puts "threaded_read_file: #{Time.now - t0}"
 end
 
-def do_read(supervisor, x)
-  x.times { nexus << async { read_file } }
-end
-
-raw_read_file(X * Y)
-
-spawn do
+def thread_pool_read_file(x, y)
   t0 = Time.now
   supervise do |s|
-    4.times { s.spawn async_read_file }
+    y.times {
+      s.spawn { x.times { IO.read(PATH) } }
+    }
   end
   puts "thread_pool_read_file: #{Time.now - t0}"
-rescue Exception => e
-  p e
-  puts e.backtrace.join("\n")
 end
+
+Y = ARGV[0] ? ARGV[0].to_i : 10
+X = ARGV[1] ? ARGV[1].to_i : 100
+
+raw_read_file(X * Y)
+threaded_read_file(X, Y)
+thread_pool_read_file(X, Y)

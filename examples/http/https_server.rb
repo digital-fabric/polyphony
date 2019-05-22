@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-require 'modulation'
+require 'bundler/setup'
+require 'polyphony/http'
 require 'localhost/authority'
-
-Polyphony = import('../../lib/polyphony')
 
 authority = Localhost::Authority.fetch
 opts = {

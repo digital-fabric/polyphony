@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
 
 def loop_it(number, lock)
   loop do

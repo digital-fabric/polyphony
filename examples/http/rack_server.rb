@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-require 'localhost/authority'
-
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony/http'
 
 app_path = ARGV.first || File.expand_path('./config.ru', __dir__)
 app = Polyphony::HTTP::Rack.load(app_path)

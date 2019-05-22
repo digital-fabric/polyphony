@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-require 'digest'
-require 'socket'
-
-Polyphony     = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
 
 @op_count = 0
 

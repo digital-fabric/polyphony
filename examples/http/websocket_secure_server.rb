@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
-require 'modulation'
+require 'bundler/setup'
+require 'polyphony/http'
 require 'localhost/authority'
 
 STDOUT.sync = true
-
-Polyphony = import('../../lib/polyphony')
 
 def ws_handler(conn)
   while msg = conn.recv

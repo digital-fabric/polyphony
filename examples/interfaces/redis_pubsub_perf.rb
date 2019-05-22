@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
-require 'modulation'
+require 'bundler/setup'
+require 'polyphony/redis'
 require 'json'
-
-Polyphony = import('../../lib/polyphony')
-import('../../lib/polyphony/extensions/redis')
 
 X_SESSIONS = 1000
 X_NODES = 10000

@@ -7,7 +7,7 @@ Exceptions  = import('./exceptions')
 
 class Supervisor
   def initialize
-    @coprocesss = []
+    @coprocesses = []
   end
 
   def await(&block)
@@ -34,14 +34,14 @@ class Supervisor
   end
 
   def spawn_coprocess(proc)
-    @coprocesss << proc
+    @coprocesses << proc
     proc.when_done { task_completed(proc) }
     proc.run unless proc.running?
     proc
   end
 
   def spawn_proc(proc)
-    @coprocesss << Object.spawn do |coprocess|
+    @coprocesses << Object.spawn do |coprocess|
       proc.call(coprocess)
       task_completed(coprocess)
     rescue Exception => e
@@ -50,7 +50,7 @@ class Supervisor
   end
 
   def still_running?
-    !@coprocesss.empty?
+    !@coprocesses.empty?
   end
 
   def stop!(result = nil)
@@ -62,15 +62,15 @@ class Supervisor
 
   def stop_all_tasks
     exception = Exceptions::Stop.new
-    @coprocesss.each do |c|
+    @coprocesses.each do |c|
       EV.next_tick { c.interrupt(exception) }
     end
   end
 
   def task_completed(coprocess)
-    return unless @coprocesss.include?(coprocess)
+    return unless @coprocesses.include?(coprocess)
     
-    @coprocesss.delete(coprocess)
-    @supervisor_fiber&.transfer if @coprocesss.empty?
+    @coprocesses.delete(coprocess)
+    @supervisor_fiber&.transfer if @coprocesses.empty?
   end
 end

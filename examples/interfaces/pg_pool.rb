@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
-Postgres =  import('../../lib/polyphony/extensions/postgres')
+require 'bundler/setup'
+require 'polyphony/postgres'
 
 PGOPTS = {
   host:     '/tmp',
@@ -16,7 +14,7 @@ PGOPTS = {
 DBPOOL = Polyphony::ResourcePool.new(limit: 8) { PG.connect(PGOPTS) }
 
 def get_records(db)
-  res = db.query("select pg_sleep(0.0001) as test")
+  res = db.query("select pg_sleep(0.001) as test")
   # puts "got #{res.ntuples} records: #{res.to_a}"
 rescue => e
   puts "got error: #{e.inspect}"
@@ -32,6 +30,6 @@ count = 0
 coprocs = CONCURRENCY.times.map {
   spawn { loop { DBPOOL.acquire { |db| get_records(db); count += 1 } } }
 }
-sleep 3
+sleep 5
 puts "count: #{count} query rate: #{count / (Time.now - t0)} queries/s"
 coprocs.each(&:interrupt)

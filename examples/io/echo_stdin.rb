@@ -1,13 +1,12 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
 
 puts "Write something..."
 move_on_after(5) do |scope|
   loop do
-    data = STDIN.read
+    data = STDIN.readpartial(8192)
     scope.reset_timeout
     puts "you wrote: #{data}"
   end

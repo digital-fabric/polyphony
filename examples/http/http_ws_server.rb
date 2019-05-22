@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
 STDOUT.sync = true
 
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony/http'
+require 'polyphony/websocket'
 
 def ws_handler(conn)
   timer = spawn {
@@ -13,7 +13,7 @@ def ws_handler(conn)
     }
   }
   while msg = conn.recv
-    # conn << "you said: #{msg}"
+    conn << "you said: #{msg}"
   end
 ensure
   timer.stop

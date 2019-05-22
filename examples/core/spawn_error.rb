@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'modulation'
+require 'bundler/setup'
+require 'polyphony'
 
-Polyphony = import('../../lib/polyphony')
 Polyphony.debug = true
 
 def error(t)

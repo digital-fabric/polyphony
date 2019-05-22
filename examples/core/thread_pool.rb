@@ -1,13 +1,10 @@
 # frozen_string_literal: true
 
-require 'modulation'
-require 'digest'
-require 'socket'
-
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
 
 def lengthy_op
-  data = IO.read('../../docs/reality-ui.bmpr')
+  data = IO.read('../../docs/dev-journal.md')
   data.clear
   # Socket.getaddrinfo('debian.org', 80)
   #Digest::SHA256.digest(IO.read('doc/Promise.html'))

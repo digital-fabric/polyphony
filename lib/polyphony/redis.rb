@@ -1,11 +1,9 @@
 # frozen_string_literal: true
 
-export :Driver
+require_relative '../polyphony'
 
 require "redis"
 require "hiredis/reader"
-
-Net = import('../net')
 
 class Driver
   def self.connect(config)
@@ -22,7 +20,7 @@ class Driver
   end
 
   def initialize(host, port)
-    @connection = Net.tcp_connect(host, port)
+    @connection = Polyphony::Net.tcp_connect(host, port)
     @reader = ::Hiredis::Reader.new
   end
 
@@ -56,8 +54,7 @@ class Driver
     reply = @reader.gets
     return reply if reply
     
-    loop do
-      data = @connection.read
+    while (data = @connection.readpartial(8192))
       @reader.feed(data)
       reply = @reader.gets
       return reply if reply

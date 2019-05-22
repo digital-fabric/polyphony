@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
 
 async def sleep_and_cancel
   puts "#{Time.now} going to sleep with cancel..."

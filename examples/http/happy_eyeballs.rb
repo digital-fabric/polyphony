@@ -3,8 +3,8 @@
 # idea taken from the example given in trio:
 # https://www.youtube.com/watch?v=oLkfnc_UMcE
 
-require 'modulation'
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony/http'
 
 async def try_connect(target, supervisor)
   puts "trying #{target[2]}"

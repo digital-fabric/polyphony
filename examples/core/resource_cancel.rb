@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
 
 resource_count = 0
 Pool = Polyphony::ResourcePool.new(limit: 3) do

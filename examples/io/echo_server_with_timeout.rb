@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
 
 begin
   server = Polyphony::Net.tcp_listen(nil, 1234, reuse_addr: true, dont_linger: true)
@@ -14,8 +13,7 @@ begin
       cancel_scope = nil
       move_on_after(5) do |s|
         cancel_scope = s
-        loop do
-          data = client.read
+        while (data = client.readpartial(8192))
           s.reset_timeout
           client.write(data)
         end

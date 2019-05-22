@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
-import('../../lib/polyphony/extensions/redis')
+require 'bundler/setup'
+require 'polyphony/redis'
 
 redis = Redis.new
 

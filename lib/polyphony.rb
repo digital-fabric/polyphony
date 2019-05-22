@@ -4,37 +4,73 @@ require 'modulation/gem'
 
 export_default :Polyphony
 
-Polyphony = import('./polyphony/core')
-Exceptions = import('./polyphony/core/exceptions')
-
-import('polyphony/extensions/socket')
-import('polyphony/extensions/ssl')
+require 'fiber'
+require_relative './ev_ext'
+import('./polyphony/extensions/kernel')
+import('./polyphony/extensions/io')
 
 module Polyphony
-  Cancel        = Exceptions::Cancel
-  MoveOn        = Exceptions::MoveOn
+  exceptions = import('./polyphony/core/exceptions')
+  Cancel        = exceptions::Cancel
+  MoveOn        = exceptions::MoveOn
 
-  Net = import('./polyphony/net')
+  Coprocess = import('./polyphony/core/coprocess')
+  FiberPool = import('./polyphony/core/fiber_pool')
+  Net       = import('./polyphony/net')
 
+
+  def self.trap(sig, ref = false, &callback)
+    sig = Signal.list[sig.to_s.upcase] if sig.is_a?(Symbol)
+    watcher = EV::Signal.new(sig, &callback)
+    EV.unref unless ref
+    watcher
+  end
+  
+  def self.fork(&block)
+    EV.break
+    pid = Kernel.fork do
+      FiberPool.reset!
+      EV.post_fork
+      Fiber.current.coprocess = Coprocess.new(Fiber.current)
+  
+      block.()
+  
+      # We cannot simply depend on the at_exit block (see below) to yield to the
+      # reactor fiber. Doing that will raise a FiberError complaining: "fiber
+      # called across stack rewinding barrier". Apparently this is a bug in
+      # Ruby, so the workaround is to yield just before exiting.
+      suspend
+    end
+    EV.restart
+    pid
+  end
+  
+  def self.debug
+    @debug
+  end
+  
+  def self.debug=(value)
+    @debug = value
+  end
+  
   auto_import(
+    CancelScope:  './polyphony/core/cancel_scope',
     Channel:      './polyphony/core/channel',
-    Coprocess:    './polyphony/core/coprocess',
+    # Coprocess:    './polyphony/core/coprocess',
+    FS:           './polyphony/fs',
+    # Net:          './polyphony/net',
+    ResourcePool: './polyphony/core/resource_pool',
+    Supervisor:   './polyphony/core/supervisor',
     Sync:         './polyphony/core/sync',
     Thread:       './polyphony/core/thread',
     ThreadPool:   './polyphony/core/thread_pool',
-  
-    FS:           './polyphony/fs',
-    # Net:          './polyphony/net',
-    ResourcePool: './polyphony/resource_pool',
-    Supervisor:   './polyphony/supervisor',
     Websocket:    './polyphony/websocket'
   )
+end
 
-  module HTTP
-    auto_import(
-      Agent:      './polyphony/http/agent',
-      Rack:       './polyphony/http/rack',
-      Server:     './polyphony/http/server',
-    )
-  end
+at_exit do
+  # in most cases, by the main fiber is done there are still pending or other
+  # or asynchronous operations going on. If the reactor loop is not done, we
+  # suspend the root fiber until it is done
+  suspend if $__reactor_fiber__&.alive?
 end

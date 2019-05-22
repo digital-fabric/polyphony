@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
-require 'modulation'
+require 'bundler/setup'
+require 'polyphony'
 
-Polyphony = import('../../lib/polyphony')
-
-EV.next_tick do
+next_tick do
   puts "two"
-  EV.next_tick { puts "four" }
+  next_tick { puts "four" }
   puts "three"
 end
 

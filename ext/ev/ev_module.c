@@ -54,8 +54,9 @@ void Init_EV() {
   rb_define_singleton_method(mEV, "post_fork", EV_post_fork, 0);
   rb_define_singleton_method(mEV, "schedule_fiber", EV_schedule_fiber, 2);
 
-  rb_define_method(rb_mKernel, "suspend", EV_suspend, 0);
-  rb_define_method(rb_mKernel, "snooze", EV_snooze, 0);
+  rb_define_global_function("suspend", EV_suspend, 0);
+  rb_define_global_function("snooze", EV_snooze, 0);
+  rb_define_global_function("next_tick", EV_next_tick, 0);
 
   ID_call                 = rb_intern("call");
   ID_caller               = rb_intern("caller");

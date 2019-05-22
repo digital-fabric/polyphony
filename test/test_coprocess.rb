@@ -1,49 +1,46 @@
 require 'minitest/autorun'
-require 'modulation'
+require 'bundler/setup'
+require 'polyphony'
 
 class CoprocessTest < MiniTest::Test
-  Core        = import('../lib/polyphony/core')
-  Coprocess   = import('../lib/polyphony/core/coprocess')
-  Exceptions  = import('../lib/polyphony/core/exceptions')
-
   def setup
     EV.rerun
   end
 
   def test_that_main_fiber_has_associated_coprocess
-    assert_equal(Fiber.current, Coprocess.current.fiber)
-    assert_equal(Coprocess.current, Fiber.current.coprocess)
+    assert_equal(Fiber.current, Polyphony::Coprocess.current.fiber)
+    assert_equal(Polyphony::Coprocess.current, Fiber.current.coprocess)
   end
 
   def test_that_new_coprocess_starts_in_suspended_state
     result = nil
-    coproc = Coprocess.new { result = 42 }
+    coproc = Polyphony::Coprocess.new { result = 42 }
     assert_nil(result)
     coproc.await
     assert_equal(42, result)
   end
 
   def test_that_new_coprocess_runs_on_different_fiber
-    coproc = Coprocess.new { Fiber.current }
+    coproc = Polyphony::Coprocess.new { Fiber.current }
     fiber = coproc.await
     assert(fiber != Fiber.current)
   end
 
   def test_that_await_blocks_until_coprocess_is_done
     result = nil
-    coproc = Coprocess.new { sleep 0.001; result = 42 }
+    coproc = Polyphony::Coprocess.new { sleep 0.001; result = 42 }
     coproc.await
     assert_equal(42, result)
   end
 
   def test_that_await_returns_the_coprocess_return_value
-    coproc = Coprocess.new { [:foo, :bar] }
+    coproc = Polyphony::Coprocess.new { [:foo, :bar] }
     assert_equal([:foo, :bar], coproc.await)
   end
 
   def test_that_await_raises_error_raised_by_coprocess
     result = nil
-    coproc = Coprocess.new { raise 'foo' }
+    coproc = Polyphony::Coprocess.new { raise 'foo' }
     begin
       result = coproc.await
     rescue => e
@@ -55,7 +52,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_running_coprocess_can_be_cancelled
     result = []
-    coproc = Coprocess.new {
+    coproc = Polyphony::Coprocess.new {
       result << 1
       sleep 0.002
       result << 2
@@ -68,13 +65,13 @@ class CoprocessTest < MiniTest::Test
     end
     assert_equal(2, result.size)
     assert_equal(1, result[0])
-    assert_kind_of(Exceptions::Cancel, result[1])
+    assert_kind_of(Polyphony::Cancel, result[1])
   end
 
   def test_that_running_coprocess_can_be_interrupted
     # that is, stopped without exception
     result = []
-    coproc = Coprocess.new {
+    coproc = Polyphony::Coprocess.new {
       result << 1
       sleep 0.002
       result << 2
@@ -85,6 +82,82 @@ class CoprocessTest < MiniTest::Test
     await_result = coproc.await
     assert_equal(1, result.size)
     assert_equal(42, await_result)
+  end
+
+  def test_that_coprocess_can_be_awaited
+    result = nil
+    spawn do
+      coprocess = Polyphony::Coprocess.new { sleep(0.001); 42 }
+      result = coprocess.await
+    end
+    suspend
+    assert_equal(42, result)
+  end
+
+  def test_that_coprocess_can_be_stopped
+    result = nil
+    coprocess = spawn do
+      sleep(0.001)
+      result = 42
+    end
+    EV.next_tick { coprocess.interrupt }
+    suspend
+    assert_nil(result)
+  end
+
+  def test_that_coprocess_can_be_cancelled
+    result = nil
+    coprocess = spawn do
+      sleep(0.001)
+      result = 42
+    rescue Polyphony::Cancel => e
+      result = e
+    end
+    EV.next_tick { coprocess.cancel! }
+
+    suspend
+
+    assert_kind_of(Polyphony::Cancel, result)
+    assert_kind_of(Polyphony::Cancel, coprocess.result)
+    assert_nil(coprocess.running?)
+  end
+
+  def test_that_inner_coprocess_can_be_interrupted
+    result = nil
+    coprocess2 = nil
+    coprocess = spawn do
+      coprocess2 = spawn do
+        sleep(0.001)
+        result = 42
+      end
+      coprocess2.await
+      result && result += 1
+    end
+    EV.next_tick { coprocess.interrupt }
+    suspend
+    assert_nil(result)
+    assert_nil(coprocess.running?)
+    assert_nil(coprocess2.running?)
+  end
+
+  def test_that_inner_coprocess_can_interrupt_outer_coprocess
+    result, coprocess2 = nil
+    
+    coprocess = spawn do
+      coprocess2 = spawn do
+        EV.next_tick { coprocess.interrupt }
+        sleep(0.001)
+        result = 42
+      end
+      coprocess2.await
+      result && result += 1
+    end
+    
+    suspend
+    
+    assert_nil(result)
+    assert_nil(coprocess.running?)
+    assert_nil(coprocess2.running?)
   end
 end
 

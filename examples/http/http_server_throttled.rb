@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony/http'
 
 $throttler = throttle(1000)
 opts = { reuse_addr: true, dont_linger: true }

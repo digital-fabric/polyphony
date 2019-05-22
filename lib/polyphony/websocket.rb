@@ -8,7 +8,7 @@ require 'websocket'
 class WebsocketConnection
   def initialize(client, headers)
     @client = client
-    @headers = headers    
+    @headers = headers
     setup(headers)
   end
 

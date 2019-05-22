@@ -1,7 +1,15 @@
 # frozen_string_literal: true
 
-export  :Server
+require_relative '../polyphony'
 
-auto_import(
-  Server: './http/server'
-)
+module Polyphony
+  module HTTP
+    auto_import(
+      Agent:      './http/agent',
+      Rack:       './http/rack',
+      Server:     './http/server',
+    )
+  end
+end
+
+export_default Polyphony::HTTP

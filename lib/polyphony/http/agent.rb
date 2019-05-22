@@ -7,7 +7,7 @@ require 'http/parser'
 require 'http/2'
 require 'json'
 
-ResourcePool = import('../resource_pool')
+ResourcePool = import('../core/resource_pool')
 
 module ResponseMixin
   def body

@@ -1,16 +1,13 @@
 # frozen_string_literal: true
 
-require 'modulation'
-require 'digest'
-require 'socket'
-
-Polyphony     = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
 
 def lengthy_op
   IO.read('../../docs/reality-ui.bmpr')
 end
 
-X = 100
+X = 1000
 
 def blocking
   t0 = Time.now

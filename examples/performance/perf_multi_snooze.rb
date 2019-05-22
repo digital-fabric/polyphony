@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'modulation'
-Polyphony = import('../../lib/polyphony')
+require 'bundler/setup'
+require 'polyphony'
 
 ITERATIONS  = 1_000
 FIBERS      = 1_000

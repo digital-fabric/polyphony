@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
-export :Client
-
+require_relative '../polyphony'
 require 'pg'
-
-Core  = import('../core')
 
 module ::PG
   def self.connect(*args)
