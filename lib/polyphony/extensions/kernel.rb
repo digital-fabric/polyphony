@@ -35,6 +35,35 @@ class ::Exception
   end
 end
 
+class Pulser
+  def initialize(freq)
+    fiber = Fiber.current
+    @timer = EV::Timer.new(freq, freq)
+    @timer.start { fiber.transfer freq }
+  end
+
+  def await
+    suspend
+  rescue Exception => e
+    @timer.stop
+    raise e
+  end
+
+  def stop
+    @timer.stop
+  end
+end
+
+module ::Process
+  def self.detach(pid)
+    coproc {
+      EV::Child.new(pid).await
+    }
+  end
+end
+
+require 'open3'
+
 # Kernel extensions (methods available to all objects)
 module ::Kernel
   def after(duration, &block)
@@ -64,31 +93,20 @@ module ::Kernel
     CancelScope.new(timeout: duration, mode: :cancel).(&block)
   end
 
+  def coproc(proc = nil, &block)
+    if proc.is_a?(Coprocess)
+      proc.run
+    else
+      Coprocess.new(&(block || proc)).run
+    end
+  end
+
   def every(freq, &block)
     EV::Timer.new(freq, freq).start(&block)
   end
 
   def move_on_after(duration, &block)
     CancelScope.new(timeout: duration).(&block)
-  end
-
-  class Pulser
-    def initialize(freq)
-      fiber = Fiber.current
-      @timer = EV::Timer.new(freq, freq)
-      @timer.start { fiber.transfer freq }
-    end
-
-    def await
-      suspend
-    rescue Exception => e
-      @timer.stop
-      raise e
-    end
-
-    def stop
-      @timer.stop
-    end
   end
 
   def pulse(freq)
@@ -107,16 +125,18 @@ module ::Kernel
     timer.stop
   end
 
-  def coproc(proc = nil, &block)
-    if proc.is_a?(Coprocess)
-      proc.run
-    else
-      Coprocess.new(&(block || proc)).run
-    end
-  end
-
   def supervise(&block)
     Supervisor.new.await(&block)
+  end
+
+  alias_method :orig_system, :system
+  def system(*args)
+    Open3.popen2(*args) do |i, o, t|
+      i.close
+      o.read
+    end
+  rescue SystemCallError => e
+    nil
   end
 
   def throttled_loop(rate, &block)
