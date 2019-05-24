@@ -82,6 +82,7 @@ class Coprocess
       suspend
     end
   end
+  alias_method :join, :await
 
   def when_done(&block)
     @when_done = block
