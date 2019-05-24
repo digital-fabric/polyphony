@@ -6,7 +6,7 @@ require 'polyphony'
 puts "Write something..."
 move_on_after(5) do |scope|
   loop do
-    data = STDIN.readpartial(8192)
+    data = STDIN.gets
     scope.reset_timeout
     puts "you wrote: #{data}"
   end
