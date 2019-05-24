@@ -20,8 +20,6 @@ module ::PG
         return
       end
     end
-  ensure
-    conn.socket_io.stop_watchers
   end
 
   def self.connect_sync(conn)
@@ -46,8 +44,6 @@ class ::PG::Connection
       consume_input
     end
     orig_get_result(&block)
-  ensure
-    socket_io.stop_watchers
   end
 
   alias_method :orig_async_exec, :async_exec

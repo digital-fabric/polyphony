@@ -1,19 +1,6 @@
 # frozen_string_literal: true
 
 class ::IO
-  def read_watcher
-    @read_watcher ||= EV::IO.new(self, :r)
-  end
-
-  def write_watcher
-    @write_watcher ||= EV::IO.new(self, :w)
-  end
-
-  def stop_watchers
-    @read_watcher&.stop
-    @write_watcher&.stop
-  end
-
   class << self
     alias_method :orig_binread, :binread
     def binread(name, length = nil, offset = nil)

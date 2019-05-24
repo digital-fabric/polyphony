@@ -38,6 +38,9 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write_chevron(VALUE io, VALUE str);
 
+static VALUE IO_read_watcher(VALUE self);
+static VALUE IO_write_watcher(VALUE self);
+
 void Init_EV_IO() {
   mEV = rb_define_module("EV");
   cEV_IO = rb_define_class_under(mEV, "IO", rb_cData);
@@ -55,6 +58,8 @@ void Init_EV_IO() {
   rb_define_method(cIO, "write", IO_write, -1);
   rb_define_method(cIO, "write_nonblock", IO_write, -1);
   rb_define_method(cIO, "<<", IO_write_chevron, 1);
+  rb_define_method(cIO, "read_watcher", IO_read_watcher, 0);
+  rb_define_method(cIO, "write_watcher", IO_write_watcher, 0);
 }
 
 static const rb_data_type_t EV_IO_type = {
@@ -303,6 +308,7 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
       int e = errno;
       if ((e == EWOULDBLOCK || e == EAGAIN)) {
         if (read_watcher == Qnil)
+          // read_watcher = IO_read_watcher(io);
           read_watcher = rb_funcall(io, ID_read_watcher, 0);
         EV_IO_await(read_watcher);
       }
@@ -359,6 +365,7 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
       int e = errno;
       if ((e == EWOULDBLOCK || e == EAGAIN)) {
         if (read_watcher == Qnil)
+          // read_watcher = IO_read_watcher(io);
           read_watcher = rb_funcall(io, ID_read_watcher, 0);
         EV_IO_await(read_watcher);
       }
@@ -406,6 +413,7 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
         int e = errno;
         if (e == EWOULDBLOCK || e == EAGAIN) {
           if (write_watcher == Qnil)
+            // write_watcher = IO_write_watcher(io);
             write_watcher = rb_funcall(io, ID_write_watcher, 0);
           EV_IO_await(write_watcher);
         }
@@ -431,4 +439,22 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
 static VALUE IO_write_chevron(VALUE io, VALUE str) {
   IO_write(1, &str, io);
   return io;
+}
+
+static VALUE IO_read_watcher(VALUE self) {
+  VALUE watcher = rb_iv_get(self, "@read_watcher");
+  if (watcher == Qnil) {
+    watcher = rb_funcall(cEV_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("r")));
+    rb_iv_set(self, "@read_watcher", watcher);
+  }
+  return watcher;
+}
+
+static VALUE IO_write_watcher(VALUE self) {
+  VALUE watcher = rb_iv_get(self, "@write_watcher");
+  if (watcher == Qnil) {
+    watcher = rb_funcall(cEV_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("w")));
+    rb_iv_set(self, "@write_watcher", watcher);
+  }
+  return watcher;
 }
