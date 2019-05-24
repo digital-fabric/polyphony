@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 require 'minitest/autorun'
 require 'bundler/setup'
 require 'polyphony'
+require 'fileutils'
 
 class IOTest < MiniTest::Test
   def setup
@@ -38,5 +41,78 @@ class IOTest < MiniTest::Test
     @o << 'bar' << 'baz'
     @o.close
     assert_equal('foobarbaz', @i.read)
+  end
+end
+
+class IOClassMethodsTest < MiniTest::Test
+  def setup
+    EV.rerun
+  end
+
+  def test_binread
+    s = IO.binread(__FILE__)
+    assert_kind_of(String, s)
+    assert(!s.empty?)
+    assert_equal(IO.orig_binread(__FILE__), s)
+
+    s = IO.binread(__FILE__, 100)
+    assert_equal(100, s.bytesize)
+    assert_equal(IO.orig_binread(__FILE__, 100), s)
+
+    s = IO.binread(__FILE__, 100, 2)
+    assert_equal(100, s.bytesize)
+    assert_equal('frozen', s[0..5])
+  end
+
+  BIN_DATA = "\x00\x01\x02\x03"
+
+  def test_binwrite
+    fn = '/tmp/test_binwrite'
+    FileUtils.rm(fn) rescue nil
+
+    len = IO.binwrite(fn, BIN_DATA)
+    assert_equal(4, len)
+    s = IO.binread(fn)
+    assert_equal(BIN_DATA, s)
+  end
+
+  def test_foreach
+    lines = []
+    IO.foreach(__FILE__) { |l| lines << l }
+    assert_equal("# frozen_string_literal: true\n", lines[0])
+    assert_equal("end", lines[-1])
+  end
+
+  def test_read
+    s = IO.read(__FILE__)
+    assert_kind_of(String, s)
+    assert(!s.empty?)
+    assert_equal(IO.orig_read(__FILE__), s)
+
+    s = IO.read(__FILE__, 100)
+    assert_equal(100, s.bytesize)
+    assert_equal(IO.orig_read(__FILE__, 100), s)
+
+    s = IO.read(__FILE__, 100, 2)
+    assert_equal(100, s.bytesize)
+    assert_equal('frozen', s[0..5])
+  end
+
+  def test_readlines
+    lines = IO.readlines(__FILE__)
+    assert_equal("# frozen_string_literal: true\n", lines[0])
+    assert_equal("end", lines[-1])
+  end
+
+  WRITE_DATA = "foo\nbar קוקו"
+
+  def test_write
+    fn = '/tmp/test_write'
+    FileUtils.rm(fn) rescue nil
+
+    len = IO.write(fn, WRITE_DATA)
+    assert_equal(WRITE_DATA.bytesize, len)
+    s = IO.read(fn)
+    assert_equal(WRITE_DATA, s)
   end
 end
