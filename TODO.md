@@ -1,9 +1,13 @@
 # Roadmap:
 
-## 0.17 Full or almost full functionality of `IO` using monkey patching
+## 0.17 Implement non-blocking versions of `IO` API using monkey patching
 
-- testing - check conformance to Ruby `IO` API (as described in the Ruby docs)
-- implement as much as possible in C
+- Don't worry about performance or completeness of behaviour
+- Related global functions such as:
+  - `Kernel#system`
+  - `IO.popen`
+- testing - check conformance to Ruby `IO` API (arguments and return values as
+  described in the Ruby docs)
 
 ## 0.18 Working net/http, httparty
 
@@ -20,14 +24,19 @@
 
 ## 0.20 Working Rails application
 
+- app with database access (postgresql)
 - benchmarks!
 
-## 0.21 Testing
+## 0.21 Support for multi-threading
+
+- Separate event loop for each thread
+
+## 0.22 Testing
 
 - test thread / thread_pool modules
 - report test coverage
 
-## 0.22 Documentation
+## 0.23 Documentation
 
 # DNS
 
