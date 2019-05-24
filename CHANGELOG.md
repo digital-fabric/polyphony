@@ -1,3 +1,14 @@
+0.17 2019-05-24
+---------------
+
+* Implement IO#read_watcher, IO#write_watcher in C for better performance
+* Implement nonblocking (yielding) versions of Kernel#system, IO.popen,
+  Process.detach, IO#gets IO#puts, other IO singleton methods
+* Add Coprocess#join as alias to Coprocess#await
+* Rename Kernel#spawn to Kernel#coproc
+* Fix encoding of strings read with IO#read, IO#readpartial
+* Fix non-blocking behaviour of IO#read, IO#readpartial, IO#write
+
 0.16 2019-05-22
 ---------------
 
