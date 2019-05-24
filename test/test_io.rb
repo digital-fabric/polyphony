@@ -115,4 +115,20 @@ class IOClassMethodsTest < MiniTest::Test
     s = IO.read(fn)
     assert_equal(WRITE_DATA, s)
   end
+
+  def test_popen
+    counter = 0
+    timer = coproc {
+      throttled_loop(200) { counter += 1 }
+    }
+
+    IO.popen('sleep 0.01') { |io| io.read }
+    assert(counter >= 2)
+
+    result = nil
+    IO.popen('echo "foo"') { |io| result = io.read }
+    assert_equal("foo\n", result)
+  ensure
+    timer&.stop
+  end
 end

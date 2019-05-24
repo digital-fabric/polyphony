@@ -50,6 +50,13 @@ class ::IO
         f.write(string)
       end
     end
+
+    alias_method :orig_popen, :popen
+    def popen(*args)
+      Open3.popen2(*args) do |i, o, t|
+        yield o
+      end
+    end
   end
 
   # def each(sep = $/, limit = nil, chomp: nil)
