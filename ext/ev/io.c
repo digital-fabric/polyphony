@@ -270,6 +270,7 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
   OBJ_TAINT(str);
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
+  rb_io_set_nonblock(fptr);
 
   if (len == 0)
   	return str;
@@ -326,6 +327,7 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
   shrinkable = io_setstrbuf(&str, len);
   OBJ_TAINT(str);
   GetOpenFile(io, fptr);
+  rb_io_set_nonblock(fptr);
   rb_io_check_byte_readable(fptr);
 
   if (len == 0)
