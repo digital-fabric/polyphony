@@ -32,6 +32,7 @@ void EV_IO_callback(ev_loop *ev_loop, struct ev_io *io, int revents);
 
 static int EV_IO_symbol2event_mask(VALUE sym);
 
+// static VALUE IO_gets(int argc, VALUE *argv, VALUE io);
 static VALUE IO_read(int argc, VALUE *argv, VALUE io);
 static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write(int argc, VALUE *argv, VALUE io);
@@ -48,6 +49,7 @@ void Init_EV_IO() {
   rb_define_method(cEV_IO, "await", EV_IO_await, 0);
 
   VALUE cIO = rb_const_get(rb_cObject, rb_intern("IO"));
+  // rb_define_method(cIO, "gets", IO_gets, -1);
   rb_define_method(cIO, "read", IO_read, -1);
   rb_define_method(cIO, "readpartial", IO_readpartial, -1);
   rb_define_method(cIO, "write", IO_write, -1);
@@ -249,6 +251,23 @@ static void io_set_read_length(VALUE str, long n, int shrinkable) {
     if (shrinkable) io_shrink_read_string(str, n);
   }
 }
+
+static rb_encoding*
+io_read_encoding(rb_io_t *fptr)
+{
+    if (fptr->encs.enc) {
+	return fptr->encs.enc;
+    }
+    return rb_default_external_encoding();
+}
+
+static VALUE io_enc_str(VALUE str, rb_io_t *fptr)
+{
+    OBJ_TAINT(str);
+    rb_enc_associate(str, io_read_encoding(fptr));
+    return str;
+}
+
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
@@ -267,7 +286,7 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
   VALUE str = argc >= 2 ? argv[1] : Qnil;
 
   shrinkable = io_setstrbuf(&str, len);
-  OBJ_TAINT(str);
+  // OBJ_TAINT(str);
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
   rb_io_set_nonblock(fptr);
@@ -302,10 +321,11 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
     }
   }
 
-  io_set_read_length(str, total, shrinkable);
-
   if (total == 0)
     return Qnil;
+
+  io_set_read_length(str, total, shrinkable);
+  io_enc_str(str, fptr);
 
   return str;
 }
@@ -351,6 +371,7 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
   }
 
   io_set_read_length(str, n, shrinkable);
+  io_enc_str(str, fptr);
 
   if (n == 0)
     return Qnil;
