@@ -70,18 +70,18 @@ The reactor, in turn, may schedule other operations once they can be resumed. In
 that manner, multiple ongoing operations may be processed concurrently.
 
 There are multiple ways to start a concurrent operation, the most common of
-which is `Kernel#spawn`:
+which is `Kernel#coproc`:
 
 ```ruby
 require 'polyphony'
 
-spawn do
+coproc do
   puts "A going to sleep"
   sleep 1
   puts "A woken up"
 end
 
-spawn do
+coproc do
   puts "B going to sleep"
   sleep 1
   puts "B woken up"
@@ -90,7 +90,7 @@ end
 
 In the above example, both `sleep` calls will be executed concurrently, and thus
 the program will take approximately only 1 second to execute. Note the lack of
-any boilerplate relating to concurrency. Each `spawn` block starts a
+any boilerplate relating to concurrency. Each `coproc` block starts a
 *coprocess*, and is executed in sequential manner.
 
 > **Coprocesses - the basic unit of concurrency**: In Polyphony, concurrent
@@ -115,8 +115,8 @@ require 'polyphony'
 
 server = TCPServer.open(1234)
 while client = server.accept
-  # spawn starts a new coprocess on a separate fiber
-  spawn {
+  # coproc starts a new coprocess on a separate fiber
+  coproc {
     while data = client.read rescue nil
       client.write(data)
     end
@@ -129,7 +129,7 @@ This example demonstrates several features of Polyphony:
 - The code uses the native `TCPServer` class from Ruby's stdlib, to setup a TCP
   server. The result of `server.accept` is also a native `TCPSocket` object.
   There are no wrapper classes being used.
-- The only hint of the code being concurrent is the use of `Kernel#spawn`,
+- The only hint of the code being concurrent is the use of `Kernel#coproc`,
   which starts a new coprocess on a dedicated fiber. This allows serving
   multiple clients at once. Whenever a blocking call is issued, such as
   `#accept` or `#read`, execution is *yielded* to the event loop, which will
@@ -257,7 +257,7 @@ Pool = Polyphony::ResourcePool.new(limit: 5) {
 }
 
 1000.times {
-  spawn {
+  coproc {
     Pool.acquire { |db| p db.query('select 1') }
   }
 }
@@ -274,7 +274,7 @@ Pool = Polyphony::ResourcePool.new(limit: 5) {
 }
 
 1000.times {
-  spawn { p Pool.query('select 1') }
+  coproc { p Pool.query('select 1') }
 }
 ```
 
@@ -313,7 +313,7 @@ server = Net.tcp_listen(1234)
 throttler = throttle(rate: 10) # up to 10 times per second
 
 while client = server.accept
-  spawn {
+  coproc {
     throttler.call {
       while data = client.read
         client.write(data)

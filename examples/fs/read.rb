@@ -26,7 +26,7 @@ def thread_pool_read_file(x, y)
   t0 = Time.now
   supervise do |s|
     y.times {
-      s.spawn { x.times { IO.read(PATH) } }
+      s.coproc { x.times { IO.read(PATH) } }
     }
   end
   puts "thread_pool_read_file: #{Time.now - t0}"

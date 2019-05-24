@@ -7,7 +7,7 @@ require 'polyphony/http'
 require 'polyphony/websocket'
 
 def ws_handler(conn)
-  timer = spawn {
+  timer = coproc {
     throttled_loop(1) {
       conn << Time.now.to_s
     }
@@ -29,7 +29,7 @@ opts = {
 
 HTML = IO.read(File.join(__dir__, 'ws_page.html'))
 
-spawn {
+coproc {
   server = Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
     req.respond(HTML, 'Content-Type' => 'text/html')
   end

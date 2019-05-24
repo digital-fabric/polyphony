@@ -9,7 +9,7 @@ begin
 
   loop do
     client = server.accept
-    spawn do
+    coproc do
       cancel_scope = nil
       move_on_after(5) do |s|
         cancel_scope = s

@@ -12,19 +12,19 @@ class IOTest < MiniTest::Test
     count = 0
     msg = nil
     [
-      spawn {
+      coproc {
         @o.write("hello")
         @o.close
       },
 
-      spawn {
+      coproc {
         while count < 5
           sleep 0.01
           count += 1
         end
       }, 
 
-      spawn {
+      coproc {
         msg = @i.read
       }
     ].each(&:await)

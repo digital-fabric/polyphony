@@ -4,7 +4,7 @@ require 'bundler/setup'
 require 'polyphony/http'
 
 opts = { reuse_addr: true, dont_linger: true }
-spawn {
+coproc {
   Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
     req.respond("Hello world!\n")
   end

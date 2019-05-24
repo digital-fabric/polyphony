@@ -21,7 +21,7 @@ async def user(number)
 end
 
 100.times do |x|
-  spawn user(x)
+  coproc user(x)
 end
 
 t0 = Time.now

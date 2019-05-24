@@ -3,14 +3,14 @@
 require 'bundler/setup'
 require 'polyphony'
 
-spawn {
+coproc {
   throttled_loop(3) { STDOUT << '.' }
 }
 
-spawn {
+coproc {
   throttled_loop(rate: 2) { STDOUT << '?' }
 }
 
-spawn {
+coproc {
   throttled_loop(interval: 1) { STDOUT << '*' }
 }

@@ -5,11 +5,11 @@ require 'polyphony'
 
 socket = Polyphony::Net.tcp_connect('127.0.0.1', 1234)
 
-writer = spawn do
+writer = coproc do
   throttled_loop(1) { socket << "#{Time.now}\n" rescue nil }
 end
 
-reader = spawn do
+reader = coproc do
   puts "received from echo server:"
   while data = socket.readpartial(8192)
     STDOUT << data

@@ -12,13 +12,13 @@ end
 puts "#{Time.now} going to sleep..."
 result = supervise do |s|
   fiber = Fiber.current
-  spawn do
+  coproc do
     sleep(0.5)
     puts "stopping supervisor..."
     s.stop!
   end
-  s.spawn my_sleep(1)
-  s.spawn my_sleep(2)
-  s.spawn my_sleep(3)
+  s.coproc my_sleep(1)
+  s.coproc my_sleep(2)
+  s.coproc my_sleep(3)
 end
 puts "#{Time.now} woke up with #{result.inspect}"

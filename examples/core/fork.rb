@@ -8,7 +8,7 @@ puts "parent pid: #{Process.pid}"
 pid = Polyphony.fork do
   puts "child pid: #{Process.pid}"
 
-  spawn do
+  coproc do
     puts "child going to sleep 1..."
     sleep 1
     puts "child woke up 1"

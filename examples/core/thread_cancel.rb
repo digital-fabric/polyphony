@@ -13,10 +13,10 @@ def lengthy_op
   acc / count
 end
 
-spawn do
+coproc do
   t0 = Time.now
   cancel_after(0.01) do
-    data = Polyphony::Thread.spawn { lengthy_op }.await
+    data = Polyphony::Thread.coproc { lengthy_op }.await
     puts "read #{data.bytesize} bytes (#{Time.now - t0}s)"
   end
 rescue Exception => e

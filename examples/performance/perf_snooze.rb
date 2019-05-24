@@ -14,7 +14,7 @@ X = 1_000_000
 # puts "#{X / dt.to_f}/s"
 
 # sleep
-# spawn do
+# coproc do
 #   t0 = Time.now
 #   X.times { sleep(0) }
 #   dt = Time.now - t0
@@ -22,7 +22,7 @@ X = 1_000_000
 # end
 
 # snooze
-spawn do
+coproc do
   t0 = Time.now
   X.times { snooze }
   dt = Time.now - t0

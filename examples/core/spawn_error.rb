@@ -9,11 +9,11 @@ def error(t)
   raise "hello #{t}"
 end
 
-def spawn_with_error
-  spawn { error(2) }
+def coproc_with_error
+  coproc { error(2) }
 end
 
-spawn do
+coproc do
   error(1)
 rescue => e
   e.cleanup_backtrace
@@ -23,6 +23,6 @@ rescue => e
   puts
 end
 
-spawn_with_error
+coproc_with_error
 
-puts "done spawning"
+puts "done coprocing"

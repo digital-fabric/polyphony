@@ -3,14 +3,14 @@
 require 'bundler/setup'
 require 'polyphony'
 
-spawn {
+coproc {
   10.times { |i|
     sleep 0.1;
     p i
   }
 }
 
-spawn {
+coproc {
   puts "going to sleep..."
   sleep 1
   puts "woke up"

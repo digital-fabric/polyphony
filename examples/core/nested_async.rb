@@ -3,7 +3,7 @@
 require 'bundler/setup'
 require 'polyphony'
 
-spawn do
+coproc do
   puts "going to sleep"
   result = async do
     async do

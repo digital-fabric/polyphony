@@ -25,7 +25,7 @@ async def meet(number)
   end
 end
 
-3.times { |x| spawn meet(x) }
+3.times { |x| coproc meet(x) }
 
 t0 = Time.now
 every(10) { puts "uptime: #{Time.now - t0}" }

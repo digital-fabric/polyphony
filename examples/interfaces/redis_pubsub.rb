@@ -3,7 +3,7 @@
 require 'bundler/setup'
 require 'polyphony/redis'
 
-spawn do
+coproc do
   redis = Redis.new
   redis.subscribe('redis-channel') do |on|
     on.message do |channel, message|
@@ -13,7 +13,7 @@ spawn do
   end
 end
 
-spawn do
+coproc do
   redis = Redis.new
   move_on_after(3) do
     throttled_loop(1) do

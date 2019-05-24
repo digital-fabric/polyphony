@@ -86,7 +86,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_coprocess_can_be_awaited
     result = nil
-    spawn do
+    coproc do
       coprocess = Polyphony::Coprocess.new { sleep(0.001); 42 }
       result = coprocess.await
     end
@@ -96,7 +96,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_coprocess_can_be_stopped
     result = nil
-    coprocess = spawn do
+    coprocess = coproc do
       sleep(0.001)
       result = 42
     end
@@ -107,7 +107,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_coprocess_can_be_cancelled
     result = nil
-    coprocess = spawn do
+    coprocess = coproc do
       sleep(0.001)
       result = 42
     rescue Polyphony::Cancel => e
@@ -125,8 +125,8 @@ class CoprocessTest < MiniTest::Test
   def test_that_inner_coprocess_can_be_interrupted
     result = nil
     coprocess2 = nil
-    coprocess = spawn do
-      coprocess2 = spawn do
+    coprocess = coproc do
+      coprocess2 = coproc do
         sleep(0.001)
         result = 42
       end
@@ -143,8 +143,8 @@ class CoprocessTest < MiniTest::Test
   def test_that_inner_coprocess_can_interrupt_outer_coprocess
     result, coprocess2 = nil
     
-    coprocess = spawn do
-      coprocess2 = spawn do
+    coprocess = coproc do
+      coprocess2 = coproc do
         EV.next_tick { coprocess.interrupt }
         sleep(0.001)
         result = 42
@@ -168,7 +168,7 @@ class MailboxTest < MiniTest::Test
 
   def test_that_coprocess_can_receive_messages
     msgs = []
-    coproc = spawn {
+    coprocess = coproc {
       loop {
         msgs << receive
       }
@@ -176,16 +176,16 @@ class MailboxTest < MiniTest::Test
 
     EV.snooze # allow coproc to start
     
-    3.times { |i| coproc << i; EV.snooze }
+    3.times { |i| coprocess << i; EV.snooze }
 
     assert_equal([0, 1, 2], msgs)
   ensure
-    coproc.stop
+    coprocess.stop
   end
 
   def test_that_multiple_messages_sent_at_once_arrive
     msgs = []
-    coproc = spawn {
+    coprocess = coproc {
       loop { 
         msgs << receive
       }
@@ -193,12 +193,12 @@ class MailboxTest < MiniTest::Test
 
     EV.snooze # allow coproc to start
     
-    3.times { |i| coproc << i }
+    3.times { |i| coprocess << i }
 
     EV.snooze
 
     assert_equal([0, 1, 2], msgs)
   ensure
-    coproc.stop
+    coprocess.stop
   end
 end

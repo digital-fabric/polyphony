@@ -11,10 +11,10 @@ end
 
 puts "#{Time.now} waiting..."
 supervise do |s|
-  s.spawn my_sleep(1)
-  s.spawn my_sleep(2)
-  s.spawn my_sleep(3)
-  s.spawn {
+  s.coproc my_sleep(1)
+  s.coproc my_sleep(2)
+  s.coproc my_sleep(3)
+  s.coproc {
     puts "fiber count: #{Polyphony::FiberPool.size}"
   }
 end

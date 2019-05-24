@@ -107,7 +107,7 @@ module ::Kernel
     timer.stop
   end
 
-  def spawn(proc = nil, &block)
+  def coproc(proc = nil, &block)
     if proc.is_a?(Coprocess)
       proc.run
     else

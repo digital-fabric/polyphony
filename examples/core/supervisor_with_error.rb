@@ -8,12 +8,12 @@ async def my_sleep(t)
   raise "blah"
 end
 
-spawn do
+coproc do
   puts "#{Time.now} going to sleep..."
   supervise do |s|
-    s.spawn my_sleep(1)
-    s.spawn my_sleep(2)
-    s.spawn my_sleep(3)
+    s.coproc my_sleep(1)
+    s.coproc my_sleep(2)
+    s.coproc my_sleep(3)
   end
 rescue => e
   puts "exception from supervisor: #{e}"

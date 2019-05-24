@@ -17,7 +17,7 @@ X_SESSIONS.times do
   }
 end
 
-spawn do
+coproc do
   redis = Redis.new
   redis.subscribe('events') do |on|
     on.message do |_, message|
@@ -40,14 +40,14 @@ def distribute_event(event)
   # puts "elapsed: #{elapsed} (#{rate}/s)" if $update_count % 100 == 0
 end
 
-spawn do
+coproc do
   redis = Redis.new
   throttled_loop(1000) do
     redis.publish('events', {path: "node#{rand(X_NODES)}"}.to_json)
   end
 end
 
-spawn do
+coproc do
   last_count = 0
   last_stamp = Time.now
   throttled_loop(1) do

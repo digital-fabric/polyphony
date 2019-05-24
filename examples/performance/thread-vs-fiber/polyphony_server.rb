@@ -46,13 +46,13 @@ def handle_request(client, parser)
   client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
 end
 
-spawn do
+coproc do
   server = TCPServer.open(1234)
   puts "listening on port 1234"
 
   loop do
     client = server.accept
-    spawn handle_client(client)
+    coproc handle_client(client)
   end
 rescue Exception => e
   puts "uncaught exception: #{e.inspect}"

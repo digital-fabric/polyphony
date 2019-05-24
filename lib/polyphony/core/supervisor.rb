@@ -41,7 +41,7 @@ class Supervisor
   end
 
   def spawn_proc(proc)
-    @coprocesses << Object.spawn do |coprocess|
+    @coprocesses << coproc do |coprocess|
       proc.call(coprocess)
       task_completed(coprocess)
     rescue Exception => e
