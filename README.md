@@ -1,4 +1,4 @@
-# Polyphony - Fiber-Based Concurrency for Ruby
+# Polyphony - lightweight concurrency for Ruby
 
 [INSTALL](#installing-polyphony) |
 [TUTORIAL](#getting-started) |
