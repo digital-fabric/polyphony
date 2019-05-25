@@ -55,12 +55,31 @@ class Agent
     response = do_request(ctx)
     case response[:status_code]
     when 301, 302
-      request(response[:headers]['Location'])
+      redirect(response[:headers]['Location'], ctx, opts)
     when 200, 204
       response.extend(ResponseMixin)
     else
       raise "Error received from server: #{response[:status_code]}"
     end
+  end
+
+  def redirect(url, ctx, opts)
+    url = case url
+    when /^http(?:s)?\:\/\//
+      url
+    when /^\/\/(.+)$/
+      ctx[:uri].scheme + url
+    when /^\//
+      "%s://%s%s" % [
+        ctx[:uri].scheme,
+        ctx[:uri].host,
+        url
+      ]
+    else
+      ctx[:uri] + url
+    end
+
+    request(url, opts)
   end
 
   def request_ctx(url, opts)
