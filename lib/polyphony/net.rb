@@ -12,7 +12,7 @@ def tcp_connect(host, port, opts = {})
     s.connect(addr)
   }
   if opts[:secure_context] || opts[:secure]
-    secure_socket(socket, opts[:secure_context], opts)
+    secure_socket(socket, opts[:secure_context], opts.merge(host: host))
   else
     socket
   end
@@ -36,11 +36,15 @@ def tcp_listen(host = nil, port = nil, opts = {})
 end
 
 def secure_socket(socket, context, opts)
-  if context
-    setup_alpn(context, opts[:alpn_protocols]) if opts[:alpn_protocols]
-    OpenSSL::SSL::SSLSocket.new(socket, context).tap { |s| s.connect }
-  else
-    OpenSSL::SSL::SSLSocket.new(socket).tap { |s| s.connect }
+  setup_alpn(context, opts[:alpn_protocols]) if context && opts[:alpn_protocols]
+  socket = context ?
+    OpenSSL::SSL::SSLSocket.new(socket, context) :
+    OpenSSL::SSL::SSLSocket.new(socket)
+  
+  socket.tap do |s|
+    s.hostname = opts[:host] if opts[:host]
+    s.connect
+    s.post_connection_check(opts[:host]) if opts[:host]
   end
 end
 

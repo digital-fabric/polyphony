@@ -136,10 +136,10 @@ class Agent
     stream = state[:http2_client].new_stream # allocate new stream
 
     headers = {
-      ':scheme'     => ctx[:uri].scheme,
       ':method'     => ctx[:method].to_s,
-      ':path'       => ctx[:uri].request_uri,
+      ':scheme'     => ctx[:uri].scheme,      
       ':authority'  => [ctx[:uri].host, ctx[:uri].port].join(':'),
+      ':path'       => ctx[:uri].request_uri,
     }
     headers.merge!(ctx[:opts][:headers]) if ctx[:opts][:headers]
 
@@ -198,8 +198,7 @@ class Agent
     when 'http'
       Polyphony::Net.tcp_connect(key[:host], key[:port])
     when 'https'
-      Polyphony::Net.tcp_connect(key[:host], key[:port], SECURE_OPTS).tap do |socket|
-        socket.post_connection_check(key[:host])
+      Polyphony::Net.tcp_connect(key[:host], key[:port], SECURE_OPTS)
       end
     else
       raise "Invalid scheme #{key[:scheme].inspect}"
