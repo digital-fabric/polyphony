@@ -34,6 +34,19 @@ class ::Socket
     @write_watcher&.stop
   end
 
+  def recv(maxlen, flags = 0, outbuf = nil)
+    outbuf ||= +''
+    loop do
+      result = recv_nonblock(maxlen, flags, outbuf, NO_EXCEPTION)
+      case result
+      when :wait_readable
+        read_watcher.await
+      else
+        return result
+      end
+    end
+  end
+
   def recvfrom(maxlen, flags = 0)
     @read_buffer ||= +''
     loop do
@@ -67,6 +80,40 @@ class ::Socket
     def getaddrinfo(*args)
       Polyphony::ThreadPool.process { orig_getaddrinfo(*args) }
     end
+  end
+end
+
+class ::TCPSocket
+  NO_EXCEPTION = { exception: false }.freeze
+
+  def foo; :bar; end
+
+  def initialize(remote_host, remote_port, local_host=nil, local_port=nil)
+    @socket = Socket.new Socket::AF_INET, Socket::SOCK_STREAM
+    if local_host && local_port
+      @socket.bind(Addrinfo.tcp(local_host, local_port))
+    end
+    @socket.connect(Addrinfo.tcp(remote_host, remote_port))
+  end
+
+  def close
+    @socket.close
+  end
+
+  def setsockopt(*args)
+    @socket.setsockopt(*args)
+  end
+
+  def closed?
+    @socket.closed?
+  end
+
+  def write_nonblock(string, options = {})
+    send(string, 0)
+  end
+
+  def read_nonblock(maxlen, buf = nil, options = nil)
+    buf ? recv(maxlen, 0, buf) : recv(maxlen, 0)
   end
 end
 

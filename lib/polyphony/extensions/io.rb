@@ -36,12 +36,13 @@ class ::IO
       end
     end
 
-    alias_method :orig_readlines, :readlines
-    def readlines(name, sep = $/, limit = nil, getline_args = EMPTY_HASH)
-      File.open(name, 'r') do |f|
-        f.readlines(sep, limit, getline_args)
-      end
-    end
+    # alias_method :orig_readlines, :readlines
+    # def readlines(name, sep = $/, limit = nil, getline_args = EMPTY_HASH)
+    #   File.open(name, 'r') do |f|
+    #     puts "readlines(#{sep.inspect}, #{limit.inspect}, #{getline_args.inspect}"
+    #     f.readlines(sep, limit, getline_args)
+    #   end
+    # end
 
     alias_method :orig_write, :write
     def write(name, string, offset = nil, opt = EMPTY_HASH)

@@ -26,7 +26,6 @@ static VALUE EV_IO_initialize(VALUE self, VALUE io, VALUE event_mask);
 
 static VALUE EV_IO_start(VALUE self);
 static VALUE EV_IO_stop(VALUE self);
-static VALUE EV_IO_await(VALUE self);
 
 void EV_IO_callback(ev_loop *ev_loop, struct ev_io *io, int revents);
 
@@ -37,9 +36,6 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io);
 static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write_chevron(VALUE io, VALUE str);
-
-static VALUE IO_read_watcher(VALUE self);
-static VALUE IO_write_watcher(VALUE self);
 
 void Init_EV_IO() {
   mEV = rb_define_module("EV");
@@ -164,7 +160,7 @@ static VALUE EV_IO_stop(VALUE self) {
   return self;
 }
 
-static VALUE EV_IO_await(VALUE self) {
+VALUE EV_IO_await(VALUE self) {
   struct EV_IO *io;
   VALUE ret;
   
@@ -221,7 +217,7 @@ struct io_internal_read_struct {
     size_t capa;
 };
 
-static int io_setstrbuf(VALUE *str, long len) {
+int io_setstrbuf(VALUE *str, long len) {
   #ifdef _WIN32
     len = (len + 1) & ~1L;	/* round up for wide char */
   #endif
@@ -249,7 +245,7 @@ static void io_shrink_read_string(VALUE str, long n) {
   }
 }
 
-static void io_set_read_length(VALUE str, long n, int shrinkable) {
+void io_set_read_length(VALUE str, long n, int shrinkable) {
   if (RSTRING_LEN(str) != n) {
     rb_str_modify(str);
     rb_str_set_len(str, n);
@@ -257,17 +253,14 @@ static void io_set_read_length(VALUE str, long n, int shrinkable) {
   }
 }
 
-static rb_encoding*
-io_read_encoding(rb_io_t *fptr)
-{
+static rb_encoding* io_read_encoding(rb_io_t *fptr) {
     if (fptr->encs.enc) {
 	return fptr->encs.enc;
     }
     return rb_default_external_encoding();
 }
 
-static VALUE io_enc_str(VALUE str, rb_io_t *fptr)
-{
+VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
     OBJ_TAINT(str);
     rb_enc_associate(str, io_read_encoding(fptr));
     return str;
@@ -291,7 +284,7 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
   VALUE str = argc >= 2 ? argv[1] : Qnil;
 
   shrinkable = io_setstrbuf(&str, len);
-  // OBJ_TAINT(str);
+  OBJ_TAINT(str);
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
   rb_io_set_nonblock(fptr);
@@ -308,8 +301,7 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
       int e = errno;
       if ((e == EWOULDBLOCK || e == EAGAIN)) {
         if (read_watcher == Qnil)
-          // read_watcher = IO_read_watcher(io);
-          read_watcher = rb_funcall(io, ID_read_watcher, 0);
+          read_watcher = IO_read_watcher(io);
         EV_IO_await(read_watcher);
       }
       else
@@ -363,10 +355,9 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
     n = read(fptr->fd, RSTRING_PTR(str), len);
     if (n < 0) {
       int e = errno;
-      if ((e == EWOULDBLOCK || e == EAGAIN)) {
+      if (e == EWOULDBLOCK || e == EAGAIN) {
         if (read_watcher == Qnil)
-          // read_watcher = IO_read_watcher(io);
-          read_watcher = rb_funcall(io, ID_read_watcher, 0);
+          read_watcher = IO_read_watcher(io);
         EV_IO_await(read_watcher);
       }
       else
@@ -413,8 +404,8 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
         int e = errno;
         if (e == EWOULDBLOCK || e == EAGAIN) {
           if (write_watcher == Qnil)
-            // write_watcher = IO_write_watcher(io);
-            write_watcher = rb_funcall(io, ID_write_watcher, 0);
+            write_watcher = IO_write_watcher(io);
+            // write_watcher = rb_funcall(io, ID_write_watcher, 0);
           EV_IO_await(write_watcher);
         }
         else {
@@ -441,7 +432,7 @@ static VALUE IO_write_chevron(VALUE io, VALUE str) {
   return io;
 }
 
-static VALUE IO_read_watcher(VALUE self) {
+VALUE IO_read_watcher(VALUE self) {
   VALUE watcher = rb_iv_get(self, "@read_watcher");
   if (watcher == Qnil) {
     watcher = rb_funcall(cEV_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("r")));
@@ -450,7 +441,7 @@ static VALUE IO_read_watcher(VALUE self) {
   return watcher;
 }
 
-static VALUE IO_write_watcher(VALUE self) {
+VALUE IO_write_watcher(VALUE self) {
   VALUE watcher = rb_iv_get(self, "@write_watcher");
   if (watcher == Qnil) {
     watcher = rb_funcall(cEV_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("w")));
