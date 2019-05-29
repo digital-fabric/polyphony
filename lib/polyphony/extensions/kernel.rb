@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'fiber'
+require 'timeout'
 
 CancelScope = import('../core/cancel_scope')
 Coprocess   = import('../core/coprocess')
@@ -155,3 +156,12 @@ module ::Kernel
   end
 end
 
+module ::Timeout
+  def self.timeout(sec, klass = nil, message = nil, &block)
+    cancel_after(sec, &block)
+  rescue Exceptions::Cancel => e
+    error = klass ? klass.new(message) : ::Timeout::Error.new
+    error.set_backtrace(e.backtrace)
+    raise error
+  end
+end
