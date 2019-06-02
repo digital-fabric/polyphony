@@ -89,31 +89,23 @@ class ::TCPSocket
   def foo; :bar; end
 
   def initialize(remote_host, remote_port, local_host=nil, local_port=nil)
-    @socket = Socket.new Socket::AF_INET, Socket::SOCK_STREAM
+    @io = Socket.new Socket::AF_INET, Socket::SOCK_STREAM
     if local_host && local_port
-      @socket.bind(Addrinfo.tcp(local_host, local_port))
+      @io.bind(Addrinfo.tcp(local_host, local_port))
     end
-    @socket.connect(Addrinfo.tcp(remote_host, remote_port))
+    @io.connect(Addrinfo.tcp(remote_host, remote_port))
   end
 
   def close
-    @socket.close
+    @io.close
   end
 
   def setsockopt(*args)
-    @socket.setsockopt(*args)
+    @io.setsockopt(*args)
   end
 
   def closed?
-    @socket.closed?
-  end
-
-  def write_nonblock(string, options = {})
-    send(string, 0)
-  end
-
-  def read_nonblock(maxlen, buf = nil, options = nil)
-    buf ? recv(maxlen, 0, buf) : recv(maxlen, 0)
+    @io.closed?
   end
 end
 

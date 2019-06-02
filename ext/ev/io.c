@@ -270,6 +270,9 @@ VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
 //////////////////////////////////////////////////////////////////////
 
 static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
+  VALUE underlying_io = rb_iv_get(io, "@io");
+  if (!NIL_P(underlying_io)) io = underlying_io;
+
   long len = argc == 1 ? NUM2LONG(argv[0]) : 8192;
 
   rb_io_t *fptr;
@@ -329,6 +332,9 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
 }
 
 static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
+  VALUE underlying_io = rb_iv_get(io, "@io");
+  if (!NIL_P(underlying_io)) io = underlying_io;
+
   long len = argc == 1 ? NUM2LONG(argv[0]) : 8192;
 
   rb_io_t *fptr;
@@ -378,6 +384,9 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
 }
 
 static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
+  VALUE underlying_io = rb_iv_get(io, "@io");
+  if (!NIL_P(underlying_io)) io = underlying_io;
+
   long i;
   long n;
   long total = 0;

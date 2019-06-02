@@ -4,13 +4,25 @@ require 'bundler/setup'
 require 'polyphony'
 require 'httparty'
 
-url = 'http://realiteq.net/?q=time'
+url = 'http://127.0.0.1:4411/?q=time'
 results = []
 
 t0 = Time.now
 move_on_after(3) do
   supervise do |s|
-    10.times { s.spawn { loop { results << HTTParty.get(url); STDOUT << '.' } } }
+    10.times do
+      s.spawn do
+        loop do
+          STDOUT << '!'
+          if (result = HTTParty.get(url))
+            results << result
+            STDOUT << '.'
+          end
+        rescue => e
+          p e
+        end
+      end
+    end
   end
   puts "done"
 end

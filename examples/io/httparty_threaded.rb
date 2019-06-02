@@ -2,7 +2,7 @@
 
 require 'httparty'
 
-url = 'http://realiteq.net/?q=time'
+url = 'http://127.0.0.1:4411/?q=time'
 results = Queue.new
 
 t0 = Time.now
@@ -10,7 +10,11 @@ threads = []
 10.times do
   threads << Thread.new do
     loop do
-      results << HTTParty.get(url); STDOUT << '.'
+      STDOUT << '!'
+      if (result = HTTParty.get(url))
+        results << result
+        STDOUT << '.'
+      end
     end
   end
 end

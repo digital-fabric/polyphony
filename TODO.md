@@ -1,14 +1,5 @@
 # Roadmap:
 
-## 0.17 Implement non-blocking versions of `IO` API using monkey patching
-
-- Don't worry about performance or completeness of behaviour
-- Related global functions such as:
-  - `Kernel#system`
-  - `IO.popen`
-- testing - check conformance to Ruby `IO` API (arguments and return values as
-  described in the Ruby docs)
-
 ## 0.18 Working net/http, httparty
 
 - implement `TCPSocket`/`TCPServer` functionality
