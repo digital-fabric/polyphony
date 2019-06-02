@@ -142,4 +142,15 @@ class ::IO
 
   # def readlines(sep = $/, limit = nil, chomp: nil)
   # end
+
+  def write_nonblock(string, options = {})
+    # STDOUT << '>'
+    write(string, 0)
+  end
+
+  def read_nonblock(maxlen, buf = nil, options = nil)
+    # STDOUT << '<'
+    buf ? readpartial(maxlen, buf) : readpartial(maxlen)
+  end
+
 end
