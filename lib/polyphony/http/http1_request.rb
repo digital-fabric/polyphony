@@ -5,6 +5,8 @@ export_default :Request
 require 'uri'
 
 class Request
+  attr_reader :body
+
   def initialize(conn, parser, body)
     @conn         = conn
     @parser       = parser
@@ -13,24 +15,26 @@ class Request
     @body         = body
   end
 
-  def http_version
-    1
+  def protocol
+    'http/1.1'
   end
 
   def method
     @method ||= @parser.http_method
   end
 
-  def path
+  def uri
     @uri ||= URI.parse(@parser.request_url || '')
-    @path ||= @uri.path
+  end
+
+  def path
+    @path ||= uri.path
   end
 
   def query
-    @uri ||= URI.parse(@parser.request_url || '')
     return @query if @query
   
-    if (q = @uri.query)
+    if (q = uri.query)
       @query = q.split('&').each_with_object({}) do |kv, h|
         k, v = kv.split('=')
         h[k.to_sym] = URI.decode_www_form_component(v)

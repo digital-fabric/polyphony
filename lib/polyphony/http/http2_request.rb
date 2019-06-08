@@ -5,12 +5,14 @@ export_default :Request
 require 'uri'
 
 class Request
+  attr_reader :headers
+
   def initialize(stream)
     @stream = stream
   end
 
-  def http_version
-    2
+  def protocol
+    'h2'
   end
 
   def set_headers(headers)
@@ -33,16 +35,19 @@ class Request
     @scheme ||= @headers[':scheme']
   end
 
-  def path
+  def uri
     @uri ||= URI.parse(@headers[':path'] || '')
-    @path ||= @uri.path
+  end
+
+  def path
+    @path ||= uri.path
   end
 
   def query
     @uri ||= URI.parse(@headers[':path'] || '')
     return @query if @query
   
-    if (q = u.query)
+    if (q = uri.query)
       @query = q.split('&').each_with_object({}) do |kv, h|
         k, v = kv.split('=')
         h[k.to_sym] = URI.decode_www_form_component(v)

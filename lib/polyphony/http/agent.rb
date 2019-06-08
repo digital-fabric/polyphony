@@ -21,12 +21,12 @@ end
 
 # Implements an HTTP agent
 class Agent
-  def self.get(url, query = nil)
-    default.get(url, query)
+  def self.get(*args)
+    default.get(*args)
   end
 
-  def self.post(url, query = nil)
-    default.post(url, query)
+  def self.post(*args)
+    default.post(*args)
   end
 
   def self.default
@@ -39,15 +39,16 @@ class Agent
     end
   end
 
-  def get(url, query = nil)
-    request(url, method: :GET, query: query)
-  end
-
-  def post(url, query = nil)
-    request(url, method: :POST, query: query)
-  end
-
   OPTS_DEFAULT = {}.freeze
+
+  def get(url, opts = OPTS_DEFAULT)
+    request(url, opts.merge(method: :GET))
+  end
+
+  def post(url, opts = OPTS_DEFAULT)
+    request(url, opts.merge(method: :POST))
+  end
+
 
   def request(url, opts = OPTS_DEFAULT)
     ctx = request_ctx(url, opts)
@@ -86,7 +87,8 @@ class Agent
     {
       method: opts[:method] || :GET,
       uri:    url_to_uri(url, opts),
-      opts:   opts
+      opts:   opts,
+      retry:  0,
     }
   end
 
@@ -106,13 +108,20 @@ class Agent
   def do_request(ctx)
     key = uri_key(ctx[:uri])
     @pools[key].acquire do |state|
-      state[:socket] ||=  connect(key)
-      state[:protocol_method] ||= protocol_method(state[:socket], ctx)
-      send(state[:protocol_method], state, ctx)
-    rescue => e
-      state[:socket]&.close rescue nil
-      state.clear
-      raise e
+      cancel_after(10) do
+        state[:socket] ||=  connect(key)
+        state[:protocol_method] ||= protocol_method(state[:socket], ctx)
+        send(state[:protocol_method], state, ctx)
+      rescue => e
+        state[:socket]&.close rescue nil
+        state.clear
+        if ctx[:retry] < 3
+          ctx[:retry] += 1
+          do_request(ctx)
+        else
+          raise e
+        end
+      end
     end
   end
 
@@ -161,6 +170,7 @@ class Agent
       ':path'       => ctx[:uri].request_uri,
     }
     headers.merge!(ctx[:opts][:headers]) if ctx[:opts][:headers]
+    puts "* proxy request headers: #{headers.inspect}"
 
     if ctx[:opts][:payload]
       stream.headers(headers, end_stream: false)
@@ -192,13 +202,17 @@ class Agent
     (stream.close rescue nil) unless done
   end
 
-  HTTP1_REQUEST = "%<method>s %<request>s HTTP/1.1\r\nHost: %<host>s\r\n\r\n"
+  HTTP1_REQUEST = "%<method>s %<request>s HTTP/1.1\r\nHost: %<host>s\r\n%<headers>s\r\n"
 
   def format_http1_request(ctx)
+    headers = ctx[:opts][:headers] ? ctx[:opts][:headers].map { |k, v| "#{k}: #{v}\r\n"}.join : nil
+    puts "* proxy request headers: #{headers.inspect}"
+
     HTTP1_REQUEST % {
       method:   ctx[:method],
       request:  ctx[:uri].request_uri,
-      host:     ctx[:uri].host
+      host:     ctx[:uri].host,
+      headers:  headers
     }
   end
 
@@ -218,7 +232,6 @@ class Agent
       Polyphony::Net.tcp_connect(key[:host], key[:port])
     when 'https'
       Polyphony::Net.tcp_connect(key[:host], key[:port], SECURE_OPTS)
-      end
     else
       raise "Invalid scheme #{key[:scheme].inspect}"
     end
