@@ -30,6 +30,7 @@ class ::IO
 
     alias_method :orig_read, :read
     def read(name, length = nil, offset = nil, opt = EMPTY_HASH)
+      opt, length = length, nil if length.is_a?(Hash)
       File.open(name, opt[:mode] || 'r') do |f|
         f.seek(offset) if offset
         length ? f.read(length) : f.read
