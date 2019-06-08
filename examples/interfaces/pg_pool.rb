@@ -28,7 +28,7 @@ DBPOOL.preheat!
 t0 = Time.now
 count = 0
 coprocs = CONCURRENCY.times.map {
-  coproc { loop { DBPOOL.acquire { |db| get_records(db); count += 1 } } }
+  spin { loop { DBPOOL.acquire { |db| get_records(db); count += 1 } } }
 }
 sleep 5
 puts "count: #{count} query rate: #{count / (Time.now - t0)} queries/s"

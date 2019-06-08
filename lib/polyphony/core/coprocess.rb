@@ -20,7 +20,7 @@ class Coprocess
   def run(&block2)
     @caller = caller if Exceptions.debug
 
-    @fiber = FiberPool.spawn do
+    @fiber = FiberPool.run do
       @fiber.coprocess = self
       @result = (@block || block2).call(self)
     rescue Exceptions::MoveOn, Exceptions::Stop => e

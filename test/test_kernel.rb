@@ -11,7 +11,7 @@ class KernelTest < MiniTest::Test
 
   def test_system_method
     counter = 0
-    timer = coproc {
+    timer = spin {
       throttled_loop(200) { counter += 1 }
     }
 

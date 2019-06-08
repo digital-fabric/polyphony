@@ -9,11 +9,11 @@ def error(t)
   raise "hello #{t}"
 end
 
-def coproc_with_error
-  coproc { error(2) }
+def spin_with_error
+  spin { error(2) }
 end
 
-coproc do
+spin do
   error(1)
 rescue => e
   e.cleanup_backtrace
@@ -23,6 +23,6 @@ rescue => e
   puts
 end
 
-coproc_with_error
+spin_with_error
 
 puts "done coprocing"

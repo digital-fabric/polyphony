@@ -5,7 +5,7 @@ require 'polyphony'
 
 class GenServer
   def self.start(receiver, *args)
-    coprocess = coproc do
+    coprocess = spin do
       state = receiver.initial_state(*args)
       loop do
         msg = receive

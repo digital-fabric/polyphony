@@ -3,14 +3,14 @@
 require 'bundler/setup'
 require 'polyphony'
 
-coproc do
-  coproc do
+spin do
+  spin do
     puts "1 >"
     sleep(1)
     puts "1 <"
   end
 
-  coproc do
+  spin do
     puts "2 >"
     sleep(1)
     puts "2 <"

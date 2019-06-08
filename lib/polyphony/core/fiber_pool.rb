@@ -4,7 +4,7 @@ export  :available,
         :checked_out,
         :reset!,
         :size,
-        :spawn
+        :run
 
 require 'fiber'
 
@@ -48,7 +48,7 @@ EV.unref
 # Invokes the given block using a fiber taken from the fiber pool. If the pool
 # is exhausted, a new fiber will be created.
 # @return [Fiber]
-def spawn(&block)
+def run(&block)
   fiber = @pool.empty? ? new_fiber : @pool.shift
   fiber.next_job = block
   fiber

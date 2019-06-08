@@ -7,7 +7,7 @@ require 'localhost/authority'
 STDOUT.sync = true
 
 def ws_handler(conn)
-  timer = coproc {
+  timer = spin {
     throttled_loop(1) {
       conn << Time.now.to_s rescue nil
     }

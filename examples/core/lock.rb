@@ -14,6 +14,6 @@ def loop_it(number, lock)
 end
 
 lock = Polyphony::Sync::Mutex.new
-coproc { loop_it(1, lock) }
-coproc { loop_it(2, lock) }
-coproc { loop_it(3, lock) }
+spin { loop_it(1, lock) }
+spin { loop_it(2, lock) }
+spin { loop_it(3, lock) }

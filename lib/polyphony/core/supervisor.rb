@@ -25,28 +25,12 @@ class Supervisor
     end
   end
 
-  def spawn(proc = nil, &block)
-    if proc.is_a?(Coprocess)
-      spawn_coprocess(proc)
-    else
-      spawn_proc(block || proc)
-    end
-  end
-
-  def spawn_coprocess(proc)
+  def spin(proc = nil, &block)
+    proc = Coprocess.new(&(proc || block)) unless proc.is_a?(Coprocess)
     @coprocesses << proc
     proc.when_done { task_completed(proc) }
     proc.run unless proc.running?
     proc
-  end
-
-  def spawn_proc(proc)
-    @coprocesses << coproc do |coprocess|
-      proc.call(coprocess)
-      task_completed(coprocess)
-    rescue Exception => e
-      task_completed(coprocess)
-    end
   end
 
   def still_running?

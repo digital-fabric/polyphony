@@ -54,4 +54,4 @@ rescue Exception => e
   end
 end
 
-coproc { compare_performance }
+spin { compare_performance }

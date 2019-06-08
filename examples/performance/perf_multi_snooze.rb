@@ -6,12 +6,12 @@ require 'polyphony'
 ITERATIONS  = 1_000
 FIBERS      = 1_000
 
-coproc do
+spin do
   count = 0
   t0 = Time.now
   supervise do |s|
     FIBERS.times do
-      s.coproc do
+      s.spin do
         ITERATIONS.times { snooze; count += 1 }
       end
     end

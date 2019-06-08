@@ -14,9 +14,9 @@ end
 
 chan1, chan2 = Polyphony::Channel.new, Polyphony::Channel.new
 
-echoer = coproc { echo(chan1, chan2) }
+echoer = spin { echo(chan1, chan2) }
 
-coproc do
+spin do
   puts "start receiver"
   while msg = chan2.receive
     puts msg
@@ -26,7 +26,7 @@ ensure
   puts "receiver stopped"
 end
 
-$main = coproc do
+$main = spin do
   t0 = Time.now
   puts "send hello"
   chan1 << "hello"

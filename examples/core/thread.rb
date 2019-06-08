@@ -18,8 +18,8 @@ end
 
 def threaded
   t0 = Time.now
-  data = Polyphony::Thread.coproc { lengthy_op }.await
-  X.times { Polyphony::Thread.coproc { lengthy_op }.await }
+  data = Polyphony::Thread.spin { lengthy_op }.await
+  X.times { Polyphony::Thread.spin { lengthy_op }.await }
   puts "read threaded #{data.bytesize} bytes (#{Time.now - t0}s)"
 end
 

@@ -46,7 +46,7 @@ def handle_request(client, parser)
   client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
 end
 
-coproc do
+spin do
   server = TCPServer.open(1234)
   puts "listening on port 1234"
 

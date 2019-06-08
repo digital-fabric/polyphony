@@ -16,7 +16,7 @@ class RedisChannel < Polyphony::Channel
 
   def self.start_monitor
     @channels = {}
-    @monitor = coproc do
+    @monitor = spin do
       subscribe_connection.subscribe(CHANNEL_MASTER_TOPIC) do |on|
         on.message do |topic, message|
           message = Marshal.load(message)
@@ -47,7 +47,7 @@ class RedisChannel < Polyphony::Channel
 
   def self.watch(channel)
     @channels[channel.topic] = channel
-    coproc do
+    spin do
       publish_connection.publish(CHANNEL_MASTER_TOPIC, Marshal.dump({
         kind: :subscribe,
         topic: channel.topic
@@ -57,7 +57,7 @@ class RedisChannel < Polyphony::Channel
 
   def self.unwatch(channel)
     @channels.delete(channel.topic)
-    coproc do
+    spin do
       publish_connection.publish(CHANNEL_MASTER_TOPIC, Marshal.dump({
         kind: :unsubscribe,
         topic: channel.topic
@@ -99,14 +99,14 @@ end
 RedisChannel.start_monitor
 channel = RedisChannel.new('channel1')
 
-coproc do
+spin do
   loop do
     message = channel.receive
     puts "got message: #{message}"
   end
 end
 
-coproc do
+spin do
   move_on_after(3) do
     throttled_loop(1) do
       channel << Time.now

@@ -8,7 +8,7 @@ async def my_sleep(t)
   raise "blah"
 end
 
-coproc do
+spin do
   puts "#{Time.now} going to sleep..."
   supervise do |s|
     s.coproc my_sleep(1)

@@ -86,7 +86,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_coprocess_can_be_awaited
     result = nil
-    coproc do
+    spin do
       coprocess = Polyphony::Coprocess.new { sleep(0.001); 42 }
       result = coprocess.await
     end
@@ -96,7 +96,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_coprocess_can_be_stopped
     result = nil
-    coprocess = coproc do
+    coprocess = spin do
       sleep(0.001)
       result = 42
     end
@@ -107,7 +107,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_coprocess_can_be_cancelled
     result = nil
-    coprocess = coproc do
+    coprocess = spin do
       sleep(0.001)
       result = 42
     rescue Polyphony::Cancel => e
@@ -125,8 +125,8 @@ class CoprocessTest < MiniTest::Test
   def test_that_inner_coprocess_can_be_interrupted
     result = nil
     coprocess2 = nil
-    coprocess = coproc do
-      coprocess2 = coproc do
+    coprocess = spin do
+      coprocess2 = spin do
         sleep(0.001)
         result = 42
       end
@@ -143,8 +143,8 @@ class CoprocessTest < MiniTest::Test
   def test_that_inner_coprocess_can_interrupt_outer_coprocess
     result, coprocess2 = nil
     
-    coprocess = coproc do
-      coprocess2 = coproc do
+    coprocess = spin do
+      coprocess2 = spin do
         EV.next_tick { coprocess.interrupt }
         sleep(0.001)
         result = 42
@@ -168,7 +168,7 @@ class MailboxTest < MiniTest::Test
 
   def test_that_coprocess_can_receive_messages
     msgs = []
-    coprocess = coproc {
+    coprocess = spin {
       loop {
         msgs << receive
       }
@@ -185,7 +185,7 @@ class MailboxTest < MiniTest::Test
 
   def test_that_multiple_messages_sent_at_once_arrive
     msgs = []
-    coprocess = coproc {
+    coprocess = spin {
       loop { 
         msgs << receive
       }

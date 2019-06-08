@@ -3,7 +3,7 @@
 require 'bundler/setup'
 require 'polyphony'
 
-timer = coproc {
+timer = spin {
   throttled_loop(5) { STDOUT << '.' }
 }
 

@@ -26,7 +26,7 @@ def user(number)
 end
 
 6.times do |x|
-  coproc { user(x) }
+  spin { user(x) }
 end
 
 t0 = Time.now

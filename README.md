@@ -11,8 +11,8 @@
 > number of parts, each forming an individual melody and harmonizing with each
 > other.
 
-**Note**: Polyphony is designed to work with recent versions of Ruby and
-supports Linux and MacOS only. This software is currently at the alpha stage.
+**Note**: Polyphony is experimental software. It is designed to work with recent
+versions of Ruby (2.5 and newer) and supports Linux and MacOS only.
 
 ## What is Polyphony
 
@@ -70,18 +70,18 @@ The reactor, in turn, may schedule other operations once they can be resumed. In
 that manner, multiple ongoing operations may be processed concurrently.
 
 There are multiple ways to start a concurrent operation, the most common of
-which is `Kernel#coproc`:
+which is `Kernel#spin`:
 
 ```ruby
 require 'polyphony'
 
-coproc do
+spin do
   puts "A going to sleep"
   sleep 1
   puts "A woken up"
 end
 
-coproc do
+spin do
   puts "B going to sleep"
   sleep 1
   puts "B woken up"
@@ -99,8 +99,8 @@ any boilerplate relating to concurrency. Each `coproc` block starts a
 > called, and resumed once that operation has been completed. Coprocesses offer
 > significant advantages over threads - they consume only about 10KB, switching
 > between them is much faster than switching threads, and literally millions of
-> them can be spawned without affecting performance*. Besides, Ruby does not yet
-> allow parallel execution of threads.
+> them can be spinned off without affecting performance*. Besides, Ruby does not
+> yet allow parallel execution of threads (courtesy of the Ruby GVL).
 > 
 > \* *This is a totally unsubstantiated claim which has not been proved in
 > practice*.
@@ -116,7 +116,7 @@ require 'polyphony'
 server = TCPServer.open(1234)
 while client = server.accept
   # coproc starts a new coprocess on a separate fiber
-  coproc {
+  spin {
     while data = client.read rescue nil
       client.write(data)
     end
@@ -129,7 +129,7 @@ This example demonstrates several features of Polyphony:
 - The code uses the native `TCPServer` class from Ruby's stdlib, to setup a TCP
   server. The result of `server.accept` is also a native `TCPSocket` object.
   There are no wrapper classes being used.
-- The only hint of the code being concurrent is the use of `Kernel#coproc`,
+- The only hint of the code being concurrent is the use of `Kernel#spin`,
   which starts a new coprocess on a dedicated fiber. This allows serving
   multiple clients at once. Whenever a blocking call is issued, such as
   `#accept` or `#read`, execution is *yielded* to the event loop, which will
@@ -223,7 +223,7 @@ end
 ### Additional concurrency constructs
 
 In order to facilitate writing concurrent code, Polyphony provides additional
-constructs that make it easier to spawn concurrent tasks and to control them.
+constructs that make it easier to create and control concurrent tasks.
 
 `CancelScope` - an abstraction used to cancel the execution of one or more
 coprocesses or supervisors. It usually works by defining a timeout for the 
@@ -257,7 +257,7 @@ Pool = Polyphony::ResourcePool.new(limit: 5) {
 }
 
 1000.times {
-  coproc {
+  spin {
     Pool.acquire { |db| p db.query('select 1') }
   }
 }
@@ -274,7 +274,7 @@ Pool = Polyphony::ResourcePool.new(limit: 5) {
 }
 
 1000.times {
-  coproc { p Pool.query('select 1') }
+  spin { p Pool.query('select 1') }
 }
 ```
 
@@ -285,9 +285,9 @@ using `Kernel.supervise`:
 
 ```ruby
 supervise { |s|
-  s.spawn { sleep 1 }
-  s.spawn { sleep 2 }
-  s.spawn { sleep 3 }
+  s.spin { sleep 1 }
+  s.spin { sleep 2 }
+  s.spin { sleep 3 }
 }
 puts "done sleeping"
 ```
@@ -313,7 +313,7 @@ server = Net.tcp_listen(1234)
 throttler = throttle(rate: 10) # up to 10 times per second
 
 while client = server.accept
-  coproc {
+  spin {
     throttler.call {
       while data = client.read
         client.write(data)

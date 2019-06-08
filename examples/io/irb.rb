@@ -6,7 +6,7 @@ require 'irb'
 
 $counter = 0
 
-timer = coproc do
+timer = spin do
   throttled_loop(10) { $counter += 1 }
 end
 

@@ -57,7 +57,7 @@ end
 
 module ::Process
   def self.detach(pid)
-    coproc {
+    spin {
       EV::Child.new(pid).await
     }
   end
@@ -94,7 +94,7 @@ module ::Kernel
     CancelScope.new(timeout: duration, mode: :cancel).(&block)
   end
 
-  def coproc(proc = nil, &block)
+  def spin(proc = nil, &block)
     if proc.is_a?(Coprocess)
       proc.run
     else

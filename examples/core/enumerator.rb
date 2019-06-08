@@ -5,7 +5,7 @@ require 'polyphony'
 
 enum = [1,2,3].each
 
-coproc do
+spin do
   while e = enum.next rescue nil
     puts e
     sleep 1

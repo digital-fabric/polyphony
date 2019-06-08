@@ -23,7 +23,7 @@ end
 def accept_loop(server, opts, &handler)
   while true
     client = server.accept
-    coproc { client_task(client, opts, &handler) }
+    spin { client_task(client, opts, &handler) }
   end
 rescue OpenSSL::SSL::SSLError
   retry # disregard

@@ -11,7 +11,7 @@ rescue => e
   puts e.backtrace.join("\n")
 end
 
-time_printer = coproc do
+time_printer = spin do
   last = Time.now
   throttled_loop(10) do
     now = Time.now

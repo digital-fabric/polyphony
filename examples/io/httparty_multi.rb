@@ -11,7 +11,7 @@ t0 = Time.now
 move_on_after(3) do
   supervise do |s|
     10.times do
-      s.spawn do
+      s.spin do
         loop do
           STDOUT << '!'
           if (result = HTTParty.get(url))

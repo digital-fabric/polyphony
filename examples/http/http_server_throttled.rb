@@ -5,7 +5,7 @@ require 'polyphony/http'
 
 $throttler = throttle(1000)
 opts = { reuse_addr: true, dont_linger: true }
-coproc {
+spin {
   Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
     $throttler.call { req.respond("Hello world!\n") }
   end

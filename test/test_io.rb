@@ -15,19 +15,19 @@ class IOTest < MiniTest::Test
     count = 0
     msg = nil
     [
-      coproc {
+      spin {
         @o.write("hello")
         @o.close
       },
 
-      coproc {
+      spin {
         while count < 5
           sleep 0.01
           count += 1
         end
       }, 
 
-      coproc {
+      spin {
         msg = @i.read
       }
     ].each(&:await)
@@ -118,7 +118,7 @@ class IOClassMethodsTest < MiniTest::Test
 
   def test_popen
     counter = 0
-    timer = coproc {
+    timer = spin {
       throttled_loop(200) { counter += 1 }
     }
 

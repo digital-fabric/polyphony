@@ -53,7 +53,7 @@ opts = {
   secure_context: ctx#authority.server_context
 }
 
-coproc {
+spin {
   Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
     puts "#{req.method} #{req.uri.to_s}"
     puts "headers <: #{req.headers.inspect}"

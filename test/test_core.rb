@@ -9,7 +9,7 @@ class SpawnTest < MiniTest::Test
 
   def test_that_spawn_returns_a_coprocess
     result = nil
-    coprocess = coproc { result = 42 }
+    coprocess = spin { result = 42 }
 
     assert_kind_of(Polyphony::Coprocess, coprocess)
     assert_nil(result)
@@ -20,7 +20,7 @@ class SpawnTest < MiniTest::Test
   def test_that_spawn_accepts_coprocess_argument
     result = nil
     coprocess = Polyphony::Coprocess.new { result = 42 }
-    coproc coprocess
+    spin coprocess
 
     assert_nil(result)
     suspend
@@ -28,7 +28,7 @@ class SpawnTest < MiniTest::Test
   end
 
   def test_that_spawned_coprocess_saves_result
-    coprocess = coproc { 42 }
+    coprocess = spin { 42 }
 
     assert_kind_of(Polyphony::Coprocess, coprocess)
     assert_nil(coprocess.result)
@@ -38,7 +38,7 @@ class SpawnTest < MiniTest::Test
 
   def test_that_spawned_coprocess_can_be_interrupted
     result = nil
-    coprocess = coproc { sleep(1); 42 }
+    coprocess = spin { sleep(1); 42 }
     EV.next_tick { coprocess.interrupt }
     suspend
     assert_nil(coprocess.result)
@@ -59,7 +59,7 @@ class CancelScopeTest < Minitest::Test
 
   def test_that_cancel_scope_cancels_coprocess
     ctx = {}
-    coproc do
+    spin do
       EV::Timer.new(0.005, 0).start { ctx[:cancel_scope]&.cancel! }
       sleep_with_cancel(ctx, :cancel)
     rescue Exception => e
@@ -76,7 +76,7 @@ class CancelScopeTest < Minitest::Test
 
   # def test_that_cancel_scope_cancels_async_op_with_stop
   #   ctx = {}
-  #   coproc do
+  #   spin do
   #     EV::Timer.new(0, 0).start { ctx[:cancel_scope].cancel! }
   #     sleep_with_cancel(ctx, :stop)
   #   end
@@ -88,7 +88,7 @@ class CancelScopeTest < Minitest::Test
 
   def test_that_cancel_after_raises_cancelled_exception
     result = nil
-    coproc do
+    spin do
       cancel_after(0.01) do
         sleep(1000)
       end
@@ -103,7 +103,7 @@ class CancelScopeTest < Minitest::Test
   def test_that_cancel_scopes_can_be_nested
     inner_result = nil
     outer_result = nil
-    coproc do
+    spin do
       move_on_after(0.01) do
         move_on_after(0.02) do
           sleep(1000)
@@ -119,7 +119,7 @@ class CancelScopeTest < Minitest::Test
     EV.rerun
 
     outer_result = nil
-    coproc do
+    spin do
       move_on_after(0.02) do
         move_on_after(0.01) do
           sleep(1000)
@@ -148,13 +148,13 @@ class SupervisorTest < MiniTest::Test
 
   def parallel_sleep(ctx)
     supervise do |s|
-      (1..3).each { |idx| s.spawn sleep_and_set(ctx, idx) }
+      (1..3).each { |idx| s.spin sleep_and_set(ctx, idx) }
     end
   end
   
   def test_that_supervisor_waits_for_all_nested_coprocesses_to_complete
     ctx = {}
-    coproc do
+    spin do
       parallel_sleep(ctx)
     end
     suspend
@@ -165,12 +165,12 @@ class SupervisorTest < MiniTest::Test
 
   def test_that_supervisor_can_add_coprocesses_after_having_started
     result = []
-    coproc {
+    spin {
       supervisor = Polyphony::Supervisor.new
       3.times do |i|
-        coproc do
+        spin do
           sleep(0.001)
-          supervisor.spawn do
+          supervisor.spin do
             sleep(0.001)
             result << i
           end

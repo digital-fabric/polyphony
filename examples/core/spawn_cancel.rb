@@ -3,7 +3,7 @@
 require 'bundler/setup'
 require 'polyphony'
 
-coproc do
+spin do
   puts "going to sleep..."
   cancel_after(1) do
     async {

@@ -9,6 +9,6 @@ def my_sleep(t)
   puts "woke up"
 end
 
-coproc do
+spin do
   async { my_sleep(1) }.await
 end
