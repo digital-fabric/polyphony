@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    polyphony (0.17)
+    polyphony (0.18)
       http-2 (= 0.10.0)
       http_parser.rb (= 0.6.0)
       modulation (= 0.24)

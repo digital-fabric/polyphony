@@ -1,3 +1,6 @@
+0.18 2019-06-08
+---------------
+
 * Rename Kernel#coproc to Kernel#spin
 * Rewrite Supervisor#spin
 
