@@ -41,7 +41,7 @@ takes care of context-switching automatically whenever a blocking call like
   coprocesses, supervisors, cancel scopes, throttling, resource pools etc.
 - Code can use native networking classes and libraries, growing support for
   third-party gems such as `pg` and `redis`.
-- HTTP 1 / HTTP 2 client
+- HTTP 1 / HTTP 2 client agent with persistent connections.
 - Competitive performance and scalability characteristics, in terms of both
   throughput and memory consumption.
 
@@ -90,7 +90,7 @@ end
 
 In the above example, both `sleep` calls will be executed concurrently, and thus
 the program will take approximately only 1 second to execute. Note the lack of
-any boilerplate relating to concurrency. Each `coproc` block starts a
+any boilerplate relating to concurrency. Each `spin` block starts a
 *coprocess*, and is executed in sequential manner.
 
 > **Coprocesses - the basic unit of concurrency**: In Polyphony, concurrent

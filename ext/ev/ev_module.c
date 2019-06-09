@@ -18,7 +18,7 @@ static VALUE EV_suspend(VALUE self);
 static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value);
 
 static VALUE watcher_refs;
-static VALUE next_tick_procs;
+static VALUE next_tick_items;
 
 static struct ev_timer next_tick_timer;
 static int next_tick_active;
@@ -80,8 +80,8 @@ void Init_EV() {
   watcher_refs = rb_hash_new();
   rb_global_variable(&watcher_refs);
 
-  next_tick_procs = rb_ary_new();
-  rb_global_variable(&next_tick_procs);
+  next_tick_items = rb_ary_new();
+  rb_global_variable(&next_tick_items);
 
   ev_timer_init(&next_tick_timer, EV_next_tick_callback, 0., 0.);
   next_tick_active = 0;
@@ -136,7 +136,7 @@ void EV_del_watcher_ref(VALUE obj) {
 static VALUE EV_next_tick(VALUE self) {
   VALUE proc = rb_block_proc();
   if (RTEST(proc)) {
-    rb_ary_push(next_tick_procs, proc);
+    rb_ary_push(next_tick_items, proc);
     if (!next_tick_active) {
       next_tick_active = 1;
       ev_timer_start(EV_DEFAULT, &next_tick_timer);
@@ -149,7 +149,7 @@ static VALUE EV_snooze(VALUE self) {
   VALUE ret;
   VALUE fiber = rb_fiber_current();
 
-  rb_ary_push(next_tick_procs, fiber);
+  rb_ary_push(next_tick_items, fiber);
   if (!next_tick_active) {
     next_tick_active = 1;
     ev_timer_start(EV_DEFAULT, &next_tick_timer);
@@ -159,7 +159,7 @@ static VALUE EV_snooze(VALUE self) {
   
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    rb_ary_delete(next_tick_procs, fiber);
+    rb_ary_delete(next_tick_items, fiber);
     return rb_funcall(ret, ID_raise, 1, ret);
   }
   else {
@@ -188,14 +188,15 @@ VALUE EV_next_tick_runner(VALUE proc) {
 }
 
 void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents) {
-  VALUE scheduled_procs = next_tick_procs;
-  next_tick_procs = rb_ary_new();
+  VALUE scheduled_items = next_tick_items;
+  next_tick_items = rb_ary_new();
 
-  for (long i = 0; i < RARRAY_LEN(scheduled_procs); i++) {
-    EV_next_tick_runner(RARRAY_AREF(scheduled_procs, i));
+  long len = RARRAY_LEN(scheduled_items);
+  for (long i = 0; i < len; i++) {
+    EV_next_tick_runner(RARRAY_AREF(scheduled_items, i));
   }
 
-  if (rb_array_len(next_tick_procs) > 0) {
+  if (rb_array_len(next_tick_items) > 0) {
     ev_timer_start(EV_DEFAULT, &next_tick_timer);
   } else {
     next_tick_active = 0;
@@ -203,7 +204,6 @@ void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents
 }
 
 static VALUE EV_suspend(VALUE self) {
-  // make sure reactor fiber is alive
   if (!RTEST(rb_fiber_alive_p(EV_reactor_fiber))) {
     return Qnil;
   }
@@ -218,7 +218,7 @@ static VALUE EV_suspend(VALUE self) {
 static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   rb_ivar_set(fiber, ID_scheduled_value, value);
 
-  rb_ary_push(next_tick_procs, fiber);
+  rb_ary_push(next_tick_items, fiber);
   if (!next_tick_active) {
     next_tick_active = 1;
     ev_timer_start(EV_DEFAULT, &next_tick_timer);
