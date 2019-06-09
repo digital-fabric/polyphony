@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.extensions = ["ext/ev/extconf.rb"]
   s.require_paths = ["lib"]
 
-  s.add_runtime_dependency      'modulation',     '0.24'
+  s.add_runtime_dependency      'modulation',     '~>0.25'
   
   s.add_runtime_dependency      'http_parser.rb', '0.6.0'
   s.add_runtime_dependency      'http-2',         '0.10.0'
