@@ -20,9 +20,9 @@ static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value);
 static VALUE watcher_refs;
 static VALUE next_tick_items;
 
-static struct ev_timer next_tick_timer;
+static struct ev_idle next_tick_watcher;
 static int next_tick_active;
-void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents);
+void EV_next_tick_callback(ev_loop *ev_loop, struct ev_idle *watcher, int revents);
 
 VALUE EV_reactor_fiber;
 VALUE EV_root_fiber;
@@ -83,7 +83,7 @@ void Init_EV() {
   next_tick_items = rb_ary_new();
   rb_global_variable(&next_tick_items);
 
-  ev_timer_init(&next_tick_timer, EV_next_tick_callback, 0., 0.);
+  ev_idle_init(&next_tick_watcher, EV_next_tick_callback);
   next_tick_active = 0;
 }
 
@@ -139,7 +139,7 @@ static VALUE EV_next_tick(VALUE self) {
     rb_ary_push(next_tick_items, proc);
     if (!next_tick_active) {
       next_tick_active = 1;
-      ev_timer_start(EV_DEFAULT, &next_tick_timer);
+      ev_idle_start(EV_DEFAULT, &next_tick_watcher);
     }
   }
   return Qnil;
@@ -152,7 +152,7 @@ static VALUE EV_snooze(VALUE self) {
   rb_ary_push(next_tick_items, fiber);
   if (!next_tick_active) {
     next_tick_active = 1;
-    ev_timer_start(EV_DEFAULT, &next_tick_timer);
+    ev_idle_start(EV_DEFAULT, &next_tick_watcher);
   }
 
   ret = YIELD_TO_REACTOR();
@@ -187,7 +187,7 @@ VALUE EV_next_tick_runner(VALUE proc) {
   return Qnil;
 }
 
-void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents) {
+void EV_next_tick_callback(ev_loop *ev_loop, struct ev_idle *watcher, int revents) {
   VALUE scheduled_items = next_tick_items;
   next_tick_items = rb_ary_new();
 
@@ -196,10 +196,10 @@ void EV_next_tick_callback(ev_loop *ev_loop, struct ev_timer *timer, int revents
     EV_next_tick_runner(RARRAY_AREF(scheduled_items, i));
   }
 
-  if (rb_array_len(next_tick_items) > 0) {
-    ev_timer_start(EV_DEFAULT, &next_tick_timer);
-  } else {
+  // if no next tick items were added during callback, stop the idle watcher
+  if (rb_array_len(next_tick_items) == 0) {
     next_tick_active = 0;
+    ev_idle_stop(EV_DEFAULT, &next_tick_watcher);
   }
 }
 
@@ -221,7 +221,7 @@ static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   rb_ary_push(next_tick_items, fiber);
   if (!next_tick_active) {
     next_tick_active = 1;
-    ev_timer_start(EV_DEFAULT, &next_tick_timer);
+    ev_idle_start(EV_DEFAULT, &next_tick_watcher);
   }
 
   return Qnil;
