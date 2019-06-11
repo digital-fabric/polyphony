@@ -140,10 +140,12 @@ module ::Kernel
     nil
   end
 
-  def throttled_loop(rate, &block)
+  def throttled_loop(rate, count: nil, &block)
     throttler = Throttler.new(rate)
-    loop do
-      throttler.(&block)
+    if count
+      count.times { throttler.(&block) }
+    else
+      loop { throttler.(&block) }
     end
   end
 
