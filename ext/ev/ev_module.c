@@ -17,6 +17,8 @@ static VALUE EV_post_fork(VALUE self);
 static VALUE EV_suspend(VALUE self);
 static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value);
 
+static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self);
+
 static VALUE watcher_refs;
 static VALUE next_tick_items;
 
@@ -57,6 +59,9 @@ void Init_EV() {
   rb_define_global_function("suspend", EV_suspend, 0);
   rb_define_global_function("snooze", EV_snooze, 0);
   rb_define_global_function("next_tick", EV_next_tick, 0);
+
+  VALUE cFiber = rb_const_get(rb_cObject, rb_intern("Fiber"));
+  rb_define_method(cFiber, "safe_transfer", Fiber_safe_transfer, -1);
 
   ID_call                 = rb_intern("call");
   ID_caller               = rb_intern("caller");
@@ -225,4 +230,13 @@ static VALUE EV_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   }
 
   return Qnil;
+}
+
+static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
+  VALUE arg = (argc == 0) ? Qnil : argv[0];
+  VALUE ret = rb_funcall(self, ID_transfer, 1, arg);
+
+  // fiber is resumed, check if resumed value is an exception
+  return RTEST(rb_obj_is_kind_of(ret, rb_eException)) ? 
+    rb_funcall(ret, ID_raise, 1, ret) : ret;
 }
