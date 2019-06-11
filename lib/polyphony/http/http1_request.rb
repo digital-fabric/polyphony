@@ -52,17 +52,20 @@ class Request
 
   def respond(chunk, headers = EMPTY_HASH)
     status = headers.delete(':status') || 200
-    data = format_head(headers)
+    data = format_head(headers, !chunk)
     if chunk
       data << "#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n0\r\n\r\n"
     end
     @conn << data
   end
 
-  def format_head(headers)
-    status = headers[':status'] || 200
-    data = +"HTTP/1.1 #{status}\r\nTransfer-Encoding: chunked\r\n"
-    headers.each do |k, v|
+  def format_head(headers, empty_response)
+    status = headers[':status'] || (empty_response ? 204 : 200)
+    data = empty_response ? 
+      +"HTTP/1.1 #{status}\r\n" :
+      +"HTTP/1.1 #{status}\r\nTransfer-Encoding: chunked\r\n"
+
+      headers.each do |k, v|
       next if k =~ /^:/
       if v.is_a?(Array)
         v.each { |o| data << "#{k}: #{o}\r\n" }
@@ -73,15 +76,16 @@ class Request
     data << "\r\n"
   end
 
-  def write_head(headers = EMPTY_HASH)
-    @conn << format_head(headers)
+  def write_head(headers = EMPTY_HASH, empty_response)
+    @conn << format_head(headers, empty_response)
   end
 
   def write(chunk)
     data = +"#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n"
+    @conn << data
   end
 
   def finish
-    @conn << "0\r\n\r\n"
+    @conn << '0\r\n\r\n'
   end
 end
