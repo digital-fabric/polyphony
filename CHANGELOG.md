@@ -1,3 +1,9 @@
+* Rewrite HTTP server for better concurrency, sequential API
+* Support 204 no-content response in HTTP 1
+* Add optional count parameter to Kernel#throttled_loop for finite looping
+* Implement Fiber#safe_transfer in C
+* Optimize Kernel#next_tick implementation using ev_idle instead of ev_timer
+
 0.18 2019-06-08
 ---------------
 
