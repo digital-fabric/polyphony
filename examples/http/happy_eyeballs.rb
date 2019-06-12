@@ -20,7 +20,7 @@ def happy_eyeballs(hostname, port, max_wait_time: 0.025)
     success = supervise do |supervisor|
       targets.each_with_index do |t, idx|
         sleep(max_wait_time) if idx > 0
-        supervisor.coproc try_connect(t, supervisor)
+        supervisor.spin try_connect(t, supervisor)
       end
     end
     if success

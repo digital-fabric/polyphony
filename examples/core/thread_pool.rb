@@ -37,7 +37,7 @@ def compare_performance
       t0 = Time.now
       supervise do |s|
         X.times do
-          s.coproc Polyphony::ThreadPool.process { lengthy_op }
+          s.spin Polyphony::ThreadPool.process { lengthy_op }
         end
       end
       thread_pool_perf = X / (Time.now - t0)

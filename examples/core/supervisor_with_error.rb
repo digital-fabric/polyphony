@@ -11,9 +11,9 @@ end
 spin do
   puts "#{Time.now} going to sleep..."
   supervise do |s|
-    s.coproc my_sleep(1)
-    s.coproc my_sleep(2)
-    s.coproc my_sleep(3)
+    s.spin my_sleep(1)
+    s.spin my_sleep(2)
+    s.spin my_sleep(3)
   end
 rescue => e
   puts "exception from supervisor: #{e}"

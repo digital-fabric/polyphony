@@ -17,8 +17,8 @@ result = supervise do |s|
     puts "stopping supervisor..."
     s.stop!
   end
-  s.coproc my_sleep(1)
-  s.coproc my_sleep(2)
-  s.coproc my_sleep(3)
+  s.spin my_sleep(1)
+  s.spin my_sleep(2)
+  s.spin my_sleep(3)
 end
 puts "#{Time.now} woke up with #{result.inspect}"

@@ -10,7 +10,8 @@ Exceptions = import('./exceptions')
 class CancelScope
   def initialize(opts = {})
     @opts = opts
-    @error_class = @opts[:mode] == :cancel ? Exceptions::Cancel : Exceptions::MoveOn
+    @error_class = (@opts[:mode] == :cancel) ?
+      Exceptions::Cancel : Exceptions::MoveOn
   end
 
   def cancel!
