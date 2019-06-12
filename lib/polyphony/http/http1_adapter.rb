@@ -181,7 +181,7 @@ class HTTP1Adapter
   # @param headers
   def respond(chunk, headers)
     consume_request if @parsing
-    data = format_headers(headers, empty_response: !chunk)
+    data = format_headers(headers, !chunk)
     if chunk
       data << "#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n0\r\n\r\n"
     end

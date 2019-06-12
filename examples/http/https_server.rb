@@ -14,7 +14,7 @@ opts = {
 puts "pid: #{Process.pid}"
 puts "Listening on port 1234..."
 Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
-  req.respond('Hello world!')
+  req.respond("Hello world!\n")
   # req.send_headers
   # req.send_body_chunk("Method: #{req.method}\n")
   # req.send_body_chunk("Path: #{req.path}\n")
