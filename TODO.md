@@ -1,33 +1,26 @@
 # Roadmap:
 
-## 0.18 Working net/http, httparty
-
-- implement `TCPSocket`/`TCPServer` functionality
-- test `socket` classes
-- test `Net::HTTP`
-- test `httparty`
-
-## 0.19 Full Rack adapter implementation
+## 0.20 Full Rack adapter implementation
 
 - follow Rack specification (doesn't have to include stuff like streaming or
   websockets)
 - find some demo Rack apps and test with Polyphony
 
-## 0.20 Working Rails application
+## 0.21 Working Rails application
 
 - app with database access (postgresql)
 - benchmarks!
 
-## 0.21 Support for multi-threading
+## 0.22 Support for multi-threading
 
 - Separate event loop for each thread
 
-## 0.22 Testing
+## 0.23 Testing
 
 - test thread / thread_pool modules
 - report test coverage
 
-## 0.23 Documentation
+## 0.24 Documentation
 
 # DNS
 
