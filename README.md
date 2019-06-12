@@ -32,7 +32,8 @@ takes care of context-switching automatically whenever a blocking call like
 ## Features
 
 - **Full-blown, integrated, high-performance HTTP 1 / HTTP 2 / WebSocket server
-  with TLS/SSL termination and automatic ALPN protocol selection**.
+  with TLS/SSL termination, automatic ALPN protocol selection, and body
+  streaming**.
 - Co-operative scheduling of concurrent tasks using Ruby fibers.
 - High-performance event reactor for handling I/O events and timers.
 - Natural, sequential programming style that makes it easy to reason about
@@ -45,11 +46,24 @@ takes care of context-switching automatically whenever a blocking call like
 - Competitive performance and scalability characteristics, in terms of both
   throughput and memory consumption.
 
+## Why you should not use Polyphony
+
+- Polyphony does weird things to Ruby, like patching methods like `IO.read`,
+  `Kernel#sleep`, and `Timeout.timeout` so they'll work concurrently without
+  using threads.
+- Error backtraces might look weird.
+- There's currently no support for threads - any IO operations in threads will
+  likely cause a bad crash.
+- Debugging might be confusing or not work at all.
+- The API is currently unstable.
+
 ## Prior Art
 
 Polyphony draws inspiration from the following, in no particular order:
 
 * [nio4r](https://github.com/socketry/nio4r/) and [async](https://github.com/socketry/async)
+  (Polyphony's C-extension code is largely a spinoff of
+  [nio4r's](https://github.com/socketry/nio4r/tree/master/ext))
 * [EventMachine](https://github.com/eventmachine/eventmachine)
 * [Trio](https://trio.readthedocs.io/)
 * [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) (and actually,
@@ -61,16 +75,18 @@ Polyphony draws inspiration from the following, in no particular order:
 $ gem install polyphony
 ```
 
+Or add it to your Gemfile, you know the drill.
+
 ## Getting Started
 
 Polyphony is designed to help you write high-performance, concurrent code in
-Ruby. It does so by turning every call which might block, such as `sleep` or
-`read` into a concurrent operation, which yields control to an event reactor.
-The reactor, in turn, may schedule other operations once they can be resumed. In
-that manner, multiple ongoing operations may be processed concurrently.
+Ruby, without using threads. It does so by turning every call which might block,
+such as `Kernel#sleep` or `IO#read` into a concurrent operation, which yields
+control to an event reactor. The reactor, in turn, may schedule other operations
+once they can be resumed. In that manner, multiple ongoing operations may be
+processed concurrently.
 
-There are multiple ways to start a concurrent operation, the most common of
-which is `Kernel#spin`:
+The simplest way to start a concurrent operation is using `Kernel#spin`:
 
 ```ruby
 require 'polyphony'
@@ -89,38 +105,38 @@ end
 ```
 
 In the above example, both `sleep` calls will be executed concurrently, and thus
-the program will take approximately only 1 second to execute. Note the lack of
-any boilerplate relating to concurrency. Each `spin` block starts a
-*coprocess*, and is executed in sequential manner.
+the program will take approximately only 1 second to execute. Note how the logic
+flow inside each `spin` block is purely sequential, and how the concurrent
+nature of the two blocks is expressed simply and cleanly.
 
-> **Coprocesses - the basic unit of concurrency**: In Polyphony, concurrent
-> operations take place inside coprocesses. A `Coprocess` is executed on top of
-> a `Fiber`, which allows it to be suspended whenever a blocking operation is
-> called, and resumed once that operation has been completed. Coprocesses offer
-> significant advantages over threads - they consume only about 10KB, switching
-> between them is much faster than switching threads, and literally millions of
-> them can be spinned off without affecting performance*. Besides, Ruby does not
-> yet allow parallel execution of threads (courtesy of the Ruby GVL).
-> 
-> \* *This is a totally unsubstantiated claim which has not been proved in
-> practice*.
+## Coprocesses - Polyphony's basic unit of concurrency
+
+In Polyphony, concurrent operations take place inside coprocesses. A `Coprocess`
+is executed on top of a `Fiber`, which allows it to be suspended whenever a
+blocking operation is called, and resumed once that operation has been
+completed. Coprocesses offer significant advantages over threads - they consume
+only about 10KB, switching between them is much faster than switching threads,
+and literally millions of them can be spinned off without affecting
+performance*. Besides, Ruby does not yet allow parallel execution of threads
+(courtesy of the Ruby GVL).
+
+\* *This is a totally unsubstantiated claim and has not been proven in practice*.
 
 ## An echo server in Polyphony
 
-To take matters further, let's see how networking can be done using Polyphony.
-Here's a bare-bones echo server written using Polyphony:
+Let's now examine how networking is done using Polyphony. Here's a bare-bones
+echo server written using Polyphony:
 
 ```ruby
 require 'polyphony'
 
 server = TCPServer.open(1234)
 while client = server.accept
-  # coproc starts a new coprocess on a separate fiber
-  spin {
-    while data = client.read rescue nil
-      client.write(data)
+  spin do
+    while (data = client.gets)
+      client << data
     end
-  }
+  end
 end
 ```
 
@@ -132,12 +148,159 @@ This example demonstrates several features of Polyphony:
 - The only hint of the code being concurrent is the use of `Kernel#spin`,
   which starts a new coprocess on a dedicated fiber. This allows serving
   multiple clients at once. Whenever a blocking call is issued, such as
-  `#accept` or `#read`, execution is *yielded* to the event loop, which will
-  resume only those coprocesses which are ready to be resumed.
+  `#accept` or `#read`, execution is *yielded* to the event reactor loop, which 
+  will resume only those coprocesses which are ready to be resumed.
 - Exception handling is done using the normal Ruby constructs `raise`, `rescue`
   and `ensure`. Exceptions never go unhandled (as might be the case with Ruby
-  threads), and must be dealt with explicitly. An unhandled exception will cause
-  the Ruby process to exit.
+  threads), and must be dealt with explicitly. An unhandled exception will by
+  default cause the Ruby process to exit.
+
+## Additional concurrency constructs
+
+In order to facilitate writing concurrent code, Polyphony provides additional
+mechanisms that make it easier to create and control concurrent tasks.
+
+### Cancel scopes
+
+Cancel scopes, an idea borrowed from Python's
+[Trio](https://trio.readthedocs.io/) library, are used to cancel the execution
+of one or more coprocesses. The most common use of cancel scopes is a for 
+implementing a timeout for the completion of a task. Any blocking operation can
+be cancelled. The programmer may choose to raise a `Cancel` exception when an
+operation has been cancelled, or alternatively to move on without any exception.
+
+Cancel scopes are typically started using `Kernel#cancel_after` and 
+`Kernel#move_on_after` for cancelling with or without an exception,
+respectively. Cancel scopes will take a block of code to execute and run it, 
+providing a reference to the cancel scope:
+
+```ruby
+puts "going to sleep (but really only for 1 second)..."
+cancel_after(1) do
+  sleep(60)
+end
+```
+
+Patterns like closing a connection after X seconds of activity are greatly
+facilitated by timeout-based cancel scopes, which can be easily reset:
+
+```ruby
+def echoer(client)
+  # close connection after 10 seconds of inactivity
+  move_on_after(10) do |scope|
+    scope.when_cancelled { puts "closing connection due to inactivity" }
+    loop do
+      data = client.read
+      scope.reset_timeout
+      client.write
+    end
+  end
+  client.close
+end
+```
+
+Cancel scopes may also be manually cancelled by calling `CancelScope#cancel!`
+at any time:
+
+```ruby
+def echoer(client)
+  move_on_after(60) do |scope|
+    loop do
+      data = client.read
+      scope.cancel! if data == 'stop'
+      client.write
+    end
+  end
+  client.close
+end
+```
+
+### Resource pools
+
+A resource pool is used to control access to one or more shared, usually
+identical resources. For example, a resource pool can be used to control
+concurrent access to database connections, or to limit concurrent
+requests to an external API:
+
+```ruby
+# up to 5 concurrent connections
+Pool = Polyphony::ResourcePool.new(limit: 5) {
+  # the block sets up the resource
+  PG.connect(...)
+}
+
+1000.times {
+  spin {
+    Pool.acquire { |db| p db.query('select 1') }
+  }
+}
+```
+
+You can also call arbitrary methods on the resource pool, which will be
+delegated to the resource using `#method_missing`:
+
+```ruby
+# up to 5 concurrent connections
+Pool = Polyphony::ResourcePool.new(limit: 5) {
+  # the block sets up the resource
+  PG.connect(...)
+}
+
+1000.times {
+  spin { p Pool.query('select pg_sleep(0.01);') }
+}
+```
+
+### Supervisors
+
+A supervisor is used to control one or more coprocesses. It can be used to
+start, stop, restart and await the completion of multiple coprocesses. It is 
+normally started using `Kernel#supervise`:
+
+```ruby
+supervise { |s|
+  s.spin { sleep 1 }
+  s.spin { sleep 2 }
+  s.spin { sleep 3 }
+}
+puts "done sleeping"
+```
+
+The `Kernel#supervise` method will await the completion of all supervised 
+coprocesses. If any supervised coprocess raises an error, the supervisor will
+automatically cancel all other supervised coprocesses.
+
+### Throttlers
+
+A throttler is a mechanism for controlling the speed of an arbitrary task,
+such as sending of emails, or crawling a website. A throttler is normally
+created using `Kernel#throttle` or `Kernel#throttled_loop`, and can even be used 
+to throttle operations across multiple coprocesses:
+
+```ruby
+server = Polyphony::Net.tcp_listen(1234)
+
+# a shared throttler, up to 10 times per second
+throttler = throttle(rate: 10)
+
+while client = server.accept
+  spin do
+    throttler.call do
+      while data = client.read
+        client.write(data)
+      end
+    end
+  end
+end
+```
+
+`Kernel#throttled_loop` can be used to run throttled infinite loops:
+
+```ruby
+throttled_loop(3) do
+  STDOUT << '.'
+end
+```
 
 ## Going further
 
@@ -217,109 +380,6 @@ class IOWatcher
   def signal
     @fiber.transfer
   end
-end
-```
-
-### Additional concurrency constructs
-
-In order to facilitate writing concurrent code, Polyphony provides additional
-constructs that make it easier to create and control concurrent tasks.
-
-`CancelScope` - an abstraction used to cancel the execution of one or more
-coprocesses or supervisors. It usually works by defining a timeout for the 
-completion of a task. Any blocking operation can be cancelled, including
-a coprocess or a supervisor. The developer may choose to cancel with or without
-an exception with `cancel` or `move_on`, respectively. Cancel scopes are
-typically started using `Kernel.cancel_after` and `Kernel.move_on`:
-
-```ruby
-def echoer(client)
-  # cancel after 10 seconds if inactivity
-  move_on_after(10) { |scope|
-    loop {
-      data = client.read
-      scope.reset_timeout
-      client.write
-    }
-  }
-}
-```
-
-`ResourcePool` - a class used to control access to shared resources. It can be
-used to control concurrent access to database connections, or to limit 
-concurrent requests to an external API:
-
-```ruby
-# up to 5 concurrent connections
-Pool = Polyphony::ResourcePool.new(limit: 5) {
-  # the block sets up the resource
-  PG.connect(...)
-}
-
-1000.times {
-  spin {
-    Pool.acquire { |db| p db.query('select 1') }
-  }
-}
-```
-
-You can also call arbitrary methods on the resource pool, which will be
-delegated to the resource using `#method_missing`:
-
-```ruby
-# up to 5 concurrent connections
-Pool = Polyphony::ResourcePool.new(limit: 5) {
-  # the block sets up the resource
-  PG.connect(...)
-}
-
-1000.times {
-  spin { p Pool.query('select 1') }
-}
-```
-
-`Supervisor` - a class used to control one or more `Coprocess`s. It can be used
-to start, stop and restart multiple coprocesses. A supervisor can also be
-used for awaiting the completion of multiple coprocesses. It is usually started
-using `Kernel.supervise`:
-
-```ruby
-supervise { |s|
-  s.spin { sleep 1 }
-  s.spin { sleep 2 }
-  s.spin { sleep 3 }
-}
-puts "done sleeping"
-```
-
-`ThreadPool` - a pool of threads used to run any operation that cannot be
-implemented using non-blocking calls, such as file system calls. The operation
-is offloaded to a worker thread, allowing the event loop to continue processing
-other tasks. For example, `IO.read` and `File.stat` are both reimplemented
-using the Polyphony thread pool. You can easily use the thread pool to run your
-own blocking operations as follows:
-
-```ruby
-result = Polyphony::ThreadPool.process { long_running_process }
-```
-
-`Throttler` - a mechanism for throttling an arbitrary task, such as sending of
-emails, or crawling a website. A throttler is normally created using 
-`Kernel.throttle`, and can even be used to throttle operations across multiple
-coprocesses:
-
-```ruby
-server = Net.tcp_listen(1234)
-throttler = throttle(rate: 10) # up to 10 times per second
-
-while client = server.accept
-  spin {
-    throttler.call {
-      while data = client.read
-        client.write(data)
-      end
-    }
-  }
 end
 ```
 
