@@ -16,8 +16,8 @@ child_pids = []
 4.times do
   child_pids << Polyphony.fork do
     puts "forked pid: #{Process.pid}"
-    Polyphony::HTTP::Server.accept_loop(server, opts) do |req|
-      req.respond("Hello world!\n")
+    server.each do |req|
+      req.respond("Hello world! from pid: #{Process.pid}\n")
     end
   rescue Interrupt
   end

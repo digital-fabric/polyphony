@@ -5,26 +5,15 @@ export_default :Request
 require 'uri'
 
 class Request
-  attr_reader :headers
+  attr_reader :headers, :adapter
 
-  def initialize(stream)
-    @stream = stream
+  def initialize(headers, adapter)
+    @headers  = headers
+    @adapter  = adapter
   end
 
   def protocol
-    'h2'
-  end
-
-  def set_headers(headers)
-    @headers = Hash[*headers.flatten]
-  end
-
-  def add_body_chunk(chunk)
-    if @body
-      @body << chunk
-    else
-      @body = +chunk
-    end
+    @adapter.protocol
   end
 
   def method
@@ -59,10 +48,19 @@ class Request
 
   EMPTY_HASH = {}
 
-  def respond(body, headers = EMPTY_HASH)
-    headers[':status'] ||= '200'
+  def respond(chunk, headers = EMPTY_HASH)
+    @adapter.respond(chunk, headers)
+  end
 
-    @stream.headers(headers, end_stream: false)
-    @stream.data(body, end_stream: true)
+  def send_headers(headers = EMPTY_HASH, empty_response = false)
+    @adapter.send_headers(headers, empty_response)
+  end
+
+  def send_body_chunk(body, done: false)
+    @adapter.send_body_chunk(body, done: done)
+  end
+
+  def finish
+    @adapter.finish
   end
 end
