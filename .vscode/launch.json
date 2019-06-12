@@ -4,6 +4,8 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
+
+
   
     {
       "name": "sleep",
@@ -11,6 +13,22 @@
       "request": "launch",
       "cwd": "${workspaceRoot}",
       "program": "${workspaceRoot}/examples/core/sleep.rb"
+
+    },
+    {
+      "name": "pingpong",
+      "type": "Ruby",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "program": "${workspaceRoot}/examples/core/pingpong.rb"
+
+    },
+    {
+      "name": "http_server",
+      "type": "Ruby",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "program": "${workspaceRoot}/examples/http/http_server.rb"
 
     },
     {
