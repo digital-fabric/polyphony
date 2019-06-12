@@ -93,36 +93,34 @@ class ::TCPSocket
     if local_host && local_port
       @io.bind(Addrinfo.tcp(local_host, local_port))
     end
-    @io.connect(Addrinfo.tcp(remote_host, remote_port))
+    @io.connect(Addrinfo.tcp(remote_host, remote_port)) if remote_host
   end
 
+  alias_method :orig_close, :close
   def close
-    @io.close
+    @io ? @io.close : orig_close
   end
 
+  alias_method :orig_setsockopt, :setsockopt
   def setsockopt(*args)
-    @io.setsockopt(*args)
+    @io ? @io.setsockopt(*args) : orig_setsockopt(*args)
   end
 
+  alias_method :orig_closed?, :closed?
   def closed?
-    @io.closed?
+    @io ? @io.closed? : orig_closed?
   end
 end
 
 class ::TCPServer
-  NO_EXCEPTION = { exception: false }.freeze
+  def initialize(hostname = nil, port)
+    @io = Socket.new Socket::AF_INET, Socket::SOCK_STREAM
+    @io.bind(Addrinfo.tcp(hostname, port))
+    @io.listen(0)
+  end
 
+  alias_method :orig_accept, :accept
   def accept
-    loop do
-      result, client_addr = accept_nonblock(NO_EXCEPTION)
-      case result
-      when TCPSocket         then return result
-      when :wait_readable then read_watcher.await
-      else
-        raise "failed to accept (#{result.inspect})"
-      end
-    end
-  ensure
-    @read_watcher&.stop
+    @io ? @io.accept : orig_accept
   end
 end
