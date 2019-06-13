@@ -7,20 +7,6 @@ import('./io')
 class ::Socket
   NO_EXCEPTION = { exception: false }.freeze
 
-  def accept
-    loop do
-      result, client_addr = accept_nonblock(NO_EXCEPTION)
-      case result
-      when Socket         then return result
-      when :wait_readable then read_watcher.await
-      else
-        raise "failed to accept (#{result.inspect})"
-      end
-    end
-  ensure
-    @read_watcher&.stop
-  end
-
   def connect(remotesockaddr)
     loop do
       result = connect_nonblock(remotesockaddr, NO_EXCEPTION)

@@ -2,6 +2,7 @@
 
 ## 0.20 Full Rack adapter implementation
 
+- Homogenize HTTP 1 and HTTP 2 headers - 
 - Implement `gets` to work correctly (see https://ruby-doc.org/core-2.5.0/Kernel.html#method-i-gets)
 - follow Rack specification (doesn't have to include stuff like streaming or
   websockets)

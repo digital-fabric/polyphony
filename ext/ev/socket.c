@@ -4,12 +4,22 @@
 static VALUE BasicSocket_send(int argc, VALUE *argv, VALUE io);
 static VALUE BasicSocket_recv(int argc, VALUE *argv, VALUE io);
 
+static VALUE Socket_accept(VALUE sock);
+
+static VALUE cTCPSocket;
+
 void Init_Socket() {
   rb_require("socket");
   VALUE cBasicSocket = rb_const_get(rb_cObject, rb_intern("BasicSocket"));
 
   rb_define_method(cBasicSocket, "send", BasicSocket_send, -1);
   rb_define_method(cBasicSocket, "recv", BasicSocket_recv, -1);
+
+  VALUE cSocket = rb_const_get(rb_cObject, rb_intern("Socket"));
+  
+  rb_define_method(cSocket, "accept", Socket_accept, 0);
+
+  cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -158,4 +168,47 @@ static VALUE BasicSocket_recv(int argc, VALUE *argv, VALUE sock) {
     return Qnil;
 
   return str;
+}
+
+static VALUE Socket_accept(VALUE sock) {
+  rb_io_t *fptr;
+  int fd;
+  struct sockaddr addr;
+  socklen_t len = (socklen_t)sizeof addr;
+  VALUE read_watcher = Qnil;
+
+  GetOpenFile(sock, fptr);
+  rb_io_set_nonblock(fptr);
+
+  while (1) {
+    fd = accept(fptr->fd, &addr, &len);
+
+    if (fd < 0) {
+      int e = errno;
+      if (e == EWOULDBLOCK || e == EAGAIN) {
+        if (read_watcher == Qnil)
+          read_watcher = IO_read_watcher(sock);
+        EV_IO_await(read_watcher);
+      }
+      else
+        rb_syserr_fail(e, strerror(e));
+        // rb_syserr_fail_path(e, fptr->pathv);
+    }
+    else {
+      VALUE connection = rb_obj_alloc(cTCPSocket);
+      rb_io_t *fp;
+      MakeOpenFile(connection, fp);
+      rb_update_max_fd(fd);
+      fp->fd = fd;
+      fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
+      rb_io_ascii8bit_binmode(connection);
+      rb_io_set_nonblock(fp);
+      rb_io_synchronized(fp);
+      // if (rsock_do_not_reverse_lookup) {
+	    //   fp->mode |= FMODE_NOREVLOOKUP;
+      // }
+
+      return connection;
+    }
+  }
 }
