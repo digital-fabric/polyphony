@@ -1,3 +1,5 @@
 run Proc.new { |env|
-    ['200', {'Content-Type' => 'text/html'}, ['A barebones rack app.']]
+    ['200', {'Content-Type' => 'text/html'}, [
+      env.select { |k, v| k =~ /^[A-Z]/}.inspect
+    ]]
 }

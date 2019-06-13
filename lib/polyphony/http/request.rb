@@ -32,8 +32,11 @@ class Request
     @path ||= uri.path
   end
 
+  def query_string
+    @query_string ||= uri.query
+  end
+
   def query
-    @uri ||= URI.parse(@headers[':path'] || '')
     return @query if @query
   
     if (q = uri.query)
@@ -44,6 +47,20 @@ class Request
     else
       @query = {}
     end
+  end
+
+  def each_chunk
+    while (chunk = @adapter.get_body_chunk)
+      yield chunk
+    end
+  end
+
+  def read
+    buf = +''
+    while (chunk = @adapter.get_body_chunk)
+      buf << chunk
+    end
+    buf
   end
 
   EMPTY_HASH = {}

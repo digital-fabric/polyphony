@@ -20,7 +20,7 @@ child_pids = []
 4.times do
   child_pids << Polyphony.fork do
     puts "forked pid: #{Process.pid}"
-    Polyphony::HTTP::Server.each(server, opts, &app)
+    server.each(&app)
   end
 end
 
