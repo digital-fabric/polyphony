@@ -1,3 +1,8 @@
+* Implement Socket#accept in C
+* Better conformance of rack adapter to rack spec (WIP)
+* Fix HTTP1 adapter
+* Better support for debugging with ruby-debug-ide (WIP)
+
 0.19 2019-06-12
 ---------------
 
