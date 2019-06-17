@@ -3,7 +3,7 @@
 ## 0.20 Full Rack adapter implementation
 
 - Homogenize HTTP 1 and HTTP 2 headers - upcase ? downcase ?
-
+- Rewrite agent code to use sequential API (like I did for server)
 - Streaming bodies for HTTP client
 
   ```ruby
