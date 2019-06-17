@@ -17,11 +17,13 @@ Gem::Specification.new do |s|
   s.extensions = ["ext/ev/extconf.rb"]
   s.require_paths = ["lib"]
 
+  s.executables   = ['poly']
+
   s.add_runtime_dependency      'modulation',     '~>0.25'
   
   s.add_runtime_dependency      'http_parser.rb', '0.6.0'
   s.add_runtime_dependency      'http-2',         '0.10.0'
-  s.add_runtime_dependency      'rack',           '2.0.7'
+  s.add_runtime_dependency      'rack'
   
   s.add_development_dependency  'hiredis',        '0.6.3'
   s.add_development_dependency  'httparty',       '0.17.0'

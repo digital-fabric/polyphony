@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+require_relative('../lib/polyphony/http')
+
+app_path = ARGV.first || './config.ru'
+app = Polyphony::HTTP::Rack.load(app_path)
+opts = { reuse_addr: true, dont_linger: true }
+
+puts "listening on port 1234"
+puts "pid: #{Process.pid}"
+Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts, &app)
