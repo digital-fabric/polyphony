@@ -2,12 +2,12 @@ require 'minitest/autorun'
 require 'bundler/setup'
 require 'polyphony'
 
-class SpawnTest < MiniTest::Test
+class SpinTest < MiniTest::Test
   def setup
     EV.rerun
   end
 
-  def test_that_spawn_returns_a_coprocess
+  def test_that_spin_returns_a_coprocess
     result = nil
     coprocess = spin { result = 42 }
 
@@ -17,7 +17,7 @@ class SpawnTest < MiniTest::Test
     assert_equal(42, result)
   end
 
-  def test_that_spawn_accepts_coprocess_argument
+  def test_that_spin_accepts_coprocess_argument
     result = nil
     coprocess = Polyphony::Coprocess.new { result = 42 }
     spin coprocess
@@ -27,7 +27,7 @@ class SpawnTest < MiniTest::Test
     assert_equal(42, result)
   end
 
-  def test_that_spawned_coprocess_saves_result
+  def test_that_spined_coprocess_saves_result
     coprocess = spin { 42 }
 
     assert_kind_of(Polyphony::Coprocess, coprocess)
@@ -36,7 +36,7 @@ class SpawnTest < MiniTest::Test
     assert_equal(42, coprocess.result)
   end
 
-  def test_that_spawned_coprocess_can_be_interrupted
+  def test_that_spined_coprocess_can_be_interrupted
     result = nil
     coprocess = spin { sleep(1); 42 }
     EV.next_tick { coprocess.interrupt }

@@ -24,6 +24,12 @@ class ::Fiber
 
   # Associate a (pseudo-)coprocess with the main fiber
   current.coprocess = Coprocess.new(current)
+  
+  @@main_fiber = current
+
+  def self.main
+    @@main_fiber
+  end
 end
 
 class ::Exception

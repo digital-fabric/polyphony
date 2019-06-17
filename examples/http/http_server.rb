@@ -16,9 +16,9 @@ spin do
     # req.send_body_chunk("Path: #{req.path}\n")
     # req.send_body_chunk("Query: #{req.query.inspect}\n", done: true)
   end
-rescue Exception => e
-  puts "*" * 40
-  p e
+# rescue Exception => e
+#   puts "*" * 40
+#   p e
 end
 
 puts "pid: #{Process.pid}"
