@@ -13,7 +13,7 @@ end
 
 def load(path)
   src = IO.read(path)
-  instance_eval(src)
+  instance_eval(src, path, 1)
 end
 
 # Implements a rack input stream:
@@ -67,6 +67,6 @@ end
 
 def respond(request, (status_code, headers, body))
   headers[':status'] = status_code.to_s
-  body = body.first
-  request.respond(body, headers)
+  puts "headers: #{headers.inspect}"
+  request.respond(body.first, headers)
 end
