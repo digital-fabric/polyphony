@@ -2,13 +2,23 @@
 
 ## 0.20 Full Rack adapter implementation
 
-- Homogenize HTTP 1 and HTTP 2 headers - 
-- Implement `gets` to work correctly (see https://ruby-doc.org/core-2.5.0/Kernel.html#method-i-gets)
-- follow Rack specification (doesn't have to include stuff like streaming or
-  websockets)
+- Homogenize HTTP 1 and HTTP 2 headers - upcase ? downcase ?
+
+- Streaming bodies for HTTP client
+
+  ```ruby
+  def download_doc
+    response = Polyphony::HTTP::Agent.get('https://acme.com/doc.pdf')
+    File.open('doc.pdf', 'wb+') do |f|
+      response.each { |chunk| f << chunk } # streaming body
+    end
+  end
+  ```
+- 
+- Implement `::gets` to work correctly (see https://ruby-doc.org/core-2.5.0/Kernel.html#method-i-gets)
 - find some demo Rack apps and test with Polyphony
 
-## 0.21 Working Rails application
+## 0.21 Working Sinatra application
 
 - app with database access (postgresql)
 - benchmarks!
