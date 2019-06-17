@@ -102,6 +102,10 @@ module ::Kernel
     end
   end
 
+  def spin_loop(&block)
+    spin { loop(&block) }
+  end
+
   def every(freq, &block)
     EV::Timer.new(freq, freq).start(&block)
   end
