@@ -16,6 +16,10 @@ class StreamWrapper
     stream.on(:half_close) { on_message_complete }
   end
 
+  def protocol
+    'h2'
+  end
+
   # Reads body chunk from connection
   def get_body_chunk
     @calling_fiber = Fiber.current
@@ -98,10 +102,6 @@ class Protocol
     stream.on(:headers) do |headers|
       @calling_fiber.transfer([stream, headers.to_h])
     end
-  end
-
-  def protocol
-    'h2'
   end
 
   def parse_loop(upgrade_headers)

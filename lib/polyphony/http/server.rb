@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :serve, :listen, :accept_loop
+export :serve, :listen, :accept_loop, :client_loop
 
 Net   = import('../net')
 HTTP1 = import('./http1_adapter')

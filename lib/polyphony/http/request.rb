@@ -13,7 +13,7 @@ class Request
   end
 
   def protocol
-    @adapter.protocol
+    @protocol = @adapter.protocol
   end
 
   def method
@@ -65,8 +65,8 @@ class Request
 
   EMPTY_HASH = {}
 
-  def respond(chunk, headers = EMPTY_HASH)
-    @adapter.respond(chunk, headers)
+  def respond(body, headers = EMPTY_HASH)
+    @adapter.respond(body, headers)
   end
 
   def send_headers(headers = EMPTY_HASH, empty_response = false)
