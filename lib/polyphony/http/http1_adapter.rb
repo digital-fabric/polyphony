@@ -17,10 +17,6 @@ class HTTP1Adapter
     @parse_fiber = Fiber.new { parse_loop }
   end
 
-  def protocol
-    'http/1.1'
-  end
-
   # Parses incoming data, potentially firing parser callbacks. This loop runs on
   # a separate fiber and is resumed only when the handler (client) loop asks for
   # headers, or the request body, or waits for the request to be completed. The
@@ -70,7 +66,7 @@ class HTTP1Adapter
 
       @headers_sent = nil
       block.(Request.new(headers, self))
-      
+
       if @parser.keep_alive?
         @parsing = false
       else
@@ -106,6 +102,11 @@ class HTTP1Adapter
     @calling_fiber = Fiber.current
     @read_body = false
     @parse_fiber.safe_transfer while @parsing
+  end
+
+  def protocol
+    version = @parser.http_version
+    "HTTP #{version.join('.')}"
   end
 
   # Upgrades the connection to a different protocol, if the 'Upgrade' header is
@@ -177,13 +178,17 @@ class HTTP1Adapter
 
   # Sends response including headers and body. Waits for the request to complete
   # if not yet completed. The body is sent using chunked transfer encoding.
-  # @param chunk [String] response body
+  # @param body [String] response body
   # @param headers
-  def respond(chunk, headers)
+  def respond(body, headers)
     consume_request if @parsing
-    data = format_headers(headers, !chunk)
-    if chunk
-      data << "#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n0\r\n\r\n"
+    data = format_headers(headers, body)
+    if body
+      if @parser.http_minor == 0
+        data << body
+      else
+        data << "#{body.bytesize.to_s(16)}\r\n#{body}\r\n0\r\n\r\n"
+      end
     end
     @conn << data
     @headers_sent = true
@@ -204,7 +209,7 @@ class HTTP1Adapter
     return if @headers_sent
 
     consume_request if @parsing && opts[:consume_request]
-    @conn << format_headers(headers, opts[:empty_response])
+    @conn << format_headers(headers, !opts[:empty_response])
     @headers_sent = true
   end
 
@@ -238,11 +243,19 @@ class HTTP1Adapter
   # @param headers [Hash] response headers
   # @param empty_response [boolean] whether a response body will be sent
   # @return [String] formatted response headers
-  def format_headers(headers, empty_response)
-    status = headers[':status'] || (empty_response ? 204 : 200)
-    data = empty_response ? 
-      +"HTTP/1.1 #{status}\r\n" :
+  def format_headers(headers, body)
+    status = headers[':status'] || (body ? 200 : 204)
+    data = if !body
+      if status == 204
+        +"HTTP/1.1 #{status}\r\n"
+      else
+        +"HTTP/1.1 #{status}\r\nContent-Length: 0\r\n"
+      end
+    elsif @parser.http_minor == 0
+      +"HTTP/1.0 #{status}\r\nContent-Length: #{body.bytesize}\r\n"
+    else
       +"HTTP/1.1 #{status}\r\nTransfer-Encoding: chunked\r\n"
+    end
 
     headers.each do |k, v|
       next if k =~ /^:/
