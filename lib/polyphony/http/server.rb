@@ -3,8 +3,8 @@
 export :serve, :listen, :accept_loop, :client_loop
 
 Net   = import('../net')
-HTTP1 = import('./http1_adapter')
-HTTP2 = import('./http2_adapter')
+HTTP1 = import('./sersr/http1')
+HTTP2 = import('./server/http2')
 
 ALPN_PROTOCOLS = %w[h2 http/1.1].freeze
 H2_PROTOCOL = 'h2'

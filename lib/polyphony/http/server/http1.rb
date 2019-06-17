@@ -5,7 +5,7 @@ export_default :HTTP1Adapter
 require 'http/parser'
 
 Request = import('./request')
-HTTP2 = import('./http2_adapter')
+HTTP2 = import('./http2')
 
 # HTTP1 protocol implementation
 class HTTP1Adapter
