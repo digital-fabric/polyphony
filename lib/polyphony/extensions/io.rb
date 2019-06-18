@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'open3'
+
 class ::IO
   class << self
     alias_method :orig_binread, :binread
@@ -130,6 +132,7 @@ class ::IO
       end
     end
     write s
+    nil
   end
 
   # def readbyte

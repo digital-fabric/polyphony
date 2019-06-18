@@ -2,6 +2,7 @@
 
 require 'fiber'
 require 'timeout'
+require 'open3'
 
 CancelScope = import('../core/cancel_scope')
 Coprocess   = import('../core/coprocess')
@@ -68,8 +69,6 @@ module ::Process
     }
   end
 end
-
-require 'open3'
 
 # Kernel extensions (methods available to all objects)
 module ::Kernel
@@ -140,16 +139,6 @@ module ::Kernel
     Supervisor.new.await(&block)
   end
 
-  alias_method :orig_system, :system
-  def system(*args)
-    Open3.popen2(*args) do |i, o, t|
-      i.close
-      o.read
-    end
-  rescue SystemCallError => e
-    nil
-  end
-
   def throttled_loop(rate, count: nil, &block)
     throttler = Throttler.new(rate)
     if count
@@ -168,26 +157,53 @@ module ::Kernel
   end
 
   # patches
+
+  alias_method :orig_backtick, :`
+  def `(cmd)
+    Open3.popen3(cmd) do |i, o, e, t|
+      i.close
+      while (l = e.readpartial(8192) rescue nil)
+        $stderr << l
+      end
+      o.read
+    end
+  end
+
+  ARGV_GETS_LOOP = proc do |calling_fiber|
+    ARGV.each do |fn|
+      File.open(fn, 'r') do |f|
+        while (line = f.gets)
+          calling_fiber = calling_fiber.transfer(line)
+        end
+      end
+    end
+  rescue => e
+    calling_fiber.transfer(e)
+  end
+  
+  alias_method :orig_gets, :gets
   def gets(*args)
     return $stdin.gets if ARGV.empty?
     
-    @gets_fiber ||= Fiber.new do |calling_fiber|
-      ARGV.each do |fn|
-        File.open(fn, 'r') do |f|
-          while (line = f.gets)
-            calling_fiber = calling_fiber.transfer(line)
-          end
-        end
-      end
-    rescue => e
-      calling_fiber.transfer(e)
-    end
-
+    @gets_fiber ||= Fiber.new(&ARGV_GETS_LOOP)
     if @gets_fiber.alive?
       @gets_fiber.safe_transfer(Fiber.current)
     else
       nil
     end
+  end
+
+  alias_method :orig_system, :system
+  def system(*args)
+    Open3.popen2(*args) do |i, o, t|
+      i.close
+      while (l = o.readpartial(8192))
+        $stdout << l
+      end
+    end
+    true
+  rescue SystemCallError => e
+    nil
   end
 end
 
