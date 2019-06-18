@@ -166,6 +166,29 @@ module ::Kernel
   def timeout(duration, opts = {}, &block)
     CancelScope.new(**opts, timeout: duration).(&block)
   end
+
+  # patches
+  def gets(*args)
+    return $stdin.gets if ARGV.empty?
+    
+    @gets_fiber ||= Fiber.new do |calling_fiber|
+      ARGV.each do |fn|
+        File.open(fn, 'r') do |f|
+          while (line = f.gets)
+            calling_fiber = calling_fiber.transfer(line)
+          end
+        end
+      end
+    rescue => e
+      calling_fiber.transfer(e)
+    end
+
+    if @gets_fiber.alive?
+      @gets_fiber.safe_transfer(Fiber.current)
+    else
+      nil
+    end
+  end
 end
 
 module ::Timeout

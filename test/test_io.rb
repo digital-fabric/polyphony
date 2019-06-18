@@ -5,6 +5,8 @@ require 'bundler/setup'
 require 'polyphony'
 require 'fileutils'
 
+require_relative './eg'
+
 class IOTest < MiniTest::Test
   def setup
     EV.rerun
@@ -130,5 +132,56 @@ class IOClassMethodsTest < MiniTest::Test
     assert_equal("foo\n", result)
   ensure
     timer&.stop
+  end
+
+  def test_kernel_gets
+    counter = 0
+    timer = spin {
+      throttled_loop(200) { counter += 1}
+    }
+
+    i, o = IO.pipe
+    orig_stdin = $stdin
+    $stdin = i
+    spin {
+      sleep 0.01
+      o.puts "foo"
+      o.close
+    }
+
+    assert(counter >= 0)
+    assert_equal("foo\n", gets)
+  ensure
+    $stdin = orig_stdin
+    timer&.stop
+  end
+
+  def test_kernel_gets_with_argv
+    ARGV << __FILE__
+
+    s = StringIO.new(IO.orig_read(__FILE__))
+
+    while (l = s.gets)
+      assert_equal(l, gets)
+    end
+  ensure
+    ARGV.delete __FILE__
+  end
+
+  def test_kernel_puts
+    orig_stdout = $stdout
+    o = eg(
+      '@buf': +'',
+      write: ->(*args) { args.each { |a| @buf << a } },
+      flush: -> { },
+      buf: -> { @buf }
+    )
+
+    $stdout = o
+
+    puts("foobar")
+    assert_equal("foobar\n", o.buf)
+  ensure
+    $stdout = orig_stdout
   end
 end
