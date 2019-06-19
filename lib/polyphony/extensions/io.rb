@@ -94,8 +94,7 @@ class ::IO
       idx = @gets_buffer.index(sep)
       return @gets_buffer.slice!(0, idx + sep_size) if idx
 
-      data = readpartial(8192)
-      if data
+      if (data = readpartial(8192) rescue nil)
         @gets_buffer << data
       else
         return nil if @gets_buffer.empty?
