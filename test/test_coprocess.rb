@@ -119,7 +119,7 @@ class CoprocessTest < MiniTest::Test
 
     assert_kind_of(Polyphony::Cancel, result)
     assert_kind_of(Polyphony::Cancel, coprocess.result)
-    assert_nil(coprocess.running?)
+    assert_nil(coprocess.alive?)
   end
 
   def test_that_inner_coprocess_can_be_interrupted
@@ -136,8 +136,8 @@ class CoprocessTest < MiniTest::Test
     EV.next_tick { coprocess.interrupt }
     suspend
     assert_nil(result)
-    assert_nil(coprocess.running?)
-    assert_nil(coprocess2.running?)
+    assert_nil(coprocess.alive?)
+    assert_nil(coprocess2.alive?)
   end
 
   def test_that_inner_coprocess_can_interrupt_outer_coprocess
@@ -156,8 +156,26 @@ class CoprocessTest < MiniTest::Test
     suspend
     
     assert_nil(result)
-    assert_nil(coprocess.running?)
-    assert_nil(coprocess2.running?)
+    assert_nil(coprocess.alive?)
+    assert_nil(coprocess2.alive?)
+  end
+
+  def test_alive?
+    counter = 0
+    coprocess = spin do
+      3.times do
+        snooze
+        counter += 1
+      end
+    end
+
+    assert(coprocess.alive?)
+    snooze
+    assert(coprocess.alive?)
+    snooze while counter < 3
+    assert(!coprocess.alive?)
+  ensure
+    coprocess&.stop
   end
 end
 

@@ -9,8 +9,17 @@ Exceptions  = import('./exceptions')
 
 # Encapsulates an asynchronous task
 class Coprocess
-  attr_reader :result, :fiber
+  @@list = {}
 
+  def self.list
+    @@list
+  end
+
+  def self.count
+    @@list.size
+  end
+
+  attr_reader :result, :fiber
 
   def initialize(fiber = nil, &block)
     @fiber = fiber
@@ -22,6 +31,7 @@ class Coprocess
     uncaught_exception = nil
 
     @fiber = FiberPool.run do
+      @@list[@fiber] = self
       @fiber.coprocess = self
       @result = (@block || block2).call(self)
     rescue Exceptions::MoveOn, Exceptions::Stop => e
@@ -31,6 +41,7 @@ class Coprocess
       @result = e
       uncaught_exception = true
     ensure
+      @@list.delete(@fiber)
       @fiber.coprocess = nil
       @fiber = nil
       @awaiting_fiber&.schedule @result
@@ -70,7 +81,7 @@ class Coprocess
     @receive_waiting = nil
   end
 
-  def running?
+  def alive?
     @fiber
   end
 

@@ -29,7 +29,7 @@ class Supervisor
     proc = Coprocess.new(&(proc || block)) unless proc.is_a?(Coprocess)
     @coprocesses << proc
     proc.when_done { task_completed(proc) }
-    proc.run unless proc.running?
+    proc.run unless proc.alive?
     proc
   end
 
