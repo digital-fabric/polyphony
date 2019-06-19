@@ -39,7 +39,6 @@ class Coprocess
       # if result is an error and nobody's waiting on us, we need to raise it
       # raise @result if @result.is_a?(Exception) && !@awaiting_fiber
       if uncaught_exception && @result.is_a?(Exception) && !@awaiting_fiber
-        puts 
         if Fiber.main == Fiber.current
           raise @result
         else
