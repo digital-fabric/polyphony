@@ -69,8 +69,13 @@ module Polyphony
 end
 
 at_exit do
+  repl = (Pry.current rescue nil) || (IRB.CurrentContext rescue nil)
+
   # in most cases, by the main fiber is done there are still pending or other
   # or asynchronous operations going on. If the reactor loop is not done, we
   # suspend the root fiber until it is done
-  suspend if $__reactor_fiber__&.alive?
+
+  if $__reactor_fiber__&.alive? && !repl
+    suspend
+  end
 end
