@@ -56,10 +56,10 @@ class ::IO
     end
 
     alias_method :orig_popen, :popen
-    def popen(*args)
-      Open3.popen2(*args) do |i, o, t|
-        yield o
-      end
+    def popen(cmd, mode = 'r')
+      return orig_popen(cmd, mode) unless block_given?
+
+      Open3.popen2(cmd) { |i, o, t| yield o }
     end
   end
 
