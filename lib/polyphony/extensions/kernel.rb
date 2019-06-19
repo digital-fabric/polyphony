@@ -66,7 +66,7 @@ module ::Process
   def self.detach(pid)
     spin {
       EV::Child.new(pid).await
-    }
+    }.tap { |coproc| coproc.define_singleton_method(:pid) { pid } }
   end
 end
 
@@ -180,7 +180,7 @@ module ::Kernel
   rescue => e
     calling_fiber.transfer(e)
   end
-  
+
   alias_method :orig_gets, :gets
   def gets(*args)
     return $stdin.gets if ARGV.empty?
