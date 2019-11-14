@@ -76,6 +76,7 @@ class Request
   def send_body_chunk(body, done: false)
     @adapter.send_body_chunk(body, done: done)
   end
+  alias_method :<<, :send_body_chunk
 
   def finish
     @adapter.finish
