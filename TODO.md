@@ -1,6 +1,16 @@
 # Roadmap:
 
-## 0.20 Full Rack adapter implementation
+## 0.20 REPL usage, coprocess introspection, monitoring
+
+- Implement `move_on_after(1, with: nil) { ... }`
+- Implement `Coprocess.await` for waiting on multiple coprocesses without
+  starting them in a supervisor, will also necessitate adding `Supervisor#add`
+- Implement `Coprocess#location`
+- Implement `Coprocess#alive?`
+- Implement `Coprocess#caller` - points to coprocess that called the coprocess
+- Implement `Coprocess.list` - a list of running coprocesses
+
+## 0.21 Full Rack adapter implementation
 
 - Homogenize HTTP 1 and HTTP 2 headers - upcase ? downcase ?
 - Rewrite agent code to use sequential API (like I did for server)
@@ -14,25 +24,24 @@
     end
   end
   ```
-- 
-- Implement `::gets` to work correctly (see https://ruby-doc.org/core-2.5.0/Kernel.html#method-i-gets)
+
 - find some demo Rack apps and test with Polyphony
 
-## 0.21 Working Sinatra application
+## 0.22 Working Sinatra application
 
 - app with database access (postgresql)
 - benchmarks!
 
-## 0.22 Support for multi-threading
+## 0.23 Support for multi-threading
 
 - Separate event loop for each thread
 
-## 0.23 Testing
+## 0.24 Testing
 
 - test thread / thread_pool modules
 - report test coverage
 
-## 0.24 Documentation
+## 0.25 Documentation
 
 # DNS
 
@@ -68,3 +77,4 @@ puts "listening on port 5300"
 Prior art:
 
 - https://github.com/socketry/async-dns
+
