@@ -31,6 +31,7 @@ module Polyphony
     pid = Kernel.fork do
       FiberPool.reset!
       EV.post_fork
+      Fiber.set_main_fiber
       Fiber.current.coprocess = Coprocess.new(Fiber.current)
   
       block.()

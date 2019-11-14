@@ -31,6 +31,10 @@ class ::Fiber
   def self.main
     @@main_fiber
   end
+
+  def self.set_main_fiber
+    @@main_fiber = current
+  end
 end
 
 class ::Exception
