@@ -9,7 +9,7 @@ require_relative './eg'
 
 class IOTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
     @i, @o = IO.pipe
   end
 
@@ -48,7 +48,7 @@ end
 
 class IOClassMethodsTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def test_binread

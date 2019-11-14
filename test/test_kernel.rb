@@ -6,7 +6,7 @@ require 'polyphony'
 
 class KernelTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def test_system_method

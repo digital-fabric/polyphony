@@ -4,7 +4,7 @@ require 'polyphony'
 
 class SpinTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def test_that_spin_returns_a_coprocess
@@ -47,7 +47,7 @@ end
 
 class CancelScopeTest < Minitest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def sleep_with_cancel(ctx, mode = nil)
@@ -116,7 +116,7 @@ class CancelScopeTest < Minitest::Test
     assert_nil(inner_result)
     assert_equal(42, outer_result)
 
-    EV.rerun
+    Polyphony.reset!
 
     outer_result = nil
     spin do
@@ -136,7 +136,7 @@ end
 
 class SupervisorTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def sleep_and_set(ctx, idx)

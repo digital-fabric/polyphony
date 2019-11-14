@@ -34,7 +34,7 @@ end
 
 class HTTP1ServerTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def spin_server(&handler)

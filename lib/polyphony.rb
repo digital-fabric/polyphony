@@ -53,6 +53,11 @@ module Polyphony
     @debug = value
   end
   
+  def self.reset!
+    FiberPool.reset!
+    EV.rerun
+  end
+  
   auto_import(
     CancelScope:  './polyphony/core/cancel_scope',
     Channel:      './polyphony/core/channel',

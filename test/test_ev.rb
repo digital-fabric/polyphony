@@ -4,7 +4,7 @@ require 'polyphony'
 
 class EVRunTest < Minitest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def test_that_run_loop_returns_immediately_if_no_watchers
@@ -17,7 +17,7 @@ end
 
 class EVTimerTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def test_that_one_shot_timer_works
@@ -39,7 +39,7 @@ end
 
 class EVIOTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def test_that_reading_works
@@ -58,7 +58,7 @@ end
 
 class EVSignalTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
     EV.restart
   end
 
@@ -83,7 +83,7 @@ end
 
 class EVAsyncTest < MiniTest::Test
   def setup
-    EV.rerun
+    Polyphony.reset!
   end
 
   def test_that_async_watcher_receives_signal_across_threads
