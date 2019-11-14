@@ -11,7 +11,6 @@ static VALUE EV_ref(VALUE self);
 static VALUE EV_unref(VALUE self);
 
 static VALUE EV_next_tick(VALUE self);
-static VALUE EV_snooze(VALUE self);
 static VALUE EV_post_fork(VALUE self);
 
 static VALUE EV_suspend(VALUE self);

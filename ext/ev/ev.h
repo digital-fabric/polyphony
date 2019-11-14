@@ -7,7 +7,7 @@
 
 void EV_add_watcher_ref(VALUE obj);
 void EV_del_watcher_ref(VALUE obj);
-void EV_async_free(void *p);
+VALUE EV_snooze(VALUE self);
 
 VALUE IO_read_watcher(VALUE io);
 VALUE IO_write_watcher(VALUE io);

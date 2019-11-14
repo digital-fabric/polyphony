@@ -377,6 +377,11 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
   io_set_read_length(str, n, shrinkable);
   io_enc_str(str, fptr);
 
+  // ensure yielding to reactor if haven't yielded while reading
+  if (read_watcher == Qnil) {
+    EV_snooze(Qnil);
+  }
+
   if (n == 0)
     return Qnil;
 
@@ -431,6 +436,11 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
         else break;
       }
     }
+  }
+
+  // ensure yielding to reactor if haven't yielded while writing
+  if (write_watcher == Qnil) {
+    EV_snooze(Qnil);
   }
 
   return LONG2FIX(total);
