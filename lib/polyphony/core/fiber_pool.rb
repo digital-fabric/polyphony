@@ -51,6 +51,10 @@ EV.unref
 def run(&block)
   fiber = @pool.empty? ? new_fiber : @pool.shift
   fiber.next_job = block
+
+  current_fiber = Fiber.current
+  fiber.calling_fiber = current_fiber
+  fiber.caller = current_fiber.backtrace(caller)
   fiber
 end
 
@@ -85,6 +89,8 @@ def fiber_loop
   end
 rescue => e
   # uncaught error
+  $stdout.orig_puts "uncaught error in FiberPool: #{e.inspect}"
+  $stdout.orig_puts e.backtrace.join("\n")
   error = e
 ensure
   @pool.delete(self)

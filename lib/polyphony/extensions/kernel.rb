@@ -12,8 +12,8 @@ Throttler   = import('../core/throttler')
 
 # Fiber extensions
 class ::Fiber
-  attr_writer :cancelled
-  attr_accessor :next_job, :coprocess
+  attr_writer :cancelled, :caller
+  attr_accessor :next_job, :coprocess, :calling_fiber
 
   def cancelled?
     @cancelled
@@ -21,6 +21,19 @@ class ::Fiber
 
   def schedule(value = nil)
     EV.schedule_fiber(self, value)
+  end
+
+  def backtrace(trace = [])
+    puts "*" * 40
+    puts "#{inspect} (#{@calling_fiber.inspect})"
+    puts caller.join("\n")
+    if @calling_fiber
+      @calling_fiber.backtrace(@caller ? (trace + @caller) : trace)
+    elsif @caller
+      trace + @caller
+    else
+      trace
+    end
   end
 
   # Associate a (pseudo-)coprocess with the main fiber
@@ -39,7 +52,7 @@ end
 
 class ::Exception
   SANITIZE_RE = /lib\/polyphony/.freeze
-  SANITIZE_PROC = proc  { |l| l !~ SANITIZE_RE }
+  SANITIZE_PROC = ->(l) { l !~ SANITIZE_RE }
 
   def cleanup_backtrace(caller = nil)
     combined = caller ? backtrace + caller : backtrace

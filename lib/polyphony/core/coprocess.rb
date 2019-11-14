@@ -27,8 +27,8 @@ class Coprocess
   end
 
   def run(&block2)
-    @caller = caller if Exceptions.debug
     uncaught_exception = nil
+    calling_fiber = Fiber.current
 
     @fiber = FiberPool.run do
       @@list[@fiber] = self
@@ -37,7 +37,11 @@ class Coprocess
     rescue Exceptions::MoveOn, Exceptions::Stop => e
       @result = e.value
     rescue Exception => e
-      e.cleanup_backtrace(@caller) if Exceptions.debug
+      puts "uncaught exception"
+      e.cleanup_backtrace(Fiber.current.backtrace)
+      # if (backtrace = Fiber.current.backtrace)
+      #   e.set_backtrace(e.backtrace + backtrace)
+      # end
       @result = e
       uncaught_exception = true
     ensure
@@ -47,11 +51,17 @@ class Coprocess
       @awaiting_fiber&.schedule @result
       @when_done&.()
 
+      if uncaught_exception && !@awaiting_fiber
+        $stdout.orig_puts "uncaught_exception: #{@result.inspect}"
+      end
+
       # if result is an error and nobody's waiting on us, we need to raise it
       # raise @result if @result.is_a?(Exception) && !@awaiting_fiber
-      if uncaught_exception && @result.is_a?(Exception) && !@awaiting_fiber
+      if uncaught_exception && !@awaiting_fiber
         if Fiber.main == Fiber.current
           raise @result
+        # elsif calling_fiber.alive?
+        #   calling_fiber.transfer @result
         else
           Fiber.main.transfer @result
         end
