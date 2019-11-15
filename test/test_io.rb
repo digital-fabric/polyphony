@@ -1,11 +1,6 @@
 # frozen_string_literal: true
 
-require 'minitest/autorun'
-require 'bundler/setup'
-require 'polyphony'
-require 'fileutils'
-
-require_relative './eg'
+require_relative 'helper'
 
 class IOTest < MiniTest::Test
   def setup

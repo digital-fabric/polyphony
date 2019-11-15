@@ -1,6 +1,6 @@
-require 'minitest/autorun'
-require 'bundler/setup'
-require 'polyphony'
+# frozen_string_literal: true
+
+require_relative 'helper'
 
 class CoprocessTest < MiniTest::Test
   def setup
@@ -48,7 +48,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_await_raises_error_raised_by_coprocess
     result = nil
-    coproc = Polyphony::Coprocess.new { p 1; raise 'foo' }
+    coproc = Polyphony::Coprocess.new { $stdout.orig_puts "foo coproc #{Fiber.current.inspect}"; raise 'foo' }
     begin
       result = coproc.await
     rescue => e
@@ -191,18 +191,26 @@ class CoprocessTest < MiniTest::Test
   end
 
   def test_alive?
+    p 1
     counter = 0
+    p 2
     coproc = spin do
+      p 3
       3.times do
+        p [:count, counter]
         snooze
         counter += 1
       end
     end
+    p 4
 
     assert(coproc.alive?)
     snooze
+    p 5
     assert(coproc.alive?)
+    p 6
     snooze while counter < 3
+    p 7
     assert(!coproc.alive?)
   ensure
     coproc&.stop

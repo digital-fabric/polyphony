@@ -41,16 +41,18 @@ def downsize
   end
 end
 
-@downsize_timer = EV::Timer.new(5, 5)
+@downsize_timer = Gyro::Timer.new(5, 5)
 @downsize_timer.start { downsize }
-EV.unref
+Gyro.unref
 
 # Invokes the given block using a fiber taken from the fiber pool. If the pool
 # is exhausted, a new fiber will be created.
 # @return [Fiber]
 def run(&block)
-  fiber = @pool.empty? ? new_fiber : @pool.shift
-  fiber.next_job = block
+  fiber = Fiber.new { run_job(&block) }
+
+  # fiber = @pool.empty? ? new_fiber : @pool.shift
+  # fiber.next_job = block
 
   current_fiber = Fiber.current
   fiber.calling_fiber = current_fiber
@@ -101,4 +103,21 @@ ensure
   # be transferred to the main fiber, which would normally be blocking on 
   # something
   $__reactor_fiber__.transfer unless error
+end
+
+def run_job(&job)
+  error = nil
+  job&.(Fiber.current)
+rescue => e
+  # uncaught error
+  $stdout.orig_puts "uncaught error in FiberPool: #{e.inspect}"
+  $stdout.orig_puts e.backtrace.join("\n")
+  error = e
+ensure
+  # Kernel.orig_puts
+  # We need to explicitly transfer control to reactor fiber, otherwise it will
+  # be transferred to the main fiber, which would normally be blocking on 
+  # something
+  $__reactor_fiber__.transfer unless error
+
 end

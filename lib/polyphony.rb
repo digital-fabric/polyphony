@@ -5,7 +5,7 @@ require 'modulation/gem'
 export_default :Polyphony
 
 require 'fiber'
-require_relative './ev_ext'
+require_relative './gyro_ext'
 import('./polyphony/extensions/kernel')
 import('./polyphony/extensions/io')
 
@@ -56,7 +56,7 @@ module Polyphony
   
   def self.reset!
     FiberPool.reset!
-    EV.rerun
+    Gyro.restart
   end
   
   auto_import(
@@ -72,16 +72,4 @@ module Polyphony
     ThreadPool:   './polyphony/core/thread_pool',
     Websocket:    './polyphony/websocket'
   )
-end
-
-at_exit do
-  repl = (Pry.current rescue nil) || (IRB.CurrentContext rescue nil)
-
-  # in most cases, by the main fiber is done there are still pending or other
-  # or asynchronous operations going on. If the reactor loop is not done, we
-  # suspend the root fiber until it is done
-
-  if $__reactor_fiber__&.alive? && !repl
-    suspend
-  end
 end

@@ -1,6 +1,6 @@
-require 'minitest/autorun'
-require 'bundler/setup'
-require 'polyphony'
+# frozen_string_literal: true
+
+require_relative 'helper'
 
 class EVRunTest < Minitest::Test
   def setup

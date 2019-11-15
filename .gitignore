@@ -52,4 +52,4 @@ build-iPhoneSimulator/
 test.rb
 .vscode
 
-lib/ev_ext.bundle
+lib/gyro_ext.bundle

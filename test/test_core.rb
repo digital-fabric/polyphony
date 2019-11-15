@@ -1,6 +1,6 @@
-require 'minitest/autorun'
-require 'bundler/setup'
-require 'polyphony'
+# frozen_string_literal: true
+
+require_relative 'helper'
 
 class SpinTest < MiniTest::Test
   def setup

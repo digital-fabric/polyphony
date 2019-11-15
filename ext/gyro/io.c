@@ -1,4 +1,4 @@
-#include "ev.h"
+#include "gyro.h"
 
 #ifdef GetReadFile
 # define FPTR_TO_FD(fptr) (fileno(GetReadFile(fptr)))
@@ -6,7 +6,7 @@
 # define FPTR_TO_FD(fptr) fptr->fd
 #endif /* GetReadFile */
 
-struct EV_IO {
+struct Gyro_IO {
   struct  ev_io ev_io;
   int     active;
   int     event_mask;
@@ -14,22 +14,21 @@ struct EV_IO {
   VALUE   fiber;
 };
 
-static VALUE mEV = Qnil;
-static VALUE cEV_IO = Qnil;
+static VALUE cGyro_IO = Qnil;
 
-static VALUE EV_IO_allocate(VALUE klass);
-static void EV_IO_mark(void *ptr);
-static void EV_IO_free(void *ptr);
-static size_t EV_IO_size(const void *ptr);
+static VALUE Gyro_IO_allocate(VALUE klass);
+static void Gyro_IO_mark(void *ptr);
+static void Gyro_IO_free(void *ptr);
+static size_t Gyro_IO_size(const void *ptr);
 
-static VALUE EV_IO_initialize(VALUE self, VALUE io, VALUE event_mask);
+static VALUE Gyro_IO_initialize(VALUE self, VALUE io, VALUE event_mask);
 
-static VALUE EV_IO_start(VALUE self);
-static VALUE EV_IO_stop(VALUE self);
+static VALUE Gyro_IO_start(VALUE self);
+static VALUE Gyro_IO_stop(VALUE self);
 
-void EV_IO_callback(ev_loop *ev_loop, struct ev_io *io, int revents);
+void Gyro_IO_callback(struct ev_loop *ev_loop, struct ev_io *io, int revents);
 
-static int EV_IO_symbol2event_mask(VALUE sym);
+static int Gyro_IO_symbol2event_mask(VALUE sym);
 
 // static VALUE IO_gets(int argc, VALUE *argv, VALUE io);
 static VALUE IO_read(int argc, VALUE *argv, VALUE io);
@@ -37,15 +36,14 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write_chevron(VALUE io, VALUE str);
 
-void Init_EV_IO() {
-  mEV = rb_define_module("EV");
-  cEV_IO = rb_define_class_under(mEV, "IO", rb_cData);
-  rb_define_alloc_func(cEV_IO, EV_IO_allocate);
+void Init_Gyro_IO() {
+  cGyro_IO = rb_define_class_under(mGyro, "IO", rb_cData);
+  rb_define_alloc_func(cGyro_IO, Gyro_IO_allocate);
 
-  rb_define_method(cEV_IO, "initialize", EV_IO_initialize, 2);
-  rb_define_method(cEV_IO, "start", EV_IO_start, 0);
-  rb_define_method(cEV_IO, "stop", EV_IO_stop, 0);
-  rb_define_method(cEV_IO, "await", EV_IO_await, 0);
+  rb_define_method(cGyro_IO, "initialize", Gyro_IO_initialize, 2);
+  rb_define_method(cGyro_IO, "start", Gyro_IO_start, 0);
+  rb_define_method(cGyro_IO, "stop", Gyro_IO_stop, 0);
+  rb_define_method(cGyro_IO, "await", Gyro_IO_await, 0);
 
   VALUE cIO = rb_const_get(rb_cObject, rb_intern("IO"));
   // rb_define_method(cIO, "gets", IO_gets, -1);
@@ -58,21 +56,21 @@ void Init_EV_IO() {
   rb_define_method(cIO, "write_watcher", IO_write_watcher, 0);
 }
 
-static const rb_data_type_t EV_IO_type = {
-    "EV_IO",
-    {EV_IO_mark, EV_IO_free, EV_IO_size,},
+static const rb_data_type_t Gyro_IO_type = {
+    "Gyro_IO",
+    {Gyro_IO_mark, Gyro_IO_free, Gyro_IO_size,},
     0, 0,
     RUBY_TYPED_FREE_IMMEDIATELY,
 };
 
-static VALUE EV_IO_allocate(VALUE klass) {
-  struct EV_IO *io = (struct EV_IO *)xmalloc(sizeof(struct EV_IO));
+static VALUE Gyro_IO_allocate(VALUE klass) {
+  struct Gyro_IO *io = (struct Gyro_IO *)xmalloc(sizeof(struct Gyro_IO));
 
-  return TypedData_Wrap_Struct(klass, &EV_IO_type, io);
+  return TypedData_Wrap_Struct(klass, &Gyro_IO_type, io);
 }
 
-static void EV_IO_mark(void *ptr) {
-  struct EV_IO *io = ptr;
+static void Gyro_IO_mark(void *ptr) {
+  struct Gyro_IO *io = ptr;
   if (io->callback != Qnil) {
     rb_gc_mark(io->callback);
   }
@@ -81,41 +79,41 @@ static void EV_IO_mark(void *ptr) {
   }
 }
 
-static void EV_IO_free(void *ptr) {
-  struct EV_IO *io = ptr;
+static void Gyro_IO_free(void *ptr) {
+  struct Gyro_IO *io = ptr;
   ev_io_stop(EV_DEFAULT, &io->ev_io);
   xfree(io);
 }
 
-static size_t EV_IO_size(const void *ptr) {
-  return sizeof(struct EV_IO);
+static size_t Gyro_IO_size(const void *ptr) {
+  return sizeof(struct Gyro_IO);
 }
 
 static const char * S_IO = "IO";
 static const char * S_to_io = "to_io";
 
-#define GetEV_IO(obj, io) TypedData_Get_Struct((obj), struct EV_IO, &EV_IO_type, (io))
+#define GetGyro_IO(obj, io) TypedData_Get_Struct((obj), struct Gyro_IO, &Gyro_IO_type, (io))
 
-static VALUE EV_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
-  struct EV_IO *io;
+static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
+  struct Gyro_IO *io;
   rb_io_t *fptr;
 
-  GetEV_IO(self, io);
+  GetGyro_IO(self, io);
 
-  io->event_mask = EV_IO_symbol2event_mask(event_mask);
+  io->event_mask = Gyro_IO_symbol2event_mask(event_mask);
   io->callback = Qnil;
   io->fiber = Qnil;
   io->active = 0;
 
   GetOpenFile(rb_convert_type(io_obj, T_FILE, S_IO, S_to_io), fptr);
-  ev_io_init(&io->ev_io, EV_IO_callback, FPTR_TO_FD(fptr), io->event_mask);
+  ev_io_init(&io->ev_io, Gyro_IO_callback, FPTR_TO_FD(fptr), io->event_mask);
 
   return Qnil;
 }
 
-void EV_IO_callback(ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
+void Gyro_IO_callback(struct ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
   VALUE fiber;
-  struct EV_IO *io = (struct EV_IO*)ev_io;
+  struct Gyro_IO *io = (struct Gyro_IO*)ev_io;
 
   if (io->fiber != Qnil) {
     ev_io_stop(EV_DEFAULT, ev_io);
@@ -132,9 +130,9 @@ void EV_IO_callback(ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
   }
 }
 
-static VALUE EV_IO_start(VALUE self) {
-  struct EV_IO *io;
-  GetEV_IO(self, io);
+static VALUE Gyro_IO_start(VALUE self) {
+  struct Gyro_IO *io;
+  GetGyro_IO(self, io);
 
   if (rb_block_given_p()) {
     io->callback = rb_block_proc();
@@ -148,9 +146,9 @@ static VALUE EV_IO_start(VALUE self) {
   return self;
 }
 
-static VALUE EV_IO_stop(VALUE self) {
-  struct EV_IO *io;
-  GetEV_IO(self, io);
+static VALUE Gyro_IO_stop(VALUE self) {
+  struct Gyro_IO *io;
+  GetGyro_IO(self, io);
 
   if (io->active) {
     ev_io_stop(EV_DEFAULT, &io->ev_io);
@@ -160,11 +158,11 @@ static VALUE EV_IO_stop(VALUE self) {
   return self;
 }
 
-VALUE EV_IO_await(VALUE self) {
-  struct EV_IO *io;
+VALUE Gyro_IO_await(VALUE self) {
+  struct Gyro_IO *io;
   VALUE ret;
   
-  GetEV_IO(self, io);
+  GetGyro_IO(self, io);
 
   io->fiber = rb_fiber_current();
   io->active = 1;
@@ -186,7 +184,7 @@ VALUE EV_IO_await(VALUE self) {
   }
 }
 
-static int EV_IO_symbol2event_mask(VALUE sym) {
+static int Gyro_IO_symbol2event_mask(VALUE sym) {
   ID sym_id;
 
   if (NIL_P(sym)) {
@@ -305,7 +303,7 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
       if ((e == EWOULDBLOCK || e == EAGAIN)) {
         if (read_watcher == Qnil)
           read_watcher = IO_read_watcher(io);
-        EV_IO_await(read_watcher);
+        Gyro_IO_await(read_watcher);
       }
       else
         rb_syserr_fail(e, strerror(e));
@@ -364,7 +362,7 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
       if (e == EWOULDBLOCK || e == EAGAIN) {
         if (read_watcher == Qnil)
           read_watcher = IO_read_watcher(io);
-        EV_IO_await(read_watcher);
+        Gyro_IO_await(read_watcher);
       }
       else
         rb_syserr_fail(e, strerror(e));
@@ -378,9 +376,9 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
   io_enc_str(str, fptr);
 
   // ensure yielding to reactor if haven't yielded while reading
-  if (read_watcher == Qnil) {
-    EV_snooze(Qnil);
-  }
+  // if (read_watcher == Qnil) {
+  //   Gyro_snooze(Qnil);
+  // }
 
   if (n == 0)
     return Qnil;
@@ -420,7 +418,7 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
           if (write_watcher == Qnil)
             write_watcher = IO_write_watcher(io);
             // write_watcher = rb_funcall(io, ID_write_watcher, 0);
-          EV_IO_await(write_watcher);
+          Gyro_IO_await(write_watcher);
         }
         else {
           rb_syserr_fail(e, strerror(e));
@@ -439,9 +437,9 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
   }
 
   // ensure yielding to reactor if haven't yielded while writing
-  if (write_watcher == Qnil) {
-    EV_snooze(Qnil);
-  }
+  // if (write_watcher == Qnil) {
+  //   Gyro_snooze(Qnil);
+  // }
 
   return LONG2FIX(total);
 }
@@ -454,7 +452,7 @@ static VALUE IO_write_chevron(VALUE io, VALUE str) {
 VALUE IO_read_watcher(VALUE self) {
   VALUE watcher = rb_iv_get(self, "@read_watcher");
   if (watcher == Qnil) {
-    watcher = rb_funcall(cEV_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("r")));
+    watcher = rb_funcall(cGyro_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("r")));
     rb_iv_set(self, "@read_watcher", watcher);
   }
   return watcher;
@@ -463,7 +461,7 @@ VALUE IO_read_watcher(VALUE self) {
 VALUE IO_write_watcher(VALUE self) {
   VALUE watcher = rb_iv_get(self, "@write_watcher");
   if (watcher == Qnil) {
-    watcher = rb_funcall(cEV_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("w")));
+    watcher = rb_funcall(cGyro_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("w")));
     rb_iv_set(self, "@write_watcher", watcher);
   }
   return watcher;

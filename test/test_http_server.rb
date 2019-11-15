@@ -1,12 +1,8 @@
 # frozen_string_literal: true
 
-require 'minitest/autorun'
-require 'bundler/setup'
-require 'polyphony'
-require 'polyphony/http'
-require 'fileutils'
+require_relative 'helper'
 
-require_relative './eg'
+require 'polyphony/http'
 
 class IO
   # Creates two mockup sockets for simulating server-client communication

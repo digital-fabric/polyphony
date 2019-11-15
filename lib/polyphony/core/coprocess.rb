@@ -37,7 +37,7 @@ class Coprocess
     rescue Exceptions::MoveOn, Exceptions::Stop => e
       @result = e.value
     rescue Exception => e
-      puts "uncaught exception"
+      # puts "uncaught exception"
       e.cleanup_backtrace(Fiber.current.backtrace)
       # if (backtrace = Fiber.current.backtrace)
       #   e.set_backtrace(e.backtrace + backtrace)

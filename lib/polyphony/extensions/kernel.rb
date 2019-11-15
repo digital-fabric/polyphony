@@ -19,14 +19,10 @@ class ::Fiber
     @cancelled
   end
 
-  def schedule(value = nil)
-    EV.schedule_fiber(self, value)
-  end
-
   def backtrace(trace = [])
-    puts "*" * 40
-    puts "#{inspect} (#{@calling_fiber.inspect})"
-    puts caller.join("\n")
+    # puts "*" * 40
+    # puts "#{inspect} (#{@calling_fiber.inspect})"
+    # puts caller.join("\n")
     if @calling_fiber
       @calling_fiber.backtrace(@caller ? (trace + @caller) : trace)
     elsif @caller

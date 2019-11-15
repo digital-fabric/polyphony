@@ -47,7 +47,7 @@ class Supervisor
   def stop_all_tasks
     exception = Exceptions::Stop.new
     @coprocesses.each do |c|
-      EV.next_tick { c.interrupt(exception) }
+      defer { c.interrupt(exception) }
     end
   end
 

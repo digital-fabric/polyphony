@@ -1,6 +1,28 @@
 # Roadmap:
 
-## 0.20 REPL usage, coprocess introspection, monitoring
+## 0.20 Fix segfaults and rewrite C code
+
+- [x] update libev code
+- [ ] rewrite and cleanup EV code
+  - rename to EV to Gyro
+  - rework API:
+
+    ```ruby
+    Gyro.ref            # add ref
+    Gyro.unref          # remove ref
+    Gyro.break          # break
+    Gyro.run            # run loop
+    Gyro.defer          # run a block on next idle
+    Gyro.snooze         # yield to reactor and resume on next idle
+    Gyro.schedule_fiber # resume an arbitrary fiber on next idle
+
+    # to run automatically
+    require 'polyphony/auto_run'
+    ```
+
+  - Fix behavior of next tick items
+
+## 0.21 REPL usage, coprocess introspection, monitoring
 
 - Implement `move_on_after(1, with: nil) { ... }`
 - Implement `Coprocess.await` for waiting on multiple coprocesses without
@@ -10,7 +32,7 @@
 - Implement `Coprocess#caller` - points to coprocess that called the coprocess
 - Implement `Coprocess.list` - a list of running coprocesses
 
-## 0.21 Full Rack adapter implementation
+## 0.22 Full Rack adapter implementation
 
 - Homogenize HTTP 1 and HTTP 2 headers - upcase ? downcase ?
 - Rewrite agent code to use sequential API (like I did for server)
@@ -27,21 +49,21 @@
 
 - find some demo Rack apps and test with Polyphony
 
-## 0.22 Working Sinatra application
+## 0.23 Working Sinatra application
 
 - app with database access (postgresql)
 - benchmarks!
 
-## 0.23 Support for multi-threading
+## 0.24 Support for multi-threading
 
 - Separate event loop for each thread
 
-## 0.24 Testing
+## 0.25 Testing
 
 - test thread / thread_pool modules
 - report test coverage
 
-## 0.25 Documentation
+## 0.26 Documentation
 
 # DNS
 

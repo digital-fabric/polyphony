@@ -6,8 +6,8 @@ require "rake/clean"
 # frozen_string_literal: true
 
 require "rake/extensiontask"
-Rake::ExtensionTask.new("ev_ext") do |ext|
-  ext.ext_dir = "ext/ev"
+Rake::ExtensionTask.new("gyro_ext") do |ext|
+  ext.ext_dir = "ext/gyro"
 end
 
 task :default => [:compile, :test]
