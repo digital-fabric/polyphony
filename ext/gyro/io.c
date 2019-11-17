@@ -271,7 +271,7 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
   VALUE underlying_io = rb_iv_get(io, "@io");
   if (!NIL_P(underlying_io)) io = underlying_io;
 
-  long len = argc == 1 ? NUM2LONG(argv[0]) : 8192;
+  long len = argc == 1 ? NUM2LONG(argv[0]) : (1 << 30);
 
   rb_io_t *fptr;
   long n;
