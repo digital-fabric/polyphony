@@ -252,16 +252,9 @@ VALUE run_deferred(VALUE item) {
 }
 
 void Gyro_defer_callback(struct ev_loop *ev_loop, struct ev_idle *watcher, int revents) {
-
   deferred_in_callback = 1;
   defer_add(deferred_eol_marker);
   rb_ivar_set(deferred_eol_marker, ID_deferred_next, Qnil);
-
-  VALUE next = deferred_head;
-  while (next != deferred_eol_marker) {
-    next = rb_ivar_get(next, ID_deferred_next);
-  }
-
 
   while (RTEST(deferred_head) && !break_flag) {
     VALUE next = rb_ivar_get(deferred_head, ID_deferred_next);
