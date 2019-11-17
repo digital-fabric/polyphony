@@ -37,5 +37,3 @@ end
 $next_tick_items << f1
 $next_tick_items << f2
 $reactor.transfer
-  
-  

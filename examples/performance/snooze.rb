@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
-X = 1_000_000
+X = 1000000
 
-STDOUT << "Fiber.yield: "
+STDOUT << "Fiber.yield:   "
 f = Fiber.new do
   loop { Fiber.yield }
 end
@@ -19,6 +19,8 @@ puts "%d/s" % (X / dt)
 # X.times { sleep(0) }
 # dt = Time.now - t0
 # puts "%d/s" % (X / dt)
+
+trap("SIGINT") { exit! }
 
 STDOUT << "Kernel#snooze: "
 t0 = Time.now
