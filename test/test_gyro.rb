@@ -2,11 +2,16 @@
 
 require_relative 'helper'
 
-class IdleTest < MiniTest::Test
-  def setup
-    Polyphony.reset!
+class RunTest < Minitest::Test
+  def test_that_run_loop_returns_immediately_if_no_watchers
+    t0 = Time.now
+    suspend
+    t1 = Time.now
+    assert (t1 - t0) < 0.001
   end
+end
 
+class IdleTest < MiniTest::Test
   def test_defer
     values = []
     defer { values << 1 }

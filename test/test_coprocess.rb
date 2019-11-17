@@ -5,14 +5,6 @@ require_relative 'helper'
 STDOUT.sync = true
 
 class CoprocessTest < MiniTest::Test
-  def setup
-    Polyphony.reset!
-  end
-
-  def teardown
-    suspend
-  end
-
   def test_that_main_fiber_has_associated_coprocess
     assert_equal(Fiber.current, Polyphony::Coprocess.current.fiber)
     assert_equal(Polyphony::Coprocess.current, Fiber.current.coprocess)
@@ -219,17 +211,19 @@ class CoprocessTest < MiniTest::Test
     # error is propagated to calling coprocess
     cp1 = nil
     cp2 = nil
-    # raised_error = nil
-    # cp1 = spin do
-    #   cp2 = spin do
-    #     raise 'foo'
-    #   end
-    # rescue => e
-    #   raised_error = e
-    # end
-    # suspend
-    # assert(raised_error)
-    # assert_equal('foo', raised_error.message)
+    raised_error = nil
+    cp1 = spin do
+      cp2 = spin do
+        raise 'foo'
+      end
+      snooze # allow cp2 to run
+    rescue => e
+      raised_error = e
+    ensure
+    end
+    suspend
+    assert(raised_error)
+    assert_equal('foo', raised_error.message)
   ensure
     cp1&.stop
     cp2&.stop
@@ -237,43 +231,39 @@ class CoprocessTest < MiniTest::Test
 end
 
 class MailboxTest < MiniTest::Test
-  def setup
-    Polyphony.reset!
+  def test_that_coprocess_can_receive_messages
+    msgs = []
+    coproc = spin {
+      loop {
+        msgs << receive
+      }
+    }
+
+    snooze # allow coproc to start
+    
+    3.times { |i| coproc << i; snooze }
+
+    assert_equal([0, 1, 2], msgs)
+  ensure
+    coproc&.stop
   end
 
-  # def test_that_coprocess_can_receive_messages
-  #   msgs = []
-  #   coproc = spin {
-  #     loop {
-  #       msgs << receive
-  #     }
-  #   }
+  def test_that_multiple_messages_sent_at_once_arrive
+    msgs = []
+    coproc = spin {
+      loop { 
+        msgs << receive
+      }
+    }
 
-  #   snooze # allow coproc to start
+    snooze # allow coproc to start
     
-  #   3.times { |i| coproc << i; snooze }
+    3.times { |i| coproc << i }
 
-  #   assert_equal([0, 1, 2], msgs)
-  # ensure
-  #   coproc&.stop
-  # end
+    snooze
 
-  # def test_that_multiple_messages_sent_at_once_arrive
-  #   msgs = []
-  #   coproc = spin {
-  #     loop { 
-  #       msgs << receive
-  #     }
-  #   }
-
-  #   snooze # allow coproc to start
-    
-  #   3.times { |i| coproc << i }
-
-  #   snooze
-
-  #   assert_equal([0, 1, 2], msgs)
-  # ensure
-  #   coproc&.stop
-  # end
+    assert_equal([0, 1, 2], msgs)
+  ensure
+    coproc&.stop
+  end
 end

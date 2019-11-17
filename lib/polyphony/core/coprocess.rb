@@ -27,7 +27,7 @@ class Coprocess
 
   def run
     uncaught_exception = nil
-    calling_fiber = Fiber.current
+    @calling_fiber = Fiber.current
 
     @fiber = Fiber.new { execute }
     @ran = true
@@ -55,7 +55,7 @@ class Coprocess
     @when_done&.()
 
     if uncaught_exception && !@awaiting_fiber
-      $stdout.orig_puts "uncaught_exception: #{@result.inspect}"
+      @calling_fiber.schedule @result
     end
 
     suspend

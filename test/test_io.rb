@@ -2,9 +2,23 @@
 
 require_relative 'helper'
 
+class GyroIOTest < MiniTest::Test
+  def test_that_reading_works
+    i, o = IO.pipe
+    data = +''
+    w = Gyro::IO.new(i, :r)
+    w.start do
+      i.read_nonblock(8192, data)
+      w.stop unless data.empty?
+    end
+    defer { o << 'hello' }
+    suspend
+    assert_equal('hello', data)
+  end
+end
+
 class IOTest < MiniTest::Test
   def setup
-    Polyphony.reset!
     @i, @o = IO.pipe
   end
 
@@ -42,10 +56,6 @@ class IOTest < MiniTest::Test
 end
 
 class IOClassMethodsTest < MiniTest::Test
-  def setup
-    Polyphony.reset!
-  end
-
   def test_binread
     s = IO.binread(__FILE__)
     assert_kind_of(String, s)

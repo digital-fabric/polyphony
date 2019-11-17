@@ -1,14 +1,8 @@
 # frozen_string_literal: true
 
-require 'minitest/autorun'
-require 'bundler/setup'
-require 'polyphony'
+require_relative 'helper'
 
 class KernelTest < MiniTest::Test
-  def setup
-    Polyphony.reset!
-  end
-
   def test_system_method
     counter = 0
     timer = spin {

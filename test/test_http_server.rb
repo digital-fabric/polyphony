@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 require_relative 'helper'
-
 require 'polyphony/http'
+
+import '../lib/polyphony/http/server/http1.rb'
 
 class IO
   # Creates two mockup sockets for simulating server-client communication
@@ -29,11 +30,8 @@ class IO
 end
 
 class HTTP1ServerTest < MiniTest::Test
-  def setup
-    Polyphony.reset!
-  end
-
   def spin_server(&handler)
+    puts "spin_server"
     server_connection, client_connection = IO.server_client_mockup
     coproc = spin do
       Polyphony::HTTP::Server.client_loop(server_connection, {}, &handler)
@@ -45,6 +43,7 @@ class HTTP1ServerTest < MiniTest::Test
   end
 
   def test_that_server_uses_content_length_in_http_1_0
+    puts "test_that_server_uses_content_length_in_http_1_0"
     server, connection = spin_server do |req|
       req.respond("Hello, world!", {})
     end
@@ -57,18 +56,22 @@ class HTTP1ServerTest < MiniTest::Test
   end
 
   def test_that_server_uses_chunked_encoding_in_http_1_1
+    puts "test_that_server_uses_chunked_encoding_in_http_1_1"
     server, connection = spin_server do |req|
       req.respond("Hello, world!", {})
     end
 
     # using HTTP 1.0, server should close connection after responding
+    puts "01"
     connection << "GET / HTTP/1.1\r\n\r\n"
 
+    puts "02"
     response = connection.readpartial(8192)
     assert_equal("HTTP/1.1 200\r\nTransfer-Encoding: chunked\r\n\r\nd\r\nHello, world!\r\n0\r\n\r\n", response)
   end
 
   def test_that_server_maintains_connection_when_using_keep_alives
+    puts "test_that_server_maintains_connection_when_using_keep_alives"
     server, connection = spin_server do |req|
       req.respond('Hi', {})
     end

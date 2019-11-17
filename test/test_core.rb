@@ -3,10 +3,6 @@
 require_relative 'helper'
 
 class SpinTest < MiniTest::Test
-  def setup
-    Polyphony.reset!
-  end
-
   def test_that_spin_returns_a_coprocess
     result = nil
     coprocess = spin { result = 42 }
@@ -46,10 +42,6 @@ class SpinTest < MiniTest::Test
 end
 
 class CancelScopeTest < Minitest::Test
-  def setup
-    Polyphony.reset!
-  end
-
   def sleep_with_cancel(ctx, mode = nil)
     Polyphony::CancelScope.new(mode: mode).call do |c|
       ctx[:cancel_scope] = c
@@ -135,10 +127,6 @@ class CancelScopeTest < Minitest::Test
 end
 
 class SupervisorTest < MiniTest::Test
-  def setup
-    Polyphony.reset!
-  end
-
   def sleep_and_set(ctx, idx)
     proc do
       sleep(0.001 * idx)
