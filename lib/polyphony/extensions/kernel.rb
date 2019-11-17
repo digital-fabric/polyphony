@@ -13,7 +13,7 @@ Throttler   = import('../core/throttler')
 # Fiber extensions
 class ::Fiber
   attr_writer :cancelled, :caller
-  attr_accessor :next_job, :coprocess, :calling_fiber
+  attr_accessor :next_job, :coprocess, :calling_fiber, :scheduled_value
 
   def cancelled?
     @cancelled
@@ -59,7 +59,7 @@ end
 class Pulser
   def initialize(freq)
     fiber = Fiber.current
-    @timer = EV::Timer.new(freq, freq)
+    @timer = Gyro::Timer.new(freq, freq)
     @timer.start { fiber.transfer freq }
   end
 
@@ -78,7 +78,7 @@ end
 module ::Process
   def self.detach(pid)
     spin {
-      EV::Child.new(pid).await
+      Gyro::Child.new(pid).await
     }.tap { |coproc| coproc.define_singleton_method(:pid) { pid } }
   end
 end
@@ -86,7 +86,7 @@ end
 # Kernel extensions (methods available to all objects)
 module ::Kernel
   def after(duration, &block)
-    EV::Timer.new(freq, 0).start(&block)
+    Gyro::Timer.new(freq, 0).start(&block)
   end
 
   def async(sym = nil, &block)
@@ -112,12 +112,8 @@ module ::Kernel
     CancelScope.new(timeout: duration, mode: :cancel).(&block)
   end
 
-  def spin(proc = nil, &block)
-    if proc.is_a?(Coprocess)
-      proc.run
-    else
-      Coprocess.new(&(block || proc)).run
-    end
+  def spin(&block)
+    Coprocess.new(&block).run
   end
 
   def spin_loop(&block)
@@ -125,7 +121,7 @@ module ::Kernel
   end
 
   def every(freq, &block)
-    EV::Timer.new(freq, freq).start(&block)
+    Gyro::Timer.new(freq, freq).start(&block)
   end
 
   def move_on_after(duration, &block)
@@ -142,7 +138,7 @@ module ::Kernel
 
   alias_method :sync_sleep, :sleep
   def sleep(duration)
-    timer = EV::Timer.new(duration, 0)
+    timer = Gyro::Timer.new(duration, 0)
     timer.await
   ensure
     timer.stop

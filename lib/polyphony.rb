@@ -21,16 +21,16 @@ module Polyphony
 
   def self.trap(sig, ref = false, &callback)
     sig = Signal.list[sig.to_s.upcase] if sig.is_a?(Symbol)
-    watcher = EV::Signal.new(sig, &callback)
-    EV.unref unless ref
+    watcher = Gyro::Signal.new(sig, &callback)
+    Gyro.unref unless ref
     watcher
   end
   
   def self.fork(&block)
-    EV.break
+    Gyro.break
     pid = Kernel.fork do
       FiberPool.reset!
-      EV.post_fork
+      Gyro.post_fork
       Fiber.set_main_fiber
       Fiber.current.coprocess = Coprocess.new(Fiber.current)
   
@@ -42,7 +42,7 @@ module Polyphony
       # Ruby, so the workaround is to yield just before exiting.
       suspend
     end
-    EV.restart
+    Gyro.restart
     pid
   end
   
@@ -55,7 +55,8 @@ module Polyphony
   end
   
   def self.reset!
-    FiberPool.reset!
+    # FiberPool.reset!
+    Fiber.main.scheduled_value = nil
     Gyro.restart
   end
   

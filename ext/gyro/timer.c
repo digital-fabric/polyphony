@@ -99,6 +99,10 @@ void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int
   VALUE resume_value;
   struct Gyro_Timer *timer = (struct Gyro_Timer*)ev_timer;
 
+  // if (!timer->active) {
+  //   return;
+  // }
+
   if (!timer->repeat) {
     timer->active = 0;
     Gyro_del_watcher_ref(timer->self);

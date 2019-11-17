@@ -20,7 +20,7 @@ class SpinTest < MiniTest::Test
   def test_that_spin_accepts_coprocess_argument
     result = nil
     coprocess = Polyphony::Coprocess.new { result = 42 }
-    spin coprocess
+    coprocess.run
 
     assert_nil(result)
     suspend
@@ -39,7 +39,7 @@ class SpinTest < MiniTest::Test
   def test_that_spined_coprocess_can_be_interrupted
     result = nil
     coprocess = spin { sleep(1); 42 }
-    EV.next_tick { coprocess.interrupt }
+    defer { coprocess.interrupt }
     suspend
     assert_nil(coprocess.result)
   end
@@ -60,7 +60,7 @@ class CancelScopeTest < Minitest::Test
   def test_that_cancel_scope_cancels_coprocess
     ctx = {}
     spin do
-      EV::Timer.new(0.005, 0).start { ctx[:cancel_scope]&.cancel! }
+      Gyro::Timer.new(0.005, 0).start { ctx[:cancel_scope]&.cancel! }
       sleep_with_cancel(ctx, :cancel)
     rescue Exception => e
       ctx[:result] = e
@@ -77,7 +77,7 @@ class CancelScopeTest < Minitest::Test
   # def test_that_cancel_scope_cancels_async_op_with_stop
   #   ctx = {}
   #   spin do
-  #     EV::Timer.new(0, 0).start { ctx[:cancel_scope].cancel! }
+  #     Gyro::Timer.new(0, 0).start { ctx[:cancel_scope].cancel! }
   #     sleep_with_cancel(ctx, :stop)
   #   end
     

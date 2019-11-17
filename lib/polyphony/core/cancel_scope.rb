@@ -21,7 +21,7 @@ class CancelScope
   end
 
   def start_timeout
-    @timeout = EV::Timer.new(@opts[:timeout], 0)
+    @timeout = Gyro::Timer.new(@opts[:timeout], 0)
     @timeout.start { cancel! }
   end
 

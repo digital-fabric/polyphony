@@ -2,9 +2,15 @@
 
 require_relative 'helper'
 
+STDOUT.sync = true
+
 class CoprocessTest < MiniTest::Test
   def setup
     Polyphony.reset!
+  end
+
+  def teardown
+    suspend
   end
 
   def test_that_main_fiber_has_associated_coprocess
@@ -32,7 +38,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_await_blocks_until_coprocess_is_done
     result = nil
-    coproc = Polyphony::Coprocess.new { sleep 0.001; result = 42 }
+    coproc = Polyphony::Coprocess.new { snooze; result = 42 }
     coproc.await
     assert_equal(42, result)
   ensure
@@ -48,7 +54,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_await_raises_error_raised_by_coprocess
     result = nil
-    coproc = Polyphony::Coprocess.new { $stdout.orig_puts "foo coproc #{Fiber.current.inspect}"; raise 'foo' }
+    coproc = Polyphony::Coprocess.new { raise 'foo' }
     begin
       result = coproc.await
     rescue => e
@@ -65,10 +71,10 @@ class CoprocessTest < MiniTest::Test
     error = nil
     coproc = Polyphony::Coprocess.new {
       result << 1
-      sleep 1
+      2.times { snooze }
       result << 2
-    }
-    EV::Timer.new(0.001, 0).start { coproc.cancel! }
+    }.run
+    defer { coproc.cancel! }
     assert_equal(0, result.size)
     begin
       coproc.await
@@ -87,11 +93,11 @@ class CoprocessTest < MiniTest::Test
     result = []
     coproc = Polyphony::Coprocess.new {
       result << 1
-      sleep 0.002
+      2.times { snooze }
       result << 2
       3
-    }
-    EV::Timer.new(0.001, 0).start { coproc.stop(42) }
+    }.run
+    defer { coproc.stop(42) }
 
     await_result = coproc.await
     assert_equal(1, result.size)
@@ -104,7 +110,7 @@ class CoprocessTest < MiniTest::Test
     result = nil
     cp2 = nil
     cp1 = spin do
-      cp2 = Polyphony::Coprocess.new { sleep(0.001); 42 }
+      cp2 = Polyphony::Coprocess.new { snooze; 42 }
       result = cp2.await
     end
     suspend
@@ -117,10 +123,10 @@ class CoprocessTest < MiniTest::Test
   def test_that_coprocess_can_be_stopped
     result = nil
     coproc = spin do
-      sleep(0.001)
+      snooze
       result = 42
     end
-    EV.next_tick { coproc.interrupt }
+    defer { coproc.interrupt }
     suspend
     assert_nil(result)
   ensure
@@ -130,12 +136,12 @@ class CoprocessTest < MiniTest::Test
   def test_that_coprocess_can_be_cancelled
     result = nil
     coproc = spin do
-      sleep(0.001)
+      snooze
       result = 42
     rescue Polyphony::Cancel => e
       result = e
     end
-    EV.next_tick { coproc.cancel! }
+    defer { coproc.cancel! }
 
     suspend
 
@@ -151,13 +157,13 @@ class CoprocessTest < MiniTest::Test
     cp2 = nil
     cp1 = spin do
       cp2 = spin do
-        sleep(0.001)
+        snooze
         result = 42
       end
       cp2.await
       result && result += 1
     end
-    EV.next_tick { cp1.interrupt }
+    defer { cp1.interrupt }
     suspend
     assert_nil(result)
     assert_nil(cp1.alive?)
@@ -172,8 +178,9 @@ class CoprocessTest < MiniTest::Test
     
     cp1 = spin do
       cp2 = spin do
-        EV.next_tick { cp1.interrupt }
-        sleep(0.001)
+        defer { cp1.interrupt }
+        snooze
+        snooze
         result = 42
       end
       cp2.await
@@ -191,26 +198,18 @@ class CoprocessTest < MiniTest::Test
   end
 
   def test_alive?
-    p 1
     counter = 0
-    p 2
     coproc = spin do
-      p 3
-      3.times do
-        p [:count, counter]
+      3.times do |i|
         snooze
         counter += 1
       end
     end
-    p 4
 
     assert(coproc.alive?)
     snooze
-    p 5
     assert(coproc.alive?)
-    p 6
     snooze while counter < 3
-    p 7
     assert(!coproc.alive?)
   ensure
     coproc&.stop
@@ -220,10 +219,10 @@ class CoprocessTest < MiniTest::Test
     # error is propagated to calling coprocess
     cp1 = nil
     cp2 = nil
-    raised_error = nil
+    # raised_error = nil
     # cp1 = spin do
     #   cp2 = spin do
-    #     # raise 'foo'
+    #     raise 'foo'
     #   end
     # rescue => e
     #   raised_error = e
@@ -242,39 +241,39 @@ class MailboxTest < MiniTest::Test
     Polyphony.reset!
   end
 
-  def test_that_coprocess_can_receive_messages
-    msgs = []
-    coproc = spin {
-      loop {
-        msgs << receive
-      }
-    }
+  # def test_that_coprocess_can_receive_messages
+  #   msgs = []
+  #   coproc = spin {
+  #     loop {
+  #       msgs << receive
+  #     }
+  #   }
 
-    EV.snooze # allow coproc to start
+  #   snooze # allow coproc to start
     
-    3.times { |i| coproc << i; EV.snooze }
+  #   3.times { |i| coproc << i; snooze }
 
-    assert_equal([0, 1, 2], msgs)
-  ensure
-    coproc&.stop
-  end
+  #   assert_equal([0, 1, 2], msgs)
+  # ensure
+  #   coproc&.stop
+  # end
 
-  def test_that_multiple_messages_sent_at_once_arrive
-    msgs = []
-    coproc = spin {
-      loop { 
-        msgs << receive
-      }
-    }
+  # def test_that_multiple_messages_sent_at_once_arrive
+  #   msgs = []
+  #   coproc = spin {
+  #     loop { 
+  #       msgs << receive
+  #     }
+  #   }
 
-    EV.snooze # allow coproc to start
+  #   snooze # allow coproc to start
     
-    3.times { |i| coproc << i }
+  #   3.times { |i| coproc << i }
 
-    EV.snooze
+  #   snooze
 
-    assert_equal([0, 1, 2], msgs)
-  ensure
-    coproc&.stop
-  end
+  #   assert_equal([0, 1, 2], msgs)
+  # ensure
+  #   coproc&.stop
+  # end
 end

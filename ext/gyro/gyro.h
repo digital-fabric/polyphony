@@ -20,6 +20,8 @@ VALUE io_enc_str(VALUE str, rb_io_t *fptr);
 #define SCHEDULE_FIBER(obj, args...) rb_funcall(obj, ID_transfer, args)
 #define YIELD_TO_REACTOR() rb_funcall(Gyro_reactor_fiber, ID_transfer, 0)
 
+#define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
+
 extern VALUE mGyro;
 
 extern VALUE Gyro_reactor_fiber;

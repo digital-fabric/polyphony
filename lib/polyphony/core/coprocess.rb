@@ -4,7 +4,6 @@ export_default :Coprocess
 
 import('../extensions/kernel')
 
-FiberPool   = import('./fiber_pool')
 Exceptions  = import('./exceptions')
 
 # Encapsulates an asynchronous task
@@ -26,51 +25,53 @@ class Coprocess
     @block = block
   end
 
-  def run(&block2)
+  def run
     uncaught_exception = nil
     calling_fiber = Fiber.current
 
-    @fiber = FiberPool.run do
-      @@list[@fiber] = self
-      @fiber.coprocess = self
-      @result = (@block || block2).call(self)
-    rescue Exceptions::MoveOn, Exceptions::Stop => e
-      @result = e.value
-    rescue Exception => e
-      # puts "uncaught exception"
-      e.cleanup_backtrace(Fiber.current.backtrace)
-      # if (backtrace = Fiber.current.backtrace)
-      #   e.set_backtrace(e.backtrace + backtrace)
-      # end
-      @result = e
-      uncaught_exception = true
-    ensure
-      @@list.delete(@fiber)
-      @fiber.coprocess = nil
-      @fiber = nil
-      @awaiting_fiber&.schedule @result
-      @when_done&.()
-
-      if uncaught_exception && !@awaiting_fiber
-        $stdout.orig_puts "uncaught_exception: #{@result.inspect}"
-      end
-
-      # if result is an error and nobody's waiting on us, we need to raise it
-      # raise @result if @result.is_a?(Exception) && !@awaiting_fiber
-      if uncaught_exception && !@awaiting_fiber
-        if Fiber.main == Fiber.current
-          raise @result
-        # elsif calling_fiber.alive?
-        #   calling_fiber.transfer @result
-        else
-          Fiber.main.transfer @result
-        end
-      end
-    end
-
+    @fiber = Fiber.new { execute }
     @ran = true
     @fiber.schedule
     self
+  end
+
+  def execute
+    @@list[@fiber] = self
+    @fiber.coprocess = self
+    @result = @block.call(self)
+  rescue Exceptions::MoveOn, Exceptions::Stop => e
+    @result = e.value
+  rescue Exception => uncaught_exception
+    @result = uncaught_exception
+    # e.cleanup_backtrace(Fiber.current.backtrace)
+    # if (backtrace = Fiber.current.backtrace)
+    #   e.set_backtrace(e.backtrace + backtrace)
+    # end
+  ensure
+    @@list.delete(@fiber)
+    @fiber.coprocess = nil
+    @fiber = nil
+    @awaiting_fiber&.schedule @result
+    @when_done&.()
+
+    if uncaught_exception && !@awaiting_fiber
+      $stdout.orig_puts "uncaught_exception: #{@result.inspect}"
+    end
+
+    suspend
+
+    # # if result is an error and nobody's waiting on us, we need to raise it
+    # # raise @result if @result.is_a?(Exception) && !@awaiting_fiber
+    # if uncaught_exception && !@awaiting_fiber
+    #   if Fiber.main == Fiber.current
+    #     raise @result
+    #   # elsif calling_fiber.alive?
+    #   #   calling_fiber.transfer @result
+    #   else
+    #     Fiber.main.transfer @result
+    #   end
+    # end
+
   end
 
   def <<(o)
@@ -81,13 +82,13 @@ class Coprocess
   end
 
   def receive
-    EV.ref
+    Gyro.ref
     @receive_waiting = true
     @fiber&.schedule if @mailbox && @mailbox.size > 0
     suspend
     @mailbox.shift
   ensure
-    EV.unref
+    Gyro.unref
     @receive_waiting = nil
   end
 
@@ -106,10 +107,10 @@ class Coprocess
       @result
     end
   ensure
-    # if awaiting was interrupted and the coprocess is still running, we need to stop it
+    # if the awaited coprocess is still running, we need to stop it
     if @fiber
-      @fiber&.schedule(Exceptions::MoveOn.new)
-      suspend
+      @fiber.schedule(Exceptions::MoveOn.new)
+      snooze
     end
   end
   alias_method :join, :await
