@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 enum = [1,2,3].each
 
 spin do
   while e = enum.next rescue nil
     puts e
-    sleep 1
+    sleep 0.1
   end
 end

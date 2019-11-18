@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
-puts "going to sleep..."
-cancel_after(1) do
-  sleep(60)
+begin
+  puts 'going to sleep...'
+  cancel_after(1) do
+    sleep(60)
+  end
+rescue Polyphony::Cancel
+  puts 'cancelled'
 end
