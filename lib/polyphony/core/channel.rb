@@ -25,15 +25,16 @@ class Channel
   end
 
   def receive
-    EV.ref
+    Gyro.ref
     if @payload_queue.empty?
       @waiting_queue << Fiber.current
+      suspend
     else
       payload = @payload_queue.shift
-      Fiber.current.schedule(payload)
+      snooze
+      payload
     end
-    suspend
   ensure
-    EV.unref
+    Gyro.unref
   end
 end
