@@ -55,6 +55,7 @@ class Coprocess
     @when_done&.()
 
     if uncaught_exception && !@awaiting_fiber
+      puts "uncaught exception, calling fiber: #{@calling_fiber.object_id}"
       @calling_fiber.schedule @result
     end
 

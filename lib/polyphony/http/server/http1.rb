@@ -16,6 +16,7 @@ class HTTP1Adapter
     @opts = opts
     @parser = HTTP::Parser.new(self)
     @parse_fiber = Fiber.new { parse_loop }
+    @parser_active = true
   end
 
   # Parses incoming data, potentially firing parser callbacks. This loop runs on
@@ -44,13 +45,17 @@ class HTTP1Adapter
       @parser << data
       snooze
     end
-    @request_fiber.transfer nil
+    @parser_active = false
+    suspend
   rescue SystemCallError, IOError
     # ignore IO/system call errors
+    @parser_active = false
     @request_fiber.transfer nil if @parsing
   rescue Exception => e
+    @parser_active = false
     # an error return value will be raised by the receiving fiber
-    @request_fiber.transfer(e) if @parsing
+    @request_fiber.transfer(e) if @request_active
+    suspend
   end
 
   # request API
@@ -60,7 +65,8 @@ class HTTP1Adapter
   # diesregard it.
   def each(&block)
     can_upgrade = true
-    while @parse_fiber.alive? && (headers = get_headers)
+    @request_active = true
+    while @parser_active && (headers = get_headers)
       if can_upgrade
         # The connection can be upgraded only on the first request
         return if upgrade_connection(headers, &block)
@@ -77,8 +83,9 @@ class HTTP1Adapter
     end
   ensure
     @parsing = false
+    @request_active = false
     @conn.close
-    if @parse_fiber.alive?
+    if @parser_active
       @parse_fiber.schedule(Exceptions::MoveOn.new(nil, nil))
     end
   end
