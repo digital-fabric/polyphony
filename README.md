@@ -365,7 +365,7 @@ class IOWatcher
 end
 ```
 
-> **Running a high-performance event loop**: Polyphony  runs a libev-based event
+> **Running a high-performance event loop**: Polyphony runs a libev-based event
 > loop that watches events such as IO-readiness, elapsed timers, received
 > signals and other asynchronous happenings, and uses them to control fiber
 > execution. The event loop itself is run on a separate fiber, allowing the main
@@ -424,7 +424,7 @@ following:
 
 ```ruby
 require 'http/parser'
-require 'modulation'
+require 'polyphony'
 
 def handle_client(client)
   parser = Http::Parser.new
