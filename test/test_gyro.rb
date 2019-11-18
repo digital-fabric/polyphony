@@ -7,7 +7,7 @@ class RunTest < Minitest::Test
     t0 = Time.now
     suspend
     t1 = Time.now
-    assert (t1 - t0) < 0.001
+    assert (t1 - t0) < 0.01
   end
 end
 

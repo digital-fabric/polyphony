@@ -3,8 +3,6 @@
 require_relative 'helper'
 require 'polyphony/http'
 
-import '../lib/polyphony/http/server/http1.rb'
-
 class IO
   # Creates two mockup sockets for simulating server-client communication
   def self.server_client_mockup

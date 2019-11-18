@@ -2,25 +2,7 @@
 
 ## 0.20 Fix segfaults and rewrite C code
 
-- [x] update libev code
-- [ ] rewrite and cleanup EV code
-  - rename to EV to Gyro
-  - rework API:
-
-    ```ruby
-    Gyro.ref            # add ref
-    Gyro.unref          # remove ref
-    Gyro.break          # break
-    Gyro.run            # run loop
-    Gyro.defer          # run a block on next idle
-    Gyro.snooze         # yield to reactor and resume on next idle
-    Gyro.schedule_fiber # resume an arbitrary fiber on next idle
-
-    # to run automatically
-    require 'polyphony/auto_run'
-    ```
-
-  - Fix behavior of next tick items
+- Update examples
 
 ## 0.21 REPL usage, coprocess introspection, monitoring
 
