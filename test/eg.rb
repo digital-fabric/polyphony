@@ -14,11 +14,9 @@ module Kernel
         when RE_ATTR
           m.instance_variable_set(k, v)
         else
-          if v.respond_to?(:to_proc)
-            s.define_method(k) { |*args| instance_exec(*args, &v) }
-          else
-            s.define_method(k) { v }
-          end
+          block = v.respond_to?(:to_proc) ? 
+            proc { |*args| instance_exec(*args, &v) } : proc { v }
+          s.define_method(k, &block)
         end
       end
     end

@@ -6,6 +6,7 @@ require 'http/parser'
 
 Request = import('./request')
 HTTP2 = import('./http2')
+Exceptions = import('../../core/exceptions')
 
 # HTTP1 protocol implementation
 class HTTP1Adapter
@@ -25,29 +26,31 @@ class HTTP1Adapter
   #
   #       handler               parse_loop
   #       get_headers     -->   ...
-  #                             @parser << @conn.readpartial(8192)
+  #                             @parser << @conn.readpartial(...)
   #       ...             <--   on_headers
   #
   #       get_body        -->   ...
+  #                             @parser << @conn.readpartial(...)
   #       ...             <--   on_body
-  #       
+  #
   #       consume_request -->   ...
-  #                             @parser << @conn.readpartial(8192)
+  #                             @parser << @conn.readpartial(...)
   #       ...             <--   on_message_complete
   #
   def parse_loop
     while (data = @conn.readpartial(8192))
       break unless data
+
       @parser << data
       snooze
     end
-    @calling_fiber.transfer nil
-  rescue SystemCallError, IOError => error
+    @request_fiber.transfer nil
+  rescue SystemCallError, IOError
     # ignore IO/system call errors
-    @calling_fiber.transfer nil
-  rescue Exception => error
+    @request_fiber.transfer nil if @parsing
+  rescue Exception => e
     # an error return value will be raised by the receiving fiber
-    @calling_fiber.transfer error
+    @request_fiber.transfer(e) if @parsing
   end
 
   # request API
@@ -61,34 +64,38 @@ class HTTP1Adapter
       if can_upgrade
         # The connection can be upgraded only on the first request
         return if upgrade_connection(headers, &block)
+
         can_upgrade = false
       end
 
       @headers_sent = nil
       block.(Request.new(headers, self))
 
-      if @parser.keep_alive?
-        @parsing = false
-      else
-        break
-      end
+      break unless @parser.keep_alive?
+
+      @parsing = false
     end
   ensure
-    @conn.close rescue nil
+    @parsing = false
+    @conn.close
+    if @parse_fiber.alive?
+      @parse_fiber.schedule(Exceptions::MoveOn.new(nil, nil))
+    end
   end
 
   # Reads headers for the next request. Transfers control to the parse loop,
   # and resumes once the parse_loop has fired the on_headers callback
   def get_headers
     @parsing = true
-    @calling_fiber = Fiber.current
-    @parse_fiber.safe_transfer
+    @request_fiber = Fiber.current
+    result = @parse_fiber.safe_transfer
+    result
   end
 
   # Reads a body chunk for the current request. Transfers control to the parse
   # loop, and resumes once the parse_loop has fired the on_body callback
   def get_body_chunk
-    @calling_fiber = Fiber.current
+    @request_fiber = Fiber.current
     @read_body = true
     @parse_fiber.safe_transfer
   end
@@ -99,7 +106,7 @@ class HTTP1Adapter
   def consume_request
     return unless @parsing
 
-    @calling_fiber = Fiber.current
+    @request_fiber = Fiber.current
     @read_body = false
     @parse_fiber.safe_transfer while @parsing
   end
@@ -131,24 +138,24 @@ class HTTP1Adapter
       @opts[:upgrade][upgrade_protocol.to_sym].(@conn, headers)
       return true
     end
-  
+
     return nil unless upgrade_protocol == 'h2c'
-    
+
     # upgrade to HTTP/2
     HTTP2.upgrade_each(@conn, @opts, http2_upgraded_headers(headers), &block)
     true
   end
-  
+
   # Returns headers for HTTP2 upgrade
   # @param headers [Hash] request headers
   # @return [Hash] headers for HTTP2 upgrade
   def http2_upgraded_headers(headers)
     headers.merge(
-      ':scheme'     => 'http',
-      ':authority'  => headers['Host'],
+      ':scheme'    => 'http',
+      ':authority' => headers['Host']
     )
   end
-    
+
   # HTTP parser callbacks, called in the context of @parse_fiber
 
   # Resumes client fiber on receipt of all headers
@@ -157,21 +164,21 @@ class HTTP1Adapter
   def on_headers_complete(headers)
     headers[':path'] = @parser.request_url
     headers[':method'] = @parser.http_method
-    @calling_fiber.transfer(headers)
+    @request_fiber.safe_transfer(headers)
   end
 
   # Resumes client fiber on receipt of body chunk
   # @param chunk [String] body chunk
   # @return [void]
   def on_body(chunk)
-    @calling_fiber.transfer(chunk) if @read_body
+    @request_fiber.safe_transfer(chunk) if @read_body
   end
 
   # Resumes client fiber on request completion
   # @return [void]
   def on_message_complete
     @parsing = false
-    @calling_fiber.transfer nil
+    @request_fiber.safe_transfer nil
   end
 
   # response API
@@ -184,11 +191,11 @@ class HTTP1Adapter
     consume_request if @parsing
     data = format_headers(headers, body)
     if body
-      if @parser.http_minor == 0
-        data << body
-      else
-        data << "#{body.bytesize.to_s(16)}\r\n#{body}\r\n0\r\n\r\n"
-      end
+      data << if @parser.http_minor == 0
+                body
+              else
+                "#{body.bytesize.to_s(16)}\r\n#{body}\r\n0\r\n\r\n"
+              end
     end
     @conn << data
     @headers_sent = true
@@ -197,7 +204,7 @@ class HTTP1Adapter
   DEFAULT_HEADERS_OPTS = {
     empty_response: false,
     consume_request: true
-  }
+  }.freeze
 
   # Sends response headers. Waits for the request to complete if not yet
   # completed. If empty_response is true(thy), the response status code will
@@ -226,7 +233,7 @@ class HTTP1Adapter
     data << "0\r\n\r\n" if done
     @conn << data
   end
-  
+
   # Finishes the response to the current request. If no headers were sent,
   # default headers are sent using #send_headers.
   # @return [void]
@@ -245,7 +252,19 @@ class HTTP1Adapter
   # @return [String] formatted response headers
   def format_headers(headers, body)
     status = headers[':status'] || (body ? 200 : 204)
-    data = if !body
+    data = headers_first_line(body, status)
+
+    headers.each do |k, v|
+      next if k =~ /^:/
+
+      v.is_a?(Array) ?
+        v.each { |o| data << "#{k}: #{o}\r\n" } : data << "#{k}: #{v}\r\n"
+    end
+    data << "\r\n"
+  end
+
+  def headers_first_line(body, status)
+    if !body
       if status == 204
         +"HTTP/1.1 #{status}\r\n"
       else
@@ -256,12 +275,5 @@ class HTTP1Adapter
     else
       +"HTTP/1.1 #{status}\r\nTransfer-Encoding: chunked\r\n"
     end
-
-    headers.each do |k, v|
-      next if k =~ /^:/
-      v.is_a?(Array) ?
-        v.each { |o| data << "#{k}: #{o}\r\n" } : data << "#{k}: #{v}\r\n"
-    end
-    data << "\r\n"
   end
 end
