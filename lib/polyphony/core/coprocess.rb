@@ -26,7 +26,6 @@ class Coprocess
   end
 
   def run
-    uncaught_exception = nil
     @calling_fiber = Fiber.current
 
     @fiber = Fiber.new { execute }
@@ -55,8 +54,11 @@ class Coprocess
     @when_done&.()
 
     if uncaught_exception && !@awaiting_fiber
-      puts "uncaught exception, calling fiber: #{@calling_fiber.object_id}"
-      @calling_fiber.schedule @result
+      if @calling_fiber.alive?
+        @calling_fiber.transfer uncaught_exception
+      else
+        Fiber.main.transfer uncaught_exception
+      end
     end
 
     suspend

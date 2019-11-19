@@ -6,6 +6,7 @@ require 'minitest/autorun'
 require 'minitest/reporters'
 
 require 'polyphony'
+require 'polyphony/extensions/backtrace'
 require 'fileutils'
 
 require_relative './eg'
