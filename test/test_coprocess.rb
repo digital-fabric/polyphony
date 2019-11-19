@@ -217,14 +217,13 @@ class CoprocessTest < MiniTest::Test
         raise 'foo'
       end
       snooze # allow cp2 to run
-    rescue => e
-      raised_error = e
-    ensure
     end
     suspend
+  rescue => e
+    raised_error = e
+  ensure
     assert(raised_error)
     assert_equal('foo', raised_error.message)
-  ensure
     cp1&.stop
     cp2&.stop
   end
