@@ -6,6 +6,7 @@ require 'uri'
 
 class Request
   attr_reader :headers, :adapter
+  attr_accessor :__next__
 
   def initialize(headers, adapter)
     @headers  = headers
@@ -49,14 +50,37 @@ class Request
     end
   end
 
-  def each_chunk
-    while (chunk = @adapter.get_body_chunk)
+  def buffer_body_chunk(chunk)
+    @buffered_body_chunks ||= []
+    @buffered_body_chunks << chunk
+  end
+
+  def each_chunk(&block)
+    if @buffered_body_chunks
+      puts 'serve buffered body_chunks'
+      @buffered_body_chunks.each(&block)
+      @buffered_body_chunks = nil
+    end
+    while !@message_complete && (chunk = @adapter.get_body_chunk)
       yield chunk
     end
   end
 
+  def complete!(keep_alive = nil)
+    @message_complete = true
+    @keep_alive = keep_alive
+  end
+
+  def complete?
+    @message_complete
+  end
+
+  def keep_alive?
+    @keep_alive
+  end
+
   def read
-    buf = +''
+    buf = @buffered_body_chunks ? @buffered_body_chunks.join : +''
     while (chunk = @adapter.get_body_chunk)
       buf << chunk
     end
@@ -67,18 +91,26 @@ class Request
 
   def respond(body, headers = EMPTY_HASH)
     @adapter.respond(body, headers)
+    @headers_sent = true
   end
 
   def send_headers(headers = EMPTY_HASH, empty_response = false)
-    @adapter.send_headers(headers, empty_response)
+    return if @headers_sent
+
+    @headers_sent = true
+    @adapter.send_headers(headers, empty_response: empty_response)
   end
 
   def send_body_chunk(body, done: false)
+    send_headers({}) unless @headers_sent
+
     @adapter.send_body_chunk(body, done: done)
   end
   alias_method :<<, :send_body_chunk
 
   def finish
+    send_headers({}) unless @headers_sent
+
     @adapter.finish
   end
 end
