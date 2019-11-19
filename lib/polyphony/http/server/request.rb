@@ -101,12 +101,12 @@ class Request
     @adapter.send_headers(headers, empty_response: empty_response)
   end
 
-  def send_body_chunk(body, done: false)
+  def send_chunk(body, done: false)
     send_headers({}) unless @headers_sent
 
-    @adapter.send_body_chunk(body, done: done)
+    @adapter.send_chunk(body, done: done)
   end
-  alias_method :<<, :send_body_chunk
+  alias_method :<<, :send_chunk
 
   def finish
     send_headers({}) unless @headers_sent

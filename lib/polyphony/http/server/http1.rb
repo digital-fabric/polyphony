@@ -178,7 +178,7 @@ class HTTP1Adapter
   # @param chunk [String] response body chunk
   # @param done [boolean] whether the response is completed
   # @return [void]
-  def send_body_chunk(chunk, done: false)
+  def send_chunk(chunk, done: false)
     data = +"#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n"
     data << "0\r\n\r\n" if done
     @conn << data

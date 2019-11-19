@@ -16,7 +16,7 @@ puts "Listening on port 1234..."
 Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
   req.respond("Hello world!\n")
   # req.send_headers
-  # req.send_body_chunk("Method: #{req.method}\n")
-  # req.send_body_chunk("Path: #{req.path}\n")
-  # req.send_body_chunk("Query: #{req.query.inspect}\n", done: true)
+  # req.send_chunk("Method: #{req.method}\n")
+  # req.send_chunk("Path: #{req.path}\n")
+  # req.send_chunk("Query: #{req.query.inspect}\n", done: true)
 end

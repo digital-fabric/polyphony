@@ -65,7 +65,7 @@ class StreamWrapper
     @headers_sent = true
   end
 
-  def send_body_chunk(chunk, done: false)
+  def send_chunk(chunk, done: false)
     send_headers({}, false) unless @headers_sent
     @stream.data(chunk, end_stream: done)
   end
