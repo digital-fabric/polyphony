@@ -13,7 +13,7 @@ Throttler   = import('../core/throttler')
 # Fiber extensions
 class ::Fiber
   attr_writer :cancelled
-  attr_accessor :next_job, :coprocess, :scheduled_value
+  attr_accessor :coprocess, :scheduled_value
 
   def cancelled?
     @cancelled
