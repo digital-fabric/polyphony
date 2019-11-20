@@ -62,19 +62,6 @@ class Coprocess
     end
 
     suspend
-
-    # # if result is an error and nobody's waiting on us, we need to raise it
-    # # raise @result if @result.is_a?(Exception) && !@awaiting_fiber
-    # if uncaught_exception && !@awaiting_fiber
-    #   if Fiber.main == Fiber.current
-    #     raise @result
-    #   # elsif calling_fiber.alive?
-    #   #   calling_fiber.transfer @result
-    #   else
-    #     Fiber.main.transfer @result
-    #   end
-    # end
-
   end
 
   def <<(o)

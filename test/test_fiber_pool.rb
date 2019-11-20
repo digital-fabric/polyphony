@@ -63,4 +63,50 @@ class FiberPoolTest < Minitest::Test
     assert_equal 2, Pool.total_count
     assert_equal 0, Pool.checked_out_count
   end
+
+  def test_error_propagation_to_main_fiber
+    error = nil
+    f = Pool.allocate { raise 'foo' }
+    begin
+      f.schedule
+      suspend
+    rescue Exception => e
+      error = e
+    end
+    assert_kind_of Exception, error
+  end
+
+  def test_error_propagation_to_calling_fiber
+    error = nil
+    f1 = Pool.allocate do
+      f2 = Pool.allocate { raise 'foo' }
+      f2.schedule
+      suspend
+    rescue Exception => e
+      error = e
+    end
+    
+    f1.schedule
+    3.times { snooze }
+    assert_kind_of Exception, error
+  end
+
+  def test_error_bubbling_up
+    error = nil
+    f1 = Pool.allocate do
+      f2 = Pool.allocate { raise 'foo' }
+      f2.schedule
+      suspend
+    end
+
+    f1.schedule
+
+    begin
+      3.times { snooze }
+    rescue Exception => e
+      error = e
+    end
+
+    assert_kind_of Exception, error
+  end
 end

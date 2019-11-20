@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 class ::Fiber
-  attr_writer :__calling_fiber__, :__caller__
+  attr_accessor :__calling_fiber__
+  attr_writer :__caller__
 
   class << self
     alias_method :orig_new, :new

@@ -91,38 +91,26 @@ def fiber_loop
   fiber = Fiber.current
   loop do
     job, fiber.__next_pool_job__ = fiber.__next_pool_job__, nil
-    fiber.cancelled = nil
-    
-    job&.(fiber)
-
+    run_job(job, fiber) if job
     check_fiber_in(fiber)
+
     break if suspend == :stop
   end
-rescue => e
-  # uncaught error
-  $stdout.orig_puts "uncaught error in FiberPool: #{e.inspect}"
-  $stdout.orig_puts e.backtrace.join("\n")
 ensure
   @total_count -= 1
   # We need to explicitly transfer control to reactor fiber, otherwise it will
-  # be transferred to the main fiber, which would normally be blocking on 
-  # something
+  # be transferred to the main fiber, which might be blocking on some operation
+  # or just waiting for the reactor loop to finish running.
   $__reactor_fiber__.transfer
 end
 
-def run_job(&job)
-  error = nil
-  job&.(Fiber.current)
-rescue => e
-  # uncaught error
-  $stdout.orig_puts "uncaught error in FiberPool: #{e.inspect}"
-  $stdout.orig_puts e.backtrace.join("\n")
-  error = e
-ensure
-  # Kernel.orig_puts
-  # We need to explicitly transfer control to reactor fiber, otherwise it will
-  # be transferred to the main fiber, which would normally be blocking on 
-  # something
-  $__reactor_fiber__.transfer unless error
-
+def run_job(job, fiber)
+  fiber.cancelled = nil
+  job.(fiber)
+rescue Exception => e
+  if fiber.respond_to?(:__calling_fiber__)
+    fiber.__calling_fiber__.transfer e
+  else
+    Fiber.main.transfer e
+  end
 end
