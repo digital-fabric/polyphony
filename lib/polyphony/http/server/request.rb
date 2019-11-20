@@ -75,6 +75,10 @@ class Request
     @message_complete
   end
 
+  def consume
+    @adapter.consume_request
+  end
+
   def keep_alive?
     @keep_alive
   end
