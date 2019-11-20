@@ -19,6 +19,7 @@ spin do
 rescue Exception => e
   puts "*" * 40
   p e
+  puts e.backtrace.join("\n")
 end
 
 puts "pid: #{Process.pid}"
