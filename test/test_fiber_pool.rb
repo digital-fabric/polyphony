@@ -64,6 +64,17 @@ class FiberPoolTest < Minitest::Test
     assert_equal 0, Pool.checked_out_count
   end
 
+  def test_value_passing
+    values = []
+    f = Pool.allocate do |x|
+      values << x
+      Fiber.main.transfer
+    end
+    f.transfer 42
+
+    assert_equal [42], values
+  end
+
   def test_error_propagation_to_main_fiber
     error = nil
     f = Pool.allocate { raise 'foo' }

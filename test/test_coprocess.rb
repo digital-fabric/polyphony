@@ -49,7 +49,7 @@ class CoprocessTest < MiniTest::Test
     coproc = Polyphony::Coprocess.new { raise 'foo' }
     begin
       result = coproc.await
-    rescue => e
+    rescue Exception => e
       result = { error: e }
     end
     assert_kind_of(Hash, result)

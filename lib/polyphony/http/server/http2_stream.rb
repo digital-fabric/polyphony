@@ -4,17 +4,15 @@ export_default :StreamHandler
 
 require 'http/2'
 
-Request = import('./request')
+Request = import './request'
+FiberPool = import '../../core/fiber_pool'
 
 class StreamHandler
   attr_accessor :__next__
 
   def initialize(stream, &block)
     @stream = stream
-    @stream_fiber = Fiber.new do |req|
-      block.(req)
-      suspend
-    end
+    @stream_fiber = FiberPool.allocate(&block)
 
     # stream callbacks occur on connection fiber
     stream.on(:headers, &method(:on_headers))

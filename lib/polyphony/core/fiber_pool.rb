@@ -62,7 +62,8 @@ def check_fiber_out
     @pool_head = @pool_head.__next_pool_fiber__
     return fiber
   else
-    fiber = Fiber.new { fiber_loop }
+    @fiber_loop_proc ||= method(:fiber_loop).to_proc
+    fiber = Fiber.new(&@fiber_loop_proc)
     @total_count += 1
     return fiber
   end
@@ -87,14 +88,15 @@ end
 
 # Runs a job-processing loop inside the current fiber
 # @return [void]
-def fiber_loop
+def fiber_loop(value)
   fiber = Fiber.current
   loop do
     job, fiber.__next_pool_job__ = fiber.__next_pool_job__, nil
-    run_job(job, fiber) if job
+    run_job(job, value, fiber) if job
     check_fiber_in(fiber)
 
-    break if suspend == :stop
+    value = suspend
+    break if value == :stop
   end
 ensure
   @total_count -= 1
@@ -104,9 +106,9 @@ ensure
   $__reactor_fiber__.transfer
 end
 
-def run_job(job, fiber)
+def run_job(job, value, fiber)
   fiber.cancelled = nil
-  job.(fiber)
+  job.(value)
 rescue Exception => e
   if fiber.respond_to?(:__calling_fiber__)
     fiber.__calling_fiber__.transfer e
