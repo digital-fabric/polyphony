@@ -73,8 +73,10 @@ class HTTP1Adapter
   def on_headers_complete(headers)
     headers[':path'] = @parser.request_url
     headers[':method'] = @parser.http_method
-  
-    request = Request.new(headers, self)
+    queue_request(Request.new(headers, self))
+  end
+
+  def queue_request(request)
     if @requests_head
       @requests_tail.__next__ = request
       @requests_tail = request
@@ -118,6 +120,7 @@ class HTTP1Adapter
     upgrade_protocol = upgrade_protocol.downcase.to_sym
     upgrade_handler = @opts[:upgrade] && @opts[:upgrade][upgrade_protocol]
     if upgrade_handler
+      @parser = @requests_head = @requests_tail = nil
       upgrade_handler.(@conn, headers)
       return true
     end
@@ -125,6 +128,7 @@ class HTTP1Adapter
     return nil unless upgrade_protocol == :h2c
 
     # upgrade to HTTP/2
+    @parser = @requests_head = @requests_tail = nil
     HTTP2.upgrade_each(@conn, @opts, http2_upgraded_headers(headers), &block)
     true
   end
@@ -189,6 +193,10 @@ class HTTP1Adapter
   # @return [void]
   def finish
     @conn << "0\r\n\r\n"
+  end
+
+  def close
+    @conn.close
   end
 
   private
