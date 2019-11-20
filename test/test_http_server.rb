@@ -183,4 +183,34 @@ class HTTP1ServerTest < MiniTest::Test
     snooze
     assert done
   end
+
+  def test_big_download
+    chunk_size = 100000
+    chunk_count = 10
+    chunk = '*' * chunk_size
+    @server, connection = spin_server do |req|
+      request = req
+      req.send_headers
+      chunk_count.times do
+        req << chunk
+        snooze
+      end
+      req.finish
+      req.adapter.close
+    end
+
+    response = +''
+    count = 0
+    
+    connection << "GET / HTTP/1.1\r\n\r\n"
+    while (data = connection.readpartial(chunk_size * 2))
+      response << data
+      count += 1
+      snooze
+    end
+
+    chunks = "#{chunk_size.to_s(16)}\r\n#{'*' * chunk_size}\r\n" * chunk_count
+    assert_equal "HTTP/1.1 200\r\nTransfer-Encoding: chunked\r\n\r\n#{chunks}0\r\n\r\n", response
+    assert_equal chunk_count * 2 + 1, count
+  end
 end
