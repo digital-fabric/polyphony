@@ -5,10 +5,10 @@ require 'polyphony'
 
 def loop_it(number, lock)
   loop do
-    sleep(rand*0.2)
+    sleep(rand * 0.2)
     lock.synchronize do
       puts "child #{number} has the lock"
-      sleep(rand*0.05)
+      sleep(rand * 0.05)
     end
   end
 end

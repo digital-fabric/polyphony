@@ -5,15 +5,15 @@ require 'polyphony/redis'
 require 'json'
 
 X_SESSIONS = 1000
-X_NODES = 10000
+X_NODES = 10_000
 X_SUBSCRIPTIONS_PER_SESSION = 100
 
 $sessions = []
 X_SESSIONS.times do
   $sessions << {
-    subscriptions: X_SUBSCRIPTIONS_PER_SESSION.times.map {
+    subscriptions: X_SUBSCRIPTIONS_PER_SESSION.times.map do
       "node#{rand(X_NODES)}"
-    }.uniq
+    end.uniq
   }
 end
 
@@ -30,20 +30,20 @@ $update_count = 0
 
 def distribute_event(event)
   $update_count += 1
-  t0 = Time.now
+  # t0 = Time.now
   count = 0
   $sessions.each do |s|
     count += 1 if s[:subscriptions].include?(event[:path])
   end
-  elapsed = Time.now - t0
-  rate = X_SESSIONS / elapsed
+  # elapsed = Time.now - t0
+  # rate = X_SESSIONS / elapsed
   # puts "elapsed: #{elapsed} (#{rate}/s)" if $update_count % 100 == 0
 end
 
 spin do
   redis = Redis.new
   throttled_loop(1000) do
-    redis.publish('events', {path: "node#{rand(X_NODES)}"}.to_json)
+    redis.publish('events', { path: "node#{rand(X_NODES)}" }.to_json)
   end
 end
 
@@ -54,10 +54,13 @@ spin do
     now = Time.now
     elapsed = now - last_stamp
     delta = $update_count - last_count
-    puts "update rate: #{delta.to_f/elapsed}"
+    puts "update rate: #{delta.to_f / elapsed}"
     last_stamp = now
     last_count = $update_count
   end
 end
 
-Polyphony.trap(:int) { puts "bye..."; exit! }
+Polyphony.trap(:int) do
+  puts 'bye...'
+  exit!
+end

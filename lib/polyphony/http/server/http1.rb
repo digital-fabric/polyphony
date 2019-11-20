@@ -18,20 +18,30 @@ class HTTP1Adapter
   end
 
   def each(&block)
-    while (data = @conn.readpartial(8192)) do
-      @parser << data
-      snooze
-      while (request = @requests_head)
-        return if upgrade_connection(request.headers, &block)
-
-        @requests_head = request.__next__
-        block.call(request)
-        return unless request.keep_alive?
-      end
+    while (data = @conn.readpartial(8192))
+      return if handle_incoming_data(data, &block)
     end
   rescue SystemCallError, IOError
     # ignore
   ensure
+    finalize_client_loop
+  end
+
+  # return [Boolean] true if client loop should stop
+  def handle_incoming_data(data, &block)
+    @parser << data
+    snooze
+    while (request = @requests_head)
+      return true if upgrade_connection(request.headers, &block)
+
+      @requests_head = request.__next__
+      block.call(request)
+      return true unless request.keep_alive?
+    end
+    nil
+  end
+
+  def finalize_client_loop
     # release references to various objects
     @requests_head = @requests_tail = nil
     @parser = nil
@@ -43,9 +53,10 @@ class HTTP1Adapter
   def get_body_chunk
     @waiting_for_body_chunk = true
     @next_chunk = nil
-    while !@requests_tail.complete? && (data = @conn.readpartial(8192)) do
+    while !@requests_tail.complete? && (data = @conn.readpartial(8192))
       @parser << data
       return @next_chunk if @next_chunk
+
       snooze
     end
     nil
@@ -58,9 +69,10 @@ class HTTP1Adapter
   # callback
   def consume_request
     request = @requests_head
-    while (data = @conn.readpartial(8192)) do
+    while (data = @conn.readpartial(8192))
       @parser << data
       return if request.complete?
+
       snooze
     end
   end
@@ -69,7 +81,7 @@ class HTTP1Adapter
     version = @parser.http_version
     "HTTP #{version.join('.')}"
   end
-  
+
   def on_headers_complete(headers)
     headers[':path'] = @parser.request_url
     headers[':method'] = @parser.http_method
@@ -84,7 +96,7 @@ class HTTP1Adapter
       @requests_head = @requests_tail = request
     end
   end
-  
+
   def on_body(chunk)
     if @waiting_for_body_chunk
       @next_chunk = chunk
@@ -93,7 +105,7 @@ class HTTP1Adapter
       @requests_tail.buffer_body_chunk(chunk)
     end
   end
-  
+
   def on_message_complete
     @waiting_for_body_chunk = nil
     @requests_tail.complete!(@parser.keep_alive?)
@@ -116,18 +128,22 @@ class HTTP1Adapter
   def upgrade_connection(headers, &block)
     upgrade_protocol = headers['Upgrade']
     return nil unless upgrade_protocol
-    
+
     upgrade_protocol = upgrade_protocol.downcase.to_sym
     upgrade_handler = @opts[:upgrade] && @opts[:upgrade][upgrade_protocol]
-    if upgrade_handler
-      @parser = @requests_head = @requests_tail = nil
-      upgrade_handler.(@conn, headers)
-      return true
-    end
+    return upgrade_with_handler(upgrade_handler, headers) if upgrade_handler
+    return upgrade_to_http2(headers, &block) if upgrade_protocol == :h2c
 
-    return nil unless upgrade_protocol == :h2c
+    nil
+  end
 
-    # upgrade to HTTP/2
+  def upgrade_with_handler(handler, headers)
+    @parser = @requests_head = @requests_tail = nil
+    handler.(@conn, headers)
+    true
+  end
+
+  def upgrade_to_http2(headers, &block)
     @parser = @requests_head = @requests_tail = nil
     HTTP2.upgrade_each(@conn, @opts, http2_upgraded_headers(headers), &block)
     true
@@ -163,7 +179,7 @@ class HTTP1Adapter
   end
 
   DEFAULT_HEADERS_OPTS = {
-    empty_response: false,
+    empty_response:  false,
     consume_request: true
   }.freeze
 
@@ -208,25 +224,42 @@ class HTTP1Adapter
   # @return [String] formatted response headers
   def format_headers(headers, body)
     status = headers[':status'] || (body ? 200 : 204)
-    data = headers_first_line(body, status)
+    data = format_status_line(body, status)
 
     headers.each do |k, v|
       next if k =~ /^:/
 
-      v.is_a?(Array) ?
-        v.each { |o| data << "#{k}: #{o}\r\n" } : data << "#{k}: #{v}\r\n"
+      format_header_lines(k, v)
     end
     data << "\r\n"
   end
 
-  def headers_first_line(body, status)
+  def format_header_lines(key, value)
+    if value.is_a?(Array)
+      value.each { |item| data << "#{key}: #{item}\r\n" }
+    else
+      data << "#{key}: #{value}\r\n"
+    end
+  end
+
+  def format_status_line(body, status)
     if !body
-      if status == 204
-        +"HTTP/1.1 #{status}\r\n"
-      else
-        +"HTTP/1.1 #{status}\r\nContent-Length: 0\r\n"
-      end
-    elsif @parser.http_minor == 0
+      empty_status_line(status)
+    else
+      with_body_status_line(status, body)
+    end
+  end
+
+  def empty_status_line(status)
+    if status == 204
+      +"HTTP/1.1 #{status}\r\n"
+    else
+      +"HTTP/1.1 #{status}\r\nContent-Length: 0\r\n"
+    end
+  end
+
+  def with_body_status_line(status, body)
+    if @parser.http_minor == 0
       +"HTTP/1.0 #{status}\r\nContent-Length: #{body.bytesize}\r\n"
     else
       +"HTTP/1.1 #{status}\r\nTransfer-Encoding: chunked\r\n"

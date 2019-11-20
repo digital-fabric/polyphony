@@ -3,21 +3,20 @@
 require_relative '../polyphony'
 require 'pg'
 
+# PG overrides
 module ::PG
   def self.connect(*args)
     Connection.connect_start(*args).tap(&method(:connect_async))
   end
-  
+
   def self.connect_async(conn)
     loop do
       res = conn.connect_poll
       case res
-      when PGRES_POLLING_FAILED   then raise Error.new(conn.error_message)
+      when PGRES_POLLING_FAILED   then raise Error, conn.error_message
       when PGRES_POLLING_READING  then conn.socket_io.read_watcher.await
       when PGRES_POLLING_WRITING  then conn.socket_io.write_watcher.await
-      when PGRES_POLLING_OK       then
-        conn.setnonblocking(true)
-        return
+      when PGRES_POLLING_OK       then return conn.setnonblocking(true)
       end
     end
   end
@@ -26,8 +25,9 @@ module ::PG
     loop do
       res = conn.connect_poll
       case res
-      when PGRES_POLLING_FAILED   then raise Error.new(conn.error_message)
-      when PGRES_POLLING_OK       then
+      when PGRES_POLLING_FAILED
+        raise Error, conn.error_message
+      when PGRES_POLLING_OK
         conn.setnonblocking(true)
         return
       end
@@ -35,9 +35,10 @@ module ::PG
   end
 end
 
+# Overrides for PG connection
 class ::PG::Connection
   alias_method :orig_get_result, :get_result
-  
+
   def get_result(&block)
     while is_busy
       socket_io.read_watcher.await
@@ -55,7 +56,7 @@ class ::PG::Connection
     while get_result; end
   end
 
-  def block(timeout = 0)
+  def block(_timeout = 0)
     while is_busy
       socket_io.read_watcher.await
       consume_input
@@ -70,20 +71,23 @@ class ::PG::Connection
   # error is raised, the transaction is rolled back and the error is raised
   # again.
   # @return [void]
-  def transaction
-    began = false
+  def transaction(&block)
     return yield if @transaction # allow nesting of calls to #transactions
 
+    perform_transaction(&block)
+  end
+
+  def perform_transaction
     query(SQL_BEGIN)
     began = true
     @transaction = true
     yield
     query(SQL_COMMIT)
   rescue StandardError => e
-    (query(SQL_ROLLBACK) rescue nil) if began
+    query(SQL_ROLLBACK) if began
     raise e
   ensure
-    @transaction = false if began
+    @transaction = false
   end
 
   self.async_api = true

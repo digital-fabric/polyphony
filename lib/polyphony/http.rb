@@ -3,11 +3,12 @@
 require_relative '../polyphony'
 
 module Polyphony
+  # HTTP imports (loaded dynamically)
   module HTTP
     auto_import(
-      Agent:      './http/agent',
-      Rack:       './http/server/rack',
-      Server:     './http/server',
+      Agent:  './http/agent',
+      Rack:   './http/server/rack',
+      Server: './http/server'
     )
   end
 end

@@ -8,6 +8,7 @@ export  :allocate,
 
 require 'fiber'
 
+# Extend Fiber class with fiber pool-related ivars
 class ::Fiber
   attr_accessor :__next_pool_job__, :__next_pool_fiber__
 end
@@ -60,12 +61,11 @@ def check_fiber_out
   if @pool_head
     fiber = @pool_head
     @pool_head = @pool_head.__next_pool_fiber__
-    return fiber
+    fiber
   else
-    @fiber_loop_proc ||= method(:fiber_loop).to_proc
-    fiber = Fiber.new(&@fiber_loop_proc)
     @total_count += 1
-    return fiber
+    @fiber_loop_proc ||= method(:fiber_loop).to_proc
+    Fiber.new(&@fiber_loop_proc)
   end
 end
 
@@ -91,10 +91,8 @@ end
 def fiber_loop(value)
   fiber = Fiber.current
   loop do
-    job, fiber.__next_pool_job__ = fiber.__next_pool_job__, nil
-    run_job(job, value, fiber) if job
+    run_next_job(fiber, value)
     check_fiber_in(fiber)
-
     value = suspend
     break if value == :stop
   end
@@ -106,9 +104,11 @@ ensure
   $__reactor_fiber__.transfer
 end
 
-def run_job(job, value, fiber)
+def run_next_job(fiber, value)
+  job = fiber.__next_pool_job__
+  fiber.__next_pool_job__ = nil
   fiber.cancelled = nil
-  job.(value)
+  job&.(value)
 rescue Exception => e
   if fiber.respond_to?(:__calling_fiber__)
     fiber.__calling_fiber__.transfer e

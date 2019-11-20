@@ -4,8 +4,10 @@ require 'bundler/setup'
 require 'polyphony'
 
 begin
-  server = Polyphony::Net.tcp_listen(nil, 1234, reuse_addr: true, dont_linger: true)
-  puts "listening on port 1234..."
+  server = Polyphony::Net.tcp_listen(
+    nil, 1234, reuse_addr: true, dont_linger: true
+  )
+  puts 'listening on port 1234...'
 
   loop do
     client = server.accept
@@ -18,8 +20,10 @@ begin
           client.write(data)
         end
       end
-      client.write "Disconnecting due to inactivity\n" if cancel_scope.cancelled?
-    rescue => e
+      if cancel_scope.cancelled?
+        client.write "Disconnecting due to inactivity\n"
+      end
+    rescue StandardError => e
       puts "client error: #{e.inspect}"
     ensure
       client.close

@@ -42,9 +42,9 @@ begin
       end.await
     end.await
   end.await
-rescue => e
+rescue StandardError => e
   puts "error: #{e.inspect}"
-  puts "backtrace:"
+  puts 'backtrace:'
   puts e.backtrace.join("\n")
   puts
 end

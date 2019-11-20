@@ -3,11 +3,11 @@
 require 'bundler/setup'
 require 'polyphony'
 
-spin {
-  1.times {
+spin do
+  1.times do
     puts Time.now
     sleep 1
-  }
-}
+  end
+end
 
 suspend

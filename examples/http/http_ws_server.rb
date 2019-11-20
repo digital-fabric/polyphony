@@ -7,12 +7,12 @@ require 'polyphony/http'
 require 'polyphony/websocket'
 
 def ws_handler(conn)
-  timer = spin {
-    throttled_loop(1) {
+  timer = spin do
+    throttled_loop(1) do
       conn << Time.now.to_s
-    }
-  }
-  while msg = conn.recv
+    end
+  end
+  while (msg = conn.recv)
     conn << "you said: #{msg}"
   end
 ensure
@@ -20,20 +20,20 @@ ensure
 end
 
 opts = {
-  reuse_addr: true,
+  reuse_addr:  true,
   dont_linger: true,
-  upgrade: {
+  upgrade:     {
     websocket: Polyphony::Websocket.handler(&method(:ws_handler))
   }
 }
 
 HTML = IO.read(File.join(__dir__, 'ws_page.html'))
 
-spin {
-  server = Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
+spin do
+  Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
     req.respond(HTML, 'Content-Type' => 'text/html')
   end
-}
+end
 
 puts "pid: #{Process.pid}"
-puts "Listening on port 1234..."
+puts 'Listening on port 1234...'

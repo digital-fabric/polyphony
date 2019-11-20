@@ -26,24 +26,22 @@ class IOTest < MiniTest::Test
     count = 0
     msg = nil
     [
-      spin {
-        @o.write("hello")
+      spin do
+        @o.write('hello')
         @o.close
-      },
+      end,
 
-      spin {
+      spin do
         while count < 5
           sleep 0.01
           count += 1
         end
-      }, 
+      end,
 
-      spin {
-        msg = @i.read
-      }
+      spin { msg = @i.read }
     ].each(&:await)
     assert_equal(5, count)
-    assert_equal("hello", msg)
+    assert_equal('hello', msg)
   end
 
   def test_that_double_chevron_method_returns_io
@@ -87,7 +85,7 @@ class IOClassMethodsTest < MiniTest::Test
     lines = []
     IO.foreach(__FILE__) { |l| lines << l }
     assert_equal("# frozen_string_literal: true\n", lines[0])
-    assert_equal("end", lines[-1])
+    assert_equal("end\n", lines[-1])
   end
 
   def test_read
@@ -108,7 +106,7 @@ class IOClassMethodsTest < MiniTest::Test
   def test_readlines
     lines = IO.readlines(__FILE__)
     assert_equal("# frozen_string_literal: true\n", lines[0])
-    assert_equal("end", lines[-1])
+    assert_equal("end\n", lines[-1])
   end
 
   WRITE_DATA = "foo\nbar קוקו"
@@ -125,9 +123,7 @@ class IOClassMethodsTest < MiniTest::Test
 
   def test_popen
     counter = 0
-    timer = spin {
-      throttled_loop(200) { counter += 1 }
-    }
+    timer = spin { throttled_loop(200) { counter += 1 } }
 
     IO.popen('sleep 0.1') { |io| io.read(8192) }
     assert(counter >= 10)
@@ -141,18 +137,16 @@ class IOClassMethodsTest < MiniTest::Test
 
   def test_kernel_gets
     counter = 0
-    timer = spin {
-      throttled_loop(200) { counter += 1}
-    }
+    timer = spin { throttled_loop(200) { counter += 1 } }
 
     i, o = IO.pipe
     orig_stdin = $stdin
     $stdin = i
-    spin {
+    spin do
       sleep 0.01
-      o.puts "foo"
+      o.puts 'foo'
       o.close
-    }
+    end
 
     assert(counter >= 0)
     assert_equal("foo\n", gets)
@@ -177,14 +171,14 @@ class IOClassMethodsTest < MiniTest::Test
     orig_stdout = $stdout
     o = eg(
       '@buf': +'',
-      write: ->(*args) { args.each { |a| @buf << a } },
-      flush: -> { },
-      buf: -> { @buf }
+      write:  ->(*args) { args.each { |a| @buf << a } },
+      flush:  -> {},
+      buf:    -> { @buf }
     )
 
     $stdout = o
 
-    puts("foobar")
+    puts 'foobar'
     assert_equal("foobar\n", o.buf)
   ensure
     $stdout = orig_stdout

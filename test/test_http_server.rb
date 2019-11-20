@@ -15,21 +15,21 @@ class IO
     [server_connection, client_connection]
   end
 
-  def self.mockup_connection(i, o, oo)
+  def self.mockup_connection(input, output, output2)
     eg(
-      :read         => ->(*args) { i.read(*args) },
-      :readpartial  => ->(*args) { i.readpartial(*args) },
-      :<<           => ->(*args) { o.write(*args) },
-      :write        => ->(*args) { o.write(*args) },
-      :close        => -> { o.close },
-      :eof?         => -> { oo.closed? }
+      :read        => ->(*args) { input.read(*args) },
+      :readpartial => ->(*args) { input.readpartial(*args) },
+      :<<          => ->(*args) { output.write(*args) },
+      :write       => ->(*args) { output.write(*args) },
+      :close       => -> { output.close },
+      :eof?        => -> { output2.closed? }
     )
   end
 end
 
 class HTTP1ServerTest < MiniTest::Test
   def teardown
-    @server&.interrupt if @server.alive?
+    @server&.interrupt if @server&.alive?
     snooze
     super
   end
@@ -44,26 +44,41 @@ class HTTP1ServerTest < MiniTest::Test
 
   def test_that_server_uses_content_length_in_http_1_0
     @server, connection = spin_server do |req|
-      req.respond("Hello, world!", {})
+      req.respond('Hello, world!', {})
     end
 
     # using HTTP 1.0, server should close connection after responding
     connection << "GET / HTTP/1.0\r\n\r\n"
 
     response = connection.readpartial(8192)
-    assert_equal("HTTP/1.0 200\r\nContent-Length: 13\r\n\r\nHello, world!", response)
+    expected = <<~HTTP.chomp.gsub("\n", "\r\n")
+      HTTP/1.0 200
+      Content-Length: 13
+
+      Hello, world!
+    HTTP
+    assert_equal(expected, response)
   end
 
   def test_that_server_uses_chunked_encoding_in_http_1_1
     @server, connection = spin_server do |req|
-      req.respond("Hello, world!", {})
+      req.respond('Hello, world!')
     end
 
     # using HTTP 1.0, server should close connection after responding
     connection << "GET / HTTP/1.1\r\n\r\n"
 
     response = connection.readpartial(8192)
-    assert_equal("HTTP/1.1 200\r\nTransfer-Encoding: chunked\r\n\r\nd\r\nHello, world!\r\n0\r\n\r\n", response)
+    expected = <<~HTTP.gsub("\n", "\r\n")
+      HTTP/1.1 200
+      Transfer-Encoding: chunked
+
+      d
+      Hello, world!
+      0
+
+    HTTP
+    assert_equal(expected, response)
   end
 
   def test_that_server_maintains_connection_when_using_keep_alives
@@ -80,7 +95,16 @@ class HTTP1ServerTest < MiniTest::Test
     connection << "GET / HTTP/1.1\r\n\r\n"
     response = connection.readpartial(8192)
     assert !connection.eof?
-    assert_equal("HTTP/1.1 200\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nHi\r\n0\r\n\r\n", response)
+    expected = <<~HTTP.gsub("\n", "\r\n")
+      HTTP/1.1 200
+      Transfer-Encoding: chunked
+
+      2
+      Hi
+      0
+
+    HTTP
+    assert_equal(expected, response)
 
     connection << "GET / HTTP/1.0\r\n\r\n"
     response = connection.readpartial(8192)
@@ -91,16 +115,32 @@ class HTTP1ServerTest < MiniTest::Test
   def test_pipelining_client
     @server, connection = spin_server do |req|
       if req.headers['Foo'] == 'bar'
-        req.respond("Hello, foobar!", {})
+        req.respond('Hello, foobar!', {})
       else
-        req.respond("Hello, world!", {})
+        req.respond('Hello, world!', {})
       end
     end
 
     connection << "GET / HTTP/1.1\r\n\r\nGET / HTTP/1.1\r\nFoo: bar\r\n\r\n"
     response = connection.readpartial(8192)
 
-    assert_equal("HTTP/1.1 200\r\nTransfer-Encoding: chunked\r\n\r\nd\r\nHello, world!\r\n0\r\n\r\nHTTP/1.1 200\r\nTransfer-Encoding: chunked\r\n\r\ne\r\nHello, foobar!\r\n0\r\n\r\n", response)
+    expected = <<~HTTP.gsub("\n", "\r\n")
+      HTTP/1.1 200
+      Transfer-Encoding: chunked
+
+      d
+      Hello, world!
+      0
+
+      HTTP/1.1 200
+      Transfer-Encoding: chunked
+
+      e
+      Hello, foobar!
+      0
+
+    HTTP
+    assert_equal(expected, response)
   end
 
   def test_body_chunks
@@ -116,42 +156,65 @@ class HTTP1ServerTest < MiniTest::Test
       req.finish
     end
 
-    connection << "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n6\r\nfoobar\r\n"
+    connection << <<~HTTP.gsub("\n", "\r\n")
+      POST / HTTP/1.1
+      Transfer-Encoding: chunked
+
+      6
+      foobar
+    HTTP
     2.times { snooze }
     assert request
-    assert_equal ['foobar'], chunks
+    assert_equal %w[foobar], chunks
     assert !request.complete?
 
     connection << "6\r\nbazbud\r\n"
     snooze
-    assert_equal ['foobar', 'bazbud'], chunks
+    assert_equal %w[foobar bazbud], chunks
     assert !request.complete?
 
     connection << "0\r\n\r\n"
     snooze
-    assert_equal ['foobar', 'bazbud'], chunks
+    assert_equal %w[foobar bazbud], chunks
     assert request.complete?
 
     2.times { snooze }
 
     response = connection.readpartial(8192)
 
-    assert_equal("HTTP/1.1 200\r\nTransfer-Encoding: chunked\r\n\r\n6\r\nFOOBAR\r\n6\r\nBAZBUD\r\n0\r\n\r\n", response)
+    expected = <<~HTTP.gsub("\n", "\r\n")
+      HTTP/1.1 200
+      Transfer-Encoding: chunked
+
+      6
+      FOOBAR
+      6
+      BAZBUD
+      0
+
+    HTTP
+    assert_equal(expected, response)
   end
 
   def test_upgrade
     done = nil
-    
+
     opts = {
       upgrade: {
-        echo: ->(conn, headers) {
-          conn << "HTTP/1.1 101 Switching Protocols\r\nUpgrade: echo\r\nConnection: Upgrade\r\n\r\n"
+        echo: lambda do |conn, _headers|
+          conn << <<~HTTP.gsub("\n", "\r\n")
+            HTTP/1.1 101 Switching Protocols
+            Upgrade: echo
+            Connection: Upgrade
+
+          HTTP
+
           while (data = conn.readpartial(8192))
             conn << data
             snooze
           end
           done = true
-        }
+        end
       }
     }
 
@@ -162,16 +225,37 @@ class HTTP1ServerTest < MiniTest::Test
     connection << "GET / HTTP/1.1\r\n\r\n"
     response = connection.readpartial(8192)
     assert !connection.eof?
-    assert_equal("HTTP/1.1 200\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nHi\r\n0\r\n\r\n", response)
+    expected = <<~HTTP.gsub("\n", "\r\n")
+      HTTP/1.1 200
+      Transfer-Encoding: chunked
 
-    connection << "GET / HTTP/1.1\r\nUpgrade: echo\r\nConnection: upgrade\r\n\r\n"
+      2
+      Hi
+      0
+
+    HTTP
+    assert_equal(expected, response)
+
+    connection << <<~HTTP.gsub("\n", "\r\n")
+      GET / HTTP/1.1
+      Upgrade: echo
+      Connection: upgrade
+
+    HTTP
+
     snooze
     response = connection.readpartial(8192)
     assert !connection.eof?
-    assert_equal("HTTP/1.1 101 Switching Protocols\r\nUpgrade: echo\r\nConnection: Upgrade\r\n\r\n", response)
+    expected = <<~HTTP.gsub("\n", "\r\n")
+      HTTP/1.1 101 Switching Protocols
+      Upgrade: echo
+      Connection: Upgrade
+
+    HTTP
+    assert_equal(expected, response)
 
     assert !done
-    
+
     connection << 'foo'
     assert_equal 'foo', connection.readpartial(8192)
 
@@ -185,11 +269,10 @@ class HTTP1ServerTest < MiniTest::Test
   end
 
   def test_big_download
-    chunk_size = 100000
+    chunk_size = 100_000
     chunk_count = 10
     chunk = '*' * chunk_size
     @server, connection = spin_server do |req|
-      request = req
       req.send_headers
       chunk_count.times do
         req << chunk
@@ -201,7 +284,7 @@ class HTTP1ServerTest < MiniTest::Test
 
     response = +''
     count = 0
-    
+
     connection << "GET / HTTP/1.1\r\n\r\n"
     while (data = connection.readpartial(chunk_size * 2))
       response << data
@@ -209,8 +292,16 @@ class HTTP1ServerTest < MiniTest::Test
       snooze
     end
 
-    chunks = "#{chunk_size.to_s(16)}\r\n#{'*' * chunk_size}\r\n" * chunk_count
-    assert_equal "HTTP/1.1 200\r\nTransfer-Encoding: chunked\r\n\r\n#{chunks}0\r\n\r\n", response
+    chunks = "#{chunk_size.to_s(16)}\n#{'*' * chunk_size}\n" * chunk_count
+    expected = <<~HTTP.gsub("\n", "\r\n")
+      HTTP/1.1 200
+      Transfer-Encoding: chunked
+
+      #{chunks}0
+
+    HTTP
+
+    assert_equal expected, response
     assert_equal chunk_count * 2 + 1, count
   end
 end

@@ -7,7 +7,7 @@ def lengthy_op
   data = IO.read('../../docs/dev-journal.md')
   data.clear
   # Socket.getaddrinfo('debian.org', 80)
-  #Digest::SHA256.digest(IO.read('doc/Promise.html'))
+  # Digest::SHA256.digest(IO.read('doc/Promise.html'))
 end
 
 X = 1000
@@ -26,18 +26,20 @@ def compare_performance
         Polyphony::ThreadPool.process { lengthy_op }
       end
       async_perf = X / (Time.now - t0)
-      puts "seq thread pool performance: %g (X %0.2f)" % [
-        async_perf, async_perf / native_perf
-      ]
+      puts format(
+        'seq thread pool performance: %g (X %0.2f)',
+        async_perf,
+        async_perf / native_perf
+      )
     end
 
     acc = 0
     count = 0
-    10.times do |i|
+    10.times do |_i|
       t0 = Time.now
       supervise do |s|
         X.times do
-          s.spin Polyphony::ThreadPool.process { lengthy_op }
+          s.spin(Polyphony::ThreadPool.process { lengthy_op })
         end
       end
       thread_pool_perf = X / (Time.now - t0)
@@ -45,10 +47,12 @@ def compare_performance
       count += 1
     end
     avg_perf = acc / count
-    puts "avg thread pool performance: %g (X %0.2f)" % [
-      avg_perf, avg_perf / native_perf
-    ]
-rescue Exception => e
+    puts format(
+      'avg thread pool performance: %g (X %0.2f)',
+      avg_perf,
+      avg_perf / native_perf
+    )
+  rescue Exception => e
     p e
     puts e.backtrace.join("\n")
   end

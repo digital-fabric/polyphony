@@ -10,7 +10,7 @@ async def try_connect(target, supervisor)
   puts "trying #{target[2]}"
   socket = Polyphony::Net.tcp_connect(target[2], 80)
   supervisor.stop!([target[2], socket])
-rescue IOError, SystemCallError
+      rescue IOError, SystemCallError
 end
 
 def happy_eyeballs(hostname, port, max_wait_time: 0.025)
@@ -24,7 +24,7 @@ def happy_eyeballs(hostname, port, max_wait_time: 0.025)
       end
     end
     if success
-      puts "success: %s (%.3fs)" % [success[0], Time.now - t0]
+      puts format('success: %s (%.3fs)', success[0], Time.now - t0)
     else
       puts "timed out (#{Time.now - t0}s)"
     end
@@ -32,4 +32,4 @@ def happy_eyeballs(hostname, port, max_wait_time: 0.025)
 end
 
 # Let's try it out:
-happy_eyeballs("debian.org", "https")
+happy_eyeballs('debian.org', 'https')

@@ -3,17 +3,17 @@
 require 'bundler/setup'
 require 'polyphony'
 
-spin {
-  10.times { |i|
-    sleep 0.1;
+spin do
+  10.times do |i|
+    sleep 0.1
     p i
-  }
-}
+  end
+end
 
-spin {
-  puts "going to sleep..."
+spin do
+  puts 'going to sleep...'
   sleep 1
-  puts "woke up"
-}.await
+  puts 'woke up'
+end.await
 
-puts "done"
+puts 'done'

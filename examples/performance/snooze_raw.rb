@@ -12,19 +12,19 @@ end
 f1 = Fiber.new { worker_loop(:a) }
 f2 = Fiber.new { worker_loop(:b) }
 
-$reactor = Fiber.new {
-  loop {
+$reactor = Fiber.new do
+  loop do
     # sleep 0.001
     handle_next_tick
-  }
-}
+  end
+end
 
 $next_tick_items = []
 
 def handle_next_tick
   items = $next_tick_items
   $next_tick_items = []
-  items.each { |f| f.transfer }
+  items.each(&:transfer)
 end
 
 module Kernel

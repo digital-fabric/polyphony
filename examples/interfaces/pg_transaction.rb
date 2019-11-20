@@ -12,17 +12,18 @@ DB = PG.connect(
 )
 
 def perform(error)
-  puts "*" * 40
+  puts '*' * 40
   DB.transaction do
-    res = DB.query("select 1 as test")
+    res = DB.query('select 1 as test')
     puts "result: #{res.to_a}"
     raise 'hello' if error
+
     DB.transaction do
-      res = DB.query("select 2 as test")
+      res = DB.query('select 2 as test')
       puts "result: #{res.to_a}"
     end
   end
-rescue => e
+rescue StandardError => e
   puts "error: #{e.inspect}"
 end
 

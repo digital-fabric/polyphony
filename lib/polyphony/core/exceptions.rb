@@ -1,7 +1,13 @@
 # frozen_string_literal: true
 
-export :CoprocessInterrupt, :MoveOn, :Stop, :Cancel, :debug, :debug=
+export :CoprocessInterrupt, :MoveOn, :Cancel
 
+# Common exception class for interrupting coprocesses. These exceptions allow
+# control of coprocesses. Interrupt exceptions can encapsulate a value and thus
+# provide a way to interrupt long-running blocking operations while still
+# passing a value back to the call site. Interrupt exceptions can also
+# references a cancel scope in order to allow correct bubbling of exceptions
+# through nested cancel scopes.
 class CoprocessInterrupt < ::Exception
   attr_reader :scope, :value
 
@@ -11,14 +17,10 @@ class CoprocessInterrupt < ::Exception
   end
 end
 
-class Stop < CoprocessInterrupt; end
+# MoveOn is used to interrupt a long-running blocking operation, while
+# continuing the rest of the computation.
 class MoveOn < CoprocessInterrupt; end
+
+# Cancel is used to interrupt a long-running blocking operation, bubbling the
+# exception up through cancel scopes and supervisors.
 class Cancel < CoprocessInterrupt; end
-
-def debug
-  @debug
-end
-
-def debug=(value)
-  @debug = value
-end

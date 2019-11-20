@@ -9,6 +9,7 @@ require 'json'
 
 ResourcePool = import('../core/resource_pool')
 
+# Response mixin
 module ResponseMixin
   def body
     self[:body]
@@ -49,7 +50,6 @@ class Agent
     request(url, opts.merge(method: :POST))
   end
 
-
   def request(url, opts = OPTS_DEFAULT)
     ctx = request_ctx(url, opts)
 
@@ -66,19 +66,20 @@ class Agent
 
   def redirect(url, ctx, opts)
     url = case url
-    when /^http(?:s)?\:\/\//
-      url
-    when /^\/\/(.+)$/
-      ctx[:uri].scheme + url
-    when /^\//
-      "%s://%s%s" % [
-        ctx[:uri].scheme,
-        ctx[:uri].host,
-        url
-      ]
-    else
-      ctx[:uri] + url
-    end
+          when /^http(?:s)?\:\/\//
+            url
+          when /^\/\/(.+)$/
+            ctx[:uri].scheme + url
+          when /^\//
+            format(
+              '%<scheme>s://%<host>s%<url>s',
+              scheme: ctx[:uri].scheme,
+              host:   ctx[:uri].host,
+              url:    url
+            )
+          else
+            ctx[:uri] + url
+          end
 
     request(url, opts)
   end
@@ -88,14 +89,14 @@ class Agent
       method: opts[:method] || :GET,
       uri:    url_to_uri(url, opts),
       opts:   opts,
-      retry:  0,
+      retry:  0
     }
   end
 
   def url_to_uri(url, opts)
     uri = URI(url)
     if opts[:query]
-      query = opts[:query].map { |k, v| "#{k}=#{v}" }.join("&")
+      query = opts[:query].map { |k, v| "#{k}=#{v}" }.join('&')
       if uri.query
         v.query = "#{uri.query}&#{query}"
       else
@@ -109,23 +110,22 @@ class Agent
     key = uri_key(ctx[:uri])
     @pools[key].acquire do |state|
       cancel_after(10) do
-        state[:socket] ||=  connect(key)
+        state[:socket] ||= connect(key)
         state[:protocol_method] ||= protocol_method(state[:socket], ctx)
         send(state[:protocol_method], state, ctx)
-      rescue => e
-        state[:socket]&.close rescue nil
+      rescue Exception => e
+        state[:socket]&.close
         state.clear
-        if ctx[:retry] < 3
-          ctx[:retry] += 1
-          do_request(ctx)
-        else
-          raise e
-        end
+
+        raise e unless ctx[:retry] < 3
+
+        ctx[:retry] += 1
+        do_request(ctx)
       end
     end
   end
 
-  def protocol_method(socket, ctx)
+  def protocol_method(socket, _ctx)
     if socket.is_a?(::OpenSSL::SSL::SSLSocket) && (socket.alpn_protocol == 'h2')
       :do_http2
     else
@@ -142,32 +142,31 @@ class Agent
     request = format_http1_request(ctx)
 
     state[:socket] << request
-    while !done
-      parser << state[:socket].readpartial(8192)
-    end
+    parser << state[:socket].readpartial(8192) until done
 
     {
-      protocol:     'http1.1',
-      status_code:  parser.status_code,
-      headers:      parser.headers,
-      body:         body
+      protocol:    'http1.1',
+      status_code: parser.status_code,
+      headers:     parser.headers,
+      body:        body
     }
   end
 
   def do_http2(state, ctx)
     unless state[:http2_client]
-      socket, client = state[:socket], HTTP2::Client.new
-      client.on(:frame) {|bytes| socket << bytes }
+      socket = state[:socket]
+      client = HTTP2::Client.new
+      client.on(:frame) { |bytes| socket << bytes }
       state[:http2_client] = client
     end
 
     stream = state[:http2_client].new_stream # allocate new stream
 
     headers = {
-      ':method'     => ctx[:method].to_s,
-      ':scheme'     => ctx[:uri].scheme,      
-      ':authority'  => [ctx[:uri].host, ctx[:uri].port].join(':'),
-      ':path'       => ctx[:uri].request_uri,
+      ':method'    => ctx[:method].to_s,
+      ':scheme'    => ctx[:uri].scheme,
+      ':authority' => [ctx[:uri].host, ctx[:uri].port].join(':'),
+      ':path'      => ctx[:uri].request_uri
     }
     headers.merge!(ctx[:opts][:headers]) if ctx[:opts][:headers]
     puts "* proxy request headers: #{headers.inspect}"
@@ -185,35 +184,47 @@ class Agent
 
     stream.on(:headers) { |h| headers = h.to_h }
     stream.on(:data) { |c| body << c }
-    stream.on(:close) {
+    stream.on(:close) do
       done = true
       return {
-        protocol:     'http2',
-        status_code:  headers && headers[':status'].to_i,
-        headers:      headers || {},
-        body:         body
+        protocol:    'http2',
+        status_code: headers && headers[':status'].to_i,
+        headers:     headers || {},
+        body:        body
       }
-    }
+    end
 
-    while data = state[:socket].readpartial(8192)
+    while (data = state[:socket].readpartial(8192))
       state[:http2_client] << data
     end
   ensure
-    (stream.close rescue nil) unless done
+    stream.close unless done
   end
 
-  HTTP1_REQUEST = "%<method>s %<request>s HTTP/1.1\r\nHost: %<host>s\r\n%<headers>s\r\n"
+  HTTP1_REQUEST = <<~HTTP.gsub("\n", "\r\n")
+    %<method>s %<request>s HTTP/1.1
+    Host: %<host>s
+    %<headers>s
+
+  HTTP
 
   def format_http1_request(ctx)
-    headers = ctx[:opts][:headers] ? ctx[:opts][:headers].map { |k, v| "#{k}: #{v}\r\n"}.join : nil
+    headers = format_headers(ctx)
     puts "* proxy request headers: #{headers.inspect}"
 
-    HTTP1_REQUEST % {
-      method:   ctx[:method],
-      request:  ctx[:uri].request_uri,
-      host:     ctx[:uri].host,
-      headers:  headers
-    }
+    format(
+      HTTP1_REQUEST,
+      method:  ctx[:method],
+      request: ctx[:uri].request_uri,
+      host:    ctx[:uri].host,
+      headers: headers
+    )
+  end
+
+  def format_headers(headers)
+    return nil unless ctx[:opts][:headers]
+
+    headers.map { |k, v| "#{k}: #{v}\r\n" }.join
   end
 
   def uri_key(uri)
@@ -224,7 +235,7 @@ class Agent
     }
   end
 
-  SECURE_OPTS = { secure: true, alpn_protocols: ['h2', 'http/1.1'] }
+  SECURE_OPTS = { secure: true, alpn_protocols: ['h2', 'http/1.1'] }.freeze
 
   def connect(key)
     case key[:scheme]

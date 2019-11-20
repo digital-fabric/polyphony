@@ -11,9 +11,9 @@ Exceptions = import('./exceptions')
 def spawn(&block)
   async do
     ctx = {
-      fiber:    Fiber.current,
-      watcher:  EV::Async.new { complete_thread_task(ctx) },
-      thread:   Thread.new { run_in_thread(ctx, &block) }
+      fiber:   Fiber.current,
+      watcher: EV::Async.new { complete_thread_task(ctx) },
+      thread:  Thread.new { run_in_thread(ctx, &block) }
     }
     ctx[:thread].report_on_exception = false
     ctx[:thread].abort_on_exception = false

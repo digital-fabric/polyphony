@@ -21,5 +21,5 @@ end
 
 sleep 3
 threads.each(&:kill)
-puts "done"
+puts 'done'
 puts "got #{results.size} (#{results.size / (Time.now - t0)}/s)"

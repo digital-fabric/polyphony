@@ -20,8 +20,11 @@ class RedisChannel < Polyphony::Channel
       subscribe_connection.subscribe(CHANNEL_MASTER_TOPIC) do |on|
         on.message do |topic, message|
           message = Marshal.load(message)
-          topic == CHANNEL_MASTER_TOPIC ? handle_master_message(message) :
-                                          handle_channel_message(topic, message)
+          topic == if CHANNEL_MASTER_TOPIC
+                     handle_master_message(message)
+                   else
+                     handle_channel_message(topic, message)
+                   end
         end
       end
     end
@@ -48,20 +51,20 @@ class RedisChannel < Polyphony::Channel
   def self.watch(channel)
     @channels[channel.topic] = channel
     spin do
-      publish_connection.publish(CHANNEL_MASTER_TOPIC, Marshal.dump({
-        kind: :subscribe,
-        topic: channel.topic
-      }))
+      publish_connection.publish(CHANNEL_MASTER_TOPIC, Marshal.dump(
+                                                         kind:  :subscribe,
+                                                         topic: channel.topic
+                                                       ))
     end
   end
 
   def self.unwatch(channel)
     @channels.delete(channel.topic)
     spin do
-      publish_connection.publish(CHANNEL_MASTER_TOPIC, Marshal.dump({
-        kind: :unsubscribe,
-        topic: channel.topic
-      }))
+      publish_connection.publish(CHANNEL_MASTER_TOPIC, Marshal.dump(
+                                                         kind:  :unsubscribe,
+                                                         topic: channel.topic
+                                                       ))
     end
   end
 

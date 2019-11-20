@@ -9,7 +9,11 @@ def lengthy_op
   @op_count += 1
   acc = 0
   count = 0
-  100.times { acc += IO.read('../../docs/reality-ui.bmpr').bytesize; count += 1; p count }
+  100.times do
+    acc += IO.read('../../docs/reality-ui.bmpr').bytesize
+    count += 1
+    p count
+  end
   acc / count
 end
 
@@ -24,4 +28,3 @@ rescue Exception => e
 ensure
   p @op_count
 end
-

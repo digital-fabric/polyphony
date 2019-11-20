@@ -3,14 +3,14 @@
 require 'bundler/setup'
 require 'polyphony'
 
-spin {
+spin do
   throttled_loop(3) { STDOUT << '.' }
-}
+end
 
-spin {
+spin do
   throttled_loop(rate: 2) { STDOUT << '?' }
-}
+end
 
-spin {
+spin do
   throttled_loop(interval: 1) { STDOUT << '*' }
-}
+end

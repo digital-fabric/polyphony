@@ -5,7 +5,7 @@ require 'polyphony'
 
 async def my_sleep(t)
   sleep(t)
-  raise "blah"
+  raise 'blah'
 end
 
 spin do
@@ -15,7 +15,7 @@ spin do
     s.spin my_sleep(2)
     s.spin my_sleep(3)
   end
-rescue => e
+rescue StandardError => e
   puts "exception from supervisor: #{e}"
 ensure
   puts "#{Time.now} woke up"

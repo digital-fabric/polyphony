@@ -4,7 +4,7 @@ require 'bundler/setup'
 require 'polyphony'
 
 spin do
-  puts "going to sleep"
+  puts 'going to sleep'
   result = async do
     async do
       async do

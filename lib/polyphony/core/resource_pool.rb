@@ -36,6 +36,7 @@ class ResourcePool
 
   def dequeue
     return unless (resource = from_stock)
+
     EV.next_tick { @waiting[0]&.transfer(resource) }
   end
 
@@ -45,6 +46,10 @@ class ResourcePool
 
   def method_missing(sym, *args, &block)
     acquire { |r| r.send(sym, *args, &block) }
+  end
+
+  def respond_to_missing?(*_args)
+    true
   end
 
   # Allocates a resource

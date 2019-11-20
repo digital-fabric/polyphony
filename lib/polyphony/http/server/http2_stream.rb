@@ -7,6 +7,7 @@ require 'http/2'
 Request = import './request'
 FiberPool = import '../../core/fiber_pool'
 
+# Manages an HTTP 2 stream
 class StreamHandler
   attr_accessor :__next__
 
@@ -92,13 +93,13 @@ class StreamHandler
     send_headers({}, false) unless @headers_sent
     @stream.data(chunk, end_stream: done)
   end
-  
+
   def finish
-    unless @headers_sent
+    if @headers_sent
+      @stream.close
+    else
       headers[':status'] ||= '204'
       @stream.headers(headers, end_stream: true)
-    else
-      @stream.close
     end
   end
 end

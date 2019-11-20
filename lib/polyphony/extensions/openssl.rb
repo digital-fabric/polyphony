@@ -4,6 +4,7 @@ require 'openssl'
 
 import('./socket')
 
+# Open ssl socket helper methods (to make it compatible with Socket API)
 class ::OpenSSL::SSL::SSLSocket
   def dont_linger
     io.dont_linger

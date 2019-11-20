@@ -17,7 +17,7 @@ class ParseLoop
         @parser << data
         snooze
       end
-    rescue => e
+    rescue StandardError => e
       conn.close
       e
     ensure
@@ -56,7 +56,7 @@ class ParseLoop
 
   def consume_request
     return unless @message_in_train
-    
+
     @calling_fiber = Fiber.current
     @read_body = false
     @parse_fiber.safe_transfer while @message_in_train
@@ -74,24 +74,25 @@ end
 def handle(parser)
   headers = parser.parse_headers
   return unless headers
+
   puts "headers: #{headers.inspect}"
-  content_length = headers['Content-Length']
+  headers['Content-Length']
   # if content_length && (content_length.to_i < 1000)
-    while chunk = parser.parse_body_chunk
-      puts "chunk: #{chunk.inspect}"
-    end
+  while (chunk = parser.parse_body_chunk)
+    puts "chunk: #{chunk.inspect}"
+  end
   # else
   #   parser.consume_request
   # end
-  puts "end of request"
-rescue => e
+  puts 'end of request'
+rescue StandardError => e
   puts "error: #{e.inspect}"
   raise e
 end
 
-writer = spin {
+writer = spin do
   o << "POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 6\r\n\r\n"
-  o << "Hello!"
+  o << 'Hello!'
 
   o << "POST / HTTP/1.1\r\nHost: example.com\r\n\r\n"
 
@@ -99,19 +100,23 @@ writer = spin {
   # o << ("Bye!" * 2048)
 
   o << "POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 4\r\n\r\n"
-  o << "Bye!"
+  o << 'Bye!'
 
-  (o << ("BLAH" * 100000)) rescue nil
+  begin
+    (o << ('BLAH' * 100_000))
+  rescue StandardError
+    nil
+  end
   o.close
-}
+end
 
 begin
   parse_loop = ParseLoop.new(i)
   while parse_loop.alive?
-    puts "*" * 40
+    puts '*' * 40
     handle(parse_loop)
   end
-rescue => e
+rescue StandardError => e
   writer.stop
   puts "#{e.class}: #{e.message}"
   puts e.backtrace

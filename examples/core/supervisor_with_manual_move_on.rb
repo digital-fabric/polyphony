@@ -11,10 +11,9 @@ end
 
 puts "#{Time.now} going to sleep..."
 result = supervise do |s|
-  fiber = Fiber.current
   spin do
     sleep(0.5)
-    puts "stopping supervisor..."
+    puts 'stopping supervisor...'
     s.stop!
   end
   s.spin my_sleep(1)

@@ -14,7 +14,7 @@ def user(number)
       scope.when_cancelled do
         puts "#{number} (cancelled)"
       end
-      
+
       Pool.acquire do |r|
         scope.disable
         puts "#{number} #{r.inspect} >"

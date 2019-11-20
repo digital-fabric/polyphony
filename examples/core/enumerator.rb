@@ -3,10 +3,10 @@
 require 'bundler/setup'
 require 'polyphony/auto_run'
 
-enum = [1,2,3].each
+enum = [1, 2, 3].each
 
 spin do
-  while e = enum.next rescue nil
+  while (e = enum.next rescue nil)
     puts e
     sleep 0.1
   end

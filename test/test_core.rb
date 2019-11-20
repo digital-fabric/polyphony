@@ -33,8 +33,10 @@ class SpinTest < MiniTest::Test
   end
 
   def test_that_spined_coprocess_can_be_interrupted
-    result = nil
-    coprocess = spin { sleep(1); 42 }
+    coprocess = spin do
+      sleep(1)
+      42
+    end
     defer { coprocess.interrupt }
     suspend
     assert_nil(coprocess.result)
@@ -60,7 +62,7 @@ class CancelScopeTest < Minitest::Test
     assert_nil(ctx[:result])
     # async operation will only begin on next iteration of event loop
     assert_nil(ctx[:cancel_scope])
-    
+
     suspend
     assert_kind_of(Polyphony::CancelScope, ctx[:cancel_scope])
     assert_kind_of(Polyphony::Cancel, ctx[:result])
@@ -72,7 +74,7 @@ class CancelScopeTest < Minitest::Test
   #     Gyro::Timer.new(0, 0).start { ctx[:cancel_scope].cancel! }
   #     sleep_with_cancel(ctx, :stop)
   #   end
-    
+
   #   suspend
   #   assert(ctx[:cancel_scope])
   #   assert_nil(ctx[:result])
@@ -139,7 +141,7 @@ class SupervisorTest < MiniTest::Test
       (1..3).each { |idx| s.spin sleep_and_set(ctx, idx) }
     end
   end
-  
+
   def test_that_supervisor_waits_for_all_nested_coprocesses_to_complete
     ctx = {}
     spin do
@@ -153,7 +155,7 @@ class SupervisorTest < MiniTest::Test
 
   def test_that_supervisor_can_add_coprocesses_after_having_started
     result = []
-    spin {
+    spin do
       supervisor = Polyphony::Supervisor.new
       3.times do |i|
         spin do
@@ -165,7 +167,7 @@ class SupervisorTest < MiniTest::Test
         end
       end
       supervisor.await
-    }.await
+    end.await
 
     assert_equal([0, 1, 2], result)
   end

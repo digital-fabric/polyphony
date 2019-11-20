@@ -5,13 +5,12 @@ require 'polyphony'
 
 i, o = IO.pipe
 
-puts "Write something:"
-spin {
+puts 'Write something:'
+spin do
   throttled_loop(1, count: 3) { o << STDIN.gets }
   o.close
-}
-
-while data = i.readpartial(8192)
-  STDOUT << "You wrote: #{data}"
 end
 
+while (data = i.readpartial(8192))
+  STDOUT << "You wrote: #{data}"
+end

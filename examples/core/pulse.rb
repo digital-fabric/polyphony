@@ -5,8 +5,6 @@ require 'polyphony'
 
 move_on_after(3) do
   pulser = pulse(1)
-  while pulser.await
-    puts Time.now
-  end
+  puts Time.now while pulser.await
 end
-puts "done!"
+puts 'done!'

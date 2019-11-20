@@ -30,7 +30,10 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_await_blocks_until_coprocess_is_done
     result = nil
-    coproc = Polyphony::Coprocess.new { snooze; result = 42 }
+    coproc = Polyphony::Coprocess.new do
+      snooze
+      result = 42
+    end
     coproc.await
     assert_equal(42, result)
   ensure
@@ -38,8 +41,8 @@ class CoprocessTest < MiniTest::Test
   end
 
   def test_that_await_returns_the_coprocess_return_value
-    coproc = Polyphony::Coprocess.new { [:foo, :bar] }
-    assert_equal([:foo, :bar], coproc.await)
+    coproc = Polyphony::Coprocess.new { %i[foo bar] }
+    assert_equal(%i[foo bar], coproc.await)
   ensure
     coproc&.stop
   end
@@ -61,11 +64,11 @@ class CoprocessTest < MiniTest::Test
   def test_that_running_coprocess_can_be_cancelled
     result = []
     error = nil
-    coproc = Polyphony::Coprocess.new {
+    coproc = Polyphony::Coprocess.new do
       result << 1
       2.times { snooze }
       result << 2
-    }.run
+    end.run
     defer { coproc.cancel! }
     assert_equal(0, result.size)
     begin
@@ -83,12 +86,12 @@ class CoprocessTest < MiniTest::Test
   def test_that_running_coprocess_can_be_interrupted
     # that is, stopped without exception
     result = []
-    coproc = Polyphony::Coprocess.new {
+    coproc = Polyphony::Coprocess.new do
       result << 1
       2.times { snooze }
       result << 2
       3
-    }.run
+    end.run
     defer { coproc.stop(42) }
 
     await_result = coproc.await
@@ -102,7 +105,10 @@ class CoprocessTest < MiniTest::Test
     result = nil
     cp2 = nil
     cp1 = spin do
-      cp2 = Polyphony::Coprocess.new { snooze; 42 }
+      cp2 = Polyphony::Coprocess.new do
+        snooze
+        42
+      end
       result = cp2.await
     end
     suspend
@@ -167,7 +173,7 @@ class CoprocessTest < MiniTest::Test
 
   def test_that_inner_coprocess_can_interrupt_outer_coprocess
     result, cp2 = nil
-    
+
     cp1 = spin do
       cp2 = spin do
         defer { cp1.interrupt }
@@ -178,9 +184,9 @@ class CoprocessTest < MiniTest::Test
       cp2.await
       result && result += 1
     end
-    
+
     suspend
-    
+
     assert_nil(result)
     assert_nil(cp1.alive?)
     assert_nil(cp2.alive?)
@@ -192,7 +198,7 @@ class CoprocessTest < MiniTest::Test
   def test_alive?
     counter = 0
     coproc = spin do
-      3.times do |i|
+      3.times do
         snooze
         counter += 1
       end
@@ -219,7 +225,7 @@ class CoprocessTest < MiniTest::Test
       snooze # allow cp2 to run
     end
     suspend
-  rescue => e
+  rescue Exception => e
     raised_error = e
   ensure
     assert(raised_error)
@@ -232,15 +238,14 @@ end
 class MailboxTest < MiniTest::Test
   def test_that_coprocess_can_receive_messages
     msgs = []
-    coproc = spin {
-      loop {
-        msgs << receive
-      }
-    }
+    coproc = spin { loop { msgs << receive } }
 
     snooze # allow coproc to start
-    
-    3.times { |i| coproc << i; snooze }
+
+    3.times do |i|
+      coproc << i
+      snooze
+    end
 
     assert_equal([0, 1, 2], msgs)
   ensure
@@ -249,14 +254,10 @@ class MailboxTest < MiniTest::Test
 
   def test_that_multiple_messages_sent_at_once_arrive
     msgs = []
-    coproc = spin {
-      loop { 
-        msgs << receive
-      }
-    }
+    coproc = spin { loop { msgs << receive } }
 
     snooze # allow coproc to start
-    
+
     3.times { |i| coproc << i }
 
     snooze

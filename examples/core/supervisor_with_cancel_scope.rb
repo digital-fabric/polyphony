@@ -13,11 +13,11 @@ end
 puts "#{Time.now} going to sleep..."
 move_on_after(0.5) do
   supervise do |s|
-    puts "supervise block"
+    puts 'supervise block'
     s.spin my_sleep(1)
     s.spin my_sleep(2)
     s.spin my_sleep(3)
   end
-  puts "supervisor done"
+  puts 'supervisor done'
 end
 puts "#{Time.now} woke up"

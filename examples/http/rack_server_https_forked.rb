@@ -9,12 +9,12 @@ app = Polyphony::HTTP::Rack.load(app_path)
 
 authority = Localhost::Authority.fetch
 opts = {
-  reuse_addr: true,
-  dont_linger: true,
+  reuse_addr:     true,
+  dont_linger:    true,
   secure_context: authority.server_context
 }
 server = Polyphony::HTTP::Server.listen('0.0.0.0', 1234, opts)
-puts "Listening on port 1234"
+puts 'Listening on port 1234'
 
 child_pids = []
 4.times do

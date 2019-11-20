@@ -2,21 +2,22 @@
 
 require_relative '../polyphony'
 
-require "redis"
-require "hiredis/reader"
+require 'redis'
+require 'hiredis/reader'
 
+# Polyphony-based Redis driver
 class Driver
   def self.connect(config)
-    if config[:scheme] == "unix"
-      raise "unix sockets not supported"
-      # connection.connect_unix(config[:path], connect_timeout)
-    elsif config[:scheme] == "rediss" || config[:ssl]
-      raise "ssl not supported"
-      # raise NotImplementedError, "SSL not supported by hiredis driver"
-    else
-      new(config[:host], config[:port])
-      # connection.connect(config[:host], config[:port], connect_timeout)
-    end
+    raise 'unix sockets not supported' if config[:scheme] == 'unix'
+
+    # connection.connect_unix(config[:path], connect_timeout)
+
+    raise 'ssl not supported' if config[:scheme] == 'rediss' || config[:ssl]
+
+    # raise NotImplementedError, "SSL not supported by hiredis driver"
+
+    new(config[:host], config[:port])
+    # connection.connect(config[:host], config[:port], connect_timeout)
   end
 
   def initialize(host, port)
@@ -53,7 +54,7 @@ class Driver
   def read
     reply = @reader.gets
     return reply if reply
-    
+
     while (data = @connection.readpartial(8192))
       @reader.feed(data)
       reply = @reader.gets

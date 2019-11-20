@@ -4,6 +4,7 @@ export_default :Request
 
 require 'uri'
 
+# HTTP request
 class Request
   attr_reader :headers, :adapter
   attr_accessor :__next__
@@ -39,14 +40,14 @@ class Request
 
   def query
     return @query if @query
-  
-    if (q = uri.query)
-      @query = q.split('&').each_with_object({}) do |kv, h|
-        k, v = kv.split('=')
-        h[k.to_sym] = URI.decode_www_form_component(v)
-      end
-    else
-      @query = {}
+
+    @query = (q = uri.query) ? split_query_string(q) : {}
+  end
+
+  def split_query_string(query)
+    query.split('&').each_with_object({}) do |kv, h|
+      k, v = kv.split('=')
+      h[k.to_sym] = URI.decode_www_form_component(v)
     end
   end
 
@@ -91,14 +92,12 @@ class Request
     buf
   end
 
-  EMPTY_HASH = {}
-
-  def respond(body, headers = EMPTY_HASH)
+  def respond(body, headers = {})
     @adapter.respond(body, headers)
     @headers_sent = true
   end
 
-  def send_headers(headers = EMPTY_HASH, empty_response = false)
+  def send_headers(headers = {}, empty_response = false)
     return if @headers_sent
 
     @headers_sent = true

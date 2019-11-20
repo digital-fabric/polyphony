@@ -4,9 +4,9 @@ require 'bundler/setup'
 require 'polyphony'
 
 def my_sleep(t)
-  puts "going to sleep..."
+  puts 'going to sleep...'
   sleep t
-  puts "woke up"
+  puts 'woke up'
 end
 
 spin do

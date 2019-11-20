@@ -7,10 +7,10 @@ import('./extensions/socket')
 import('./extensions/openssl')
 
 def tcp_connect(host, port, opts = {})
-  socket = ::Socket.new(:INET, :STREAM).tap { |s|
+  socket = ::Socket.new(:INET, :STREAM).tap do |s|
     addr = ::Socket.sockaddr_in(port, host)
     s.connect(addr)
-  }
+  end
   if opts[:secure_context] || opts[:secure]
     secure_socket(socket, opts[:secure_context], opts.merge(host: host))
   else
@@ -20,14 +20,9 @@ end
 
 def tcp_listen(host = nil, port = nil, opts = {})
   host ||= '0.0.0.0'
-  raise "Port number not specified" unless port
-  socket = ::Socket.new(:INET, :STREAM).tap { |s|
-    s.reuse_addr if opts[:reuse_addr]
-    s.dont_linger if opts[:dont_linger]
-    addr = ::Socket.sockaddr_in(port, host)
-    s.bind(addr)
-    s.listen(0)
-  }
+  raise 'Port number not specified' unless port
+
+  socket = socket_from_options(host, port, opts)
   if opts[:secure_context] || opts[:secure]
     secure_server(socket, opts[:secure_context], opts)
   else
@@ -35,16 +30,32 @@ def tcp_listen(host = nil, port = nil, opts = {})
   end
 end
 
+def socket_from_options(host, port, opts)
+  ::Socket.new(:INET, :STREAM).tap do |s|
+    s.reuse_addr if opts[:reuse_addr]
+    s.dont_linger if opts[:dont_linger]
+    addr = ::Socket.sockaddr_in(port, host)
+    s.bind(addr)
+    s.listen(0)
+  end
+end
+
 def secure_socket(socket, context, opts)
   setup_alpn(context, opts[:alpn_protocols]) if context && opts[:alpn_protocols]
-  socket = context ?
-    OpenSSL::SSL::SSLSocket.new(socket, context) :
-    OpenSSL::SSL::SSLSocket.new(socket)
-  
+  socket = secure_socket_wrapper(socket, context)
+
   socket.tap do |s|
     s.hostname = opts[:host] if opts[:host]
     s.connect
     s.post_connection_check(opts[:host]) if opts[:host]
+  end
+end
+
+def secure_socket_wrapper(socket, context)
+  if context
+    OpenSSL::SSL::SSLSocket.new(socket, context)
+  else
+    OpenSSL::SSL::SSLSocket.new(socket)
   end
 end
 
@@ -55,7 +66,7 @@ end
 
 def setup_alpn(context, protocols)
   context.alpn_protocols = protocols
-  context.alpn_select_cb = ->(peer_protocols) {
+  context.alpn_select_cb = lambda do |peer_protocols|
     (protocols & peer_protocols).first
-  }
+  end
 end

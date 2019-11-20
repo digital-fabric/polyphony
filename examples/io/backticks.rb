@@ -7,5 +7,5 @@ timer = spin do
   throttled_loop(5) { STDOUT << '.' }
 end
 
-puts system('ruby -e "sleep 1; puts :done; STDOUT.close"')
+puts `ruby -e "sleep 1; puts :done; STDOUT.close"`
 timer.stop

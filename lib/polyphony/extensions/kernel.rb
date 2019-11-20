@@ -21,18 +21,19 @@ class ::Fiber
 
   # Associate a (pseudo-)coprocess with the main fiber
   current.coprocess = Coprocess.new(current)
-  
-  @@main_fiber = current
 
   def self.main
-    @@main_fiber
+    @main_fiber
   end
 
   def self.set_main_fiber
-    @@main_fiber = current
+    @main_fiber = current
   end
+
+  set_main_fiber
 end
 
+# Pulser abstraction for recurring operations
 class Pulser
   def initialize(freq)
     fiber = Fiber.current
@@ -52,18 +53,19 @@ class Pulser
   end
 end
 
+# Overrides for Process
 module ::Process
   def self.detach(pid)
-    spin {
+    spin do
       Gyro::Child.new(pid).await
-    }.tap { |coproc| coproc.define_singleton_method(:pid) { pid } }
+    end.tap { |coproc| coproc.define_singleton_method(:pid) { pid } }
   end
 end
 
-# Kernel extensions (methods available to all objects)
+# Kernel extensions (methods available to all objects / call sites)
 module ::Kernel
-  def after(duration, &block)
-    Gyro::Timer.new(freq, 0).start(&block)
+  def after(interval, &block)
+    Gyro::Timer.new(interval, 0).start(&block)
   end
 
   def async(sym = nil, &block)
@@ -82,7 +84,9 @@ module ::Kernel
   def async_decorate(receiver, sym)
     sync_sym = :"sync_#{sym}"
     receiver.alias_method(sync_sym, sym)
-    receiver.class_eval("def #{sym}(*args, &block); Coprocess.new { send(#{sync_sym.inspect}, *args, &block) }; end")
+    receiver.define_method(sym) do |*args, &block|
+      Coprocess.new { send(sync_sym, *args, &block) }
+    end
   end
 
   def cancel_after(duration, &block)
@@ -146,9 +150,11 @@ module ::Kernel
 
   alias_method :orig_backtick, :`
   def `(cmd)
-    Open3.popen3(cmd) do |i, o, e, t|
+    # $stdout.orig_puts '*' * 60
+    # $stdout.orig_puts caller.join("\n")
+    Open3.popen3(cmd) do |i, o, e, _t|
       i.close
-      while (l = e.readpartial(8192) rescue nil)
+      while (l = e.readpartial(8192))
         $stderr << l
       end
       o.read
@@ -163,36 +169,35 @@ module ::Kernel
         end
       end
     end
-  rescue => e
+  rescue Exception => e
     calling_fiber.transfer(e)
   end
 
   alias_method :orig_gets, :gets
-  def gets(*args)
+  def gets(*_args)
     return $stdin.gets if ARGV.empty?
-    
+
     @gets_fiber ||= Fiber.new(&ARGV_GETS_LOOP)
-    if @gets_fiber.alive?
-      @gets_fiber.safe_transfer(Fiber.current)
-    else
-      nil
-    end
+    return @gets_fiber.safe_transfer(Fiber.current) if @gets_fiber.alive?
+
+    nil
   end
 
   alias_method :orig_system, :system
   def system(*args)
-    Open3.popen2(*args) do |i, o, t|
+    Open3.popen2(*args) do |i, o, _t|
       i.close
       while (l = o.readpartial(8192))
         $stdout << l
       end
     end
     true
-  rescue SystemCallError => e
+  rescue SystemCallError
     nil
   end
 end
 
+# Override Timeout to use cancel scope
 module ::Timeout
   def self.timeout(sec, klass = nil, message = nil, &block)
     cancel_after(sec, &block)

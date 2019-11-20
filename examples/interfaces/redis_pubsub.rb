@@ -8,7 +8,7 @@ spin do
   redis.subscribe('redis-channel') do |on|
     on.message do |channel, message|
       puts "##{channel}: #{message}"
-      redis.unsubscribe if message == "exit"
+      redis.unsubscribe if message == 'exit'
     end
   end
 end

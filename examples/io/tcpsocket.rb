@@ -10,7 +10,7 @@ timer = spin { throttled_loop(20) { STDOUT << '.' } }
 5.times do
   socket.send("GET /?q=time HTTP/1.1\r\nHost: realiteq.net\r\n\r\n", 0)
   socket.recv(8192)
-  STDOUT << "*"
+  STDOUT << '*'
 end
 
 timer.stop

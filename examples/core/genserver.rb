@@ -33,11 +33,19 @@ class GenServer
   end
 
   def self.cast(process, method, *args)
-    process << {from: Polyphony::Coprocess.current, method: method, args: args}
+    process << {
+      from:   Polyphony::Coprocess.current,
+      method: method,
+      args:   args
+    }
   end
 
   def self.call(process, method, *args)
-    process << {from: Polyphony::Coprocess.current, method: method, args: args}
+    process << {
+      from:   Polyphony::Coprocess.current,
+      method: method,
+      args:   args
+    }
     receive
   end
 end
@@ -57,16 +65,16 @@ module Map
   end
 end
 
-map_server = GenServer.start(Map, {foo: :bar})
+map_server = GenServer.start(Map, foo: :bar)
 
-puts "getting value from map server"
+puts 'getting value from map server'
 v = map_server.get(:foo)
 puts "value: #{v.inspect}"
 
-puts "putting value in map server"
+puts 'putting value in map server'
 map_server.put!(:foo, 42)
 
-puts "getting value from map server"
+puts 'getting value from map server'
 v = map_server.get(:foo)
 puts "value: #{v.inspect}"
 

@@ -4,6 +4,8 @@ export_default :Channel
 
 Exceptions = import('./exceptions')
 
+# Implements a unidirectional communication channel along the lines of Go
+# (buffered) channels.
 class Channel
   def initialize
     @payload_queue = []
@@ -15,11 +17,11 @@ class Channel
     @waiting_queue.slice(0..-1).each { |f| f.schedule(stop) }
   end
 
-  def <<(o)
+  def <<(value)
     if @waiting_queue.empty?
-      @payload_queue << o
+      @payload_queue << value
     else
-      @waiting_queue.shift&.schedule(o)
+      @waiting_queue.shift&.schedule(value)
     end
     snooze
   end
@@ -30,11 +32,15 @@ class Channel
       @waiting_queue << Fiber.current
       suspend
     else
-      payload = @payload_queue.shift
-      snooze
-      payload
+      receive_from_queue
     end
   ensure
     Gyro.unref
+  end
+
+  def receive_from_queue
+    payload = @payload_queue.shift
+    snooze
+    payload
   end
 end

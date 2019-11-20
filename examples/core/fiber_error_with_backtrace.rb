@@ -48,7 +48,7 @@ class Exception
       @backtrace_called = true
       return orig_backtrace
     end
-    
+
     if @__raising_fiber__
       backtrace = orig_backtrace || []
       backtrace + @__raising_fiber__.caller

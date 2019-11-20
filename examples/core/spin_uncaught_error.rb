@@ -3,6 +3,6 @@
 require 'bundler/setup'
 require 'polyphony'
 
-spin {
-  raise "This is an error"
-}
+spin do
+  raise 'This is an error'
+end

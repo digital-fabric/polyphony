@@ -15,14 +15,14 @@ end
 
 spin do
   error(1)
-rescue => e
+rescue StandardError => e
   e.cleanup_backtrace
   puts "error: #{e.inspect}"
-  puts "backtrace:"
+  puts 'backtrace:'
   puts e.backtrace.reverse.join("\n")
   puts
 end
 
 spin_with_error
 
-puts "done coprocing"
+puts 'done coprocing'

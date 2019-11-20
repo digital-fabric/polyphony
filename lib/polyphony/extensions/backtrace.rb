@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Fiber override
 class ::Fiber
   attr_accessor :__calling_fiber__
   attr_writer :__caller__
@@ -26,6 +27,7 @@ class ::Fiber
   end
 end
 
+# Exeption overrides
 class ::Exception
   alias_method :orig_initialize, :initialize
 
@@ -40,7 +42,7 @@ class ::Exception
       @backtrace_called = true
       return orig_backtrace
     end
-    
+
     if @__raising_fiber__
       backtrace = orig_backtrace || []
       backtrace + @__raising_fiber__.caller

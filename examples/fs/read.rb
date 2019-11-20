@@ -15,9 +15,9 @@ end
 def threaded_read_file(x, y)
   t0 = Time.now
   threads = []
-  y.times {
+  y.times do
     threads << Thread.new { x.times { IO.orig_read(PATH) } }
-  }
+  end
   threads.each(&:join)
   puts "threaded_read_file: #{Time.now - t0}"
 end
@@ -25,9 +25,9 @@ end
 def thread_pool_read_file(x, y)
   t0 = Time.now
   supervise do |s|
-    y.times {
+    y.times do
       s.spin { x.times { IO.read(PATH) } }
-    }
+    end
   end
   puts "thread_pool_read_file: #{Time.now - t0}"
 end

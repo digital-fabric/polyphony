@@ -2,6 +2,7 @@
 
 export_default :Throttler
 
+# Implements general-purpose throttling
 class Throttler
   def initialize(rate)
     @rate = rate_from_argument(rate)
@@ -16,9 +17,9 @@ class Throttler
   def call(&block)
     now = clock
     dt = now - @last_iteration_clock
-    if dt < @min_dt
-      sleep(@min_dt - dt)
-    end
+
+    sleep(@min_dt - dt) if dt < @min_dt
+
     @last_iteration_clock = dt > @min_dt ? now : @last_iteration_clock + @min_dt
     block.call(self)
   end
@@ -26,9 +27,10 @@ class Throttler
   alias_method :process, :call
 
   private
-  
+
   def rate_from_argument(arg)
     return arg if arg.is_a?(Numeric)
+
     if arg.is_a?(Hash)
       return 1.0 / arg[:interval] if arg[:interval]
       return arg[:rate] if arg[:rate]

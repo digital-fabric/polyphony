@@ -7,6 +7,7 @@ AllCops:
     - 'test/**/*.rb'
     - 'examples/**/*.rb'
     - 'Gemfile*'
+    - lib/polyphony/http/agent.rb
 
 Style/LambdaCall:
   Enabled: false
@@ -47,3 +48,88 @@ Style/NumericPredicate:
 
 Style/TrivialAccessors:
   Enabled: false
+
+Style/MethodMissingSuper:
+  Enabled: false
+
+Style/GlobalVars:
+  Exclude:
+    - lib/polyphony/core/fiber_pool.rb
+    - lib/polyphony/auto_run.rb
+    - examples/**/*.rb
+
+Style/ClassVars:
+  Exclude:
+    - lib/polyphony/core/coprocess.rb
+
+Layout/AlignHash:
+  EnforcedColonStyle: table
+  EnforcedHashRocketStyle: table
+
+Naming/AccessorMethodName:
+  Exclude:
+    - lib/polyphony/http/server/http1.rb
+    - lib/polyphony/http/server/http2_stream.rb
+    - examples/**/*.rb
+
+Naming/MethodName:
+  Exclude:
+    - test/test_signal.rb
+
+Lint/HandleExceptions:
+  Exclude:
+    - lib/polyphony/http/server/http1.rb
+    - lib/polyphony/http/server/http2.rb
+    - lib/polyphony/http/server.rb
+    - examples/**/*.rb
+
+Metrics/MethodLength:
+  Exclude:
+    - lib/polyphony/http/server/rack.rb
+    - lib/polyphony/extensions/io.rb
+    - test/**/*.rb
+    - examples/**/*.rb
+
+Metrics/ModuleLength:
+  Exclude:
+    - lib/polyphony/extensions/kernel.rb
+    - examples/**/*.rb
+
+Metrics/ClassLength:
+  Exclude:
+    - lib/polyphony/http/server/http1.rb
+    - test/**/*.rb
+    - examples/**/*.rb
+
+Style/RegexpLiteral:
+  Enabled: false
+
+Style/RescueModifier:
+  Exclude:
+    - lib/polyphony/auto_run.rb
+    - test/**/*.rb
+    - examples/**/*.rb
+
+Style/Documentation:
+  Exclude:
+    - test/**/*.rb
+    - examples/**/*.rb
+
+Style/FormatString:
+  Exclude:
+    - test/**/*.rb
+    - examples/**/*.rb
+
+Style/FormatStringToken:
+  Exclude:
+    - test/**/*.rb
+    - examples/**/*.rb
+
+Naming/UncommunicativeMethodParamName:
+  Exclude:
+    - test/**/*.rb
+    - examples/**/*.rb
+
+Security/MarshalLoad:
+  Exclude:
+    - examples/**/*.rb

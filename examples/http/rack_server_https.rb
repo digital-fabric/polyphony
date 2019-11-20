@@ -9,11 +9,11 @@ app = Polyphony::HTTP::Rack.load(app_path)
 
 authority = Localhost::Authority.fetch
 opts = {
-  reuse_addr: true,
-  dont_linger: true,
+  reuse_addr:     true,
+  dont_linger:    true,
   secure_context: authority.server_context
 }
 
-puts "listening on port 1234"
+puts 'listening on port 1234'
 puts "pid: #{Process.pid}"
 Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts, &app)

@@ -34,11 +34,11 @@ def accept_loop(server, opts, &handler)
 end
 
 def client_loop(client, opts, &handler)
-  client.no_delay rescue nil
+  client.no_delay if client.respond_to?(:no_delay)
   adapter = protocol_adapter(client, opts)
   adapter.each(&handler)
 ensure
-  client.close rescue nil
+  client.close
 end
 
 def protocol_adapter(socket, opts)

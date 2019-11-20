@@ -5,6 +5,7 @@ export_default :Supervisor
 Coprocess   = import('./coprocess')
 Exceptions  = import('./exceptions')
 
+# Implements a supervision mechanism for controlling multiple coprocesses
 class Supervisor
   def initialize
     @coprocesses = []
@@ -17,6 +18,10 @@ class Supervisor
   rescue Exceptions::MoveOn => e
     e.value
   ensure
+    finalize_await
+  end
+
+  def finalize_await
     if still_running?
       stop_all_tasks
       suspend
@@ -39,13 +44,13 @@ class Supervisor
 
   def stop!(result = nil)
     return unless @supervisor_fiber && !@stopped
-  
+
     @stopped = true
     @supervisor_fiber.transfer Exceptions::MoveOn.new(nil, result)
   end
 
   def stop_all_tasks
-    exception = Exceptions::Stop.new
+    exception = Exceptions::MoveOn.new
     @coprocesses.each do |c|
       defer { c.interrupt(exception) }
     end
@@ -53,7 +58,7 @@ class Supervisor
 
   def task_completed(coprocess)
     return unless @coprocesses.include?(coprocess)
-    
+
     @coprocesses.delete(coprocess)
     @supervisor_fiber&.transfer if @coprocesses.empty?
   end

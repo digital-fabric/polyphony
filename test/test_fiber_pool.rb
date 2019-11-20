@@ -30,7 +30,6 @@ class FiberPoolTest < Minitest::Test
 
   def test_reallocation
     values = []
-    fibers = []
     f1 = Pool.allocate { values << :foo }
     f2 = Pool.allocate { values << :bar }
     assert f1 != f2
@@ -58,7 +57,7 @@ class FiberPoolTest < Minitest::Test
     f3.schedule
     snooze
 
-    assert_equal [:foo, :bar, :baz], values
+    assert_equal %i[foo bar baz], values
     assert_equal 2, Pool.available_count
     assert_equal 2, Pool.total_count
     assert_equal 0, Pool.checked_out_count
@@ -96,7 +95,7 @@ class FiberPoolTest < Minitest::Test
     rescue Exception => e
       error = e
     end
-    
+
     f1.schedule
     3.times { snooze }
     assert_kind_of Exception, error

@@ -4,9 +4,9 @@ require 'bundler/setup'
 require 'polyphony/postgres'
 
 def get_records
-  res = $db.query("select 1 as test")
+  $db.query('select 1 as test')
   # puts "got #{res.ntuples} records: #{res.to_a}"
-rescue => e
+rescue StandardError => e
   puts "got error: #{e.inspect}"
   puts e.backtrace.join("\n")
 end
@@ -28,7 +28,7 @@ $db = PG.connect(
   sslmode:  'require'
 )
 
-X = 10000
+X = 10_000
 t0 = Time.now
 X.times { get_records }
 puts "query rate: #{X / (Time.now - t0)} reqs/s"

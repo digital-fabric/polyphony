@@ -6,7 +6,7 @@ require 'polyphony/http'
 require 'polyphony/extensions/backtrace'
 
 opts = {
-  reuse_addr: true,
+  reuse_addr:  true,
   dont_linger: true
 }
 
@@ -17,10 +17,10 @@ spin do
     req.respond("Hello world!\n")
   end
 rescue Exception => e
-  puts "*" * 40
+  puts '*' * 40
   p e
   puts e.backtrace.join("\n")
 end
 
 puts "pid: #{Process.pid}"
-puts "Listening on port 1234..."
+puts 'Listening on port 1234...'

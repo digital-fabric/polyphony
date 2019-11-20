@@ -7,7 +7,7 @@ class RunTest < Minitest::Test
     t0 = Time.now
     suspend
     t1 = Time.now
-    assert (t1 - t0) < 0.01
+    assert((t1 - t0) < 0.01)
   end
 end
 
@@ -24,12 +24,12 @@ class IdleTest < MiniTest::Test
 
   def test_schedule
     values = []
-    f = Fiber.new {
+    f = Fiber.new do
       values << :foo
       # We *have* to suspend the fiber in order to yield to the reactor,
       # otherwise control will transfer back to main fiber.
       suspend
-    }
+    end
     assert_equal [], values
     f.schedule
     suspend
@@ -39,10 +39,10 @@ class IdleTest < MiniTest::Test
 
   def test_suspend
     values = []
-    Fiber.new {
+    Fiber.new do
       values << :foo
       suspend
-    }.schedule
+    end.schedule
     suspend
 
     assert_equal [:foo], values
@@ -50,12 +50,12 @@ class IdleTest < MiniTest::Test
 
   def test_schedule_and_suspend
     values = []
-    fibers = 3.times.map { |i| 
-      Fiber.new {
+    3.times.map do |i|
+      Fiber.new do
         values << i
         suspend
-      }.schedule
-    }
+      end.schedule
+    end
     suspend
 
     assert_equal [0, 1, 2], values
@@ -63,12 +63,15 @@ class IdleTest < MiniTest::Test
 
   def test_snooze
     values = []
-    fibers = 3.times.map { |i|
-      Fiber.new {
-        3.times { snooze; values << i }
+    3.times.map do |i|
+      Fiber.new do
+        3.times do
+          snooze
+          values << i
+        end
         suspend
-      }.schedule
-    }
+      end.schedule
+    end
     suspend
 
     assert_equal [0, 1, 2, 0, 1, 2, 0, 1, 2], values
@@ -76,17 +79,17 @@ class IdleTest < MiniTest::Test
 
   def test_break
     values = []
-    Fiber.new {
+    Fiber.new do
       values << :foo
       snooze
       # here will never be reached
       values << :bar
       suspend
-    }.schedule
-    
-    Fiber.new {
+    end.schedule
+
+    Fiber.new do
       Gyro.break
-    }.schedule
+    end.schedule
 
     suspend
 
@@ -95,51 +98,51 @@ class IdleTest < MiniTest::Test
 
   def test_start
     values = []
-    f1 = Fiber.new {
+    f1 = Fiber.new do
       values << :foo
       snooze
       values << :bar
       suspend
-    }.schedule
-    
-    f2 = Fiber.new {
+    end.schedule
+
+    f2 = Fiber.new do
       Gyro.break
       values << :restarted
       snooze
       values << :baz
-    }.schedule
+    end.schedule
 
     suspend
-    
+
     Gyro.start
     f2.schedule
     f1.schedule
     suspend
 
-    assert_equal [:foo, :restarted, :bar, :baz], values
+    assert_equal %i[foo restarted bar baz], values
   end
 
   def test_restart
     values = []
-    Fiber.new {
+    Fiber.new do
       values << :foo
       snooze
       # this part will not be reached, as f
       values << :bar
       suspend
-    }.schedule
-    
-    Fiber.new {
+    end.schedule
+
+    Fiber.new do
       Gyro.restart
 
       # control is transfer to the fiber that called Gyro.restart
       values << :restarted
       snooze
       values << :baz
-    }.schedule
+    end.schedule
 
     suspend
 
-    assert_equal [:foo, :restarted, :baz], values
+    assert_equal %i[foo restarted baz], values
   end
 end

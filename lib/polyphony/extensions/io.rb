@@ -2,6 +2,7 @@
 
 require 'open3'
 
+# IO overrides
 class ::IO
   class << self
     alias_method :orig_binread, :binread
@@ -20,11 +21,14 @@ class ::IO
       end
     end
 
-    EMPTY_HASH = {}
+    EMPTY_HASH = {}.freeze
 
     alias_method :orig_foreach, :foreach
     def foreach(name, sep = $/, limit = nil, getline_args = EMPTY_HASH, &block)
-      sep, limit = $/, sep if sep.is_a?(Integer)
+      if sep.is_a?(Integer)
+        sep = $/
+        limit = sep
+      end
       File.open(name, 'r') do |f|
         f.each_line(sep, limit, getline_args, &block)
       end
@@ -32,7 +36,10 @@ class ::IO
 
     alias_method :orig_read, :read
     def read(name, length = nil, offset = nil, opt = EMPTY_HASH)
-      opt, length = length, nil if length.is_a?(Hash)
+      if length.is_a?(Hash)
+        opt = length
+        length = nil
+      end
       File.open(name, opt[:mode] || 'r') do |f|
         f.seek(offset) if offset
         length ? f.read(length) : f.read
@@ -42,7 +49,6 @@ class ::IO
     # alias_method :orig_readlines, :readlines
     # def readlines(name, sep = $/, limit = nil, getline_args = EMPTY_HASH)
     #   File.open(name, 'r') do |f|
-    #     puts "readlines(#{sep.inspect}, #{limit.inspect}, #{getline_args.inspect}"
     #     f.readlines(sep, limit, getline_args)
     #   end
     # end
@@ -59,7 +65,7 @@ class ::IO
     def popen(cmd, mode = 'r')
       return orig_popen(cmd, mode) unless block_given?
 
-      Open3.popen2(cmd) { |i, o, t| yield o }
+      Open3.popen2(cmd) { |_i, o, _t| yield o }
     end
   end
 
@@ -84,8 +90,11 @@ class ::IO
   # end
 
   alias_method :orig_gets, :gets
-  def gets(sep = $/, limit = nil, chomp: nil)
-    sep, limit = $/, sep if sep.is_a?(Integer)
+  def gets(sep = $/, _limit = nil, _chomp: nil)
+    if sep.is_a?(Integer)
+      sep = $/
+      _limit = sep
+    end
     sep_size = sep.bytesize
 
     @gets_buffer ||= +''
@@ -94,11 +103,13 @@ class ::IO
       idx = @gets_buffer.index(sep)
       return @gets_buffer.slice!(0, idx + sep_size) if idx
 
-      if (data = readpartial(8192) rescue nil)
+      if (data = readpartial(8192))
         @gets_buffer << data
       else
         return nil if @gets_buffer.empty?
-        line, @gets_buffer = @gets_buffer.freeze, +''
+
+        line = @gets_buffer.freeze
+        @gets_buffer = +''
         return line
       end
     end
@@ -146,14 +157,13 @@ class ::IO
   # def readlines(sep = $/, limit = nil, chomp: nil)
   # end
 
-  def write_nonblock(string, options = {})
+  def write_nonblock(string, _options = {})
     # STDOUT << '>'
     write(string, 0)
   end
 
-  def read_nonblock(maxlen, buf = nil, options = nil)
+  def read_nonblock(maxlen, buf = nil, _options = nil)
     # STDOUT << '<'
     buf ? readpartial(maxlen, buf) : readpartial(maxlen)
   end
-
 end

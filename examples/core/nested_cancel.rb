@@ -17,8 +17,8 @@ async def sleep_and_cancel
   rescue Exception => e
     puts "#{Time.now} outer scope got error: #{e}"
   end
-ensure
-  puts "#{Time.now} woke up"
+      ensure
+        puts "#{Time.now} woke up"
 end
 
 async def sleep_and_move_on

@@ -9,7 +9,10 @@ def bm(fibers, iterations)
   supervise do |s|
     fibers.times do
       s.spin do
-        iterations.times { snooze; count += 1 }
+        iterations.times do
+          snooze
+          count += 1
+        end
       end
     end
   end
@@ -17,10 +20,10 @@ def bm(fibers, iterations)
   puts "#{[fibers, iterations].inspect} count: #{count} #{count / dt.to_f}/s"
 end
 
-bm(1, 1000000)
-bm(10, 100000)
-bm(100, 10000)
-bm(1000, 1000)
-bm(10000, 100)
-# bm(100000, 10)
-# bm(1000000, 1)
+bm(1, 1_000_000)
+bm(10, 100_000)
+bm(100, 10_000)
+bm(1_000, 1_000)
+bm(10_000, 100)
+# bm(100_000,    10)
+# bm(1_000_000,   1)

@@ -6,6 +6,7 @@ require 'http/2'
 
 Stream = import './http2_stream'
 
+# HTTP2 API
 class Protocol
   def self.upgrade_each(socket, opts, headers, &block)
     adapter = new(socket, opts, headers)
@@ -13,7 +14,7 @@ class Protocol
   end
 
   def initialize(conn, opts, upgrade_headers = nil)
-    @conn = conn  
+    @conn = conn
     @opts = opts
 
     @interface = ::HTTP2::Server.new
@@ -22,15 +23,15 @@ class Protocol
   end
 
   # request API
-  
+
   UPGRADE_MESSAGE = <<~HTTP.gsub("\n", "\r\n")
-  HTTP/1.1 101 Switching Protocols
-  Connection: Upgrade
-  Upgrade: h2c
+    HTTP/1.1 101 Switching Protocols
+    Connection: Upgrade
+    Upgrade: h2c
 
   HTTP
 
-def upgrade(headers)
+  def upgrade(headers)
     settings = headers['HTTP2-Settings']
     @conn << UPGRADE_MESSAGE
     @interface.upgrade(settings, headers, '')
@@ -40,7 +41,7 @@ def upgrade(headers)
   def each(&block)
     @interface.on(:stream) { |stream| Stream.new(stream, &block) }
 
-    while (data = @conn.readpartial(8192)) do
+    while (data = @conn.readpartial(8192))
       @interface << data
       snooze
     end

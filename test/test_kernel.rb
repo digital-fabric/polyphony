@@ -5,9 +5,7 @@ require_relative 'helper'
 class KernelTest < MiniTest::Test
   def test_system_method
     counter = 0
-    timer = spin {
-      throttled_loop(200) { counter += 1 }
-    }
+    timer = spin { throttled_loop(200) { counter += 1 } }
 
     system('sleep 0.01')
     assert(counter >= 2)
@@ -15,7 +13,7 @@ class KernelTest < MiniTest::Test
     i, o = IO.pipe
     orig_stdout = $stdout
     $stdout = o
-    result = system('echo "hello"')
+    system('echo "hello"')
     o.close
     assert_equal("hello\n", i.read)
   ensure
@@ -25,9 +23,7 @@ class KernelTest < MiniTest::Test
 
   def test_backtick_method
     counter = 0
-    timer = spin {
-      throttled_loop(200) { counter += 1 }
-    }
+    timer = spin { throttled_loop(200) { counter += 1 } }
 
     `sleep 0.01`
     assert(counter >= 2)

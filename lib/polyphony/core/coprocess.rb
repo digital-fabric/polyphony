@@ -36,29 +36,35 @@ class Coprocess
   end
 
   def execute
+    # uncaught_exception = nil
     @@list[@fiber] = self
     @fiber.coprocess = self
     @result = @block.call(self)
-  rescue Exceptions::MoveOn, Exceptions::Stop => e
+  rescue Exceptions::MoveOn => e
     @result = e.value
-  rescue Exception => uncaught_exception
-    @result = uncaught_exception
+  rescue Exception => e
+    uncaught_exception = true
+    @result = e
   ensure
+    finish_execution(uncaught_exception)
+  end
+
+  def finish_execution(uncaught_exception)
     @@list.delete(@fiber)
     @fiber.coprocess = nil
     @fiber = nil
     @awaiting_fiber&.schedule @result
     @when_done&.()
 
-    # the fiber pool will propagate the exception to the calling fiber
-    raise uncaught_exception if uncaught_exception && !@awaiting_fiber
+    # if no awaiting fiber, raise any uncaught error
+    raise @result if uncaught_exception && !@awaiting_fiber
 
     suspend
   end
 
-  def <<(o)
+  def <<(value)
     @mailbox ||= []
-    @mailbox << o
+    @mailbox << value
     @fiber&.schedule if @receive_waiting
     snooze
   end
@@ -66,7 +72,7 @@ class Coprocess
   def receive
     Gyro.ref
     @receive_waiting = true
-    @fiber&.schedule if @mailbox && @mailbox.size > 0
+    @fiber&.schedule if @mailbox && !@mailbox.empty?
     suspend
     @mailbox.shift
   ensure
@@ -81,6 +87,19 @@ class Coprocess
   # Kernel.await expects the given argument / block to be a callable, so #call
   # in fact waits for the coprocess to finish
   def await
+    await_coprocess_result
+  ensure
+    # If the awaiting fiber has been transferred an exception, the awaited fiber
+    # might still be running, so we need to stop it
+    if @fiber
+      @fiber.schedule(Exceptions::MoveOn.new)
+      # wait for it to be stopped
+      # snooze
+    end
+  end
+  alias_method :join, :await
+
+  def await_coprocess_result
     run unless @ran
     if @fiber
       @awaiting_fiber = Fiber.current
@@ -88,14 +107,7 @@ class Coprocess
     else
       @result
     end
-  ensure
-    # if the awaited coprocess is still running, we need to stop it
-    if @fiber
-      @fiber.schedule(Exceptions::MoveOn.new)
-      snooze
-    end
   end
-  alias_method :join, :await
 
   def when_done(&block)
     @when_done = block

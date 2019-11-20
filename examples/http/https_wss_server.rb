@@ -7,12 +7,14 @@ require 'localhost/authority'
 STDOUT.sync = true
 
 def ws_handler(conn)
-  timer = spin {
-    throttled_loop(1) {
-      conn << Time.now.to_s rescue nil
-    }
-  }
-  while msg = conn.recv
+  timer = spin do
+    throttled_loop(1) do
+      conn << Time.now.to_s
+    rescue StandardError
+      nil
+    end
+  end
+  while (msg = conn.recv)
     puts "msg: #{msg}"
     # conn << "you said: #{msg}"
   end
@@ -22,10 +24,10 @@ end
 
 authority = Localhost::Authority.fetch
 opts = {
-  reuse_addr: true,
-  dont_linger: true,
+  reuse_addr:     true,
+  dont_linger:    true,
   secure_context: authority.server_context,
-  upgrade: {
+  upgrade:        {
     websocket: Polyphony::Websocket.handler(&method(:ws_handler))
   }
 }
@@ -33,7 +35,7 @@ opts = {
 HTML = IO.read(File.join(__dir__, 'wss_page.html'))
 
 puts "pid: #{Process.pid}"
-puts "Listening on port 1234..."
+puts 'Listening on port 1234...'
 Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
   req.respond(HTML, 'Content-Type' => 'text/html')
 end

@@ -11,17 +11,16 @@ end
 
 def t(tag)
   Fiber.current.tag = tag.to_s
-  COUNT.times { |i|
+  COUNT.times do |i|
     puts "#{tag} #{i} "
     snooze
-  }
+  end
   puts
   snooze
   puts "#{tag} done"
-rescue => e
+rescue StandardError => e
   puts e
 end
-
 
 GC.disable
 spin { t(:a) }

@@ -18,12 +18,12 @@ move_on_after(3) do
             results << result
             STDOUT << '.'
           end
-        rescue => e
+        rescue StandardError => e
           p e
         end
       end
     end
   end
-  puts "done"
+  puts 'done'
 end
 puts "got #{results.size} (#{results.size / (Time.now - t0)}/s)"

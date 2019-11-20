@@ -14,11 +14,11 @@ end
 
 chan1, chan2 = 2.times.map { Polyphony::Channel.new }
 
-echoer = spin { echo(chan1, chan2) }
+spin { echo(chan1, chan2) }
 
 spin do
   puts 'start receiver'
-  while msg = chan2.receive
+  while (msg = chan2.receive)
     puts msg
     $main.resume if msg =~ /world/
   end
@@ -35,7 +35,7 @@ $main = spin do
   chan1 << 'world'
 
   suspend
-  
+
   puts 'closing channels'
   chan1.close
   chan2.close

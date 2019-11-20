@@ -14,8 +14,8 @@ supervise do |s|
   s.spin my_sleep(1)
   s.spin my_sleep(2)
   s.spin my_sleep(3)
-  s.spin {
+  s.spin do
     puts "fiber count: #{Polyphony::FiberPool.size}"
-  }
+  end
 end
 puts "#{Time.now} done waiting"

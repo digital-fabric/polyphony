@@ -8,8 +8,8 @@ uri = URI('http://realiteq.net/?q=time')
 
 begin
   puts Net::HTTP.get(uri)
-rescue => e
+rescue StandardError => e
   p e
-  puts "*" * 40
+  puts '*' * 40
   puts e.backtrace[0..4].join("\n")
 end

@@ -4,17 +4,16 @@ require 'socket'
 
 import('./io')
 
+# Socket overrides (eventually rewritten in C)
 class ::Socket
   NO_EXCEPTION = { exception: false }.freeze
 
   def connect(remotesockaddr)
     loop do
       result = connect_nonblock(remotesockaddr, NO_EXCEPTION)
-      case result
-      when 0              then return
-      when :wait_writable then write_watcher.await
-      else                raise IOError
-      end
+      return if result == 0
+
+      result == :wait_writable ? write_watcher.await : (raise IOError)
     end
   ensure
     @write_watcher&.stop
@@ -24,12 +23,9 @@ class ::Socket
     outbuf ||= +''
     loop do
       result = recv_nonblock(maxlen, flags, outbuf, NO_EXCEPTION)
-      case result
-      when :wait_readable
-        read_watcher.await
-      else
-        return result
-      end
+      raise IOError unless result
+
+      result == :wait_readable ? read_watcher.await : (return result)
     end
   end
 
@@ -37,17 +33,15 @@ class ::Socket
     @read_buffer ||= +''
     loop do
       result = recvfrom_nonblock(maxlen, flags, @read_buffer, NO_EXCEPTION)
-      case result
-      when nil            then raise IOError
-      when :wait_readable then read_watcher.await
-      else                return result
-      end
+      raise IOError unless result
+
+      result == :wait_readable ? read_watcher.await : (return result)
     end
   ensure
     @read_watcher&.stop
   end
 
-  ZERO_LINGER = [0, 0].pack("ii")
+  ZERO_LINGER = [0, 0].pack('ii').freeze
 
   def dont_linger
     setsockopt(Socket::SOL_SOCKET, Socket::SO_LINGER, ZERO_LINGER)
@@ -69,17 +63,21 @@ class ::Socket
   end
 end
 
+# Overide stock TCPSocket code by encapsulating a Socket instance
 class ::TCPSocket
   NO_EXCEPTION = { exception: false }.freeze
 
-  def foo; :bar; end
-
-  def initialize(remote_host, remote_port, local_host=nil, local_port=nil)
+  def initialize(remote_host, remote_port, local_host = nil, local_port = nil)
     @io = Socket.new Socket::AF_INET, Socket::SOCK_STREAM
     if local_host && local_port
-      @io.bind(Addrinfo.tcp(local_host, local_port))
+      addr = Addrinfo.tcp(local_host, local_port)
+      @io.bind(addr)
     end
-    @io.connect(Addrinfo.tcp(remote_host, remote_port)) if remote_host
+
+    return unless remote_host && remote_port
+
+    addr = Addrinfo.tcp(remote_host, remote_port)
+    @io.connect(addr)
   end
 
   alias_method :orig_close, :close
@@ -96,10 +94,23 @@ class ::TCPSocket
   def closed?
     @io ? @io.closed? : orig_closed?
   end
+
+  def dont_linger
+    setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_LINGER, ::Socket::ZERO_LINGER)
+  end
+
+  def no_delay
+    setsockopt(::Socket::IPPROTO_TCP, ::Socket::TCP_NODELAY, 1)
+  end
+
+  def reuse_addr
+    setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_REUSEADDR, 1)
+  end
 end
 
+# Override stock TCPServer code by encapsulating a Socket instance.
 class ::TCPServer
-  def initialize(hostname = nil, port)
+  def initialize(hostname = nil, port = 0)
     @io = Socket.new Socket::AF_INET, Socket::SOCK_STREAM
     @io.bind(Addrinfo.tcp(hostname, port))
     @io.listen(0)
