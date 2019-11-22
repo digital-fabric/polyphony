@@ -2,19 +2,20 @@
 
 export :Mutex
 
-# Implements mutex lock for synchronizing async operations
+# Implements mutex lock for synchronizing access to a shared resource
 class Mutex
   def initialize
-    @waiting = []
+    @waiting_fibers = []
   end
 
-  def synchronize
+  def synchronize(&block)
     fiber = Fiber.current
-    @waiting << fiber
-    suspend if @waiting.size > 1
+    @waiting_fibers << fiber
+    suspend if @waiting_fibers.size > 1
     yield
   ensure
-    @waiting.delete(fiber)
-    EV.next_tick { @waiting[0]&.transfer } unless @waiting.empty?
+    @waiting_fibers.delete(fiber)
+    @waiting_fibers.first&.schedule
+    snooze
   end
 end
