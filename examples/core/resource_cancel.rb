@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 resource_count = 0
 Pool = Polyphony::ResourcePool.new(limit: 3) do

@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 spin do
   puts 'going to sleep'
-  result = async do
-    async do
-      async do
-        puts "Fiber count: #{Polyphony::FiberPool.size}"
+  result = spin do
+    spin do
+      spin do
+        puts "Fiber count: #{Polyphony::FiberPool.stats[:total]}"
         sleep(1)
       end.await
     end.await

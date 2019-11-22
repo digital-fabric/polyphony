@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 spin do
   10.times do |i|
@@ -12,7 +12,7 @@ end
 
 spin do
   puts 'going to sleep...'
-  sleep 1
+  sleep 0.8
   puts 'woke up'
 end.await
 

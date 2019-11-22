@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 @op_count = 0
 
@@ -10,7 +10,7 @@ def lengthy_op
   acc = 0
   count = 0
   100.times do
-    acc += IO.read('../../docs/reality-ui.bmpr').bytesize
+    acc += IO.read(__FILE__).bytesize
     count += 1
     p count
   end

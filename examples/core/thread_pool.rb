@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 def lengthy_op
-  data = IO.read('../../docs/dev-journal.md')
+  data = IO.read(__FILE__)
   data.clear
   # Socket.getaddrinfo('debian.org', 80)
   # Digest::SHA256.digest(IO.read('doc/Promise.html'))
 end
 
-X = 1000
+X = 100
 
 def compare_performance
   t0 = Time.now
@@ -39,7 +39,7 @@ def compare_performance
       t0 = Time.now
       supervise do |s|
         X.times do
-          s.spin(Polyphony::ThreadPool.process { lengthy_op })
+          s.spin { Polyphony::ThreadPool.process { lengthy_op } }
         end
       end
       thread_pool_perf = X / (Time.now - t0)

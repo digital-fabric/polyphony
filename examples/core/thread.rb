@@ -4,7 +4,7 @@ require 'bundler/setup'
 require 'polyphony'
 
 def lengthy_op
-  IO.read('../../docs/reality-ui.bmpr')
+  IO.orig_read(__FILE__)
 end
 
 X = 1000

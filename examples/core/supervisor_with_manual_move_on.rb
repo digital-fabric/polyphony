@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
-async def my_sleep(t)
+def my_sleep(t)
   puts "start: #{t}"
   sleep(t)
   puts "done: #{t}"
@@ -16,8 +16,8 @@ result = supervise do |s|
     puts 'stopping supervisor...'
     s.stop!
   end
-  s.spin my_sleep(1)
-  s.spin my_sleep(2)
-  s.spin my_sleep(3)
+  s.spin { my_sleep(1) }
+  s.spin { my_sleep(2) }
+  s.spin { my_sleep(3) }
 end
 puts "#{Time.now} woke up with #{result.inspect}"

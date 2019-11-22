@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 puts "parent pid: #{Process.pid}"
 
@@ -17,6 +17,6 @@ end
 
 puts "got child pid #{pid}"
 
-puts 'waiting for child'
-EV::Child.new(pid).await
-puts 'child is done'
+puts 'parent waiting for child'
+Gyro::Child.new(pid).await
+puts 'parent done waiting'

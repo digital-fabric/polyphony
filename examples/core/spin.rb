@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 def my_sleep(t)
   puts 'going to sleep...'
@@ -10,5 +10,5 @@ def my_sleep(t)
 end
 
 spin do
-  async { my_sleep(1) }.await
+  spin { my_sleep(1) }.await
 end

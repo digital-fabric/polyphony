@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 resource_count = 0
 Pool = Polyphony::ResourcePool.new(limit: 3) do
   :"resource#{resource_count += 1}"
 end
 
-async def user(number)
+def user(number)
   loop do
     # puts "user #{number} >"
     Pool.acquire do |r|
@@ -21,7 +21,7 @@ async def user(number)
 end
 
 100.times do |x|
-  coproc user(x)
+  spin { user(x) }
 end
 
 t0 = Time.now

@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 spin do
   puts 'going to sleep...'
   cancel_after(1) do
-    async do
+    spin do
       sleep(2)
     end.await
   end

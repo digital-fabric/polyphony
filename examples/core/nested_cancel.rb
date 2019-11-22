@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
-async def sleep_and_cancel
+def sleep_and_cancel
   puts "#{Time.now} going to sleep with cancel..."
   cancel_after(1) do
     puts "#{Time.now} outer cancel scope"
@@ -17,11 +17,11 @@ async def sleep_and_cancel
   rescue Exception => e
     puts "#{Time.now} outer scope got error: #{e}"
   end
-      ensure
-        puts "#{Time.now} woke up"
+ensure
+  puts "#{Time.now} woke up"
 end
 
-async def sleep_and_move_on
+def sleep_and_move_on
   puts "#{Time.now} going to sleep with move_on..."
   move_on_after(1) do
     puts "#{Time.now} outer cancel scope"
@@ -35,6 +35,6 @@ async def sleep_and_move_on
   puts "#{Time.now} woke up"
 end
 
-sleep_and_cancel.await
+sleep_and_cancel
 puts
-sleep_and_move_on.await
+sleep_and_move_on

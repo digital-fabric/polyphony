@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
-async def my_sleep(t)
+def my_sleep(t)
   puts "start: #{t}"
   r = sleep(t)
   puts "my_sleep result #{r.inspect}"

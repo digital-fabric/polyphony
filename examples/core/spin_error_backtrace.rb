@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
-
-Polyphony.debug = true
+require 'polyphony/auto_run'
+require 'polyphony/extensions/backtrace'
 
 def error(t)
   raise "hello #{t}"

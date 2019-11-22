@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
-next_tick do
+defer do
   puts 'two'
-  next_tick { puts 'four' }
+  defer { puts 'four' }
   puts 'three'
 end
 
