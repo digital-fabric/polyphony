@@ -11,11 +11,11 @@ def process(&block)
 end
 
 def start_task_on_thread(block)
-  EV.ref
+  Gyro.ref
   @task_queue << [block, Fiber.current]
   suspend
 ensure
-  EV.unref
+  Gyro.unref
 end
 
 def size=(size)
@@ -30,8 +30,8 @@ def setup
   @task_queue = ::Queue.new
   @resolve_queue = ::Queue.new
 
-  @async_watcher = EV::Async.new { resolve_from_queue }
-  EV.unref
+  @async_watcher = Gyro::Async.new { resolve_from_queue }
+  Gyro.unref
 
   @threads = (1..@size).map { Thread.new { thread_loop } }
 end
