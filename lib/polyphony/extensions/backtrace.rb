@@ -45,9 +45,15 @@ class ::Exception
 
     if @__raising_fiber__
       backtrace = orig_backtrace || []
-      backtrace + @__raising_fiber__.caller
+      sanitize(backtrace + @__raising_fiber__.caller)
     else
-      orig_backtrace
+      sanitize(orig_backtrace)
     end
+  end
+
+  POLYPHONY_DIR = File.expand_path(File.join(__dir__, '../..'))
+
+  def sanitize(backtrace)
+    backtrace.reject { |l| l[POLYPHONY_DIR] }
   end
 end
