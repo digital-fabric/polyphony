@@ -63,18 +63,29 @@ class Coprocess
   end
 
   def <<(value)
-    @mailbox ||= []
-    @mailbox << value
-    @fiber&.schedule if @receive_waiting
+    if @receive_waiting && @fiber
+      @fiber&.schedule value
+    else
+      @queued_messages ||= []
+      @queued_messages << value
+    end
     snooze
   end
 
   def receive
+    if !@queued_messages || @queued_messages&.empty?
+      wait_for_message
+    else
+      value = @queued_messages.shift
+      snooze
+      value
+    end
+  end
+
+  def wait_for_message
     Gyro.ref
     @receive_waiting = true
-    @fiber&.schedule if @mailbox && !@mailbox.empty?
     suspend
-    @mailbox.shift
   ensure
     Gyro.unref
     @receive_waiting = nil
