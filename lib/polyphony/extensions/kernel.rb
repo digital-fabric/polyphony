@@ -68,27 +68,6 @@ module ::Kernel
     Gyro::Timer.new(interval, 0).start(&block)
   end
 
-  def async(sym = nil, &block)
-    if sym
-      async_decorate(is_a?(Class) ? self : singleton_class, sym)
-    else
-      Coprocess.new(&block)
-    end
-  end
-
-  # Converts a regular method into an async method, i.e. a method that returns a
-  # proc that eventually executes the original code.
-  # @param receiver [Object] object receiving the method call
-  # @param sym [Symbol] method name
-  # @return [void]
-  def async_decorate(receiver, sym)
-    sync_sym = :"sync_#{sym}"
-    receiver.alias_method(sync_sym, sym)
-    receiver.define_method(sym) do |*args, &block|
-      Coprocess.new { send(sync_sym, *args, &block) }
-    end
-  end
-
   def cancel_after(duration, &block)
     CancelScope.new(timeout: duration, mode: :cancel).(&block)
   end
