@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
 export  :allocate,
-        :available_count,
-        :checked_out_count,
         :reset!,
-        :total_count
+        :stats
 
 require 'fiber'
 
@@ -21,6 +19,14 @@ end
 # Fiber count
 @total_count = 0
 @checked_out_count = 0
+
+def stats
+  {
+    available:   @total_count - @checked_out_count,
+    checked_out: @checked_out_count,
+    total:       @total_count
+  }
+end
 
 # Returns number of available fibers in pool
 # @return [Integer] available fibers count
