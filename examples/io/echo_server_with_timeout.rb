@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 begin
   server = Polyphony::Net.tcp_listen(
@@ -11,17 +11,17 @@ begin
 
   loop do
     client = server.accept
+    client.write "Hi there\n"
     spin do
       cancel_scope = nil
-      move_on_after(5) do |s|
-        cancel_scope = s
-        while (data = client.readpartial(8192))
-          s.reset_timeout
-          client.write(data)
+      move_on_after(5) do |scope|
+        scope.when_cancelled do
+          client.write "Disconnecting due to inactivity\n"
         end
-      end
-      if cancel_scope.cancelled?
-        client.write "Disconnecting due to inactivity\n"
+        while (data = client.readpartial(8192))
+          scope.reset_timeout
+          client.write "You said: #{data}"
+        end
       end
     rescue StandardError => e
       puts "client error: #{e.inspect}"

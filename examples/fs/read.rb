@@ -1,14 +1,12 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 require 'polyphony/fs'
-
-PATH = File.expand_path('../../../../docs/dev-journal.md', __dir__)
 
 def raw_read_file(x)
   t0 = Time.now
-  x.times { IO.orig_read(PATH) }
+  x.times { IO.orig_read(__FILE__) }
   puts "raw_read_file: #{Time.now - t0}"
 end
 

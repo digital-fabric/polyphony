@@ -82,7 +82,7 @@ rsock_send_blocking(void *data)
 ///////////////////////////////////////////////////////////////////////////
 
 static VALUE BasicSocket_send(int argc, VALUE *argv, VALUE sock) {
-  VALUE underlying_socket = rb_iv_get(sock, "@socket");
+  VALUE underlying_socket = rb_iv_get(sock, "@io");
   if (!NIL_P(underlying_socket)) sock = underlying_socket;
   struct rsock_send_arg arg;
   VALUE flags, to;
@@ -95,6 +95,7 @@ static VALUE BasicSocket_send(int argc, VALUE *argv, VALUE sock) {
   rb_scan_args(argc, argv, "21", &arg.mesg, &flags, &to);
 
   StringValue(arg.mesg);
+
   if (!NIL_P(to)) {
     SockAddrStringValue(to);
     to = rb_str_new4(to);
@@ -112,15 +113,16 @@ static VALUE BasicSocket_send(int argc, VALUE *argv, VALUE sock) {
   arg.fd = fptr->fd;
   arg.flags = NUM2INT(flags);
   while ((n = (ssize_t)func(&arg)) < 0) {
-    if (write_watcher == Qnil)
+    if (write_watcher == Qnil) {
       write_watcher = IO_write_watcher(sock);
+    }
     Gyro_IO_await(write_watcher);
   }
   return SSIZET2NUM(n);
 }
 
 static VALUE BasicSocket_recv(int argc, VALUE *argv, VALUE sock) {
-  VALUE underlying_socket = rb_iv_get(sock, "@socket");
+  VALUE underlying_socket = rb_iv_get(sock, "@io");
   if (!NIL_P(underlying_socket)) sock = underlying_socket;
   long len = argc >= 1 ? NUM2LONG(argv[0]) : 8192;
   if (len < 0) {

@@ -2,7 +2,8 @@
 
 ## 0.20 Fix segfaults and rewrite C code
 
-- Update examples
+- Update, cleanup examples
+- Remove `async` API stuff, async-related examples
 
 ## 0.21 REPL usage, coprocess introspection, monitoring
 

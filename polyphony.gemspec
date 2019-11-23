@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   }
   s.rdoc_options = ["--title", "polyphony", "--main", "README.md"]
   s.extra_rdoc_files = ["README.md"]
-  s.extensions = ["ext/ev/extconf.rb"]
+  s.extensions = ["ext/gyro/extconf.rb"]
   s.require_paths = ["lib"]
 
   s.executables   = ['poly']

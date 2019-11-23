@@ -6,5 +6,5 @@ require 'httparty'
 
 timer = spin { throttled_loop(10) { STDOUT << '.' } }
 
-puts HTTParty.get('http://realiteq.net/?q=time')
+puts HTTParty.get('http://google.com/')
 timer.stop

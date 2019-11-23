@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 require 'net/http'
 
 uri = URI('http://realiteq.net/?q=time')

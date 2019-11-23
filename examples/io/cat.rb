@@ -1,13 +1,12 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
+require 'polyphony/auto_run'
 
 File.open(__FILE__, 'r') do |f|
   line_number = 1
   while (l = f.gets)
-    puts "encoding: #{l.encoding.inspect}"
-    STDOUT.puts format('%03d %s', line_number, l)
+    puts format('%03d %s', line_number, l)
     line_number += 1
   end
 end
