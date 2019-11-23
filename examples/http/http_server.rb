@@ -10,16 +10,17 @@ opts = {
   dont_linger: true
 }
 
-puts "Main fiber: #{Fiber.current.object_id}"
-
 spin do
   Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
     req.respond("Hello world!\n")
   end
-rescue Exception => e
-  puts '*' * 40
-  p e
-  puts e.backtrace.join("\n")
+end
+
+spin do
+  throttled_loop(1) do
+    Polyphony::FiberPool.compact
+    puts "Fiber count: #{Polyphony::FiberPool.stats[:total]}"
+  end
 end
 
 puts "pid: #{Process.pid}"

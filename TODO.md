@@ -4,6 +4,7 @@
 
 - Update, cleanup examples
 - Remove `async` API stuff, async-related examples
+- Annotate examples
 
 ## 0.21 REPL usage, coprocess introspection, monitoring
 
