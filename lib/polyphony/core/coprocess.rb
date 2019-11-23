@@ -58,8 +58,6 @@ class Coprocess
 
     # if no awaiting fiber, raise any uncaught error
     raise @result if uncaught_exception && !@awaiting_fiber
-
-    suspend
   end
 
   def <<(value)
