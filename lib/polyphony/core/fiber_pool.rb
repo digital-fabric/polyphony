@@ -2,7 +2,8 @@
 
 export  :allocate,
         :reset!,
-        :stats
+        :stats,
+        :compact
 
 require 'fiber'
 
@@ -43,13 +44,13 @@ def total_count
   @total_count
 end
 
-# def downsize
-#   return if @count < 5
-#   max_available = @count >= 5 ? @count / 5 : 2
-#   if @pool.count > max_available
-#     @pool.slice!(max_available, 50).each { |f| f.transfer :stop }
-#   end
-# end
+def compact
+  calling_fiber = Fiber.current
+  while (fiber = @pool_head)
+    @pool_head = fiber.__next_pool_fiber__
+    fiber.schedule :stop
+  end
+end
 
 # @downsize_timer = Gyro::Timer.new(5, 5)
 # @downsize_timer.start { downsize }
@@ -64,9 +65,8 @@ end
 
 def check_fiber_out
   @checked_out_count += 1
-  if @pool_head
-    fiber = @pool_head
-    @pool_head = @pool_head.__next_pool_fiber__
+  if (fiber = @pool_head)
+    @pool_head = fiber.__next_pool_fiber__
     fiber
   else
     @total_count += 1
