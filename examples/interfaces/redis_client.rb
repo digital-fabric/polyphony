@@ -5,7 +5,7 @@ require 'polyphony/redis'
 
 redis = Redis.new
 
-X = 10_000
+X = 10
 
 t0 = Time.now
 X.times { redis.get('abc') }

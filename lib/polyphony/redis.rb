@@ -58,7 +58,7 @@ class Driver
     while (data = @connection.readpartial(8192))
       @reader.feed(data)
       reply = @reader.gets
-      return reply if reply
+      return reply unless reply == false
     end
   end
 end
