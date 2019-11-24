@@ -264,7 +264,7 @@ class MailboxTest < MiniTest::Test
     coproc&.stop
   end
 
-  def test_that_multiple_messages_sent_at_once_arrive
+  def test_that_multiple_messages_sent_at_once_arrive_in_order
     msgs = []
     coproc = spin { loop { msgs << receive } }
 
@@ -277,5 +277,92 @@ class MailboxTest < MiniTest::Test
     assert_equal([0, 1, 2], msgs)
   ensure
     coproc&.stop
+  end
+
+  def test_when_done
+    flag = nil
+    values = []
+    coproc = spin do
+      snooze until flag
+    end
+    coproc.when_done {
+      values << 42
+    }
+
+    snooze
+    assert values.empty?
+    snooze
+    flag = true
+    assert values.empty?
+    assert coproc.alive?
+
+    snooze
+    assert_equal [42], values
+    assert !coproc.alive?
+  end
+
+  def test_resume
+    values = []
+    coproc = spin do
+      values << 1
+      x = suspend
+      values << x
+      suspend
+      values << 3
+    end
+    snooze
+    assert_equal [1], values
+
+    coproc.resume 2
+    assert_equal [1, 2], values
+
+    coproc.resume
+    assert_equal [1, 2, 3], values
+
+    assert !coproc.alive?
+  end
+
+  def test_interrupt
+    coproc = spin do
+      sleep 1
+      :foo
+    end
+
+    snooze
+    assert coproc.alive?
+
+    coproc.interrupt :bar
+    assert !coproc.alive?
+
+    assert_equal :bar, coproc.result
+  end
+
+  def test_cancel
+    error = nil
+    coproc = spin do
+      sleep 1
+      :foo
+    end
+
+    snooze
+    coproc.cancel!
+  rescue Polyphony::Cancel => e
+    # cancel error should bubble up
+    error = e
+  ensure
+    assert error
+    assert !coproc.alive?
+  end
+
+  def test_current
+    assert_equal Fiber.main.coprocess, Polyphony::Coprocess.current
+
+    value = nil
+    coproc = spin do
+      value = :ok if Polyphony::Coprocess.current == coproc
+    end
+
+    snooze
+    assert_equal :ok, value
   end
 end

@@ -126,16 +126,25 @@ class Coprocess
   end
 
   def resume(value = nil)
-    @fiber&.schedule(value)
+    if @fiber
+      @fiber.schedule(value)
+      snooze
+    end
   end
 
   def interrupt(value = nil)
-    @fiber&.schedule(Exceptions::MoveOn.new(nil, value))
+    if @fiber
+      @fiber.schedule(Exceptions::MoveOn.new(nil, value))
+      snooze
+    end
   end
   alias_method :stop, :interrupt
 
   def cancel!
-    @fiber&.schedule(Exceptions::Cancel.new)
+    if @fiber
+      @fiber.schedule(Exceptions::Cancel.new)
+      snooze
+    end
   end
 
   def self.current
