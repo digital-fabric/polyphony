@@ -12,8 +12,43 @@ Throttler   = import('../core/throttler')
 
 # Fiber extensions
 class ::Fiber
+  attr_accessor :__calling_fiber__
+  attr_writer :__caller__
   attr_writer :cancelled
   attr_accessor :coprocess, :scheduled_value
+
+  class << self
+    alias_method :orig_new, :new
+    def new(&block)
+      calling_fiber = Fiber.current
+      fiber_caller = caller
+      fiber = orig_new do |v|
+        block.call(v)
+      ensure
+        $__reactor_fiber__.transfer if $__reactor_fiber__.alive?
+      end
+      fiber.__calling_fiber__ = calling_fiber
+      fiber.__caller__ = fiber_caller
+      fiber
+    end
+
+    def main
+      @main_fiber
+    end
+  
+    def set_main_fiber
+      @main_fiber = current
+    end
+    end
+
+  def caller
+    @__caller__ ||= []
+    if @__calling_fiber__
+      @__caller__ + @__calling_fiber__.caller
+    else
+      @__caller__
+    end
+  end
 
   def cancelled?
     @cancelled
@@ -21,16 +56,38 @@ class ::Fiber
 
   # Associate a (pseudo-)coprocess with the main fiber
   current.coprocess = Coprocess.new(current)
-
-  def self.main
-    @main_fiber
-  end
-
-  def self.set_main_fiber
-    @main_fiber = current
-  end
-
   set_main_fiber
+end
+
+# Exeption overrides
+class ::Exception
+  alias_method :orig_initialize, :initialize
+
+  def initialize(*args)
+    @__raising_fiber__ = Fiber.current
+    orig_initialize(*args)
+  end
+
+  alias_method :orig_backtrace, :backtrace
+  def backtrace
+    unless @backtrace_called
+      @backtrace_called = true
+      return orig_backtrace
+    end
+
+    if @__raising_fiber__
+      backtrace = orig_backtrace || []
+      sanitize(backtrace + @__raising_fiber__.caller)
+    else
+      sanitize(orig_backtrace)
+    end
+  end
+
+  POLYPHONY_DIR = File.expand_path(File.join(__dir__, '../..'))
+
+  def sanitize(backtrace)
+    backtrace.reject { |l| l[POLYPHONY_DIR] }
+  end
 end
 
 # Pulser abstraction for recurring operations

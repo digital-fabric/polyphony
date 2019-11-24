@@ -215,14 +215,12 @@ class CoprocessTest < MiniTest::Test
 
   def test_coprocess_exception_propagation
     # error is propagated to calling coprocess
-    cp1 = nil
-    cp2 = nil
     raised_error = nil
-    cp1 = spin do
-      cp2 = spin do
+    spin do
+      spin do
         raise 'foo'
       end
-      snooze # allow cp2 to run
+      snooze # allow nested coprocess to run before finishing
     end
     suspend
   rescue Exception => e
@@ -230,9 +228,23 @@ class CoprocessTest < MiniTest::Test
   ensure
     assert(raised_error)
     assert_equal('foo', raised_error.message)
-    cp1&.stop
-    cp2&.stop
   end
+end
+
+def test_exception_propagation_for_orphan_fiber
+  raised_error = nil
+  spin do
+    spin do
+      snooze
+      raise 'bar'
+    end
+  end
+  suspend
+rescue Exception => e
+  raised_error = e
+ensure
+  assert(raised_error)
+  assert_equal('bar', raised_error.message)
 end
 
 class MailboxTest < MiniTest::Test

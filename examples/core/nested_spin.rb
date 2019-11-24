@@ -8,7 +8,7 @@ spin do
   result = spin do
     spin do
       spin do
-        puts "Fiber count: #{Polyphony::FiberPool.stats[:total]}"
+        puts "Coprocess count: #{Polyphony::Coprocess.list.size}"
         sleep(1)
       end.await
     end.await

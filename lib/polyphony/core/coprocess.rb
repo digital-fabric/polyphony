@@ -2,10 +2,8 @@
 
 export_default :Coprocess
 
-import '../extensions/kernel'
-
+import '../extensions/core'
 Exceptions  = import './exceptions'
-FiberPool   = import './fiber_pool'
 
 # Encapsulates an asynchronous task
 class Coprocess
@@ -29,7 +27,7 @@ class Coprocess
   def run
     @calling_fiber = Fiber.current
 
-    @fiber = FiberPool.allocate { execute }
+    @fiber = Fiber.new { execute }
     @fiber.schedule
     @ran = true
     self
@@ -56,8 +54,12 @@ class Coprocess
     @awaiting_fiber&.schedule @result
     @when_done&.()
 
-    # if no awaiting fiber, raise any uncaught error
-    raise @result if uncaught_exception && !@awaiting_fiber
+    if uncaught_exception && !@awaiting_fiber
+      # if no awaiting fiber, raise any uncaught error by passing it to the
+      # calling fiber, or to the main fiber if the calling fiber
+      calling_fiber = @calling_fiber || Fiber.main
+      calling_fiber.transfer @result
+    end
   end
 
   def <<(value)

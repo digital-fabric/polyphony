@@ -5,7 +5,6 @@ export_default :StreamHandler
 require 'http/2'
 
 Request = import './request'
-FiberPool = import '../../core/fiber_pool'
 
 # Manages an HTTP 2 stream
 class StreamHandler
@@ -13,7 +12,7 @@ class StreamHandler
 
   def initialize(stream, &block)
     @stream = stream
-    @stream_fiber = FiberPool.allocate(&block)
+    @stream_fiber = Fiber.new(&block)
 
     # stream callbacks occur on connection fiber
     stream.on(:headers, &method(:on_headers))

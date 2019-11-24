@@ -54,7 +54,6 @@ Style/MethodMissingSuper:
 
 Style/GlobalVars:
   Exclude:
-    - lib/polyphony/core/fiber_pool.rb
     - lib/polyphony/auto_run.rb
     - examples/**/*.rb
 

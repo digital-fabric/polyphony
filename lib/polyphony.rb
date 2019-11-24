@@ -7,18 +7,17 @@ export_default :Polyphony
 require 'fiber'
 require_relative './gyro_ext'
 
-import('./polyphony/extensions/kernel')
-import('./polyphony/extensions/io')
+import './polyphony/extensions/core'
+import './polyphony/extensions/io'
 
 # Main Polyphony API
 module Polyphony
-  exceptions = import('./polyphony/core/exceptions')
+  exceptions = import './polyphony/core/exceptions'
   Cancel        = exceptions::Cancel
   MoveOn        = exceptions::MoveOn
 
-  Coprocess = import('./polyphony/core/coprocess')
-  FiberPool = import('./polyphony/core/fiber_pool')
-  Net       = import('./polyphony/net')
+  Coprocess = import './polyphony/core/coprocess'
+  Net       = import './polyphony/net'
 
   auto_import(
     CancelScope:  './polyphony/core/cancel_scope',
@@ -58,7 +57,6 @@ module Polyphony
     end
 
     def reset!
-      FiberPool.reset!
       Fiber.main.scheduled_value = nil
       Gyro.restart
     end
@@ -66,7 +64,6 @@ module Polyphony
     private
 
     def setup_forked_process
-      FiberPool.reset!
       Gyro.post_fork
       Fiber.set_main_fiber
       Fiber.current.coprocess = Coprocess.new(Fiber.current)

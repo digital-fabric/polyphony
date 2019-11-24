@@ -3,7 +3,6 @@
 require 'bundler/setup'
 require 'polyphony/auto_run'
 require 'polyphony/http'
-require 'polyphony/extensions/backtrace'
 
 opts = {
   reuse_addr:  true,
@@ -18,8 +17,7 @@ end
 
 spin do
   throttled_loop(1) do
-    Polyphony::FiberPool.compact
-    puts "Fiber count: #{Polyphony::FiberPool.stats[:total]}"
+    puts "Coprocess count: #{Polyphony::Coprocess.list.size}"
   end
 end
 
