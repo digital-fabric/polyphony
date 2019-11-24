@@ -91,7 +91,7 @@ Metrics/MethodLength:
 
 Metrics/ModuleLength:
   Exclude:
-    - lib/polyphony/extensions/kernel.rb
+    - lib/polyphony/extensions/core.rb
     - examples/**/*.rb
 
 Metrics/ClassLength:

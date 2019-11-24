@@ -1,3 +1,24 @@
+* Cleanup code using Rubocop
+* Update and cleanup examples
+* Remove fiber pool
+* Rename `CoprocessInterrupt` to `Interrupt`
+* Fix ResourcePool, Mutex, Thread, ThreadPool
+* Fix coprocess message passing behaviour
+* Add HTTP::Request#consume API
+* Use bundler 2.x
+* Remove separate parse loop fiber in HTTP 1, HTTP 2 adapters
+* Fix handling of exceptions in coprocesses
+* Implement synthetic, sanitized exception backtrace showing control flow across
+  fibers
+* Fix channels
+* Fix HTTP1 connection shutdown and error states
+* Workaround for IO#read without length
+* Rename `next_tick` to `defer`
+* Fix race condition in firing of deferred items, use linked list instead of
+  array for deferred items
+* Rename `EV` module to `Gyro`
+* Keep track of main fiber when forking
+* Add `<<` alias for `send_chunk` in HTTP::Request
 * Implement Socket#accept in C
 * Better conformance of rack adapter to rack spec (WIP)
 * Fix HTTP1 adapter
