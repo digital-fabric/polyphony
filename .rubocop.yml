@@ -55,6 +55,7 @@ Style/MethodMissingSuper:
 Style/GlobalVars:
   Exclude:
     - lib/polyphony/auto_run.rb
+    - lib/polyphony/extensions/core.rb
     - examples/**/*.rb
 
 Style/ClassVars:

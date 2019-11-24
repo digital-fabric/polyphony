@@ -12,10 +12,9 @@ writer = spin do
   end
 end
 
-reader = spin do
+spin do
   while (data = socket.readpartial(8192))
     STDOUT << 'received: ' + data
   end
   writer.interrupt
 end
-

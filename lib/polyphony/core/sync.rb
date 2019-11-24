@@ -8,7 +8,7 @@ class Mutex
     @waiting_fibers = []
   end
 
-  def synchronize(&block)
+  def synchronize
     fiber = Fiber.current
     @waiting_fibers << fiber
     suspend if @waiting_fibers.size > 1

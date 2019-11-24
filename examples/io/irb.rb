@@ -8,7 +8,10 @@ require 'irb'
 
 $counter = 0
 timer = spin do
-  throttled_loop(1) { $counter += 1; p Time.now }
+  throttled_loop(1) do
+    $counter += 1
+    p Time.now
+  end
 end
 
 at_exit { timer.stop }

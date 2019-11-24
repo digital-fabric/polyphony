@@ -26,7 +26,8 @@ move_on_after(3) do
   end
   puts 'done'
 end
-puts "got %<count>d (%<rate>0.1f reqs/s)" % {
+puts format(
+  'got %<count>d (%<rate>0.1f reqs/s)',
   count: results.size,
   rate:  results.size / (Time.now - t0)
-}
+)

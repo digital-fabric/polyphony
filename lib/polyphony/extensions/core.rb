@@ -35,7 +35,7 @@ class ::Fiber
     def main
       @main_fiber
     end
-  
+
     def set_main_fiber
       @main_fiber = current
     end

@@ -3,7 +3,7 @@
 require 'bundler/setup'
 require 'polyphony/auto_run'
 
-COUNT = 10000
+COUNT = 10_000
 
 class ::Fiber
   attr_accessor :tag
@@ -13,7 +13,7 @@ COUNTS = Hash.new { |h, k| h[k] = 0 }
 
 def t(tag)
   Fiber.current.tag = tag.to_s
-  COUNT.times do |i|
+  COUNT.times do
     COUNTS[tag] += 1
     snooze
   end
@@ -26,9 +26,7 @@ GC.disable
 cp1 = spin { t(:a) }
 cp2 = spin { t(:b) }
 
-while cp1.alive? || cp2.alive?
-  sleep 0.01
-end
+sleep 0.01 while cp1.alive? || cp2.alive?
 
-puts "counts:"
+puts 'counts:'
 p COUNTS

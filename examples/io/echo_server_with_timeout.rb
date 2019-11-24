@@ -13,7 +13,6 @@ begin
     client = server.accept
     client.write "Hi there\n"
     spin do
-      cancel_scope = nil
       move_on_after(5) do |scope|
         scope.when_cancelled do
           client.write "Disconnecting due to inactivity\n"

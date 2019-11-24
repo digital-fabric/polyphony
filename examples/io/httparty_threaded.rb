@@ -22,7 +22,8 @@ end
 sleep 3
 threads.each(&:kill)
 puts 'done'
-puts "got %<count>d (%<rate>0.1f reqs/s)" % {
+puts format(
+  'got %<count>d (%<rate>0.1f reqs/s)',
   count: results.size,
   rate:  results.size / (Time.now - t0)
-}
+)

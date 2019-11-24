@@ -3,10 +3,44 @@
 export_default :Coprocess
 
 import '../extensions/core'
-Exceptions  = import './exceptions'
+Exceptions = import './exceptions'
 
 # Encapsulates an asynchronous task
 class Coprocess
+  # inter-coprocess message passing
+  module Messaging
+    def <<(value)
+      if @receive_waiting && @fiber
+        @fiber&.schedule value
+      else
+        @queued_messages ||= []
+        @queued_messages << value
+      end
+      snooze
+    end
+
+    def receive
+      if !@queued_messages || @queued_messages&.empty?
+        wait_for_message
+      else
+        value = @queued_messages.shift
+        snooze
+        value
+      end
+    end
+
+    def wait_for_message
+      Gyro.ref
+      @receive_waiting = true
+      suspend
+    ensure
+      Gyro.unref
+      @receive_waiting = nil
+    end
+  end
+
+  include Messaging
+
   @@list = {}
 
   def self.list
@@ -54,41 +88,12 @@ class Coprocess
     @awaiting_fiber&.schedule @result
     @when_done&.()
 
-    if uncaught_exception && !@awaiting_fiber
-      # if no awaiting fiber, raise any uncaught error by passing it to the
-      # calling fiber, or to the main fiber if the calling fiber
-      calling_fiber = @calling_fiber || Fiber.main
-      calling_fiber.transfer @result
-    end
-  end
+    return unless uncaught_exception && !@awaiting_fiber
 
-  def <<(value)
-    if @receive_waiting && @fiber
-      @fiber&.schedule value
-    else
-      @queued_messages ||= []
-      @queued_messages << value
-    end
-    snooze
-  end
-
-  def receive
-    if !@queued_messages || @queued_messages&.empty?
-      wait_for_message
-    else
-      value = @queued_messages.shift
-      snooze
-      value
-    end
-  end
-
-  def wait_for_message
-    Gyro.ref
-    @receive_waiting = true
-    suspend
-  ensure
-    Gyro.unref
-    @receive_waiting = nil
+    # if no awaiting fiber, raise any uncaught error by passing it to the
+    # calling fiber, or to the main fiber if the calling fiber
+    calling_fiber = @calling_fiber || Fiber.main
+    calling_fiber.transfer @result
   end
 
   def alive?
@@ -102,11 +107,7 @@ class Coprocess
   ensure
     # If the awaiting fiber has been transferred an exception, the awaited fiber
     # might still be running, so we need to stop it
-    if @fiber
-      @fiber.schedule(Exceptions::MoveOn.new)
-      # wait for it to be stopped
-      # snooze
-    end
+    @fiber&.schedule(Exceptions::MoveOn.new)
   end
   alias_method :join, :await
 
