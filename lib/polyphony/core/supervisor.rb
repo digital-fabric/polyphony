@@ -52,7 +52,7 @@ class Supervisor
   def stop_all_tasks
     exception = Exceptions::MoveOn.new
     @coprocesses.each do |c|
-      defer { c.interrupt(exception) }
+      c.transfer(exception)
     end
   end
 

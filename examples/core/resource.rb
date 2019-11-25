@@ -14,6 +14,7 @@ def user(number)
     Pool.acquire do |r|
       puts "user #{number} #{r.inspect} >"
       sleep(0.05 + rand * 0.2)
+      raise if rand > 0.9
       # STDOUT << '.'
       # puts "#{number}: #{r.inspect}"
     end

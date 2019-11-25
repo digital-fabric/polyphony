@@ -37,7 +37,7 @@ class ResourcePool
   def dequeue
     return unless (resource = from_stock)
 
-    defer { @waiting[0]&.transfer(resource) }
+    @waiting[0]&.schedule resource
   end
 
   def from_stock

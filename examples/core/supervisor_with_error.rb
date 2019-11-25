@@ -2,11 +2,10 @@
 
 require 'bundler/setup'
 require 'polyphony/auto_run'
-require 'polyphony/extensions/backtrace'
 
 def my_sleep(t)
   sleep(t)
-  raise 'blah'
+  raise 'foo'
 end
 
 spin do

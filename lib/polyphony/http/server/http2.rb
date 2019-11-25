@@ -16,10 +16,10 @@ class Protocol
   def initialize(conn, opts, upgrade_headers = nil)
     @conn = conn
     @opts = opts
+    @upgrade_headers = upgrade_headers
 
     @interface = ::HTTP2::Server.new
     @interface.on(:frame) { |bytes| @conn << bytes }
-    defer { upgrade(upgrade_headers) } if upgrade_headers
   end
 
   # request API
@@ -31,15 +31,18 @@ class Protocol
 
   HTTP
 
-  def upgrade(headers)
-    settings = headers['HTTP2-Settings']
+  def upgrade
     @conn << UPGRADE_MESSAGE
-    @interface.upgrade(settings, headers, '')
+    settings = @upgrade_headers['HTTP2-Settings']
+    @interface.upgrade(settings, @upgrade_headers, '')
+  ensure
+    @upgrade_headers = nil
   end
 
   # Iterates over incoming requests
   def each(&block)
     @interface.on(:stream) { |stream| Stream.new(stream, &block) }
+    upgrade if @upgrade_headers
 
     while (data = @conn.readpartial(8192))
       @interface << data
