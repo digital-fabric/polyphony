@@ -87,10 +87,10 @@ class ::Exception
     end
   end
 
-  POLYPHONY_DIR = File.expand_path(File.join(__dir__, '../..'))
+  POLYPHONY_DIR = File.expand_path(File.join(__dir__, '..'))
 
   def sanitize(backtrace)
-    return backtrace unless ::Exception.__disable_sanitized_backtrace__
+    return backtrace if ::Exception.__disable_sanitized_backtrace__
 
     backtrace.reject { |l| l[POLYPHONY_DIR] }
   end
