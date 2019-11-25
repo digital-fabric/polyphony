@@ -12,7 +12,7 @@
 > other.
 
 **Note**: Polyphony is experimental software. It is designed to work with recent
-versions of Ruby (2.5 and newer) and supports Linux and MacOS only.
+versions of Ruby (2.6 and newer) and supports Linux and MacOS only.
 
 ## What is Polyphony
 
@@ -42,6 +42,7 @@ takes care of context-switching automatically whenever a blocking call like
   coprocesses, supervisors, cancel scopes, throttling, resource pools etc.
 - Code can use native networking classes and libraries, growing support for
   third-party gems such as `pg` and `redis`.
+- Use stdlib classes such as `TCPServer`, `TCPSocket` and 
 - HTTP 1 / HTTP 2 client agent with persistent connections.
 - Competitive performance and scalability characteristics, in terms of both
   throughput and memory consumption.
