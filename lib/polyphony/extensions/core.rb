@@ -101,14 +101,10 @@ class Pulser
   def initialize(freq)
     fiber = Fiber.current
     @timer = Gyro::Timer.new(freq, freq)
-    @timer.start { fiber.transfer freq }
   end
 
   def await
-    suspend
-  rescue Exception => e
-    @timer.stop
-    raise e
+    @timer.await
   end
 
   def stop

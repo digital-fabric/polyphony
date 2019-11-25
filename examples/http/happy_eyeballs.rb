@@ -6,11 +6,13 @@
 require 'bundler/setup'
 require 'polyphony/http'
 
-async def try_connect(target, supervisor)
+def try_connect(target, supervisor)
   puts "trying #{target[2]}"
   socket = Polyphony::Net.tcp_connect(target[2], 80)
+  # connection successful
   supervisor.stop!([target[2], socket])
-      rescue IOError, SystemCallError
+rescue IOError, SystemCallError
+  # ignore error
 end
 
 def happy_eyeballs(hostname, port, max_wait_time: 0.025)
@@ -20,7 +22,7 @@ def happy_eyeballs(hostname, port, max_wait_time: 0.025)
     success = supervise do |supervisor|
       targets.each_with_index do |t, idx|
         sleep(max_wait_time) if idx > 0
-        supervisor.spin try_connect(t, supervisor)
+        supervisor.spin { try_connect(t, supervisor) }
       end
     end
     if success
