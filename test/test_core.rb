@@ -172,3 +172,48 @@ class SupervisorTest < MiniTest::Test
     assert_equal([0, 1, 2], result)
   end
 end
+
+class ExceptionTest < MiniTest::Test
+  def test_cross_fiber_backtrace
+    error = nil
+    frames = []
+    spin do
+      spin do
+        spin do
+          raise 'foo'
+        end
+        suspend
+      rescue => e
+        frames << 2
+        raise e
+      end
+      suspend
+    rescue => e
+      frames << 3
+      raise e
+    end
+    4.times { snooze }
+  rescue Exception => e
+    error = e
+  ensure
+    assert_kind_of RuntimeError, error
+    assert_equal [2, 3], frames
+  end
+
+  def test_cross_fiber_backtrace_with_dead_calling_fiber
+    error = nil
+    frames = []
+    spin do
+      spin do
+        spin do
+          raise 'foo'
+        end
+      end
+    end
+    4.times { snooze }
+  rescue Exception => e
+    error = e
+  ensure
+    assert_kind_of RuntimeError, error
+  end
+end

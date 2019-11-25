@@ -25,7 +25,7 @@ class ::Fiber
       fiber = orig_new do |v|
         block.call(v)
       ensure
-        $__reactor_fiber__.transfer if $__reactor_fiber__.alive?
+        $__reactor_fiber__.safe_transfer if $__reactor_fiber__.alive?
       end
       fiber.__calling_fiber__ = calling_fiber
       fiber.__caller__ = fiber_caller
@@ -61,6 +61,10 @@ end
 
 # Exeption overrides
 class ::Exception
+  class << self
+    attr_accessor :__disable_sanitized_backtrace__
+  end
+
   alias_method :orig_initialize, :initialize
 
   def initialize(*args)
@@ -68,10 +72,10 @@ class ::Exception
     orig_initialize(*args)
   end
 
-  alias_method :orig_backtrace, :backtrace
+  alias_method_once :orig_backtrace, :backtrace
   def backtrace
-    unless @backtrace_called
-      @backtrace_called = true
+    unless @first_backtrace_call
+      @first_backtrace_call = true
       return orig_backtrace
     end
 
@@ -86,6 +90,8 @@ class ::Exception
   POLYPHONY_DIR = File.expand_path(File.join(__dir__, '../..'))
 
   def sanitize(backtrace)
+    return backtrace unless ::Exception.__disable_sanitized_backtrace__
+
     backtrace.reject { |l| l[POLYPHONY_DIR] }
   end
 end

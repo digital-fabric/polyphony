@@ -10,6 +10,8 @@ require 'fileutils'
 
 require_relative './eg'
 
+::Exception.__disable_sanitized_backtrace__ = true
+
 Minitest::Reporters.use! [
   Minitest::Reporters::SpecReporter.new
 ]
