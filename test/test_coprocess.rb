@@ -5,7 +5,7 @@ require_relative 'helper'
 STDOUT.sync = true
 
 class CoprocessTest < MiniTest::Test
-  def test_that_main_fiber_has_associated_coprocess
+  def test_that_root_fiber_has_associated_coprocess
     assert_equal(Fiber.current, Polyphony::Coprocess.current.fiber)
     assert_equal(Polyphony::Coprocess.current, Fiber.current.coprocess)
   end
@@ -355,7 +355,7 @@ class MailboxTest < MiniTest::Test
   end
 
   def test_current
-    assert_equal Fiber.main.coprocess, Polyphony::Coprocess.current
+    assert_equal Fiber.root.coprocess, Polyphony::Coprocess.current
 
     value = nil
     coproc = spin do

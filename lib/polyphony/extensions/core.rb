@@ -32,12 +32,12 @@ class ::Fiber
       fiber
     end
 
-    def main
-      @main_fiber
+    def root
+      @root_fiber
     end
 
-    def set_main_fiber
-      @main_fiber = current
+    def set_root_fiber
+      @root_fiber = current
     end
     end
 
@@ -54,9 +54,9 @@ class ::Fiber
     @cancelled
   end
 
-  # Associate a (pseudo-)coprocess with the main fiber
+  # Associate a (pseudo-)coprocess with the root fiber
   current.coprocess = Coprocess.new(current)
-  set_main_fiber
+  set_root_fiber
 end
 
 # Exeption overrides

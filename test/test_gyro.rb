@@ -27,7 +27,7 @@ class IdleTest < MiniTest::Test
     f = Fiber.new do
       values << :foo
       # We *have* to suspend the fiber in order to yield to the reactor,
-      # otherwise control will transfer back to main fiber.
+      # otherwise control will transfer back to root fiber.
       suspend
     end
     assert_equal [], values

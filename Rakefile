@@ -12,9 +12,9 @@ end
 
 task :default => [:compile, :test]
 task :test do
-  Dir.glob('./test/test_*.rb').each { |file| require(file) }
+  exec 'ruby test/run.rb'
 end
 
-# task default: %w[compile]# spec rubocop]
+task default: %w[compile]
 
 CLEAN.include "**/*.o", "**/*.so", "**/*.bundle", "**/*.jar", "pkg", "tmp"

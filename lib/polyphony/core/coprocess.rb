@@ -91,8 +91,8 @@ class Coprocess
     return unless uncaught_exception && !@awaiting_fiber
 
     # if no awaiting fiber, raise any uncaught error by passing it to the
-    # calling fiber, or to the main fiber if the calling fiber
-    calling_fiber = @calling_fiber || Fiber.main
+    # calling fiber, or to the root fiber if the calling fiber
+    calling_fiber = @calling_fiber || Fiber.root
     calling_fiber.transfer @result
   end
 
