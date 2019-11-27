@@ -4,7 +4,6 @@ require 'fiber'
 require 'timeout'
 require 'open3'
 
-CancelScope = import('../core/cancel_scope')
 Coprocess   = import('../core/coprocess')
 Exceptions  = import('../core/exceptions')
 Supervisor  = import('../core/supervisor')
@@ -127,8 +126,13 @@ module ::Kernel
     Gyro::Timer.new(interval, 0).start(&block)
   end
 
-  def cancel_after(duration, &block)
-    CancelScope.new(timeout: duration, mode: :cancel).(&block)
+  def cancel_after(interval, &block)
+    timer = Gyro::Timer.new(interval, 0)
+    fiber = Fiber.current
+    timer.start { fiber.schedule Exceptions::Cancel.new }
+    block.call
+  ensure
+    timer.stop
   end
 
   def spin(&block)
@@ -143,8 +147,15 @@ module ::Kernel
     Gyro::Timer.new(freq, freq).start(&block)
   end
 
-  def move_on_after(duration, &block)
-    CancelScope.new(timeout: duration).(&block)
+  def move_on_after(interval, with_value: nil, &block)
+    timer = Gyro::Timer.new(interval, 0)
+    fiber = Fiber.current
+    timer.start { fiber.schedule Exceptions::MoveOn.new(nil, with_value) }
+    block.call
+  rescue Exceptions::MoveOn => e
+    e.value
+  ensure
+    timer.stop
   end
 
   def pulse(freq)
@@ -178,10 +189,6 @@ module ::Kernel
 
   def throttle(rate)
     Throttler.new(rate)
-  end
-
-  def timeout(duration, opts = {}, &block)
-    CancelScope.new(**opts, timeout: duration).(&block)
   end
 
   # patches
