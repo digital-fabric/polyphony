@@ -94,38 +94,38 @@ class CancelScopeTest < Minitest::Test
     assert_equal(:cancelled, result)
   end
 
-  def test_that_cancel_scopes_can_be_nested
-    inner_result = nil
-    outer_result = nil
-    spin do
-      move_on_after(0.01) do
-        move_on_after(0.02) do
-          sleep(1000)
-        end
-        inner_result = 42
-      end
-      outer_result = 42
-    end
-    suspend
-    assert_nil(inner_result)
-    assert_equal(42, outer_result)
+  # def test_that_cancel_scopes_can_be_nested
+  #   inner_result = nil
+  #   outer_result = nil
+  #   spin do
+  #     Polyphony::CancelScope.new(timeout: 0.01) do
+  #       Polyphony::CancelScope.new(timeout: 0.02) do
+  #         sleep(1000)
+  #       end
+  #       inner_result = 42
+  #     end
+  #     outer_result = 42
+  #   end
+  #   suspend
+  #   assert_nil(inner_result)
+  #   assert_equal(42, outer_result)
 
-    Polyphony.reset!
+  #   Polyphony.reset!
 
-    outer_result = nil
-    spin do
-      move_on_after(0.02) do
-        move_on_after(0.01) do
-          sleep(1000)
-        end
-        inner_result = 42
-      end
-      outer_result = 42
-    end
-    suspend
-    assert_equal(42, inner_result)
-    assert_equal(42, outer_result)
-  end
+  #   outer_result = nil
+  #   spin do
+  #     move_on_after(0.02) do
+  #       move_on_after(0.01) do
+  #         sleep(1000)
+  #       end
+  #       inner_result = 42
+  #     end
+  #     outer_result = 42
+  #   end
+  #   suspend
+  #   assert_equal(42, inner_result)
+  #   assert_equal(42, outer_result)
+  # end
 end
 
 class SupervisorTest < MiniTest::Test
