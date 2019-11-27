@@ -285,9 +285,7 @@ class MailboxTest < MiniTest::Test
     coproc = spin do
       snooze until flag
     end
-    coproc.when_done {
-      values << 42
-    }
+    coproc.when_done { values << 42 }
 
     snooze
     assert values.empty?

@@ -1,3 +1,9 @@
+* Refactor and improve CancelScope, ResourcePool
+* Reimplement cancel_after, move_on_after using plain timers
+* Use Timer#await instead of Timer#start in Pulser
+* Rename Fiber.main to Fiber.root
+* Replace use of defer with proper fiber scheduling
+* Improve Coprocess resume, interrupt, cancel methods
 * Cleanup code using Rubocop
 * Update and cleanup examples
 * Remove fiber pool

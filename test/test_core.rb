@@ -183,12 +183,12 @@ class ExceptionTest < MiniTest::Test
           raise 'foo'
         end
         suspend
-      rescue => e
+      rescue Exception => e
         frames << 2
         raise e
       end
       suspend
-    rescue => e
+    rescue Exception => e
       frames << 3
       raise e
     end
@@ -202,7 +202,6 @@ class ExceptionTest < MiniTest::Test
 
   def test_cross_fiber_backtrace_with_dead_calling_fiber
     error = nil
-    frames = []
     spin do
       spin do
         spin do

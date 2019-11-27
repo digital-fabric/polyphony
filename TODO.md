@@ -2,9 +2,9 @@
 
 ## 0.20 Fix segfaults and rewrite C code
 
-- Update, cleanup examples
-- Remove `async` API stuff, async-related examples
-- Annotate examples
+- Cull, edit and annotate examples
+- Work better mechanism supervising multiple coprocesses (`when_done` feels a
+  bit hacky)
 
 ## 0.21 REPL usage, coprocess introspection, monitoring
 

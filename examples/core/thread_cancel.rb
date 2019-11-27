@@ -14,7 +14,6 @@ def lengthy_op
 end
 
 spin do
-  t0 = Time.now
   cancel_after(0.1) do
     data = Polyphony::Thread.spin { lengthy_op }.await
     puts "slept #{data} times"

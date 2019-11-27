@@ -23,5 +23,5 @@ end
 
 at_exit { timer.stop }
 
-puts "try typing $counter to see the counter incremented in the background"
+puts 'try typing $counter to see the counter incremented in the background'
 IRB.start

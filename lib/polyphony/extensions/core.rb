@@ -98,7 +98,6 @@ end
 # Pulser abstraction for recurring operations
 class Pulser
   def initialize(freq)
-    fiber = Fiber.current
     @timer = Gyro::Timer.new(freq, freq)
   end
 

@@ -14,7 +14,7 @@ class CancelScope
   end
 
   def error_class
-    @opts[:mode] == :cancel ?  Exceptions::Cancel : Exceptions::MoveOn
+    @opts[:mode] == :cancel ? Exceptions::Cancel : Exceptions::MoveOn
   end
 
   def cancel!
