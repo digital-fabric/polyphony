@@ -10,4 +10,4 @@
 ## Technical overview
 
 * [Fiber scheduling](technical-overview/fiber-scheduling.md)
-* [Error handling](technical-overview/error-handling.md)
+* [Exception handling](technical-overview/exception-handling.md)

@@ -46,7 +46,7 @@ received upon being resumed is checked. If the value is an exception, it will
 be raised in the context of the waiting fiber, effectively signalling that the
 blocking operation has been unsuccessful and allowing exception handling using
 the usual mechanisms offered by Ruby, namely `rescue` and `ensure` (see also
-[exception handling](exception-handling.md)).
+[exception handling](technical-overview/exception-handling.md)).
 
 Here's an siplified example of how this mechanism works when reading from an I/O
 object (the actual code for I/O reading in Polyphony is written in C and a bit
