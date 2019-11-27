@@ -1,6 +1,6 @@
 # Roadmap:
 
-## 0.20 Fix segfaults and rewrite C code
+## 0.20.1
 
 - Cull, edit and annotate examples
 - Work better mechanism supervising multiple coprocesses (`when_done` feels a

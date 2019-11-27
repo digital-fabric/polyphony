@@ -1,3 +1,6 @@
+0.20 2019-11-27
+---------------
+
 * Refactor and improve CancelScope, ResourcePool
 * Reimplement cancel_after, move_on_after using plain timers
 * Use Timer#await instead of Timer#start in Pulser
