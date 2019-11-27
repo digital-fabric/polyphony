@@ -8,19 +8,19 @@ Exceptions = import('./exceptions')
 
 # A cancellation scope that can be used to cancel an asynchronous task
 class CancelScope
-  def initialize(opts = {})
+  def initialize(opts = {}, &block)
     @opts = opts
-    @error_class = if @opts[:mode] == :cancel
-                     Exceptions::Cancel
-                   else
-                     Exceptions::MoveOn
-                   end
+    call(&block) if block
+  end
+
+  def error_class
+    @opts[:mode] == :cancel ?  Exceptions::Cancel : Exceptions::MoveOn
   end
 
   def cancel!
     @cancelled = true
     @fiber.cancelled = true
-    @fiber.transfer @error_class.new(self, @opts[:value])
+    @fiber.transfer error_class.new(self, @opts[:value])
   end
 
   def start_timeout
@@ -45,11 +45,11 @@ class CancelScope
     e.scope == self ? e.value : raise(e)
   ensure
     @timeout&.stop
-    protect(&@when_cancelled) if @cancelled && @when_cancelled
+    protect(&@on_cancel) if @cancelled && @on_cancel
   end
 
-  def when_cancelled(&block)
-    @when_cancelled = block
+  def on_cancel(&block)
+    @on_cancel = block
   end
 
   def cancelled?
