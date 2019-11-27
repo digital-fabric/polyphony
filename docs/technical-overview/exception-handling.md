@@ -66,3 +66,29 @@ can be disabled by setting the `Exception.__disable_sanitized_backtrace__` flag:
 Exception.__disable_sanitized_backtrace__ = true
 ...
 ```
+
+## Cleaning up after exceptions
+
+A major issue when handling exceptions is cleaning up - freeing up resources
+that have been allocated, cancelling ongoing operations, etc. Polyphony allows
+using the normal `ensure` statement for cleaning up. Have a look at Polyphony's
+implementation of `Kernel#sleep`:
+
+```ruby
+def sleep(duration)
+  timer = Gyro::Timer.new(duration, 0)
+  timer.await
+ensure
+  timer.stop
+end
+```
+
+This method creates a one-shot timer with the given duration and then suspends
+the current fiber, waiting for the timer to fire and then resume the fiber.
+While the awaiting fiber is suspended, other operations might be going on, which
+might interrupt the `sleep` operation by scheduling the awaiting fiber with an
+exception, for example a `MoveOn` or a `Cancel` exception. For this reason, we
+need to *ensure* that the timer will be stopped, regardless of whether it has
+fired or not. We call `timer.stop` inside an ensure block, thus ensuring that
+the timer will have stopped once the awaiting fiber has resumed, even if it has
+not fired.
