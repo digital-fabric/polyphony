@@ -18,26 +18,34 @@ class ResourcePool
   end
 
   def acquire
-    resource = wait
+    resource = wait_for_resource
+    return unless resource
+
     yield resource
   ensure
-    @available << resource if resource
-    dequeue unless @waiting.empty?
+    dequeue(resource) || return_to_stock(resource) if resource
   end
 
-  def wait
+  def wait_for_resource
     fiber = Fiber.current
     @waiting << fiber
-    dequeue
+    ready_resource = from_stock
+    return ready_resource if ready_resource
+
     suspend
   ensure
     @waiting.delete(fiber)
   end
 
-  def dequeue
-    return unless (resource = from_stock)
+  def dequeue(resource)
+    return nil if @waiting.empty?
 
-    @waiting[0]&.schedule resource
+    @waiting[0]&.schedule(resource)
+    true
+  end
+
+  def return_to_stock(resource)
+    @available << resource
   end
 
   def from_stock

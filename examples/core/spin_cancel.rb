@@ -4,14 +4,14 @@ require 'bundler/setup'
 require 'polyphony/auto_run'
 
 spin do
-  puts 'going to sleep...'
   cancel_after(1) do
     spin do
+      puts 'going to sleep...'
       sleep(2)
+    ensure
+      puts 'woke up'
     end.await
   end
 rescue Polyphony::Cancel => e
   puts "got error: #{e}"
-ensure
-  puts 'woke up'
 end

@@ -6,25 +6,21 @@ require 'polyphony/auto_run'
 @op_count = 0
 
 def lengthy_op
-  @op_count += 1
-  acc = 0
-  count = 0
   100.times do
-    acc += IO.read(__FILE__).bytesize
-    count += 1
-    p count
+    sleep 0.01
+    @op_count += 1
   end
-  acc / count
+  @op_count
 end
 
 spin do
   t0 = Time.now
-  cancel_after(0.01) do
+  cancel_after(0.1) do
     data = Polyphony::Thread.spin { lengthy_op }.await
-    puts "read #{data.bytesize} bytes (#{Time.now - t0}s)"
+    puts "slept #{data} times"
   end
 rescue Exception => e
   puts "error: #{e}"
 ensure
-  p @op_count
+  puts "slept #{@op_count} times"
 end

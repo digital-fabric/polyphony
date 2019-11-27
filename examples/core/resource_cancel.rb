@@ -10,23 +10,20 @@ end
 
 def user(number)
   loop do
-    move_on_after(0.2) do |scope|
-      scope.when_cancelled do
-        puts "#{number} (cancelled)"
-      end
-
+    Polyphony::CancelScope.new(timeout: 0.2) do |scope|
+      scope.on_cancel { puts "#{number} (cancelled)" }
       Pool.acquire do |r|
         scope.disable
         puts "#{number} #{r.inspect} >"
-        sleep(0.4 + rand * 0.2)
+        sleep(0.1 + rand * 0.2)
         puts "#{number} #{r.inspect} <"
       end
     end
   end
 end
 
-6.times do |x|
-  spin { user(x) }
+10.times do |x|
+  spin { user(x + 1) }
 end
 
 t0 = Time.now
