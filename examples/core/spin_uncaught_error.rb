@@ -2,7 +2,6 @@
 
 require 'bundler/setup'
 require 'polyphony/auto_run'
-require 'polyphony/extensions/backtrace'
 
 def foo
   spin do
