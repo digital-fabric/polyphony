@@ -11,4 +11,5 @@
 
 * [Concurrency the Easy Way](technical-overview/concurrency.md)
 * [How Fibers are Scheduled](technical-overview/fiber-scheduling.md)
-* [Exception handling](technical-overview/exception-handling.md)
+* [Exception Handling](technical-overview/exception-handling.md)
+* [Frequently Asked Questions](technical-overview/faq.md)
