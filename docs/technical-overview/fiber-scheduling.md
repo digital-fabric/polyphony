@@ -1,4 +1,4 @@
-# Fiber Scheduling
+# How Fibers Are Scheduled
 
 Ruby provides two mechanisms for transferring control between fibers:
 `Fiber#resume` / `Fiber.yield` and `Fiber#transfer`. The first is inherently asymmetric and is famously used
