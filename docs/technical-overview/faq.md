@@ -66,7 +66,29 @@ waiting for a message, then responding to the client. In addition, we can use
 an `ensure` block to correctly cleanup even if exceptions are raised while
 handling the client.
 
-### Why is awaiting implicit? Why not use async/await?
+Using callbacks also makes it much more difficult to debug your program. when
+callbacks are used to handle events, the stack trace will necessarily start at
+the reactor, and thus lack any information about how the event came to be in
+the first place. Contrast this with Polyphony, where stack traces show the 
+entire *sequence of events* leading up to the present point in the code.
+
+In conclusion:
+
+- Callbacks cause the splitting of logic into disjunct chunks.
+- Callbacks do not provide a good error handling solution.
+- Callbacks often lead to code bloat.
+- Callbacks are harder to debug.
+
+### If callbacks suck, why not use promises?
+
+Promises have gained a lot of traction during the last few years as an  
+alternative to callbacks, above all in the Javascript community. While promises
+have been at a certain point considered for use in Polyphony, they were not
+found to offer enough of a benefit. Promises still cause split logic, are
+quite verbose and provide a non-native exception handling mechanism. In
+addition, they do not make it easier to debug your code.
+
+### Why is awaiting implicit? Why not use explicit async/await?
 
 Actually, async/await was contemplated while developing Polyphony, but at a
 certain point it was decided to abandon these methods / decorators in favor of
@@ -77,4 +99,3 @@ stdlib classes needs to be wrapped in boilerplate.
 Instead, we have decided to make blocking operations implicit and thus allow the
 use of common APIs such as `Kernel#sleep` or `IO.popen` in a transparent manner.
 After all, these APIs in their stock form block execution just as well.
-
