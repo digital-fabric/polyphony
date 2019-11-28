@@ -1,10 +1,10 @@
 # Concurrency the Easy Way
 
-Concurrency is a major consideration for the modern programmer. Nowadays
-applications and digital platforms are expected to do multiple things at once:
-serve multiple clients, process multiple background jobs, talk to multiple
-external services. Concurrency is the property of our programming environment
-allowing us to schedule and control multiple ongoing operations.
+Concurrency is a major consideration for modern programmers. Applications and
+digital platforms are nowadays expected to do multiple things at once: serve
+multiple clients, process multiple background jobs, talk to multiple external
+services. Concurrency is the property of our programming environment allowing us
+to schedule and control multiple ongoing operations.
 
 Traditionally, concurrency has been achieved by using multiple processes or
 threads. Both approaches have proven problematic. Processes consume relatively a

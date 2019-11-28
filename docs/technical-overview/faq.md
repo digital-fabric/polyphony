@@ -92,9 +92,9 @@ addition, they do not make it easier to debug your code.
 
 Actually, async/await was contemplated while developing Polyphony, but at a
 certain point it was decided to abandon these methods / decorators in favor of
-a more implicit approach. The first and most crucial issue with async/await is
-that it prevents the use of anything from Ruby's stdlib. Any operation involving
-stdlib classes needs to be wrapped in boilerplate.
+a more implicit approach. The most crucial issue with async/await is that it 
+prevents the use of anything from Ruby's stdlib. Any operation involving stdlib
+classes needs to be wrapped in boilerplate.
 
 Instead, we have decided to make blocking operations implicit and thus allow the
 use of common APIs such as `Kernel#sleep` or `IO.popen` in a transparent manner.
