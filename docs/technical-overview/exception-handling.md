@@ -92,3 +92,35 @@ need to *ensure* that the timer will be stopped, regardless of whether it has
 fired or not. We call `timer.stop` inside an ensure block, thus ensuring that
 the timer will have stopped once the awaiting fiber has resumed, even if it has
 not fired.
+
+## Bubbling Up - A Robust Solution for Uncaught Exceptions
+
+One of the "annoying" things about exceptions is that for them to be useful, you
+have to intercept them (using `rescue`). If you forget to do that, you'll end up
+with uncaught exceptions that can wreak havoc. For example, by default a Ruby
+`Thread` in which an exception was raised without being caught, will simply
+terminate with the exception silently swallowed.
+
+To prevent the same from happening with fibers, Polyphony provides a mechanism
+that lets uncaught exceptions bubble up through the chain of calling fibers.
+Let's discuss the following example:
+
+```ruby
+require 'polyphony'
+
+spin do
+  spin do
+    spin do
+      spin do
+        raise 'foo'
+      end.await
+    end.await
+  end.await
+end.await
+```
+
+In this example, there are four coprocesses, nested one within the other. An
+exception is raised in the inner most coprocess, and having no exception
+handler, will bubble up through the different enclosing coprocesses, until 
+reaching the top-most level, that of the root fiber, at which point the
+exception will cause the program to halt and print an error message.
