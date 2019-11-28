@@ -33,9 +33,9 @@ This form of concurrency, called cooperative concurrency (in contrast to
 pre-emptive concurrency, like threads and processes), offers many advantages,
 especially for applications that are
 [I/O bound](https://en.wikipedia.org/wiki/I/O_bound). Fibers are very
-lightweight (starting at about 20KB), can be switched faster than threads or
-processes, and literally millions of them can be created on a single system -
-the only limiting factor is available memory.
+lightweight (starting at about 20KB), can be context-switched faster than
+threads or processes, and literally millions of them can be created on a
+single system - the only limiting factor is available memory.
 
 Polyphony takes Ruby's fibers and adds a way to schedule and switch between
 fibers automatically whenever a blocking operation is started, such as waiting
@@ -44,6 +44,13 @@ readable, or waiting for a timer to elapse. In addition, Polyphony patches the
 stock Ruby classes to support its concurrency model, letting developers use all
 of Ruby's stdlib, for example `Net::HTTP` and `Mail` while reaping the benefits
 of lightweight, highly performant, fiber-based concurrency.
+
+Writing concurrent applications using Polyphony's fiber-based concurrency model
+offers a significant performance advantage. Computational tasks can be broken
+down into many fine-grained concurrent operations that cost very little in
+memory and context-switching time. More importantly, this concurrency model lets
+developers express their ideas in a sequential manner, leading to source code
+that is easy to read and reason about.
 
 ## Coprocesses - Polyphony's basic unit of concurrency
 
@@ -83,3 +90,15 @@ Some other constructs offered by Polyphony:
   resources, for example a pool of database connections.
 - `Throttler` - used for throttling repeating operations, for example throttling
   access to a shared resource, or throttling incoming requests.
+
+## A Compelling Concurrency Solution for Ruby
+
+> The goal of Ruby is to make programmers happy.
+
+  — Yukihiro “Matz” Matsumoto
+
+Polyphony's goal is to make programmers even happier by offering them an easy
+way to write concurrent applications in Ruby. Polyphony aims to show that Ruby
+can be used for developing sufficiently high-performance applications, while
+offering all the advantages of Ruby, with source code that is easy to read and
+understand.
