@@ -1,6 +1,6 @@
 # Table of contents
 
-* [Introduction](../README.md)
+* [Polyphony - Easy Concurrency for Ruby](../README.md)
 
 ## Getting Started
 
@@ -13,3 +13,4 @@
 * [How Fibers are Scheduled](technical-overview/fiber-scheduling.md)
 * [Exception Handling](technical-overview/exception-handling.md)
 * [Frequently Asked Questions](technical-overview/faq.md)
+
