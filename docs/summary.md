@@ -2,10 +2,7 @@
 
 * [Polyphony - Easy Concurrency for Ruby](../README.md)
 
-## Getting Started
-
-* [Installing](getting-started/getting-started.md)
-* [Tutorial](getting-started/tutorial.md)
+## [Getting Started](getting-started/getting-started.md)
 
 ## Technical overview
 
