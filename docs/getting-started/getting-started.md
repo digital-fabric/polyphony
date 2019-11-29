@@ -1,4 +1,4 @@
-# Installing
+# Getting Started
 
 ## Installing
 
