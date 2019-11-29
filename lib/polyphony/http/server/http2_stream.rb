@@ -5,6 +5,7 @@ export_default :StreamHandler
 require 'http/2'
 
 Request = import './request'
+Exceptions = import '../../core/exceptions'
 
 # Manages an HTTP 2 stream
 class StreamHandler
@@ -12,12 +13,36 @@ class StreamHandler
 
   def initialize(stream, &block)
     @stream = stream
-    @stream_fiber = Fiber.new(&block)
+    @calling_fiber = Fiber.current
+    @stream_fiber = Fiber.new { |req| handle_request(req, &block) }
 
-    # stream callbacks occur on connection fiber
+    # Stream callbacks occur on the connection fiber (see HTTP2::Protocol#each).
+    # The request handler is run on a separate fiber for each stream, allowing
+    # concurrent handling of incoming requests on the same HTTP/2 connection.
+    #
+    # The different stream adapter APIs suspend the stream fiber, waiting for
+    # stream callbacks to be called. The callbacks, in turn, transfer control to
+    # the stream fiber, effectively causing the return of the adapter API calls.
+    #
+    # Note: the request handler is run once headers are received. Reading the
+    # request body, if present, is at the discretion of the request handler.
+    # This mirrors the behaviour of the HTTP/1 adapter.
     stream.on(:headers, &method(:on_headers))
     stream.on(:data, &method(:on_data))
     stream.on(:half_close, &method(:on_half_close))
+  end
+
+  def handle_request(request, &block)
+    error = nil
+    block.(request)
+    @calling_fiber.transfer
+  rescue Exceptions::MoveOn
+    # ignore
+  rescue Exception => e
+    error = e
+  ensure
+    @done = true
+    @calling_fiber.transfer error
   end
 
   def on_headers(headers)
@@ -100,5 +125,12 @@ class StreamHandler
       headers[':status'] ||= '204'
       @stream.headers(headers, end_stream: true)
     end
+  end
+
+  def stop
+    return if @done
+
+    @stream.close
+    @stream_fiber.schedule(Polyphony::MoveOn.new)
   end
 end

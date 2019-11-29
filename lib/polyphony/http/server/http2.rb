@@ -19,10 +19,16 @@ class Protocol
     @upgrade_headers = upgrade_headers
 
     @interface = ::HTTP2::Server.new
-    @interface.on(:frame) { |bytes| @conn << bytes }
+    @connection_fiber = Fiber.current
+    @interface.on(:frame, &method(:send_frame))
+    @streams = {}
   end
 
-  # request API
+  def send_frame(data)
+    @conn << data
+  rescue Exception => e
+    @connection_fiber.transfer e
+  end
 
   UPGRADE_MESSAGE = <<~HTTP.gsub("\n", "\r\n")
     HTTP/1.1 101 Switching Protocols
@@ -34,6 +40,7 @@ class Protocol
   def upgrade
     @conn << UPGRADE_MESSAGE
     settings = @upgrade_headers['HTTP2-Settings']
+    Fiber.current.schedule(nil)
     @interface.upgrade(settings, @upgrade_headers, '')
   ensure
     @upgrade_headers = nil
@@ -41,7 +48,7 @@ class Protocol
 
   # Iterates over incoming requests
   def each(&block)
-    @interface.on(:stream) { |stream| Stream.new(stream, &block) }
+    @interface.on(:stream) { |stream| start_stream(stream, &block) }
     upgrade if @upgrade_headers
 
     while (data = @conn.readpartial(8192))
@@ -51,8 +58,17 @@ class Protocol
   rescue SystemCallError, IOError
     # ignore
   ensure
-    # release references to various objects
+    finalize_client_loop
+  end
+
+  def start_stream(stream, &block)
+    stream = Stream.new(stream, &block)
+    @streams[stream] = true
+  end
+
+  def finalize_client_loop
     @interface = nil
+    @streams.each_key(&:stop)
     @conn.close
   end
 

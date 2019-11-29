@@ -80,6 +80,7 @@ Lint/HandleExceptions:
   Exclude:
     - lib/polyphony/http/server/http1.rb
     - lib/polyphony/http/server/http2.rb
+    - lib/polyphony/http/server/http2_stream.rb
     - lib/polyphony/http/server.rb
     - examples/**/*.rb
 
