@@ -4,8 +4,8 @@
 
 ## Getting Started
 
-* [Installing](getting-started/getting-started.md#installing-polyphony)
-* [Tutorial](getting-started/getting-started.md#tutorial)
+* [Installing](getting-started/installing.md)
+* [Tutorial](getting-started/tutorial.md)
 
 ## Technical overview
 

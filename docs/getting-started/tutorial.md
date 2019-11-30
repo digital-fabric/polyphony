@@ -1,26 +1,6 @@
-# Getting Started
+# Tutorial
 
-## Installing Polyphony
-
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'polyphony'
-```
-
-And then execute:
-
-```bash
-$ bundle
-```
-
-Or install it yourself as:
-
-```bash
-$ gem install polyphony
-```
-
-## Tutorial: Building a Simple Echo Server
+## Building a Simple Echo Server with Polyphony
 
 In order to demonstrate how to use Polyphony, let's write an echo server, which
 accepts TCP connections and sends back whatever it receives from the client.
@@ -90,7 +70,7 @@ Let's consider the advantage of the Polyphony approach:
 - Our code is terse, easy to read and - most importantly - expresses the order of events clearly and without being split across callbacks.
 - We have a server that can scale to thousands of clients without breaking a sweat.
 
-### Handling Inactive Connections
+## Handling Inactive Connections
 
 Now that we have a working concurrent echo server, let's add some bells and
 whistles. First of all, let's get rid of clients that are not active. We'll do
