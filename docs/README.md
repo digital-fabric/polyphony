@@ -33,7 +33,7 @@ Polyphony draws inspiration from the following, in no particular order:
 
 To learn more about using Polyphony to build concurrent applications, read the technical overview below, or look at the [included examples](https://github.com/digital-fabric/polyphony/tree/9e0f3b09213156bdf376ef33684ef267517f06e8/examples/README.md). A thorough reference is forthcoming.
 
-### Contributing to Polyphony
+## Contributing to Polyphony
 
 If there's some blocking behavior you'd like to see handled by Polyphony, please let us know by [creating an issue](https://github.com/digital-fabric/polyphony/issues). Our aim is for Polyphony to be a comprehensive solution for writing concurrent Ruby programs.
 

@@ -1,5 +1,8 @@
 # Polyphony - Easy Concurrency for Ruby
 
+[DOCS](https://dfab.gitbook.io/polyphony) |
+[EXAMPLES](examples)
+
 > Polyphony \| pəˈlɪf\(ə\)ni \| _Music_ - the style of simultaneously combining a number of parts, each forming an individual melody and harmonizing with each other.
 
 ## What is Polyphony
@@ -10,30 +13,20 @@ Polyphony makes it possible to use normal Ruby built-in classes like `IO`, and `
 
 ## Features
 
-* \*\*Full-blown, integrated, high-performance HTTP 1 / HTTP 2 / WebSocket server
-
+* **Full-blown, integrated, high-performance HTTP 1 / HTTP 2 / WebSocket server
   with TLS/SSL termination, automatic ALPN protocol selection, and body
-
-  streaming\*\*.
-
+  streaming**.
 * Co-operative scheduling of concurrent tasks using Ruby fibers.
 * High-performance event reactor for handling I/O events and timers.
 * Natural, sequential programming style that makes it easy to reason about
-
   concurrent code.
-
 * Abstractions and constructs for controlling the execution of concurrent code:
-
   coprocesses, supervisors, cancel scopes, throttling, resource pools etc.
-
 * Code can use native networking classes and libraries, growing support for
-
   third-party gems such as `pg` and `redis`.
-
 * Use stdlib classes such as `TCPServer`, `TCPSocket` and 
 * HTTP 1 / HTTP 2 client agent with persistent connections.
 * Competitive performance and scalability characteristics, in terms of both
-
   throughput and memory consumption.
 
 ## Prior Art
@@ -41,22 +34,14 @@ Polyphony makes it possible to use normal Ruby built-in classes like `IO`, and `
 Polyphony draws inspiration from the following, in no particular order:
 
 * [nio4r](https://github.com/socketry/nio4r/) and [async](https://github.com/socketry/async)
-
-  \(Polyphony's C-extension code is largely a spinoff of
-
-  [nio4r's](https://github.com/socketry/nio4r/tree/master/ext)\)
-
+  (Polyphony's C-extension code is largely a spinoff of
+  [nio4r's](https://github.com/socketry/nio4r/tree/master/ext))
 * [EventMachine](https://github.com/eventmachine/eventmachine)
 * [Trio](https://trio.readthedocs.io/)
-* [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) \(and actually,
+* [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) (and actually,
+  Erlang in general)
 
-  Erlang in general\)
+## Documentation
 
-## Going further
-
-To learn more about using Polyphony to build concurrent applications, read the technical overview below, or look at the [included examples](https://github.com/digital-fabric/polyphony/tree/9e0f3b09213156bdf376ef33684ef267517f06e8/examples/README.md). A thorough reference is forthcoming.
-
-### Contributing to Polyphony
-
-If there's some blocking behavior you'd like to see handled by Polyphony, please let us know by [creating an issue](https://github.com/digital-fabric/polyphony/issues). Our aim is for Polyphony to be a comprehensive solution for writing concurrent Ruby programs.
-
+The complete documentation for Polyphony could be found on the
+[Polyphony website](https://dfab.gitbook.io/polyphony).
