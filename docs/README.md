@@ -24,12 +24,10 @@ Polyphony makes it possible to use normal Ruby built-in classes like `IO`, and `
 
 Polyphony draws inspiration from the following, in no particular order:
 
-* [nio4r](https://github.com/socketry/nio4r/) and [async](https://github.com/socketry/async) (Polyphony's C-extension code is largely a spinoff of [nio4r's](https://github.com/socketry/nio4r/tree/master/ext)\)
+* [nio4r](https://github.com/socketry/nio4r/) and [async](https://github.com/socketry/async) (Polyphony's C-extension code is largely a spinoff of [nio4r's](https://github.com/socketry/nio4r/tree/master/ext))
 * [EventMachine](https://github.com/eventmachine/eventmachine)
 * [Trio](https://trio.readthedocs.io/)
-* [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) \(and actually,
-
-  Erlang in general\)
+* [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) (and actually, Erlang in general)
 
 ## Going further
 
