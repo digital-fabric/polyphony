@@ -90,27 +90,6 @@ Let's consider the advantage of the Polyphony approach:
 - Our code is terse, easy to read and - most importantly - expresses the order of events clearly and without being split across callbacks.
 - We have a server that can scale to thousands of clients without breaking a sweat.
 
-Here's our code up until now:
-
-```ruby
-require 'polyphony/auto_run'
-
-server = TCPServer.open('127.0.0.1', 1234)
-puts 'Echoing on port 1234...'
-
-def handle_client(client)
-  while (data = client.gets)
-    client.write('you said: ', data.chomp, "!\n")
-  end
-rescue Errno::ECONNRESET
-  puts 'Connection reset by client'
-end
-
-while (client = server.accept)
-  spin { handle_client(client) }
-end
-```
-
 ### Handling Inactive Connections
 
 Now that we have a working concurrent echo server, let's add some bells and
@@ -144,6 +123,32 @@ closed, whether or not it was interrupted by the cancel scope timer. The habit
 of always cleaning up using `ensure` in the face of interruptions is a
 fundamental element of using Polyphony. It makes your code robust, even in a
 highly concurrent execution environment.
+
+Here's the complete source code for our Polyphony-based echo server:
+
+```ruby
+require 'polyphony/auto_run'
+
+server = TCPServer.open('127.0.0.1', 1234)
+puts 'Echoing on port 1234...'
+
+def handle_client(client)
+  Polyphony::CancelScope.new(timeout: 10) do |scope|
+    while (data = client.gets)
+      scope.reset_timeout
+      client.write('you said: ', data.chomp, "!\n")
+    end
+  end
+rescue Errno::ECONNRESET
+  puts 'Connection reset by client'
+ensure
+  client.close
+end
+
+while (client = server.accept)
+  spin { handle_client(client) }
+end
+```
 
 ## Learning More
 
