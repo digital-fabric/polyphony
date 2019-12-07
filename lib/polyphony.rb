@@ -32,11 +32,23 @@ module Polyphony
   )
 
   class << self
-    def trap(sig, ref = false, &callback)
-      sig = Signal.list[sig.to_s.upcase] if sig.is_a?(Symbol)
-      watcher = Gyro::Signal.new(sig, &callback)
-      Gyro.unref unless ref
-      watcher
+    # def trap(sig, ref = false, &callback)
+    #   sig = Signal.list[sig.to_s.upcase] if sig.is_a?(Symbol)
+    #   puts "sig = #{sig.inspect}"
+    #   watcher = Gyro::Signal.new(sig, &callback)
+    #   # Gyro.unref unless ref
+    #   watcher
+    # end
+
+    def wait_for_signal(sig)
+      fiber = Fiber.current
+      Gyro.ref
+      trap(sig) do
+        trap(sig, :DEFAULT)
+        Gyro.unref
+        fiber.transfer(sig)
+      end
+      suspend
     end
 
     def fork(&block)

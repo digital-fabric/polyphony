@@ -18,19 +18,15 @@ class SignalTest < MiniTest::Test
     assert_equal(1, count)
   end
 
-  def test_trap_api
+  def test_wait_for_signal_api
     count = 0
-    w = Polyphony.trap(:usr1, true) do
+    spin do
+      Polyphony.wait_for_signal 'SIGHUP'
       count += 1
-      w.stop
     end
 
-    assert_kind_of(Gyro::Signal, w)
-    Thread.new do
-      sync_sleep 0.001
-      Process.kill(:USR1, Process.pid)
-    end
-    suspend
-    assert_equal(1, count)
+    snooze
+    Process.kill(:HUP, Process.pid)
+    assert_equal 1, count
   end
 end

@@ -61,7 +61,7 @@ spin do
   end
 end
 
-Polyphony.trap(:int) do
+trap(:int) do
   puts 'bye...'
   exit!
 end
