@@ -6,14 +6,23 @@ class GyroIOTest < MiniTest::Test
   def test_that_reading_works
     i, o = IO.pipe
     data = +''
-    w = Gyro::IO.new(i, :r)
-    w.start do
+    sequence = []
+    watcher = Gyro::IO.new(i, :r)
+    spin {
+      sequence << 1
+      watcher.await
+      sequence << 2
       i.read_nonblock(8192, data)
-      w.stop unless data.empty?
+    }
+    snooze
+    sequence << 3
+    defer do
+      o << 'hello'
+      sequence << 4
     end
-    defer { o << 'hello' }
     suspend
-    assert_equal('hello', data)
+    assert_equal 'hello', data
+    assert_equal [1, 3, 4, 2], sequence
   end
 end
 

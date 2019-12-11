@@ -5,7 +5,6 @@ struct Gyro_Child {
   int     active;
   int     pid;
   VALUE   self;
-  VALUE   callback;
   VALUE   fiber;
 };
 
@@ -20,8 +19,6 @@ static size_t Gyro_Child_size(const void *ptr);
 /* Methods */
 static VALUE Gyro_Child_initialize(VALUE self, VALUE pid);
 
-static VALUE Gyro_Child_start(VALUE self);
-static VALUE Gyro_Child_stop(VALUE self);
 static VALUE Gyro_Child_await(VALUE self);
 
 void Gyro_Child_callback(struct ev_loop *ev_loop, struct ev_child *child, int revents);
@@ -32,8 +29,6 @@ void Init_Gyro_Child() {
   rb_define_alloc_func(cGyro_Child, Gyro_Child_allocate);
 
   rb_define_method(cGyro_Child, "initialize", Gyro_Child_initialize, 1);
-  rb_define_method(cGyro_Child, "start", Gyro_Child_start, 0);
-  rb_define_method(cGyro_Child, "stop", Gyro_Child_stop, 0);
   rb_define_method(cGyro_Child, "await", Gyro_Child_await, 0);
 }
 
@@ -51,9 +46,6 @@ static VALUE Gyro_Child_allocate(VALUE klass) {
 
 static void Gyro_Child_mark(void *ptr) {
   struct Gyro_Child *child = ptr;
-  if (child->callback != Qnil) {
-    rb_gc_mark(child->callback);
-  }
   if (child->fiber != Qnil) {
     rb_gc_mark(child->fiber);
   }
@@ -80,7 +72,6 @@ static VALUE Gyro_Child_initialize(VALUE self, VALUE pid) {
   GetGyro_Child(self, child);
 
   child->self     = self;
-  child->callback = Qnil;
   child->fiber    = Qnil;
   child->pid      = NUM2INT(pid);
   child->active   = 0;
@@ -105,39 +96,6 @@ void Gyro_Child_callback(struct ev_loop *ev_loop, struct ev_child *ev_child, int
     child->fiber = Qnil;
     SCHEDULE_FIBER(fiber, 1, resume_value);
   }
-  else if (child->callback != Qnil) {
-    rb_funcall(child->callback, ID_call, 1, resume_value);
-  }
-}
-
-static VALUE Gyro_Child_start(VALUE self) {
-  struct Gyro_Child *child;
-  GetGyro_Child(self, child);
-
-  if (rb_block_given_p()) {
-    child->callback = rb_block_proc();
-  }
-
-  if (!child->active) {
-    ev_child_start(EV_DEFAULT, &child->ev_child);
-    child->active = 1;
-    Gyro_add_watcher_ref(self);
-  }
-
-  return self;
-}
-
-static VALUE Gyro_Child_stop(VALUE self) {
-  struct Gyro_Child *child;
-  GetGyro_Child(self, child);
-
-  if (child->active) {
-    ev_child_stop(EV_DEFAULT, &child->ev_child);
-    child->active = 0;
-    Gyro_del_watcher_ref(self);
-  }
-
-  return self;
 }
 
 static VALUE Gyro_Child_await(VALUE self) {

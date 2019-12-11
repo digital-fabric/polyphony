@@ -10,7 +10,6 @@ struct Gyro_IO {
   struct  ev_io ev_io;
   int     active;
   int     event_mask;
-  VALUE   callback;
   VALUE   fiber;
 };
 
@@ -22,9 +21,6 @@ static void Gyro_IO_free(void *ptr);
 static size_t Gyro_IO_size(const void *ptr);
 
 static VALUE Gyro_IO_initialize(VALUE self, VALUE io, VALUE event_mask);
-
-static VALUE Gyro_IO_start(VALUE self);
-static VALUE Gyro_IO_stop(VALUE self);
 
 void Gyro_IO_callback(struct ev_loop *ev_loop, struct ev_io *io, int revents);
 
@@ -41,8 +37,6 @@ void Init_Gyro_IO() {
   rb_define_alloc_func(cGyro_IO, Gyro_IO_allocate);
 
   rb_define_method(cGyro_IO, "initialize", Gyro_IO_initialize, 2);
-  rb_define_method(cGyro_IO, "start", Gyro_IO_start, 0);
-  rb_define_method(cGyro_IO, "stop", Gyro_IO_stop, 0);
   rb_define_method(cGyro_IO, "await", Gyro_IO_await, 0);
 
   VALUE cIO = rb_const_get(rb_cObject, rb_intern("IO"));
@@ -71,9 +65,6 @@ static VALUE Gyro_IO_allocate(VALUE klass) {
 
 static void Gyro_IO_mark(void *ptr) {
   struct Gyro_IO *io = ptr;
-  if (io->callback != Qnil) {
-    rb_gc_mark(io->callback);
-  }
   if (io->fiber != Qnil) {
     rb_gc_mark(io->fiber);
   }
@@ -101,7 +92,6 @@ static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
   GetGyro_IO(self, io);
 
   io->event_mask = Gyro_IO_symbol2event_mask(event_mask);
-  io->callback = Qnil;
   io->fiber = Qnil;
   io->active = 0;
 
@@ -122,40 +112,9 @@ void Gyro_IO_callback(struct ev_loop *ev_loop, struct ev_io *ev_io, int revents)
     io->fiber = Qnil;
     SCHEDULE_FIBER(fiber, 0);
   }
-  else if (io->callback != Qnil) {
-    rb_funcall(io->callback, ID_call, 1, INT2NUM(revents));
-  }
   else {
     ev_io_stop(EV_DEFAULT, ev_io);
   }
-}
-
-static VALUE Gyro_IO_start(VALUE self) {
-  struct Gyro_IO *io;
-  GetGyro_IO(self, io);
-
-  if (rb_block_given_p()) {
-    io->callback = rb_block_proc();
-  }
-
-  if (!io->active) {
-    ev_io_start(EV_DEFAULT, &io->ev_io);
-    io->active = 1;
-  }
-
-  return self;
-}
-
-static VALUE Gyro_IO_stop(VALUE self) {
-  struct Gyro_IO *io;
-  GetGyro_IO(self, io);
-
-  if (io->active) {
-    ev_io_stop(EV_DEFAULT, &io->ev_io);
-    io->active = 0;
-  }
-
-  return self;
 }
 
 VALUE Gyro_IO_await(VALUE self) {

@@ -3,7 +3,6 @@
 struct Gyro_Async {
   struct  ev_async ev_async;
   int     active;
-  VALUE   callback;
   VALUE   fiber;
 };
 
@@ -18,8 +17,6 @@ static size_t Gyro_Async_size(const void *ptr);
 /* Methods */
 static VALUE Gyro_Async_initialize(VALUE self);
 
-static VALUE Gyro_Async_start(VALUE self);
-static VALUE Gyro_Async_stop(VALUE self);
 static VALUE Gyro_Async_signal(VALUE self);
 static VALUE Gyro_Async_await(VALUE self);
 
@@ -31,8 +28,6 @@ void Init_Gyro_Async() {
   rb_define_alloc_func(cGyro_Async, Gyro_Async_allocate);
 
   rb_define_method(cGyro_Async, "initialize", Gyro_Async_initialize, 0);
-  rb_define_method(cGyro_Async, "start", Gyro_Async_start, 0);
-  rb_define_method(cGyro_Async, "stop", Gyro_Async_stop, 0);
   rb_define_method(cGyro_Async, "signal!", Gyro_Async_signal, 0);
   rb_define_method(cGyro_Async, "await", Gyro_Async_await, 0);
 }
@@ -51,9 +46,6 @@ static VALUE Gyro_Async_allocate(VALUE klass) {
 
 static void Gyro_Async_mark(void *ptr) {
   struct Gyro_Async *async = ptr;
-  if (async->callback != Qnil) {
-    rb_gc_mark(async->callback);
-  }
   if (async->fiber != Qnil) {
     rb_gc_mark(async->fiber);
   }
@@ -76,15 +68,10 @@ static VALUE Gyro_Async_initialize(VALUE self) {
   struct Gyro_Async *async;
   GetGyro_Async(self, async);
 
-  if (rb_block_given_p()) {
-    async->callback = rb_block_proc();
-  }
   async->fiber = Qnil;
+  async->active = 0;
 
   ev_async_init(&async->ev_async, Gyro_Async_callback);
-
-  async->active = 1;
-  ev_async_start(EV_DEFAULT, &async->ev_async);
 
   return Qnil;
 }
@@ -94,38 +81,15 @@ void Gyro_Async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int
   struct Gyro_Async *async = (struct Gyro_Async*)ev_async;
 
   if (async->fiber != Qnil) {
+    ev_async_stop(EV_DEFAULT, ev_async);
     async->active = 0;
     fiber = async->fiber;
     async->fiber = Qnil;
     SCHEDULE_FIBER(fiber, 0);
   }
-  else if (async->callback != Qnil) {
-    rb_funcall(async->callback, ID_call, 1, Qtrue);
+  else {
+    ev_async_stop(EV_DEFAULT, ev_async);
   }
-}
-
-static VALUE Gyro_Async_start(VALUE self) {
-  struct Gyro_Async *async;
-  GetGyro_Async(self, async);
-
-  if (!async->active) {
-    ev_async_start(EV_DEFAULT, &async->ev_async);
-    async->active = 1;
-  }
-
-  return self;
-}
-
-static VALUE Gyro_Async_stop(VALUE self) {
-  struct Gyro_Async *async;
-  GetGyro_Async(self, async);
-
-  if (async->active) {
-    ev_async_stop(EV_DEFAULT, &async->ev_async);
-    async->active = 0;
-  }
-
-  return self;
 }
 
 static VALUE Gyro_Async_signal(VALUE self) {

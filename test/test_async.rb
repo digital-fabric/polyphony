@@ -5,10 +5,12 @@ require_relative 'helper'
 class AsyncTest < MiniTest::Test
   def test_that_async_watcher_receives_signal_across_threads
     count = 0
-    a = Gyro::Async.new do
+    a = Gyro::Async.new
+    spin {
+      a.await
       count += 1
-      a.stop
-    end
+    }
+    snooze
     Thread.new do
       sync_sleep 0.001
       a.signal!
@@ -19,10 +21,15 @@ class AsyncTest < MiniTest::Test
 
   def test_that_async_watcher_coalesces_signals
     count = 0
-    a = Gyro::Async.new do
-      count += 1
-      Gyro::Timer.new(0.01, 0).start { a.stop }
-    end
+    a = Gyro::Async.new
+    coproc = spin {
+      loop {
+        a.await
+        count += 1
+        after(0.01) { coproc.stop }
+      }
+    }
+    snooze
     Thread.new do
       sync_sleep 0.001
       3.times { a.signal! }
