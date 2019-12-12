@@ -1,3 +1,8 @@
+0.21 2019-12-12
+---------------
+
+* Add Coprocess.await (for waiting for multiple coprocesses)
+* Add Coprocess#caller, Coprocess#location methods
 * Remove callback-oriented Gyro APIs
 * Revise signal handling API
 * Improve error handling in HTTP/2 adapter
