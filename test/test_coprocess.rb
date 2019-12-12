@@ -229,22 +229,31 @@ class CoprocessTest < MiniTest::Test
     assert(raised_error)
     assert_equal('foo', raised_error.message)
   end
-end
 
-def test_exception_propagation_for_orphan_fiber
-  raised_error = nil
-  spin do
+  def test_exception_propagation_for_orphan_fiber
+    raised_error = nil
     spin do
-      snooze
-      raise 'bar'
+      spin do
+        snooze
+        raise 'bar'
+      end
     end
+    suspend
+  rescue Exception => e
+    raised_error = e
+  ensure
+    assert(raised_error)
+    assert_equal('bar', raised_error.message)
   end
-  suspend
-rescue Exception => e
-  raised_error = e
-ensure
-  assert(raised_error)
-  assert_equal('bar', raised_error.message)
+
+  def test_await_multiple_coprocesses
+    cp1 = spin { sleep 0.01; :foo }
+    cp2 = spin { sleep 0.01; :bar }
+    cp3 = spin { sleep 0.01; :baz }
+
+    result = Polyphony::Coprocess.await(cp1, cp2, cp3)
+    assert_equal %i{foo bar baz}, result
+  end
 end
 
 class MailboxTest < MiniTest::Test

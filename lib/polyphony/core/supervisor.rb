@@ -9,12 +9,14 @@ Exceptions  = import('./exceptions')
 class Supervisor
   def initialize
     @coprocesses = []
+    @pending = []
   end
 
   def await(&block)
     @supervisor_fiber = Fiber.current
     block&.(self)
     suspend
+    @coprocesses.map { |cp| cp.result }
   rescue Exceptions::MoveOn => e
     e.value
   ensure
@@ -30,12 +32,21 @@ class Supervisor
     end
   end
 
-  def spin(proc = nil, &block)
-    proc = Coprocess.new(&(proc || block)) unless proc.is_a?(Coprocess)
-    @coprocesses << proc
-    proc.when_done { task_completed(proc) }
-    proc.run unless proc.alive?
-    proc
+  def spin(coproc = nil, &block)
+    coproc = Coprocess.new(&(coproc || block)) unless coproc.is_a?(Coprocess)
+    @coprocesses << coproc
+    @pending << coproc
+    coproc.when_done { task_completed(coproc) }
+    coproc.run unless coproc.alive?
+    coproc
+  end
+
+  def add(coproc)
+    @coprocesses << coproc
+    @pending << coproc
+    coproc.when_done { task_completed(coproc) }
+    coproc.run unless coproc.alive?
+    coproc
   end
 
   def still_running?
@@ -51,15 +62,23 @@ class Supervisor
 
   def stop_all_tasks
     exception = Exceptions::MoveOn.new
-    @coprocesses.each do |c|
+    @pending.each do |c|
       c.transfer(exception)
     end
   end
 
   def task_completed(coprocess)
-    return unless @coprocesses.include?(coprocess)
+    return unless @pending.include?(coprocess)
 
-    @coprocesses.delete(coprocess)
-    @supervisor_fiber&.transfer if @coprocesses.empty?
+    @pending.delete(coprocess)
+    @supervisor_fiber&.transfer if @pending.empty?
+  end
+end
+
+class Coprocess
+  def self.await(*coprocs)
+    supervise do |s|
+      coprocs.each { |cp| s.add cp }
+    end
   end
 end

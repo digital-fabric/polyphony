@@ -216,3 +216,29 @@ class ExceptionTest < MiniTest::Test
     assert_kind_of RuntimeError, error
   end
 end
+
+class MoveOnAfterTest < MiniTest::Test
+  def test_move_on_after
+    t0 = Time.now
+    v = move_on_after(0.01) do
+      sleep 1
+      :foo
+    end
+    t1 = Time.now
+
+    assert t1 - t0 < 0.02
+    assert_nil v
+  end
+
+  def test_move_on_after_with_value
+    t0 = Time.now
+    v = move_on_after(0.01, with_value: :bar) do
+      sleep 1
+      :foo
+    end
+    t1 = Time.now
+
+    assert t1 - t0 < 0.02
+    assert_equal :bar, v
+  end
+end

@@ -8,13 +8,13 @@
 
 ## 0.21 REPL usage, coprocess introspection, monitoring
 
-- Implement `move_on_after(1, with: nil) { ... }`
-- Implement `Coprocess.await` for waiting on multiple coprocesses without
+- [v] Implement `move_on_after(1, with_value: nil) { ... }`
+- [v] Implement `Coprocess.await` for waiting on multiple coprocesses without
   starting them in a supervisor, will also necessitate adding `Supervisor#add`
-- Implement `Coprocess#location`
-- Implement `Coprocess#alive?`
-- Implement `Coprocess#caller` - points to coprocess that called the coprocess
-- Implement `Coprocess.list` - a list of running coprocesses
+- [ ] Implement `Coprocess#location` - location where it was started
+- [ ] Implement `Coprocess#caller` - points to coprocess that called the coprocess
+- [v] Implement `Coprocess#alive?`
+- [v] Implement `Coprocess.list` - a list of running coprocesses
 
 ## 0.22 Full Rack adapter implementation
 
