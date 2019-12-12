@@ -16,7 +16,7 @@ class Supervisor
     @supervisor_fiber = Fiber.current
     block&.(self)
     suspend
-    @coprocesses.map { |cp| cp.result }
+    @coprocesses.map(&:result)
   rescue Exceptions::MoveOn => e
     e.value
   ensure
@@ -75,6 +75,7 @@ class Supervisor
   end
 end
 
+# Extension for Coprocess class
 class Coprocess
   def self.await(*coprocs)
     supervise do |s|

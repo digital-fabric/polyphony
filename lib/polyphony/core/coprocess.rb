@@ -101,7 +101,7 @@ class Coprocess
   end
 
   def caller
-    @fiber&.__caller__[2..]
+    @fiber && @fiber.__caller__[2..-1]
   end
 
   def location
