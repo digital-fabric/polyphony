@@ -23,7 +23,7 @@
 * [Throttlers](#)
 * [Resource Pools](#)
 * [Synchronisation](#)
-* [HTTP Server](#)
+* [Web Server](user-guide/web-server.md)
 * [Websocket Server](#)
 * [Reactor API](#)
 
@@ -42,3 +42,5 @@
 * [Polyphony::Pulser](#)
 * [Polyphony::ResourcePool](#)
 * [Polyphony::Throttler](#)
+
+## [Contributing to Polyphony](contributing.md)
