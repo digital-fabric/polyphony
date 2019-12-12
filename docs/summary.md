@@ -6,10 +6,10 @@
 
 * [Installing](getting-started/installing.md)
 * [Tutorial](getting-started/tutorial.md)
-* [Building a simple HTTP server](getting-started/http-server.md)
 
 ## Technical overview
 
+* [Design Principles](technical-overview/design-principles.md)
 * [Concurrency the Easy Way](technical-overview/concurrency.md)
 * [How Fibers are Scheduled](technical-overview/fiber-scheduling.md)
 * [Exception Handling](technical-overview/exception-handling.md)

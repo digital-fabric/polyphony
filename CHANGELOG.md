@@ -1,3 +1,8 @@
+* Remove callback-oriented Gyro APIs
+* Revise signal handling API
+* Improve error handling in HTTP/2 adapter
+* More documentation
+
 0.20 2019-11-27
 ---------------
 

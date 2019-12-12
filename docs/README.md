@@ -16,7 +16,7 @@ Polyphony makes it possible to use normal Ruby built-in classes like `IO`, and `
 * Natural, sequential programming style that makes it easy to reason about concurrent code.
 * Abstractions and constructs for controlling the execution of concurrent code: coprocesses, supervisors, cancel scopes, throttling, resource pools etc.
 * Code can use native networking classes and libraries, growing support for third-party gems such as `pg` and `redis`.
-* Use stdlib classes such as `TCPServer`, `TCPSocket` and 
+* Use stdlib classes such as `TCPServer` and `TCPSocket` and `Net::HTTP`.
 * HTTP 1 / HTTP 2 client agent with persistent connections.
 * Competitive performance and scalability characteristics, in terms of both throughput and memory consumption.
 
