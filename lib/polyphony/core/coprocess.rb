@@ -100,6 +100,14 @@ class Coprocess
     @fiber
   end
 
+  def caller
+    @fiber&.__caller__[2..]
+  end
+
+  def location
+    caller[0]
+  end
+
   # Kernel.await expects the given argument / block to be a callable, so #call
   # in fact waits for the coprocess to finish
   def await

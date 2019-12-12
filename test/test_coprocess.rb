@@ -254,6 +254,27 @@ class CoprocessTest < MiniTest::Test
     result = Polyphony::Coprocess.await(cp1, cp2, cp3)
     assert_equal %i{foo bar baz}, result
   end
+
+  def test_caller
+    location = /^#{__FILE__}:#{__LINE__ + 1}/
+    cp = spin do
+      sleep 0.01
+    end
+    snooze
+
+    caller = cp.caller
+    assert caller[0] =~ location
+  end
+
+  def test_location
+    location = /^#{__FILE__}:#{__LINE__ + 1}/
+    cp = spin do
+      sleep 0.01
+    end
+    snooze
+
+    assert cp.location =~ location
+  end
 end
 
 class MailboxTest < MiniTest::Test

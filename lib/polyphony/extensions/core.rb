@@ -12,7 +12,7 @@ Throttler   = import('../core/throttler')
 # Fiber extensions
 class ::Fiber
   attr_accessor :__calling_fiber__
-  attr_writer :__caller__
+  attr_accessor :__caller__
   attr_writer :cancelled
   attr_accessor :coprocess, :scheduled_value
 

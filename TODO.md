@@ -11,8 +11,8 @@
 - [v] Implement `move_on_after(1, with_value: nil) { ... }`
 - [v] Implement `Coprocess.await` for waiting on multiple coprocesses without
   starting them in a supervisor, will also necessitate adding `Supervisor#add`
-- [ ] Implement `Coprocess#location` - location where it was started
-- [ ] Implement `Coprocess#caller` - points to coprocess that called the coprocess
+- [v] Implement `Coprocess#location` - location where it was started
+- [v] Implement `Coprocess#caller` - points to coprocess that called the coprocess
 - [v] Implement `Coprocess#alive?`
 - [v] Implement `Coprocess.list` - a list of running coprocesses
 
