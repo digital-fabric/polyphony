@@ -41,7 +41,8 @@ def socket_from_options(host, port, opts)
 end
 
 def secure_socket(socket, context, opts)
-  setup_alpn(context, opts[:alpn_protocols]) if context && opts[:alpn_protocols]
+  context ||= OpenSSL::SSL::SSLContext.new
+  setup_alpn(context, opts[:alpn_protocols]) if opts[:alpn_protocols]
   socket = secure_socket_wrapper(socket, context)
 
   socket.tap do |s|
