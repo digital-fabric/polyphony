@@ -72,3 +72,10 @@ Actually, async/await was contemplated while developing Polyphony, but at a cert
 
 Instead, we have decided to make blocking operations implicit and thus allow the use of common APIs such as `Kernel#sleep` or `IO.popen` in a transparent manner. After all, these APIs in their stock form block execution just as well.
 
+## Why is Polyphony not split into multiple gems?
+
+Polyphony is currently at an experimental stage, and its different APIs are still in flux. For that reason, all the different parts of Polyphony are currently kept in a single gem. Once things stabilize, and as Polyphony approaches version 1.0, it will be split into separate gems, each with its own functionality.
+
+## Who is behind this project?
+
+I'm Sharon Rosner, an independent software developer living in France. Here's my [github profile](https://github.com/ciconia). You can contact me by writing to [noteflakes@gmail.com](mailto:ciconia@gmail.com).
