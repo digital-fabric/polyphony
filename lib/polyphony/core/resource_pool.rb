@@ -4,17 +4,23 @@ export_default :ResourcePool
 
 # Implements a limited resource pool
 class ResourcePool
+  attr_reader :limit, :size
+
   # Initializes a new resource pool
   # @param opts [Hash] options
   # @param &block [Proc] allocator block
   def initialize(opts, &block)
     @allocator = block
 
-    @available = []
-    @waiting = []
+    @stock = []
+    @queue = []
 
     @limit = opts[:limit] || 4
-    @count = 0
+    @size = 0
+  end
+
+  def available
+    @stock.size
   end
 
   def acquire
@@ -23,33 +29,41 @@ class ResourcePool
 
     yield resource
   ensure
-    dequeue(resource) || return_to_stock(resource) if resource
+    release(resource) if resource
   end
 
   def wait_for_resource
     fiber = Fiber.current
-    @waiting << fiber
+    @queue << fiber
     ready_resource = from_stock
     return ready_resource if ready_resource
 
     suspend
   ensure
-    @waiting.delete(fiber)
+    @queue.delete(fiber)
   end
 
-  def dequeue(resource)
-    return nil if @waiting.empty?
+  def release(resource)
+    if resource.__discarded__
+      @size -= 1
+    elsif resource
+      return_to_stock(resource)
+      dequeue
+    end
+  end
 
-    @waiting[0]&.schedule(resource)
-    true
+  def dequeue
+    return if @queue.empty? || @stock.empty?
+
+    @queue.shift.schedule(@stock.shift)
   end
 
   def return_to_stock(resource)
-    @available << resource
+    @stock << resource
   end
 
   def from_stock
-    @available.shift || (@count < @limit && allocate)
+    @stock.shift || (@size < @limit && allocate)
   end
 
   def method_missing(sym, *args, &block)
@@ -60,14 +74,32 @@ class ResourcePool
     true
   end
 
+  # Extension to allow discarding of resources
+  module ResourceExtensions
+    def __discarded__
+      @__discarded__
+    end
+
+    def __discard__
+      @__discarded__ = true
+    end
+  end
+
   # Allocates a resource
   # @return [any] allocated resource
   def allocate
-    @count += 1
-    @allocator.()
+    @size += 1
+    @allocator.().tap { |r| r.extend ResourceExtensions }
+  end
+
+  def <<(resource)
+    @size += 1
+    resource.extend ResourceExtensions
+    @stock << resource
+    dequeue
   end
 
   def preheat!
-    (@limit - @count).times { @available << from_stock }
+    (@limit - @size).times { @stock << from_stock }
   end
 end
