@@ -15,8 +15,6 @@ class ::Socket
 
       result == :wait_writable ? write_watcher.await : (raise IOError)
     end
-  ensure
-    @write_watcher&.stop
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
@@ -37,8 +35,6 @@ class ::Socket
 
       result == :wait_readable ? read_watcher.await : (return result)
     end
-  ensure
-    @read_watcher&.stop
   end
 
   ZERO_LINGER = [0, 0].pack('ii').freeze
