@@ -6,7 +6,7 @@ module Polyphony
   # HTTP imports (loaded dynamically)
   module HTTP
     auto_import(
-      Agent:  './http/agent',
+      Agent:  './http/client/agent',
       Rack:   './http/server/rack',
       Server: './http/server'
     )

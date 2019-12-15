@@ -3,11 +3,15 @@
 require 'bundler/setup'
 require 'polyphony/http'
 
+Exception.__disable_sanitized_backtrace__ = true
+
+TIME_URI = 'http://ui.realiteq.net/'
+
 def get_server_time
-  Polyphony::HTTP::Agent.get('https://ui.realiteq.net/', q: :time).json
+  Polyphony::HTTP::Agent.get(TIME_URI, query: { q: :time }).json
 end
 
-X = 10
+X = 100
 puts "Making #{X} requests..."
 t0 = Time.now
 supervise do |s|
