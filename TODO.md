@@ -1,26 +1,11 @@
 # Roadmap:
 
-## 0.20.1
-
-- Cull, edit and annotate examples
-- Work better mechanism supervising multiple coprocesses (`when_done` feels a
-  bit hacky)
-
 ## 0.22 Full Rack adapter implementation
 
+- Work better mechanism supervising multiple coprocesses (`when_done` feels a
+  bit hacky)
+- Add supervisor test
 - Homogenize HTTP 1 and HTTP 2 headers - upcase ? downcase ?
-- Rewrite agent code to use sequential API (like I did for server)
-- Streaming bodies for HTTP client
-
-  ```ruby
-  def download_doc
-    response = Polyphony::HTTP::Agent.get('https://acme.com/doc.pdf')
-    File.open('doc.pdf', 'wb+') do |f|
-      response.each { |chunk| f << chunk } # streaming body
-    end
-  end
-  ```
-
 - find some demo Rack apps and test with Polyphony
 
 ## 0.23 Working Sinatra application

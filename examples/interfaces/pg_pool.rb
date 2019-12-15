@@ -27,6 +27,7 @@ puts "concurrency: #{CONCURRENCY}"
 DBPOOL.preheat!
 t0 = Time.now
 count = 0
+
 coprocs = CONCURRENCY.times.map do
   spin do
     loop do

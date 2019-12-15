@@ -16,6 +16,7 @@ Gem::Specification.new do |s|
   s.extra_rdoc_files = ["README.md"]
   s.extensions = ["ext/gyro/extconf.rb"]
   s.require_paths = ["lib"]
+  s.required_ruby_version = '>= 2.6'
 
   s.executables   = ['poly']
 
