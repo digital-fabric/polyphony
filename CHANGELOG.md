@@ -1,3 +1,10 @@
+
+* Rewrite HTTP client agent c1b63787
+* Increment Gyro refcount in ResourcePool#acquire
+* Rewrite ResourcePool
+* Fix socket extensions
+* Fix ALPN setup in Net.secure_socket
+
 0.21 2019-12-12
 ---------------
 
