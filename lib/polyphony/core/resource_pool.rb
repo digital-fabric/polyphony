@@ -24,11 +24,13 @@ class ResourcePool
   end
 
   def acquire
+    Gyro.ref
     resource = wait_for_resource
     return unless resource
 
     yield resource
   ensure
+    Gyro.unref
     release(resource) if resource
   end
 
