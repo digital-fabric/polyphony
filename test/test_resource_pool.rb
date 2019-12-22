@@ -98,4 +98,10 @@ class ResourcePoolTest < MiniTest::Test
 
     assert_equal ['a'] * 10, results
   end
+
+  def test_failing_allocator
+    pool = Polyphony::ResourcePool.new(limit: 4) { raise }
+
+    assert_raises { pool.acquire { } }
+  end
 end
