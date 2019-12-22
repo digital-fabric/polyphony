@@ -157,11 +157,13 @@ class ::IO
   # def readlines(sep = $/, limit = nil, chomp: nil)
   # end
 
+  alias_method :orig_write_nonblock, :write_nonblock
   def write_nonblock(string, _options = {})
     # STDOUT << '>'
     write(string, 0)
   end
 
+  alias_method :orig_read_nonblock, :read_nonblock
   def read_nonblock(maxlen, buf = nil, _options = nil)
     # STDOUT << '<'
     buf ? readpartial(maxlen, buf) : readpartial(maxlen)

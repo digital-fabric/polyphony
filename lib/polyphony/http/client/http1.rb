@@ -61,7 +61,11 @@ class HTTP1Adapter
   end
 
   def each_chunk(&block)
-    @waiting_for_chunk = true
+    if (body = @buffered_body)
+      @buffered_body = nil
+      @waiting_for_chunk = true
+      block.(body)
+    end
     while !@done && (data = @socket.readpartial(8192))
       @parser << data
     end

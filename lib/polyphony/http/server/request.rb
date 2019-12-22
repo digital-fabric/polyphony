@@ -58,7 +58,6 @@ class Request
 
   def each_chunk(&block)
     if @buffered_body_chunks
-      puts 'serve buffered body_chunks'
       @buffered_body_chunks.each(&block)
       @buffered_body_chunks = nil
     end

@@ -6,6 +6,12 @@ require 'polyphony/auto_run'
 
 Exception.__disable_sanitized_backtrace__ = true
 
+resp = Polyphony::HTTP::Agent.get('https://realiteq.net/?q=time')
+puts "*" * 40
+puts resp.body
+
+__END__
+
 X = 1
 Y = 1
 t0 = Time.now
@@ -13,8 +19,12 @@ supervise { |s|
   X.times {
     s.spin {
       Y.times {
-        resp = Polyphony::HTTP::Agent.get('http://gitlab.com/')
-        puts "body size: #{resp.body.bytesize}"
+        resp = Polyphony::HTTP::Agent.get('http://about.gitlab.com/')
+        puts "*" * 40
+        p resp.headers
+        puts "*" * 40
+        puts resp.body
+        # puts "body size: #{resp.body.bytesize}"
       }
     }
   }

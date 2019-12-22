@@ -15,7 +15,7 @@ class Response
   end
 
   def body
-    @adapter.body
+    @body ||= @adapter.body
   end
 
   def each_chunk(&block)

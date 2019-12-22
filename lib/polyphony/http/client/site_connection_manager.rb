@@ -4,12 +4,17 @@ export_default :SiteConnectionManager
 
 ResourcePool = import '../../core/resource_pool'
 HTTP1Adapter = import './http1'
+HTTP2Adapter = import './http2'
 
 # HTTP site connection pool
 class SiteConnectionManager < ResourcePool
   def initialize(uri_key)
     @uri_key = uri_key
     super(limit: 4)
+  end
+
+  def method_missing(sym, *args)
+    raise "Invalid method #{sym}"
   end
 
   def acquire
@@ -28,7 +33,6 @@ class SiteConnectionManager < ResourcePool
     when nil
       @state = :first_connection
       create_first_connection
-      suspend
     when :first_connection
       @first_connection_queue << Fiber.current
       suspend
@@ -37,7 +41,7 @@ class SiteConnectionManager < ResourcePool
 
   def create_first_connection
     @first_connection_queue = []
-    @first_connection_queue << Fiber.current
+    # @first_connection_queue << Fiber.current
 
     adapter = connect
     @state = adapter.protocol
@@ -54,7 +58,12 @@ class SiteConnectionManager < ResourcePool
 
   def setup_http2_allocator(adapter)
     @adapter = adapter
-    @allocator = make_http2_allocator
+    @limit = 20
+    @size += 1
+    stream_adapter = adapter.allocate_stream_adapter
+    stream_adapter.extend ResourceExtensions
+    @stock << stream_adapter
+    @allocator = proc { adapter.allocate_stream_adapter }
   end
 
   def dequeue_first_connection_waiters
@@ -64,11 +73,28 @@ class SiteConnectionManager < ResourcePool
     @first_connection_queue = nil
   end
 
-  SECURE_OPTS = { secure: true, alpn_protocols: ['http/1.1'] }.freeze
-
   def connect
-    HTTP1Adapter.new(create_socket)
+    socket = create_socket
+    protocol = socket_protocol(socket)
+    case protocol
+    when :http1
+      HTTP1Adapter.new(socket)
+    when :http2
+      HTTP2Adapter.new(socket)
+    else
+      raise "Unknown protocol #{protocol.inspect}"
+    end
   end
+
+  def socket_protocol(socket)
+    if socket.is_a?(OpenSSL::SSL::SSLSocket) && socket.alpn_protocol == 'h2'
+      :http2
+    else
+      :http1
+    end
+  end
+
+  SECURE_OPTS = { secure: true, alpn_protocols: ['h2', 'http/1.1'] }.freeze
 
   def create_socket
     case @uri_key[:scheme]
@@ -79,9 +105,5 @@ class SiteConnectionManager < ResourcePool
     else
       raise "Invalid scheme #{@uri_key[:scheme].inspect}"
     end
-  end
-
-  def http2?
-    @http2
   end
 end

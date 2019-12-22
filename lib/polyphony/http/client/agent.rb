@@ -3,20 +3,18 @@
 export_default :Agent
 
 require 'uri'
-require 'http/2'
 
 ResourcePool = import '../../core/resource_pool'
-HTTP1Adapter = import './http1'
 SiteConnectionManager = import './site_connection_manager'
 
 # Implements an HTTP agent
 class Agent
-  def self.get(*args)
-    default.get(*args)
+  def self.get(*args, &block)
+    default.get(*args, &block)
   end
 
-  def self.post(*args)
-    default.post(*args)
+  def self.post(*args, &block)
+    default.post(*args, &block)
   end
 
   def self.default
@@ -31,21 +29,21 @@ class Agent
 
   OPTS_DEFAULT = {}.freeze
 
-  def get(url, opts = OPTS_DEFAULT)
-    request(url, opts.merge(method: :GET))
+  def get(url, opts = OPTS_DEFAULT, &block)
+    request(url, opts.merge(method: :GET), &block)
   end
 
-  def post(url, opts = OPTS_DEFAULT)
-    request(url, opts.merge(method: :POST))
+  def post(url, opts = OPTS_DEFAULT, &block)
+    request(url, opts.merge(method: :POST), &block)
   end
 
-  def request(url, opts = OPTS_DEFAULT)
+  def request(url, opts = OPTS_DEFAULT, &block)
     ctx = request_ctx(url, opts)
 
-    response = do_request(ctx)
+    response = do_request(ctx, &block)
     case response.status_code
     when 301, 302
-      redirect(response.headers['Location'], ctx, opts)
+      redirect(response.headers['Location'], ctx, opts, &block)
     when 200, 204
       response
     else
@@ -53,9 +51,9 @@ class Agent
     end
   end
 
-  def redirect(url, ctx, opts)
+  def redirect(url, ctx, opts, &block)
     url = redirect_url(url, ctx)
-    request(url, opts)
+    request(url, opts, &block)
   end
 
   def redirect_url(url, ctx)
@@ -102,12 +100,25 @@ class Agent
     uri
   end
 
-  def do_request(ctx)
+  def do_request(ctx, &block)
     key = uri_key(ctx[:uri])
 
     @pools[key].acquire do |adapter|
-      adapter.request(ctx)
+      response = adapter.request(ctx)
+      case response.status_code
+      when 200, 204
+        if block
+          block.(response)
+        else
+          # read body
+          response.body
+        end
+      end
+      response
     end
+  rescue => e
+    p e
+    puts e.backtrace.join("\n")
   end
 
   def uri_key(uri)
