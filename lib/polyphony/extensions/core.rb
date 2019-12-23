@@ -23,8 +23,11 @@ class ::Fiber
       fiber_caller = caller
       fiber = orig_new do |v|
         block.call(v)
+      rescue Exception => e
+        puts "Uncaught exception #{calling_fiber.alive?}"
+        calling_fiber.transfer e if calling_fiber.alive?
       ensure
-        $__reactor_fiber__.safe_transfer if $__reactor_fiber__.alive?
+        suspend
       end
       fiber.__calling_fiber__ = calling_fiber
       fiber.__caller__ = fiber_caller
@@ -132,6 +135,10 @@ module ::Kernel
     block.call
   ensure
     timer.stop
+  end
+
+  def defer(&block)
+    Fiber.new(&block).schedule
   end
 
   def spin(&block)
@@ -251,3 +258,8 @@ module ::Timeout
     raise error
   end
 end
+
+trap("SIGINT") {
+  Gyro.break!
+  exit
+}

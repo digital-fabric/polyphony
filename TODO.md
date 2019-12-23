@@ -43,7 +43,14 @@ end
 
 # Roadmap:
 
-## 0.22 Full Rack adapter implementation
+## 0.22 Redesign of Gyro scheduling system
+
+- Schedulerless design - no separate fiber for running ev loop
+- Blocking operations directly transfer to first scheduled fiber
+- Scheduled fibers managed using linked list, switching directly from one to the
+  other
+
+## 0.23 Full Rack adapter implementation
 
 - Work better mechanism supervising multiple coprocesses (`when_done` feels a
   bit hacky)
@@ -51,21 +58,21 @@ end
 - Homogenize HTTP 1 and HTTP 2 headers - upcase ? downcase ?
 - find some demo Rack apps and test with Polyphony
 
-## 0.23 Working Sinatra application
+## 0.24 Working Sinatra application
 
 - app with database access (postgresql)
 - benchmarks!
 
-## 0.24 Support for multi-threading
+## 0.25 Support for multi-threading
 
 - Separate event loop for each thread
 
-## 0.25 Testing
+## 0.26 Testing
 
 - test thread / thread_pool modules
 - report test coverage
 
-## 0.26 Documentation
+## 0.27 Documentation
 
 # DNS
 

@@ -99,25 +99,21 @@ void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int
   VALUE resume_value;
   struct Gyro_Timer *timer = (struct Gyro_Timer*)ev_timer;
 
-  // if (!timer->active) {
-  //   return;
-  // }
-
   if (!timer->repeat) {
     timer->active = 0;
-    Gyro_del_watcher_ref(timer->self);
   }
 
   if (timer->fiber != Qnil) {
     ev_timer_stop(EV_DEFAULT, ev_timer);
-    Gyro_del_watcher_ref(timer->self);
+
     timer->active = 0;
     fiber = timer->fiber;
     timer->fiber = Qnil;
     resume_value = DBL2NUM(timer->after);
-    SCHEDULE_FIBER(fiber, 1, resume_value);
+    Gyro_schedule_fiber(fiber, resume_value);
   }
   else if (timer->callback != Qnil) {
+    Gyro_ref_count_decr();
     rb_funcall(timer->callback, ID_call, 1, Qtrue);
   }
 }
@@ -127,13 +123,13 @@ static VALUE Gyro_Timer_start(VALUE self) {
   GetGyro_Timer(self, timer);
 
   if (rb_block_given_p()) {
+    Gyro_ref_count_incr();
     timer->callback = rb_block_proc();
   }
 
   if (!timer->active) {
     ev_timer_start(EV_DEFAULT, &timer->ev_timer);
     timer->active = 1;
-    Gyro_add_watcher_ref(self);
   }
 
   return self;
@@ -146,7 +142,6 @@ static VALUE Gyro_Timer_stop(VALUE self) {
   if (timer->active) {
     ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
     timer->active = 0;
-    Gyro_del_watcher_ref(self);
   }
 
   return self;
@@ -166,7 +161,6 @@ static VALUE Gyro_Timer_reset(VALUE self) {
   ev_timer_start(EV_DEFAULT, &timer->ev_timer);
   if (!prev_active) {
     timer->active = 1;
-    Gyro_add_watcher_ref(self);
   }
 
   return self;
@@ -181,11 +175,11 @@ static VALUE Gyro_Timer_await(VALUE self) {
   timer->fiber = rb_fiber_current();
   timer->active = 1;
   ev_timer_start(EV_DEFAULT, &timer->ev_timer);
-  Gyro_add_watcher_ref(self);
 
-  ret = YIELD_TO_REACTOR();
+  ret = Gyro_yield();
 
   // fiber is resumed, check if resumed value is an exception
+  timer->fiber = Qnil;
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
     if (timer->active) {
       timer->active = 0;
@@ -193,7 +187,6 @@ static VALUE Gyro_Timer_await(VALUE self) {
     }
     return rb_funcall(ret, ID_raise, 1, ret);
   }
-  else {
+  else
     return ret;
-  }
 }

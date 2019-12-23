@@ -5,14 +5,14 @@ require 'polyphony/auto_run'
 
 spin do
   10.times do |i|
-    sleep 0.1
+    sleep 0.05
     p i
   end
 end
 
 spin do
   puts 'going to sleep...'
-  sleep 0.8
+  sleep 0.4
   puts 'woke up'
 end.await
 

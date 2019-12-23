@@ -88,7 +88,7 @@ class IdleTest < MiniTest::Test
     end.schedule
 
     Fiber.new do
-      Gyro.break
+      Gyro.break!
     end.schedule
 
     suspend
@@ -96,7 +96,7 @@ class IdleTest < MiniTest::Test
     assert_equal [:foo], values
   end
 
-  def test_start
+  def test_reset
     values = []
     f1 = Fiber.new do
       values << :foo
@@ -106,7 +106,7 @@ class IdleTest < MiniTest::Test
     end.schedule
 
     f2 = Fiber.new do
-      Gyro.break
+      Gyro.reset!
       values << :restarted
       snooze
       values << :baz
@@ -114,12 +114,9 @@ class IdleTest < MiniTest::Test
 
     suspend
 
-    Gyro.start
-    f2.schedule
     f1.schedule
     suspend
-
-    assert_equal %i[foo restarted bar baz], values
+    assert_equal %i[foo restarted baz], values
   end
 
   def test_restart
@@ -127,13 +124,13 @@ class IdleTest < MiniTest::Test
     Fiber.new do
       values << :foo
       snooze
-      # this part will not be reached, as f
+      # this part will not be reached, as Gyro state is reset
       values << :bar
       suspend
     end.schedule
 
     Fiber.new do
-      Gyro.restart
+      Gyro.reset!
 
       # control is transfer to the fiber that called Gyro.restart
       values << :restarted

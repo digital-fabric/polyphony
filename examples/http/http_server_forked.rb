@@ -3,6 +3,8 @@
 require 'bundler/setup'
 require 'polyphony/http'
 
+::Exception.__disable_sanitized_backtrace__ = true
+
 opts = {
   reuse_addr:  true,
   dont_linger: true
@@ -24,4 +26,4 @@ child_pids = []
   child_pids << pid
 end
 
-child_pids.each { |pid| EV::Child.new(pid).await }
+child_pids.each { |pid| Gyro::Child.new(pid).await }

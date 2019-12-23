@@ -87,14 +87,15 @@ void Gyro_Child_callback(struct ev_loop *ev_loop, struct ev_child *ev_child, int
   struct Gyro_Child *child = (struct Gyro_Child*)ev_child;
   resume_value = INT2NUM(child->pid);
 
+  printf("* callback for pid %d\n", child->pid);
+
   child->active = 0;
   ev_child_stop(EV_DEFAULT, ev_child);
-  Gyro_del_watcher_ref(child->self);
 
   if (child->fiber != Qnil) {
     fiber = child->fiber;
     child->fiber = Qnil;
-    SCHEDULE_FIBER(fiber, 1, resume_value);
+    Gyro_schedule_fiber(fiber, resume_value);
   }
 }
 
@@ -107,12 +108,12 @@ static VALUE Gyro_Child_await(VALUE self) {
   child->fiber = rb_fiber_current();
   child->active = 1;
   ev_child_start(EV_DEFAULT, &child->ev_child);
-  Gyro_add_watcher_ref(self);
 
-  ret = YIELD_TO_REACTOR();
+  ret = Gyro_yield();
 
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
+    printf("* child error\n");
     if (child->active) {
       child->active = 0;
       ev_child_stop(EV_DEFAULT, &child->ev_child);

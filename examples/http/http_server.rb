@@ -12,12 +12,14 @@ opts = {
 spin do
   Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |req|
     req.respond("Hello world!\n")
+  rescue Exception => e
+    p e
   end
 end
 
 spin do
   throttled_loop(1) do
-    puts "Coprocess count: #{Polyphony::Coprocess.list.size}"
+    puts "#{Time.now} coprocess count: #{Polyphony::Coprocess.list.size}"
   end
 end
 

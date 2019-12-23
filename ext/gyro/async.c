@@ -85,7 +85,7 @@ void Gyro_Async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int
     async->active = 0;
     fiber = async->fiber;
     async->fiber = Qnil;
-    SCHEDULE_FIBER(fiber, 0);
+    Gyro_schedule_fiber(fiber, Qnil);
   }
   else {
     ev_async_stop(EV_DEFAULT, ev_async);
@@ -113,7 +113,7 @@ static VALUE Gyro_Async_await(VALUE self) {
     ev_async_start(EV_DEFAULT, &async->ev_async);
   }
 
-  ret = YIELD_TO_REACTOR();
+  ret = Gyro_yield();
 
   // fiber is resumed
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {

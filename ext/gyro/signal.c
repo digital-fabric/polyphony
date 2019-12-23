@@ -79,6 +79,7 @@ static VALUE Gyro_Signal_initialize(VALUE self, VALUE sig) {
   ev_signal_init(&signal->ev_signal, Gyro_Signal_callback, signal->signum);
 
   signal->active = 1;
+  Gyro_ref_count_incr();
   ev_signal_start(EV_DEFAULT, &signal->ev_signal);
 
   return Qnil;
@@ -97,6 +98,7 @@ static VALUE Gyro_Signal_start(VALUE self) {
   GetGyro_Signal(self, signal);
 
   if (!signal->active) {
+    Gyro_ref_count_incr();
     ev_signal_start(EV_DEFAULT, &signal->ev_signal);
     signal->active = 1;
   }
@@ -109,6 +111,7 @@ static VALUE Gyro_Signal_stop(VALUE self) {
   GetGyro_Signal(self, signal);
 
   if (signal->active) {
+    Gyro_ref_count_decr();
     ev_signal_stop(EV_DEFAULT, &signal->ev_signal);
     signal->active = 0;
   }

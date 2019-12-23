@@ -110,7 +110,7 @@ void Gyro_IO_callback(struct ev_loop *ev_loop, struct ev_io *ev_io, int revents)
     io->active = 0;
     fiber = io->fiber;
     io->fiber = Qnil;
-    SCHEDULE_FIBER(fiber, 0);
+    Gyro_schedule_fiber(fiber, Qnil);
   }
   else {
     ev_io_stop(EV_DEFAULT, ev_io);
@@ -126,9 +126,10 @@ VALUE Gyro_IO_await(VALUE self) {
   io->fiber = rb_fiber_current();
   io->active = 1;
   ev_io_start(EV_DEFAULT, &io->ev_io);
-  ret = YIELD_TO_REACTOR();
+  ret = Gyro_yield();
 
   // make sure io watcher is stopped
+  io->fiber = Qnil;
   if (io->active) {
     io->active = 0;
     ev_io_stop(EV_DEFAULT, &io->ev_io);
@@ -376,7 +377,6 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
         if (e == EWOULDBLOCK || e == EAGAIN) {
           if (write_watcher == Qnil)
             write_watcher = IO_write_watcher(io);
-            // write_watcher = rb_funcall(io, ID_write_watcher, 0);
           Gyro_IO_await(write_watcher);
         }
         else {
