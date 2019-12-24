@@ -116,7 +116,7 @@ class Agent
       end
       response
     end
-  rescue => e
+  rescue Exception => e
     p e
     puts e.backtrace.join("\n")
   end

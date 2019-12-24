@@ -259,7 +259,7 @@ module ::Timeout
   end
 end
 
-trap("SIGINT") {
+trap('SIGINT') do
   Gyro.break!
   exit
-}
+end

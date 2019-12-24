@@ -13,9 +13,9 @@ class SiteConnectionManager < ResourcePool
     super(limit: 4)
   end
 
-  def method_missing(sym, *args)
-    raise "Invalid method #{sym}"
-  end
+  # def method_missing(sym, *args)
+  #   raise "Invalid method #{sym}"
+  # end
 
   def acquire
     Gyro.ref

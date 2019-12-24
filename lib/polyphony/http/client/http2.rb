@@ -39,13 +39,14 @@ class HTTP2Adapter
     :http2
   end
 
+  # Virtualizes adapter over HTTP2 stream
   class StreamAdapter
     def initialize(connection)
       @connection = connection
     end
 
     def request(ctx)
-      stream = setup_stream#(ctx, stream)
+      stream = setup_stream # (ctx, stream)
       send_request(ctx, stream)
 
       stream.on(:headers, &method(:on_headers))
@@ -56,11 +57,11 @@ class HTTP2Adapter
       # stream.on(:half_close) { puts "* half_close" }
 
       wait_for_response(ctx, stream)
-    rescue => e
+    rescue Exception => e
       p e
       puts e.backtrace.join("\n")
     # ensure
-    #   stream.close
+      # stream.close
     end
 
     def send_request(ctx, stream)
@@ -89,7 +90,7 @@ class HTTP2Adapter
       end
     end
 
-    def on_close(o)
+    def on_close(_stream)
       @done = true
       @waiting_done_fiber&.schedule
     end
@@ -108,18 +109,18 @@ class HTTP2Adapter
       stream
     end
 
-    def wait_for_response(ctx, stream)
+    def wait_for_response(_ctx, _stream)
       headers = wait_for_headers
       Response.new(self, headers[':status'].to_i, headers)
     end
 
     def wait_for_headers
       return @headers if @headers
-      
+
       @waiting_headers_fiber = Fiber.current
       suspend
     end
-  
+
     def protocol
       :http2
     end
@@ -149,18 +150,16 @@ class HTTP2Adapter
       # end
       # puts ""
       # body
-    rescue => e
+    rescue Exception => e
       p e
       puts e.backtrace.join("\n")
     end
 
-    def each_chunk(&block)
-      while !@buffered_chunks.empty?
-        yield @buffered_chunks.shift
-      end
+    def each_chunk
+      yield @buffered_chunks.shift until @buffered_chunks.empty?
 
       @waiting_chunk_fiber = Fiber.current
-      while !@done
+      until @done
         chunk = suspend
         yield chunk
       end
@@ -170,7 +169,7 @@ class HTTP2Adapter
       return yield @buffered_chunks.shift unless @buffered_chunks.empty?
 
       @waiting_chunk_fuber = Fiber.current
-      while !@done
+      until @done
         chunk = suspend
         return yield chunk
       end

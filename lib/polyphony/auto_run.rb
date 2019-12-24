@@ -10,7 +10,7 @@ at_exit do
     # operations going on. If the reactor loop is not done, we suspend the root
     # fiber until it is done
     begin
-      suspend if !repl
+      suspend unless repl
     rescue Exception => e
       p e
       puts e.backtrace.join("\n")
