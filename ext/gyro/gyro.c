@@ -9,6 +9,8 @@ static VALUE Gyro_suspend(VALUE self);
 
 static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self);
 static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self);
+static VALUE Fiber_state(VALUE self);
+static VALUE Fiber_mark_as_done(VALUE self);
 
 static void Gyro_clear_scheduled_fibers();
 
@@ -23,19 +25,25 @@ static VALUE scheduled_tail;
 ID ID_call;
 ID ID_caller;
 ID ID_clear;
-ID ID_scheduled_next;
-ID ID_scheduled_prev;
-ID ID_scheduled;
+ID ID_done;
 ID ID_each;
 ID ID_inspect;
 ID ID_raise;
 ID ID_read_watcher;
+ID ID_scheduled;
+ID ID_scheduled_next;
+ID ID_scheduled_prev;
 ID ID_scheduled_value;
 ID ID_transfer;
 ID ID_write_watcher;
 ID ID_R;
 ID ID_W;
 ID ID_RW;
+
+VALUE SYM_DEAD;
+VALUE SYM_RUNNING;
+VALUE SYM_PAUSED;
+VALUE SYM_SCHEDULED;
 
 void Init_Gyro() {
   mGyro = rb_define_module("Gyro");
@@ -53,23 +61,35 @@ void Init_Gyro() {
   VALUE cFiber = rb_const_get(rb_cObject, rb_intern("Fiber"));
   rb_define_method(cFiber, "safe_transfer", Fiber_safe_transfer, -1);
   rb_define_method(cFiber, "schedule", Fiber_schedule, -1);
+  rb_define_method(cFiber, "state", Fiber_state, 0);
+  rb_define_method(cFiber, "mark_as_done!", Fiber_mark_as_done, 0);
 
   ID_call             = rb_intern("call");
   ID_caller           = rb_intern("caller");
   ID_clear            = rb_intern("clear");
-  ID_scheduled_next   = rb_intern("scheduled_next");
-  ID_scheduled_prev   = rb_intern("scheduled_prev");
-  ID_scheduled        = rb_intern("ID_scheduled");
+  ID_done             = rb_intern("done");
   ID_each             = rb_intern("each");
   ID_inspect          = rb_intern("inspect");
   ID_raise            = rb_intern("raise");
   ID_read_watcher     = rb_intern("read_watcher");
-  ID_scheduled_value  = rb_intern("@scheduled_value");
+  ID_scheduled        = rb_intern("scheduled");
+  ID_scheduled_next   = rb_intern("scheduled_next");
+  ID_scheduled_prev   = rb_intern("scheduled_prev");
+  ID_scheduled_value  = rb_intern("scheduled_value");
   ID_transfer         = rb_intern("transfer");
   ID_write_watcher    = rb_intern("write_watcher");
   ID_R                = rb_intern("r");
   ID_W                = rb_intern("w");
   ID_RW               = rb_intern("rw");
+
+  SYM_DEAD = ID2SYM(rb_intern("dead"));
+  SYM_RUNNING = ID2SYM(rb_intern("running"));
+  SYM_PAUSED = ID2SYM(rb_intern("paused"));
+  SYM_SCHEDULED = ID2SYM(rb_intern("scheduled"));
+  rb_global_variable(&SYM_DEAD);
+  rb_global_variable(&SYM_RUNNING);
+  rb_global_variable(&SYM_PAUSED);
+  rb_global_variable(&SYM_SCHEDULED);
 
   scheduled_head = Qnil;
   scheduled_tail = Qnil;
@@ -140,6 +160,20 @@ static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
   return self;
 }
 
+static VALUE Fiber_state(VALUE self) {
+  if (!rb_fiber_alive_p(self) || (rb_ivar_get(self, ID_done) != Qnil))
+    return SYM_DEAD;
+  if (rb_fiber_current() == self) return SYM_RUNNING;
+  if (rb_ivar_get(self, ID_scheduled) != Qnil) return SYM_SCHEDULED;
+  
+  return SYM_PAUSED;
+}
+
+static VALUE Fiber_mark_as_done(VALUE self) {
+  rb_ivar_set(self, ID_done, Qtrue);
+  return self;
+}
+
 VALUE Gyro_yield() {
   Gyro_ref_count_incr();
   VALUE ret = Gyro_run();
@@ -174,6 +208,9 @@ VALUE Gyro_run() {
   if (scheduled_head == Qnil) {
     scheduled_tail = Qnil;
   }
+
+  if (rb_fiber_alive_p(next_fiber) != Qtrue)
+    return Qnil;
 
   // run next fiber
   VALUE value = rb_ivar_get(next_fiber, ID_scheduled_value);

@@ -2,7 +2,42 @@
 
 require_relative 'helper'
 
-class RunTest < Minitest::Test
+class SchedulingTest < MiniTest::Test
+  def test_fiber_state
+    assert_equal :running, Fiber.current.state
+
+    f = Fiber.new {}
+
+    assert_equal :paused, f.state
+    f.resume
+    assert_equal :dead, f.state
+
+    f = Fiber.new { }
+    f.schedule
+    assert_equal :scheduled, f.state
+    snooze
+    assert_equal :dead, f.state
+  end
+
+  def test_schedule
+    values = []
+    fibers = 3.times.map { |i| Fiber.new { values << i } }
+    fibers[0].schedule
+
+    assert_equal [], values
+    snooze
+    assert_equal [0], values
+    
+    fibers[1].schedule
+    fibers[2].schedule
+
+    assert_equal [0], values
+    snooze
+    assert_equal [0, 1, 2], values
+  end
+end
+
+class RunTest < MiniTest::Test
   def test_that_run_loop_returns_immediately_if_no_watchers
     t0 = Time.now
     suspend

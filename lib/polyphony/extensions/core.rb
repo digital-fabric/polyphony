@@ -14,7 +14,7 @@ class ::Fiber
   attr_accessor :__calling_fiber__
   attr_accessor :__caller__
   attr_writer :cancelled
-  attr_accessor :coprocess, :scheduled_value
+  attr_accessor :coprocess
 
   class << self
     alias_method :orig_new, :new
@@ -27,6 +27,7 @@ class ::Fiber
         puts "Uncaught exception #{calling_fiber.alive?}"
         calling_fiber.transfer e if calling_fiber.alive?
       ensure
+        fiber.mark_as_done!
         suspend
       end
       fiber.__calling_fiber__ = calling_fiber
@@ -41,7 +42,7 @@ class ::Fiber
     def set_root_fiber
       @root_fiber = current
     end
-    end
+  end
 
   def caller
     @__caller__ ||= []
