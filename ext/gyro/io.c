@@ -102,18 +102,15 @@ static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
 }
 
 void Gyro_IO_callback(struct ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
-  VALUE fiber;
   struct Gyro_IO *io = (struct Gyro_IO*)ev_io;
 
+  ev_io_stop(EV_DEFAULT, ev_io);
+  io->active = 0;
+
   if (io->fiber != Qnil) {
-    ev_io_stop(EV_DEFAULT, ev_io);
-    io->active = 0;
-    fiber = io->fiber;
+    VALUE fiber = io->fiber;
     io->fiber = Qnil;
     Gyro_schedule_fiber(fiber, Qnil);
-  }
-  else {
-    ev_io_stop(EV_DEFAULT, ev_io);
   }
 }
 

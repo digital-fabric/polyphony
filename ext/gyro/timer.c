@@ -95,8 +95,6 @@ static VALUE Gyro_Timer_initialize(VALUE self, VALUE after, VALUE repeat) {
 }
 
 void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int revents) {
-  VALUE fiber;
-  VALUE resume_value;
   struct Gyro_Timer *timer = (struct Gyro_Timer*)ev_timer;
 
   if (!timer->repeat) {
@@ -104,12 +102,12 @@ void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int
   }
 
   if (timer->fiber != Qnil) {
-    ev_timer_stop(EV_DEFAULT, ev_timer);
+    VALUE fiber = timer->fiber;
+    VALUE resume_value = DBL2NUM(timer->after);
 
+    ev_timer_stop(EV_DEFAULT, ev_timer);
     timer->active = 0;
-    fiber = timer->fiber;
     timer->fiber = Qnil;
-    resume_value = DBL2NUM(timer->after);
     Gyro_schedule_fiber(fiber, resume_value);
   }
   else if (timer->callback != Qnil) {

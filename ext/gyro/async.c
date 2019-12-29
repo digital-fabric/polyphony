@@ -77,18 +77,15 @@ static VALUE Gyro_Async_initialize(VALUE self) {
 }
 
 void Gyro_Async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
-  VALUE fiber;
   struct Gyro_Async *async = (struct Gyro_Async*)ev_async;
 
+  ev_async_stop(EV_DEFAULT, ev_async);
+  async->active = 0;
+
   if (async->fiber != Qnil) {
-    ev_async_stop(EV_DEFAULT, ev_async);
-    async->active = 0;
-    fiber = async->fiber;
+    VALUE fiber = async->fiber;
     async->fiber = Qnil;
     Gyro_schedule_fiber(fiber, Qnil);
-  }
-  else {
-    ev_async_stop(EV_DEFAULT, ev_async);
   }
 }
 
@@ -116,6 +113,7 @@ static VALUE Gyro_Async_await(VALUE self) {
   ret = Gyro_yield();
 
   // fiber is resumed
+  async->fiber = Qnil;
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
     if (async->active) {
       async->active = 0;

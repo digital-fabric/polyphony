@@ -82,18 +82,14 @@ static VALUE Gyro_Child_initialize(VALUE self, VALUE pid) {
 }
 
 void Gyro_Child_callback(struct ev_loop *ev_loop, struct ev_child *ev_child, int revents) {
-  VALUE fiber;
-  VALUE resume_value;
   struct Gyro_Child *child = (struct Gyro_Child*)ev_child;
-  resume_value = INT2NUM(child->pid);
-
-  printf("* callback for pid %d\n", child->pid);
 
   child->active = 0;
   ev_child_stop(EV_DEFAULT, ev_child);
 
   if (child->fiber != Qnil) {
-    fiber = child->fiber;
+    VALUE fiber = child->fiber;
+    VALUE resume_value = INT2NUM(child->pid);
     child->fiber = Qnil;
     Gyro_schedule_fiber(fiber, resume_value);
   }
