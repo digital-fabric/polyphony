@@ -21,9 +21,9 @@ library. Polyphony's design is based on the following principles:
   puts 'going to sleep now'
   ```
 
-- Blocking operations should yield to the reactor without any decoration or
-  wrapper APIs. This means no `async/await` notation, and no built-in concept of
-  deferred computation.
+- Blocking operations should yield to other concurrent tasks without any
+  decoration or wrapper APIs. This means no `async/await` notation, and no
+  built-in concept of deferred computation.
 
   ```ruby
   # in Polyphony, I/O ops block the current fiber, but implicitly yield to other

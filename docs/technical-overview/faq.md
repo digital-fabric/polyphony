@@ -72,6 +72,10 @@ Actually, async/await was contemplated while developing Polyphony, but at a cert
 
 Instead, we have decided to make blocking operations implicit and thus allow the use of common APIs such as `Kernel#sleep` or `IO.popen` in a transparent manner. After all, these APIs in their stock form block execution just as well.
 
+## Why use `Fiber#transfer` and not `Fiber#resume`?
+
+The API for `Fiber.yield`/`Fiber#resume` is stateful and is intended for the asymmetric execution of coroutines. This is useful when using generators, or other cases where one coroutine acts as a "server" and another as a "client". In Polyphony's case, all fibers are equal, and control can be transferred freely between them, which is much easier to achieve using `Fiber#transfer`. In addition, using `Fiber#transfer` allows us to perform blocking operations from the main fiber, which is not possible when using `Fiber#resume`.
+
 ## Why is Polyphony not split into multiple gems?
 
 Polyphony is currently at an experimental stage, and its different APIs are still in flux. For that reason, all the different parts of Polyphony are currently kept in a single gem. Once things stabilize, and as Polyphony approaches version 1.0, it will be split into separate gems, each with its own functionality.
