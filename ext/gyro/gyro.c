@@ -3,6 +3,9 @@
 static VALUE Gyro_break_set(VALUE self);
 static VALUE Gyro_break_get(VALUE self);
 
+static VALUE Gyro_ref(VALUE self);
+static VALUE Gyro_unref(VALUE self);
+
 static VALUE Gyro_reset(VALUE self);
 static VALUE Gyro_post_fork(VALUE self);
 static VALUE Gyro_suspend(VALUE self);
@@ -46,6 +49,9 @@ VALUE SYM_SCHEDULED;
 
 void Init_Gyro() {
   mGyro = rb_define_module("Gyro");
+
+  rb_define_singleton_method(mGyro, "ref", Gyro_ref, 0);
+  rb_define_singleton_method(mGyro, "unref", Gyro_unref, 0);
 
   rb_define_singleton_method(mGyro, "reset!", Gyro_reset, 0);
   rb_define_singleton_method(mGyro, "post_fork", Gyro_post_fork, 0);
@@ -92,6 +98,16 @@ void Init_Gyro() {
   scheduled_head = Qnil;
   scheduled_tail = Qnil;
   rb_global_variable(&scheduled_head);
+}
+
+static VALUE Gyro_ref(VALUE self) {
+  Gyro_ref_count_incr();
+  return Qnil;
+}
+
+static VALUE Gyro_unref(VALUE self) {
+  Gyro_ref_count_decr();
+  return Qnil;
 }
 
 static VALUE Gyro_reset(VALUE self) {
