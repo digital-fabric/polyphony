@@ -1,4 +1,8 @@
+0.22 2020-01-02
+---------------
 
+* Redesign Gyro scheduling subsystem, go scheduler-less
+* More docs
 * Rewrite HTTP client agent c1b63787
 * Increment Gyro refcount in ResourcePool#acquire
 * Rewrite ResourcePool
