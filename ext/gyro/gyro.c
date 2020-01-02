@@ -32,7 +32,6 @@ ID ID_raise;
 ID ID_read_watcher;
 ID ID_scheduled;
 ID ID_scheduled_next;
-ID ID_scheduled_prev;
 ID ID_scheduled_value;
 ID ID_transfer;
 ID ID_write_watcher;
@@ -74,7 +73,6 @@ void Init_Gyro() {
   ID_read_watcher     = rb_intern("read_watcher");
   ID_scheduled        = rb_intern("scheduled");
   ID_scheduled_next   = rb_intern("scheduled_next");
-  ID_scheduled_prev   = rb_intern("scheduled_prev");
   ID_scheduled_value  = rb_intern("scheduled_value");
   ID_transfer         = rb_intern("transfer");
   ID_write_watcher    = rb_intern("write_watcher");
@@ -201,9 +199,6 @@ VALUE Gyro_run() {
   VALUE next_fiber = scheduled_head;
   VALUE next_next_fiber = rb_ivar_get(next_fiber, ID_scheduled_next);
   rb_ivar_set(next_fiber, ID_scheduled_next, Qnil);
-  if (next_next_fiber != Qnil) {
-    rb_ivar_set(next_next_fiber, ID_scheduled_prev, Qnil);
-  }
   scheduled_head = next_next_fiber;
   if (scheduled_head == Qnil) {
     scheduled_tail = Qnil;
@@ -231,7 +226,6 @@ void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
   if (scheduled_head != Qnil) {
     VALUE last = scheduled_tail;
     rb_ivar_set(last, ID_scheduled_next, fiber);
-    rb_ivar_set(fiber, ID_scheduled_prev, last);
     scheduled_tail = fiber;
   }
   else {
@@ -255,9 +249,7 @@ static void Gyro_clear_scheduled_fibers() {
   while (scheduled_head != Qnil) {
     VALUE fiber = scheduled_head;
     scheduled_head = rb_ivar_get(fiber, ID_scheduled_next);
-    
     rb_ivar_set(fiber, ID_scheduled_next, Qnil);
-    rb_ivar_set(fiber, ID_scheduled_prev, Qnil);
   }
   scheduled_tail = Qnil;
 }

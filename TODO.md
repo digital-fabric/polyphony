@@ -1,3 +1,31 @@
+# Add ability to cancel multiple coprocesses
+
+```ruby
+scope = CancelScope.new
+
+3.times { |i|
+  spin {
+    puts "sleep for #{i + 1}s"
+    scope.call { sleep i + 1 }
+    puts "woke up"
+  }
+}
+
+sleep 0.5
+scope.cancel!
+```
+
+# Add ability to wait for signal
+
+```ruby
+sig = Gyro::Signal('SIGUP')
+
+loop do
+  sig.await
+  restart
+end
+```
+
 # HTTP Client Agent
 
 The concurrency model and the fact that we want to serve the response object on
