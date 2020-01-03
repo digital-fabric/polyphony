@@ -13,23 +13,33 @@ Throttler   = import('../core/throttler')
 class ::Fiber
   attr_accessor :__calling_fiber__
   attr_accessor :__caller__
+  attr_accessor :__location__
   attr_writer :cancelled
   attr_accessor :coprocess
 
+  def location
+    __location__ || (__caller__ && __caller__[2])
+  end
+
+  def inspect
+    "#<Fiber:#{object_id}@#{location} (#{state})"
+  end
+  alias_method :to_s, :inspect
+
   class << self
     alias_method :orig_new, :new
-    def new(&block)
+    def new(location = nil, &block)
       calling_fiber = Fiber.current
       fiber_caller = caller
       fiber = orig_new do |v|
         block.call(v)
       rescue Exception => e
-        puts "Uncaught exception #{calling_fiber.alive?}"
         calling_fiber.transfer e if calling_fiber.alive?
       ensure
         fiber.mark_as_done!
-        suspend
+        Gyro.run
       end
+      fiber.__location__ = location
       fiber.__calling_fiber__ = calling_fiber
       fiber.__caller__ = fiber_caller
       fiber
