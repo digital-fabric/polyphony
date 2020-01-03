@@ -6,7 +6,6 @@ struct Gyro_Timer {
   double  after;
   double  repeat;
   VALUE   self;
-  VALUE   callback;
   VALUE   fiber;
 };
 
@@ -21,9 +20,6 @@ static size_t Gyro_Timer_size(const void *ptr);
 /* Methods */
 static VALUE Gyro_Timer_initialize(VALUE self, VALUE after, VALUE repeat);
 
-static VALUE Gyro_Timer_start(VALUE self);
-static VALUE Gyro_Timer_stop(VALUE self);
-static VALUE Gyro_Timer_reset(VALUE self);
 static VALUE Gyro_Timer_await(VALUE self);
 
 void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int revents);
@@ -34,9 +30,6 @@ void Init_Gyro_Timer() {
   rb_define_alloc_func(cGyro_Timer, Gyro_Timer_allocate);
 
   rb_define_method(cGyro_Timer, "initialize", Gyro_Timer_initialize, 2);
-  rb_define_method(cGyro_Timer, "start", Gyro_Timer_start, 0);
-  rb_define_method(cGyro_Timer, "stop", Gyro_Timer_stop, 0);
-  rb_define_method(cGyro_Timer, "reset", Gyro_Timer_reset, 0);
   rb_define_method(cGyro_Timer, "await", Gyro_Timer_await, 0);
 }
 
@@ -54,9 +47,6 @@ static VALUE Gyro_Timer_allocate(VALUE klass) {
 
 static void Gyro_Timer_mark(void *ptr) {
   struct Gyro_Timer *timer = ptr;
-  if (timer->callback != Qnil) {
-    rb_gc_mark(timer->callback);
-  }
   if (timer->fiber != Qnil) {
     rb_gc_mark(timer->fiber);
   }
@@ -83,7 +73,6 @@ static VALUE Gyro_Timer_initialize(VALUE self, VALUE after, VALUE repeat) {
   GetGyro_Timer(self, timer);
 
   timer->self     = self;
-  timer->callback = Qnil;
   timer->fiber    = Qnil;
   timer->after    = NUM2DBL(after);
   timer->repeat   = NUM2DBL(repeat);
@@ -110,58 +99,6 @@ void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int
     timer->fiber = Qnil;
     Gyro_schedule_fiber(fiber, resume_value);
   }
-  else if (timer->callback != Qnil) {
-    Gyro_ref_count_decr();
-    rb_funcall(timer->callback, ID_call, 1, Qtrue);
-  }
-}
-
-static VALUE Gyro_Timer_start(VALUE self) {
-  struct Gyro_Timer *timer;
-  GetGyro_Timer(self, timer);
-
-  if (rb_block_given_p()) {
-    Gyro_ref_count_incr();
-    timer->callback = rb_block_proc();
-  }
-
-  if (!timer->active) {
-    ev_timer_start(EV_DEFAULT, &timer->ev_timer);
-    timer->active = 1;
-  }
-
-  return self;
-}
-
-static VALUE Gyro_Timer_stop(VALUE self) {
-  struct Gyro_Timer *timer;
-  GetGyro_Timer(self, timer);
-
-  if (timer->active) {
-    ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
-    timer->active = 0;
-  }
-
-  return self;
-}
-
-static VALUE Gyro_Timer_reset(VALUE self) {
-  struct Gyro_Timer *timer;
-  int prev_active;
-  GetGyro_Timer(self, timer);
-
-  prev_active = timer->active;
-
-  if (prev_active) {
-    ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
-  }
-  ev_timer_set(&timer->ev_timer, timer->after, timer->repeat);
-  ev_timer_start(EV_DEFAULT, &timer->ev_timer);
-  if (!prev_active) {
-    timer->active = 1;
-  }
-
-  return self;
 }
 
 static VALUE Gyro_Timer_await(VALUE self) {
@@ -183,7 +120,7 @@ static VALUE Gyro_Timer_await(VALUE self) {
       timer->active = 0;
       ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
     }
-    return rb_funcall(ret, ID_raise, 1, ret);
+    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else
     return ret;

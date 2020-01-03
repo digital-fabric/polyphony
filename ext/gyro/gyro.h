@@ -15,7 +15,7 @@ enum {
 // void Gyro_del_watcher_ref(VALUE obj);
 VALUE Gyro_snooze(VALUE self);
 
-VALUE Gyro_run();
+VALUE Gyro_run_next_fiber();
 VALUE Gyro_yield();
 void Gyro_schedule_fiber(VALUE fiber, VALUE value);
 

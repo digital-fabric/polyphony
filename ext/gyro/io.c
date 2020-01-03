@@ -134,7 +134,7 @@ VALUE Gyro_IO_await(VALUE self) {
 
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    return rb_funcall(ret, ID_raise, 1, ret);
+    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else {
     return Qnil;

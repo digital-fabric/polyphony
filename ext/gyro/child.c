@@ -114,7 +114,7 @@ static VALUE Gyro_Child_await(VALUE self) {
       child->active = 0;
       ev_child_stop(EV_DEFAULT, &child->ev_child);
     }
-    return rb_funcall(ret, ID_raise, 1, ret);
+    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else {
     return ret;

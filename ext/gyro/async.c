@@ -119,7 +119,7 @@ static VALUE Gyro_Async_await(VALUE self) {
       async->active = 0;
       ev_async_stop(EV_DEFAULT, &async->ev_async);
     }
-    return rb_funcall(ret, ID_raise, 1, ret);
+    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else {
     return Qnil;

@@ -6,6 +6,7 @@ static VALUE Gyro_break_get(VALUE self);
 static VALUE Gyro_ref(VALUE self);
 static VALUE Gyro_unref(VALUE self);
 
+static VALUE Gyro_run(VALUE self);
 static VALUE Gyro_reset(VALUE self);
 static VALUE Gyro_post_fork(VALUE self);
 static VALUE Gyro_suspend(VALUE self);
@@ -53,6 +54,7 @@ void Init_Gyro() {
   rb_define_singleton_method(mGyro, "ref", Gyro_ref, 0);
   rb_define_singleton_method(mGyro, "unref", Gyro_unref, 0);
 
+  rb_define_singleton_method(mGyro, "run", Gyro_run, 0);
   rb_define_singleton_method(mGyro, "reset!", Gyro_reset, 0);
   rb_define_singleton_method(mGyro, "post_fork", Gyro_post_fork, 0);
   rb_define_singleton_method(mGyro, "snooze", Gyro_snooze, 0);
@@ -110,6 +112,10 @@ static VALUE Gyro_unref(VALUE self) {
   return Qnil;
 }
 
+static VALUE Gyro_run(VALUE self) {
+  return Gyro_run_next_fiber();
+}
+
 static VALUE Gyro_reset(VALUE self) {
   break_flag = 0;
   ref_count = 0;
@@ -121,7 +127,6 @@ static VALUE Gyro_reset(VALUE self) {
 static VALUE Gyro_break_set(VALUE self) {
   break_flag = 1;
   ev_break(EV_DEFAULT, EVBREAK_ALL);
-  // printf("\n");
   return Qnil;
 }
 
@@ -133,9 +138,9 @@ VALUE Gyro_snooze(VALUE self) {
   VALUE fiber = rb_fiber_current();
   Gyro_schedule_fiber(fiber, Qnil);
 
-  VALUE ret = Gyro_run();
+  VALUE ret = Gyro_run_next_fiber();
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
-    return rb_funcall(ret, ID_raise, 1, ret);
+    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   else
     return ret;
 }
@@ -151,9 +156,10 @@ static VALUE Gyro_post_fork(VALUE self) {
 }
 
 static VALUE Gyro_suspend(VALUE self) {
-  VALUE ret = Gyro_run();
+  rb_ivar_set(self, ID_scheduled_value, Qnil);
+  VALUE ret = Gyro_run_next_fiber();
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    return rb_funcall(ret, ID_raise, 1, ret);
+    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else
     return ret;
@@ -165,7 +171,7 @@ static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
 
   // fiber is resumed, check if resumed value is an exception
   return RTEST(rb_obj_is_kind_of(ret, rb_eException)) ? 
-    rb_funcall(ret, ID_raise, 1, ret) : ret;
+    rb_funcall(rb_mKernel, ID_raise, 1, ret) : ret;
 }
 
 static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
@@ -190,12 +196,12 @@ static VALUE Fiber_mark_as_done(VALUE self) {
 
 VALUE Gyro_yield() {
   Gyro_ref_count_incr();
-  VALUE ret = Gyro_run();
+  VALUE ret = Gyro_run_next_fiber();
   Gyro_ref_count_decr();
   return ret;
 }
 
-VALUE Gyro_run() {
+VALUE Gyro_run_next_fiber() {
   while (1) {
     if (break_flag != 0) {
       return Qnil;
@@ -220,8 +226,10 @@ VALUE Gyro_run() {
     scheduled_tail = Qnil;
   }
 
-  if (rb_fiber_alive_p(next_fiber) != Qtrue)
+  if (rb_fiber_alive_p(next_fiber) != Qtrue) {
     return Qnil;
+  }
+    
 
   // run next fiber
   VALUE value = rb_ivar_get(next_fiber, ID_scheduled_value);
