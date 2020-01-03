@@ -54,31 +54,32 @@ class CancelScopeTest < Minitest::Test
   def test_that_cancel_scope_cancels_coprocess
     ctx = {}
     spin do
-      Gyro::Timer.new(0.005, 0).start { ctx[:cancel_scope]&.cancel! }
+      after(0.005) { ctx[:cancel_scope].cancel! }
       sleep_with_cancel(ctx, :cancel)
     rescue Exception => e
       ctx[:result] = e
+      nil
     end
     assert_nil(ctx[:result])
     # async operation will only begin on next iteration of event loop
     assert_nil(ctx[:cancel_scope])
 
-    suspend
+    Gyro.run
     assert_kind_of(Polyphony::CancelScope, ctx[:cancel_scope])
     assert_kind_of(Polyphony::Cancel, ctx[:result])
   end
 
-  # def test_that_cancel_scope_cancels_async_op_with_stop
-  #   ctx = {}
-  #   spin do
-  #     Gyro::Timer.new(0, 0).start { ctx[:cancel_scope].cancel! }
-  #     sleep_with_cancel(ctx, :stop)
-  #   end
+  def test_that_cancel_scope_cancels_async_op_with_stop
+    ctx = {}
+    spin do
+      after(0) { ctx[:cancel_scope].cancel! }
+      sleep_with_cancel(ctx, :stop)
+    end
 
-  #   suspend
-  #   assert(ctx[:cancel_scope])
-  #   assert_nil(ctx[:result])
-  # end
+    Gyro.run
+    assert(ctx[:cancel_scope])
+    assert_nil(ctx[:result])
+  end
 
   def test_that_cancel_after_raises_cancelled_exception
     result = nil

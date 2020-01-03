@@ -26,7 +26,7 @@ class AsyncTest < MiniTest::Test
       loop {
         a.await
         count += 1
-        after(0.01) { coproc.stop }
+        defer { coproc.stop }
       }
     }
     snooze
@@ -34,7 +34,7 @@ class AsyncTest < MiniTest::Test
       sync_sleep 0.001
       3.times { a.signal! }
     end
-    suspend
+    coproc.await
     assert_equal(1, count)
   end
 end

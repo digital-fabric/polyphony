@@ -18,8 +18,8 @@ Minitest::Reporters.use! [
 
 class MiniTest::Test
   def teardown
-    # wait for reactor loop to finish running
-    suspend
+    # wait for any remaining scheduled work
+    Gyro.run
     Polyphony.reset!
   end
 end

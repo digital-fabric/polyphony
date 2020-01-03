@@ -2,7 +2,7 @@
 
 require_relative 'helper'
 
-class SchedulingTest < MiniTest::Test
+class GyroTest < MiniTest::Test
   def test_fiber_state
     assert_equal :running, Fiber.current.state
 
@@ -35,18 +35,14 @@ class SchedulingTest < MiniTest::Test
     snooze
     assert_equal [0, 1, 2], values
   end
-end
 
-class RunTest < MiniTest::Test
   def test_that_run_loop_returns_immediately_if_no_watchers
     t0 = Time.now
     suspend
     t1 = Time.now
     assert((t1 - t0) < 0.01)
   end
-end
 
-class IdleTest < MiniTest::Test
   def test_defer
     values = []
     defer { values << 1 }

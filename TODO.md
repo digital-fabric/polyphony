@@ -1,3 +1,8 @@
+# Refactor core.rb
+
+- Put core class patches in core_ext.rb
+- Put API in api.rb
+
 # Add ability to cancel multiple coprocesses
 
 ```ruby
@@ -24,6 +29,17 @@ loop do
   sig.await
   restart
 end
+```
+
+# Better API for multiple coprocess supervision
+
+```ruby
+# wait for all, raise exception raised in any coprocess
+Coprocess.join(coproc1, coproc2, ...)
+#=> returns array of results from coprocesses
+
+# wait for first that finishes from multiple coprocs
+Coprocess.select(coproc1, coproc2)
 ```
 
 # HTTP Client Agent
@@ -71,14 +87,37 @@ end
 
 # Roadmap:
 
-## 0.22 Redesign of Gyro scheduling system
+## 0.23 More API work and tests
 
-- Schedulerless design - no separate fiber for running ev loop
-- Blocking operations directly transfer to first scheduled fiber
-- Scheduled fibers managed using linked list, switching directly from one to the
-  other
+- Tests for all APIs
+- Awaiting on recurring timer (with compensation for timer drift)
 
-## 0.23 Full Rack adapter implementation
+  ```ruby
+  timer = Gyro::Timer.new(1, 1)
+  loop do
+    timer.await
+    puts Time.now.to_f
+  end
+  ```
+
+- Cancel multiple coprocesses with single cancel scope:
+
+  ```ruby
+  scope = CancelScope.new
+
+  3.times do
+    spin do
+      scope.call do
+        do_some_work
+      end
+    end
+  end
+
+  sleep 0.5
+  scope.cancel!
+  ```
+
+## 0.24 Full Rack adapter implementation
 
 - Work better mechanism supervising multiple coprocesses (`when_done` feels a
   bit hacky)
@@ -86,21 +125,26 @@ end
 - Homogenize HTTP 1 and HTTP 2 headers - upcase ? downcase ?
 - find some demo Rack apps and test with Polyphony
 
-## 0.24 Working Sinatra application
+## 0.25 Working Sinatra application
 
 - app with database access (postgresql)
 - benchmarks!
 
-## 0.25 Support for multi-threading
+## 0.26 Support for multi-threading
 
 - Separate event loop for each thread
 
-## 0.26 Testing
+## 0.27 Testing
 
 - test thread / thread_pool modules
 - report test coverage
 
-## 0.27 Documentation
+## 0.28 Documentation
+
+## 0.29 Integration
+
+- Sidekick
+- Rails?
 
 # DNS
 
