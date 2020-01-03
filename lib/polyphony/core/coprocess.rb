@@ -92,7 +92,8 @@ class Coprocess
 
     # if no awaiting fiber, raise any uncaught error by passing it to the
     # calling fiber, or to the root fiber if the calling fiber
-    calling_fiber = @calling_fiber || Fiber.root
+    calling_fiber_alive = @calling_fiber && @calling_fiber.state != :dead
+    calling_fiber = calling_fiber_alive ? @calling_fiber : Fiber.root
     calling_fiber.transfer @result
   end
 
