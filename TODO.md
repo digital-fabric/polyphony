@@ -20,17 +20,6 @@ sleep 0.5
 scope.cancel!
 ```
 
-# Add ability to wait for signal
-
-```ruby
-sig = Gyro::Signal('SIGUP')
-
-loop do
-  sig.await
-  restart
-end
-```
-
 # Better API for multiple coprocess supervision
 
 ```ruby

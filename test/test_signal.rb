@@ -6,10 +6,15 @@ class SignalTest < MiniTest::Test
   def test_Gyro_Signal_constructor
     sig = Signal.list['USR1']
     count = 0
-    w = Gyro::Signal.new(sig) do
-      count += 1
-      w.stop
-    end
+    w = Gyro::Signal.new(sig)
+
+    spin {
+      loop {
+        w.await
+        count += 1
+        break
+      }
+    }
     Thread.new do
       sync_sleep 0.001
       Process.kill(:USR1, Process.pid)

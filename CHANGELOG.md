@@ -1,6 +1,6 @@
 * Patch Fiber#inspect to show correct block location
 * Add Gyro.run
-* Move away from callback-based timer API (from now on only Timer#await)
+* Move away from callback-based API for `Gyro::Timer`, `Gyro::Signal`
 
 0.22 2020-01-02
 ---------------

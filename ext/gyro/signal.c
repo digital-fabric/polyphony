@@ -4,7 +4,7 @@ struct Gyro_Signal {
   struct  ev_signal ev_signal;
   int     active;
   int     signum;
-  VALUE   callback;
+  VALUE   fiber;
 };
 
 static VALUE cGyro_Signal = Qnil;
@@ -18,8 +18,7 @@ static size_t Gyro_Signal_size(const void *ptr);
 /* Methods */
 static VALUE Gyro_Signal_initialize(VALUE self, VALUE sig);
 
-static VALUE Gyro_Signal_start(VALUE self);
-static VALUE Gyro_Signal_stop(VALUE self);
+static VALUE Gyro_Signal_await(VALUE self);
 
 void Gyro_Signal_callback(struct ev_loop *ev_loop, struct ev_signal *signal, int revents);
 
@@ -29,8 +28,7 @@ void Init_Gyro_Signal() {
   rb_define_alloc_func(cGyro_Signal, Gyro_Signal_allocate);
 
   rb_define_method(cGyro_Signal, "initialize", Gyro_Signal_initialize, 1);
-  rb_define_method(cGyro_Signal, "start", Gyro_Signal_start, 0);
-  rb_define_method(cGyro_Signal, "stop", Gyro_Signal_stop, 0);
+  rb_define_method(cGyro_Signal, "await", Gyro_Signal_await, 0);
 }
 
 static const rb_data_type_t Gyro_Signal_type = {
@@ -47,8 +45,8 @@ static VALUE Gyro_Signal_allocate(VALUE klass) {
 
 static void Gyro_Signal_mark(void *ptr) {
   struct Gyro_Signal *signal = ptr;
-  if (signal->callback != Qnil) {
-    rb_gc_mark(signal->callback);
+  if (signal->fiber != Qnil) {
+    rb_gc_mark(signal->fiber);
   }
 }
 
@@ -72,15 +70,11 @@ static VALUE Gyro_Signal_initialize(VALUE self, VALUE sig) {
   GetGyro_Signal(self, signal);
   signal->signum = NUM2INT(signum);
 
-  if (rb_block_given_p()) {
-    signal->callback = rb_block_proc();
-  }
-
   ev_signal_init(&signal->ev_signal, Gyro_Signal_callback, signal->signum);
 
-  signal->active = 1;
-  Gyro_ref_count_incr();
-  ev_signal_start(EV_DEFAULT, &signal->ev_signal);
+  // signal->active = 1;
+  // Gyro_ref_count_incr();
+  // ev_signal_start(EV_DEFAULT, &signal->ev_signal);
 
   return Qnil;
 }
@@ -88,33 +82,37 @@ static VALUE Gyro_Signal_initialize(VALUE self, VALUE sig) {
 void Gyro_Signal_callback(struct ev_loop *ev_loop, struct ev_signal *ev_signal, int revents) {
   struct Gyro_Signal *signal = (struct Gyro_Signal*)ev_signal;
 
-  if (signal->callback != Qnil) {
-    rb_funcall(signal->callback, ID_call, 1, INT2NUM(signal->signum));
-  }
-}
+  if (signal->fiber != Qnil) {
+    VALUE fiber = signal->fiber;
 
-static VALUE Gyro_Signal_start(VALUE self) {
-  struct Gyro_Signal *signal;
-  GetGyro_Signal(self, signal);
-
-  if (!signal->active) {
-    Gyro_ref_count_incr();
-    ev_signal_start(EV_DEFAULT, &signal->ev_signal);
-    signal->active = 1;
-  }
-
-  return self;
-}
-
-static VALUE Gyro_Signal_stop(VALUE self) {
-  struct Gyro_Signal *signal;
-  GetGyro_Signal(self, signal);
-
-  if (signal->active) {
-    Gyro_ref_count_decr();
-    ev_signal_stop(EV_DEFAULT, &signal->ev_signal);
+    ev_signal_stop(EV_DEFAULT, ev_signal);
     signal->active = 0;
+    signal->fiber = Qnil;
+    Gyro_schedule_fiber(fiber, INT2NUM(signal->signum));
   }
+}
 
-  return self;
+static VALUE Gyro_Signal_await(VALUE self) {
+  struct Gyro_Signal *signal;
+  VALUE ret;
+  
+  GetGyro_Signal(self, signal);
+
+  signal->fiber = rb_fiber_current();
+  signal->active = 1;
+  ev_signal_start(EV_DEFAULT, &signal->ev_signal);
+
+  ret = Gyro_yield();
+
+  // fiber is resumed, check if resumed value is an exception
+  signal->fiber = Qnil;
+  if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
+    if (signal->active) {
+      signal->active = 0;
+      ev_signal_stop(EV_DEFAULT, &signal->ev_signal);
+    }
+    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
+  }
+  else
+    return ret;
 }
