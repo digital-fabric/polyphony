@@ -58,10 +58,14 @@ class Coprocess
     @block = block
   end
 
+  def location
+    @block ? @block.source_location.join(':') : nil
+  end
+
   def run
     @calling_fiber = Fiber.current
 
-    @fiber = Fiber.new { execute }
+    @fiber = Fiber.new(location) { execute }
     @fiber.schedule
     @ran = true
     self
@@ -99,14 +103,6 @@ class Coprocess
 
   def alive?
     @fiber
-  end
-
-  def caller
-    @fiber && @fiber.__caller__[2..-1]
-  end
-
-  def location
-    caller[0]
   end
 
   # Kernel.await expects the given argument / block to be a callable, so #call

@@ -18,7 +18,7 @@ class ::Fiber
   attr_accessor :coprocess
 
   def location
-    __location__ || (__caller__ && __caller__[2])
+    __location__ || (__caller__ && __caller__[0])
   end
 
   def inspect
