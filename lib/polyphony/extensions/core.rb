@@ -136,16 +136,21 @@ end
 # Kernel extensions (methods available to all objects / call sites)
 module ::Kernel
   def after(interval, &block)
-    Gyro::Timer.new(interval, 0).start(&block)
+    spin {
+      sleep interval
+      block.()
+    }
   end
 
   def cancel_after(interval, &block)
-    timer = Gyro::Timer.new(interval, 0)
     fiber = Fiber.current
-    timer.start { fiber.schedule Exceptions::Cancel.new }
+    canceller = spin {
+      sleep interval
+      fiber.schedule Exceptions::Cancel.new
+    }
     block.call
   ensure
-    timer.stop
+    canceller.stop
   end
 
   def defer(&block)
@@ -161,18 +166,21 @@ module ::Kernel
   end
 
   def every(freq, &block)
-    Gyro::Timer.new(freq, freq).start(&block)
+    raise NotImplementedError
+    # Gyro::Timer.new(freq, freq).start(&block)
   end
 
   def move_on_after(interval, with_value: nil, &block)
-    timer = Gyro::Timer.new(interval, 0)
     fiber = Fiber.current
-    timer.start { fiber.schedule Exceptions::MoveOn.new(nil, with_value) }
+    canceller = spin {
+      sleep interval
+      fiber.schedule Exceptions::MoveOn.new(nil, with_value)
+    }
     block.call
   rescue Exceptions::MoveOn => e
     e.value
   ensure
-    timer.stop
+    canceller.stop
   end
 
   def pulse(freq)
@@ -187,8 +195,6 @@ module ::Kernel
   def sleep(duration)
     timer = Gyro::Timer.new(duration, 0)
     timer.await
-  ensure
-    timer.stop
   end
 
   def supervise(&block)
