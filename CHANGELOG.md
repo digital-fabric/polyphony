@@ -1,3 +1,5 @@
+* Add `Kernel#orig_sleep` alias to sync `#sleep` method
+* Add optional resume value to `Gyro::Async#signal!`
 * Patch Fiber#inspect to show correct block location
 * Add Gyro.run
 * Move away from callback-based API for `Gyro::Timer`, `Gyro::Signal`

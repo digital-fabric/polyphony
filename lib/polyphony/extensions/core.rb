@@ -192,6 +192,7 @@ module ::Kernel
   end
 
   alias_method :sync_sleep, :sleep
+  alias_method :orig_sleep, :sleep
   def sleep(duration)
     timer = Gyro::Timer.new(duration, 0)
     timer.await
