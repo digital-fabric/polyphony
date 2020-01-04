@@ -7,7 +7,7 @@ def lengthy_op
   IO.orig_read(__FILE__)
 end
 
-X = 1000
+X = 10000
 
 def blocking
   t0 = Time.now
@@ -18,8 +18,8 @@ end
 
 def threaded
   t0 = Time.now
-  data = Polyphony::Thread.spin { lengthy_op }.await
-  X.times { Polyphony::Thread.spin { lengthy_op }.await }
+  data = Polyphony::Thread.spawn { lengthy_op }.await
+  X.times { Polyphony::Thread.spawn { lengthy_op } }
   puts "read threaded #{data.bytesize} bytes (#{Time.now - t0}s)"
 end
 

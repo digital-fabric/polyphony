@@ -7,15 +7,9 @@ export :process, :setup, :size=, :busy?
 def process(&block)
   setup unless @task_queue
 
-  start_task_on_thread(block)
-end
-
-def start_task_on_thread(block)
-  Gyro.ref
-  @task_queue << [block, Fiber.current]
-  suspend
-ensure
-  Gyro.unref
+  watcher = Gyro::Async.new
+  @task_queue << [block, watcher]
+  watcher.await
 end
 
 def size=(size)
@@ -28,19 +22,7 @@ end
 
 def setup
   @task_queue = ::Queue.new
-  @resolve_queue = ::Queue.new
-
-  @async_watcher = Gyro::Async.new { resolve_from_queue }
-  Gyro.unref
-
   @threads = (1..@size).map { Thread.new { thread_loop } }
-end
-
-def resolve_from_queue
-  until @resolve_queue.empty?
-    (fiber, result) = @resolve_queue.pop(true)
-    fiber.transfer result unless fiber.cancelled?
-  end
 end
 
 def thread_loop
@@ -48,11 +30,9 @@ def thread_loop
 end
 
 def run_queued_task
-  (block, fiber) = @task_queue.pop
+  (block, watcher) = @task_queue.pop
   result = block.()
-  @resolve_queue << [fiber, result]
-  @async_watcher.signal!
+  watcher.signal!(result)
 rescue Exception => e
-  @resolve_queue << [fiber, e]
-  @async_watcher.signal!
+  watcher.signal!(e)
 end

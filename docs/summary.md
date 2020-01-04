@@ -15,11 +15,25 @@
 * [Exception Handling](technical-overview/exception-handling.md)
 * [Frequently Asked Questions](technical-overview/faq.md)
 
-## Using Polyphony
+## How To
 
-* [Coprocesses](#)
-* [Supervisors](#)
-* [Cancel Scopes](#)
+* [Make an echo server](howto/echo-server.md)
+* [Make an HTTP server](howto/http-server.md)
+* [Make a Websocket server](howto/websocket-server.md)
+* [Use timers](howto/timers.md)
+* [Throttle recurrent operations](howto/throttle.md)
+* [Cancel ongoing operations](howto/cancel.md)
+* [Control coprocesses](howto/coprocesses.md)
+* [Synchronize concurrent operations](howto/synchronize.md)
+* [Perform CPU-bound operations](howto/cpu-bound.md)
+* [Control backpressure](howto/backpressure.md)
+* [Fork worker processes](howto/worker-processes.md)
+
+## Polyphony extensions
+
+* [Postgresql](extensions/pg)
+* [Redis](extensions/redis)
+* [IRB](extensions/irb)
 * [Throttlers](#)
 * [Resource Pools](#)
 * [Synchronisation](#)
