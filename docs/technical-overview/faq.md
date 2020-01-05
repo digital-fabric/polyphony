@@ -80,6 +80,18 @@ The API for `Fiber.yield`/`Fiber#resume` is stateful and is intended for the asy
 
 Polyphony is currently at an experimental stage, and its different APIs are still in flux. For that reason, all the different parts of Polyphony are currently kept in a single gem. Once things stabilize, and as Polyphony approaches version 1.0, it will be split into separate gems, each with its own functionality.
 
+## Can I use Polyphony in a multithreaded program?
+
+Not yet. We plan to support multiple threads when Ruby 3.0 is ready.
+
+## Can I run Rails using Polyphony?
+
+Not yet. We do plan to support running Rails when our multithreaded support is ready (see above).
+
+## How can I contribute to Polyphony?
+
+The Polyphony repository is at https://github.com/digital-fabric/polyphony. Feel free to create issues and contribute pull requests.
+
 ## Who is behind this project?
 
 I'm Sharon Rosner, an independent software developer living in France. Here's my [github profile](https://github.com/ciconia). You can contact me by writing to [noteflakes@gmail.com](mailto:ciconia@gmail.com).
