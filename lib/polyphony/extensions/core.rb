@@ -22,7 +22,7 @@ class ::Fiber
   end
 
   def inspect
-    "#<Fiber:#{object_id}@#{location} (#{state})"
+    "#<Fiber:#{object_id} #{location} (#{state})"
   end
   alias_method :to_s, :inspect
 
