@@ -263,7 +263,7 @@ class CoprocessTest < MiniTest::Test
     snooze
 
     caller = cp.caller
-    assert caller[0] =~ location
+    assert_match location, caller[0]
   end
 
   def test_location

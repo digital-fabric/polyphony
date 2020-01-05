@@ -62,6 +62,10 @@ class Coprocess
     @block ? @block.source_location.join(':') : nil
   end
 
+  def caller
+    @fiber ? @fiber.caller[2..-1] : nil
+  end
+
   def run
     @calling_fiber = Fiber.current
 
