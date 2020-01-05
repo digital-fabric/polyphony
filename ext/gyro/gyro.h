@@ -16,7 +16,7 @@ enum {
 VALUE Gyro_snooze(VALUE self);
 
 VALUE Gyro_run_next_fiber();
-VALUE Gyro_yield();
+VALUE Gyro_await();
 void Gyro_schedule_fiber(VALUE fiber, VALUE value);
 
 int Gyro_ref_count();

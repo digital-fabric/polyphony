@@ -102,7 +102,7 @@ static VALUE Gyro_Signal_await(VALUE self) {
   signal->active = 1;
   ev_signal_start(EV_DEFAULT, &signal->ev_signal);
 
-  ret = Gyro_yield();
+  ret = Gyro_await();
 
   // fiber is resumed, check if resumed value is an exception
   signal->fiber = Qnil;

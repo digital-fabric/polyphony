@@ -111,7 +111,7 @@ static VALUE Gyro_Timer_await(VALUE self) {
   timer->active = 1;
   ev_timer_start(EV_DEFAULT, &timer->ev_timer);
 
-  ret = Gyro_yield();
+  ret = Gyro_await();
 
   // fiber is resumed, check if resumed value is an exception
   timer->fiber = Qnil;

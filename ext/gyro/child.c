@@ -105,7 +105,7 @@ static VALUE Gyro_Child_await(VALUE self) {
   child->active = 1;
   ev_child_start(EV_DEFAULT, &child->ev_child);
 
-  ret = Gyro_yield();
+  ret = Gyro_await();
 
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {

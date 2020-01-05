@@ -194,7 +194,7 @@ static VALUE Fiber_mark_as_done(VALUE self) {
   return self;
 }
 
-VALUE Gyro_yield() {
+VALUE Gyro_await() {
   Gyro_ref_count_incr();
   VALUE ret = Gyro_run_next_fiber();
   Gyro_ref_count_decr();

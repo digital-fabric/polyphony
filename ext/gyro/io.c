@@ -123,7 +123,7 @@ VALUE Gyro_IO_await(VALUE self) {
   io->fiber = rb_fiber_current();
   io->active = 1;
   ev_io_start(EV_DEFAULT, &io->ev_io);
-  ret = Gyro_yield();
+  ret = Gyro_await();
 
   // make sure io watcher is stopped
   io->fiber = Qnil;

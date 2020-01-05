@@ -116,7 +116,7 @@ static VALUE Gyro_Async_await(VALUE self) {
     ev_async_start(EV_DEFAULT, &async->ev_async);
   }
 
-  ret = Gyro_yield();
+  ret = Gyro_await();
 
   // fiber is resumed
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
