@@ -51,7 +51,7 @@ class SupervisorTest < MiniTest::Test
     assert_equal [Polyphony::Coprocess], buffer.map { |v| v.class }.uniq
   end
 
-  def test_select
+  def test_supervisor_select
     buffer = []
     foo_cp = bar_cp = baz_cp = nil
     result, cp = Polyphony::Supervisor.new.select { |s|

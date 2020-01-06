@@ -229,7 +229,6 @@ VALUE Gyro_run_next_fiber() {
   if (rb_fiber_alive_p(next_fiber) != Qtrue) {
     return Qnil;
   }
-    
 
   // run next fiber
   VALUE value = rb_ivar_get(next_fiber, ID_scheduled_value);

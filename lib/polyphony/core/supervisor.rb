@@ -9,7 +9,7 @@ Exceptions  = import('./exceptions')
 class Supervisor
   def initialize(&block)
     @coprocesses = []
-    @pending = []
+    @pending = {}
   end
 
   def await(&block)
@@ -51,7 +51,7 @@ class Supervisor
   def spin(coproc = nil, &block)
     coproc = Coprocess.new(&(coproc || block)) unless coproc.is_a?(Coprocess)
     @coprocesses << coproc
-    @pending << coproc
+    @pending[coproc] = true
     coproc.when_done { task_completed(coproc) }
     coproc.run unless coproc.alive?
     coproc
@@ -59,7 +59,7 @@ class Supervisor
 
   def add(coproc)
     @coprocesses << coproc
-    @pending << coproc
+    @pending[coproc] = true
     coproc.when_done { task_completed(coproc) }
     coproc.run unless coproc.alive?
     coproc
@@ -67,7 +67,7 @@ class Supervisor
   alias_method :<<, :add
 
   def still_running?
-    !@coprocesses.empty?
+    !@pending.empty?
   end
 
   def stop!(result = nil)
@@ -79,17 +79,21 @@ class Supervisor
 
   def stop_all_tasks
     exception = Exceptions::MoveOn.new
-    @pending.each do |c|
+    @pending.each_key do |c|
       c.schedule(exception)
     end
   end
 
   def task_completed(coprocess)
-    return unless @pending.include?(coprocess)
+    return unless @pending[coprocess]
+
+    # puts "task_completed #{coprocess.inspect}"
 
     @pending.delete(coprocess)
     return unless @pending.empty? || (@mode == :select && !@select_coproc)
     
+    # puts "scheduling supervisor fiber"
+    # p [@pending.empty?, @mode == :select, !@select_coproc]
     @select_coproc = coprocess if @mode == :select
     @supervisor_fiber&.schedule
   end
