@@ -1,0 +1,46 @@
+# frozen_string_literal: true
+
+require 'coverage'
+require 'simplecov'
+
+class << SimpleCov::LinesClassifier
+  alias_method :orig_whitespace_line?, :whitespace_line?
+  def whitespace_line?(line)
+    line.strip =~ /^begin|end|ensure$/ || orig_whitespace_line?(line)
+  end
+end
+
+module Coverage
+  EXCLUDE = %w{coverage eg helper run
+  }.map { |n| File.expand_path("test/#{n}.rb") }
+
+  PWD = FileUtils.pwd
+
+  class << self
+    def relevant_lines_for_filename(filename)
+      @classifier ||= SimpleCov::LinesClassifier.new
+      @classifier.classify(IO.read(filename).lines)
+    end
+
+    def start
+      @result = {}
+      trace = TracePoint.new(:line) do |tp|
+        next if tp.path =~ /\(/
+      
+        absolute = File.expand_path(tp.path)
+        next unless absolute =~ /^#{PWD}/
+        next if EXCLUDE.include? absolute
+        
+        @result[absolute] ||= relevant_lines_for_filename(absolute)
+        @result[absolute][tp.lineno - 1] = 1
+      end
+      trace.enable
+    end
+
+    def result
+      @result
+    end
+  end
+end
+
+SimpleCov.start

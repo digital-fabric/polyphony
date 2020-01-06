@@ -2,13 +2,15 @@
 
 require 'bundler/setup'
 
+require 'fileutils'
+require_relative './eg'
+
+require_relative './coverage' if ENV['COV']
+
 require 'minitest/autorun'
 require 'minitest/reporters'
 
 require 'polyphony'
-require 'fileutils'
-
-require_relative './eg'
 
 ::Exception.__disable_sanitized_backtrace__ = true
 

@@ -1,5 +1,4 @@
-
-* 
+* Optional coverage report for tests
 * More tests
 * Add `Coprocess.select` and `Supervisor#select` methods
 * Add `Coprocess.join` alias to `Coprocess.await` method
