@@ -1,3 +1,8 @@
+
+* 
+* More tests
+* Add `Coprocess.select` and `Supervisor#select` methods
+* Add `Coprocess.join` alias to `Coprocess.await` method
 * Add support for cancelling multiple coprocesses with a single cancel scope
 * Fix stopping a coprocess before it being scheduled for the first time
 * Rewrite `thread`, `thread_pool` modules

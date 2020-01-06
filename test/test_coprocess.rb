@@ -2,8 +2,6 @@
 
 require_relative 'helper'
 
-STDOUT.sync = true
-
 class CoprocessTest < MiniTest::Test
   def test_that_root_fiber_has_associated_coprocess
     assert_equal(Fiber.current, Polyphony::Coprocess.current.fiber)
@@ -262,6 +260,15 @@ class CoprocessTest < MiniTest::Test
     cp3 = spin { sleep 0.01; :baz }
 
     result = Polyphony::Coprocess.await(cp1, cp2, cp3)
+    assert_equal %i{foo bar baz}, result
+  end
+
+  def test_join_multiple_coprocesses
+    cp1 = spin { sleep 0.01; :foo }
+    cp2 = spin { sleep 0.01; :bar }
+    cp3 = spin { sleep 0.01; :baz }
+
+    result = Polyphony::Coprocess.join(cp1, cp2, cp3)
     assert_equal %i{foo bar baz}, result
   end
 

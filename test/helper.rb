@@ -23,3 +23,11 @@ class MiniTest::Test
     Polyphony.reset!
   end
 end
+
+module Kernel
+  def capture_exception
+    yield
+  rescue Exception => e
+    e
+  end
+end

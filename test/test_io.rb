@@ -134,8 +134,8 @@ class IOClassMethodsTest < MiniTest::Test
     counter = 0
     timer = spin { throttled_loop(200) { counter += 1 } }
 
-    IO.popen('sleep 0.1') { |io| io.read(8192) }
-    assert(counter >= 10)
+    IO.popen('sleep 0.05') { |io| io.read(8192) }
+    assert(counter >= 5)
 
     result = nil
     IO.popen('echo "foo"') { |io| result = io.read(8192) }

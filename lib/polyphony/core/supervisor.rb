@@ -7,12 +7,13 @@ Exceptions  = import('./exceptions')
 
 # Implements a supervision mechanism for controlling multiple coprocesses
 class Supervisor
-  def initialize
+  def initialize(&block)
     @coprocesses = []
     @pending = []
   end
 
   def await(&block)
+    @mode = :await
     @supervisor_fiber = Fiber.current
     block&.(self)
     suspend
@@ -21,6 +22,21 @@ class Supervisor
     e.value
   ensure
     finalize_await
+  end
+  alias_method :join, :await
+
+  def select(&block)
+    @mode = :select
+    @select_coproc = nil
+    @supervisor_fiber = Fiber.current
+    block&.(self)
+    suspend
+    [@select_coproc.result, @select_coproc]
+  rescue Exceptions::MoveOn => e
+    e.value
+  ensure
+    stop_all_tasks if still_running?
+    @supervisor_fiber = nil
   end
 
   def finalize_await
@@ -48,6 +64,7 @@ class Supervisor
     coproc.run unless coproc.alive?
     coproc
   end
+  alias_method :<<, :add
 
   def still_running?
     !@coprocesses.empty?
@@ -57,13 +74,13 @@ class Supervisor
     return unless @supervisor_fiber && !@stopped
 
     @stopped = true
-    @supervisor_fiber.transfer Exceptions::MoveOn.new(nil, result)
+    @supervisor_fiber.schedule Exceptions::MoveOn.new(nil, result)
   end
 
   def stop_all_tasks
     exception = Exceptions::MoveOn.new
     @pending.each do |c|
-      c.transfer(exception)
+      c.schedule(exception)
     end
   end
 
@@ -71,15 +88,27 @@ class Supervisor
     return unless @pending.include?(coprocess)
 
     @pending.delete(coprocess)
-    @supervisor_fiber&.transfer if @pending.empty?
+    return unless @pending.empty? || (@mode == :select && !@select_coproc)
+    
+    @select_coproc = coprocess if @mode == :select
+    @supervisor_fiber&.schedule
   end
 end
 
 # Extension for Coprocess class
 class Coprocess
-  def self.await(*coprocs)
-    supervise do |s|
-      coprocs.each { |cp| s.add cp }
+  class << self
+    def await(*coprocs)
+      supervisor = Supervisor.new
+      coprocs.each { |cp| supervisor << cp }
+      supervisor.await
+    end
+    alias_method :join, :await
+
+    def select(*coprocs)
+      supervisor = Supervisor.new
+      coprocs.each { |cp| supervisor << cp }
+      supervisor.select
     end
   end
 end
