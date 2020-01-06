@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 def lengthy_op
   data = IO.orig_read(__FILE__)
@@ -59,3 +59,5 @@ def compare_performance
 end
 
 spin { compare_performance }
+
+suspend

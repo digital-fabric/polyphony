@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 puts 'going to sleep...'
 Timeout.timeout(1) do

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 require 'polyphony/http'
 
 opts = {
@@ -25,3 +25,4 @@ end
 
 puts "pid: #{Process.pid}"
 puts 'Listening on port 1234...'
+suspend

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 require 'polyphony/redis'
 
 class RedisChannel < Polyphony::Channel
@@ -119,3 +119,5 @@ spin do
   channel.close
   RedisChannel.stop_monitor
 end
+
+suspend

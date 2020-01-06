@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 def my_sleep(t)
   puts "start: #{t}"

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 def lengthy_op
   data = IO.orig_read(__FILE__)
@@ -13,3 +13,5 @@ end
     p [_i, 2, Polyphony::ThreadPool.process { lengthy_op }]
   }
 end
+
+suspend

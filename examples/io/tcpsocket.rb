@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 require 'polyphony/extensions/backtrace'
 
 socket = TCPSocket.new('google.com', 80)

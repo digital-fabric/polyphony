@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 spin do
   10.times do |i|
@@ -17,3 +17,5 @@ spin do
 end.await
 
 puts 'done'
+
+suspend

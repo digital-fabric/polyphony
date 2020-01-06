@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 def loop_it(number, lock)
   loop do
@@ -17,3 +17,5 @@ lock = Polyphony::Sync::Mutex.new
 spin { loop_it(1, lock) }
 spin { loop_it(2, lock) }
 spin { loop_it(3, lock) }
+
+suspend

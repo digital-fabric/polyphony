@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 require 'polyphony/redis'
 require 'json'
 
@@ -65,3 +65,5 @@ trap(:int) do
   puts 'bye...'
   exit!
 end
+
+suspend

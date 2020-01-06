@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 # Let's see how a long-running blocking operation can be interrupted. Polyphony
 # provides several APIs for interrupting an ongoing operation, and distinguishes
@@ -32,3 +32,5 @@ spin do
     nap(:move_on, 2)
   end
 end
+
+suspend

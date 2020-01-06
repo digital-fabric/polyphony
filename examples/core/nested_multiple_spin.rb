@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 spin do
   spin do
@@ -16,3 +16,5 @@ spin do
     puts '2 <'
   end
 end
+
+suspend

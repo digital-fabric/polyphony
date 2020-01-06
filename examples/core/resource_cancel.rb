@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 resource_count = 0
 Pool = Polyphony::ResourcePool.new(limit: 3) do
@@ -27,4 +27,4 @@ end
 end
 
 t0 = Time.now
-every(10) { puts "uptime: #{Time.now - t0}" }
+throttled_loop(0.1) { puts "uptime: #{Time.now - t0}" }

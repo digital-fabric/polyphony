@@ -2,7 +2,7 @@
 
 require 'bundler/setup'
 require 'polyphony/http'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 Exception.__disable_sanitized_backtrace__ = true
 

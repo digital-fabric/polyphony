@@ -2,7 +2,6 @@
 
 require 'bundler/setup'
 
-# Notice we require 'polyphony' and not 'polyphony/auto_run'
 require 'polyphony'
 
 def nap(tag, t)
@@ -13,6 +12,5 @@ end
 
 spin { nap(:a, 1) }
 
-# If polyphony/auto_run has not been `require`d, the reactor fiber needs to be
-# started manually. This is done by transferring control to it using `suspend`:
+# Wait for any coprocess still alive
 suspend

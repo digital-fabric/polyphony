@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 waiter = spin do
   puts 'Waiting for HUP'
@@ -12,3 +12,5 @@ end
 sleep 1
 puts 'Sending HUP'
 Process.kill('SIGHUP', Process.pid)
+
+suspend

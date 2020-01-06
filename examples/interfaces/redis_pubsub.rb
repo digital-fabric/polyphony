@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 require 'polyphony/redis'
 
 spin do
@@ -23,3 +23,5 @@ spin do
   end
   redis.publish('redis-channel', 'exit')
 end
+
+suspend

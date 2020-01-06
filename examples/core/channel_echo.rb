@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 def echo(cin, cout)
   puts 'start echoer'
@@ -41,3 +41,5 @@ $main = spin do
   chan2.close
   puts "done #{Time.now - t0}"
 end
+
+suspend

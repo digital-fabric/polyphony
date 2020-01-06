@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 @op_count = 0
 
@@ -24,3 +24,5 @@ ensure
   sleep 0.1
   puts "slept #{@op_count} times"
 end
+
+suspend

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/auto_run'
+require 'polyphony'
 
 enum = [1, 2, 3].each
 
@@ -11,3 +11,5 @@ spin do
     sleep 0.1
   end
 end
+
+suspend

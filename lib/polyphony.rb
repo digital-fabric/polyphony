@@ -59,13 +59,6 @@ module Polyphony
       pid = Kernel.fork do
         setup_forked_process
         block.()
-
-        # We cannot simply depend on the at_exit block (see polyphony/auto_run)
-        # to yield to the reactor fiber. Doing that will raise a FiberError
-        # complaining: "fiber called across stack rewinding barrier". Apparently
-        # this is a bug in Ruby, so the workaround is to yield just before
-        # exiting.
-        suspend
       end
       Gyro.reset!
       pid
