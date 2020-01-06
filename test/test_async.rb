@@ -12,7 +12,7 @@ class AsyncTest < MiniTest::Test
     }
     snooze
     Thread.new do
-      sync_sleep 0.001
+      orig_sleep 0.001
       a.signal!
     end
     suspend
@@ -31,7 +31,7 @@ class AsyncTest < MiniTest::Test
     }
     snooze
     Thread.new do
-      sync_sleep 0.001
+      orig_sleep 0.001
       3.times { a.signal! }
     end
     coproc.await

@@ -12,6 +12,9 @@ import './polyphony/extensions/io'
 
 # Main Polyphony API
 module Polyphony
+  GlobalAPI = import './polyphony/core/global_api'
+  ::Object.include GlobalAPI
+
   exceptions = import './polyphony/core/exceptions'
   Cancel        = exceptions::Cancel
   MoveOn        = exceptions::MoveOn

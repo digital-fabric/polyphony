@@ -109,21 +109,6 @@ class ::Exception
   end
 end
 
-# Pulser abstraction for recurring operations
-class Pulser
-  def initialize(freq)
-    @timer = Gyro::Timer.new(freq, freq)
-  end
-
-  def await
-    @timer.await
-  end
-
-  def stop
-    @timer.stop
-  end
-end
-
 # Overrides for Process
 module ::Process
   def self.detach(pid)
@@ -135,87 +120,7 @@ end
 
 # Kernel extensions (methods available to all objects / call sites)
 module ::Kernel
-  def after(interval, &block)
-    spin {
-      sleep interval
-      block.()
-    }
-  end
-
-  def cancel_after(interval, &block)
-    fiber = Fiber.current
-    canceller = spin {
-      sleep interval
-      fiber.schedule Exceptions::Cancel.new
-    }
-    block.call
-  ensure
-    canceller.stop
-  end
-
-  def defer(&block)
-    Fiber.new(&block).schedule
-  end
-
-  def spin(&block)
-    Coprocess.new(&block).run
-  end
-
-  def spin_loop(&block)
-    spin { loop(&block) }
-  end
-
-  def every(freq, &block)
-    raise NotImplementedError
-    # Gyro::Timer.new(freq, freq).start(&block)
-  end
-
-  def move_on_after(interval, with_value: nil, &block)
-    fiber = Fiber.current
-    canceller = spin {
-      sleep interval
-      fiber.schedule Exceptions::MoveOn.new(nil, with_value)
-    }
-    block.call
-  rescue Exceptions::MoveOn => e
-    e.value
-  ensure
-    canceller.stop
-  end
-
-  def pulse(freq)
-    Pulser.new(freq)
-  end
-
-  def receive
-    Fiber.current.coprocess.receive
-  end
-
-  alias_method :sync_sleep, :sleep
   alias_method :orig_sleep, :sleep
-  def sleep(duration)
-    timer = Gyro::Timer.new(duration, 0)
-    timer.await
-  end
-
-  def supervise(&block)
-    Supervisor.new.await(&block)
-  end
-
-  def throttled_loop(rate, count: nil, &block)
-    throttler = Throttler.new(rate)
-    if count
-      count.times { throttler.(&block) }
-    else
-      loop { throttler.(&block) }
-    end
-  end
-
-  def throttle(rate)
-    Throttler.new(rate)
-  end
-
-  # patches
 
   alias_method :orig_backtick, :`
   def `(cmd)

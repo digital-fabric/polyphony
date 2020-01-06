@@ -16,7 +16,7 @@ class SignalTest < MiniTest::Test
       }
     }
     Thread.new do
-      sync_sleep 0.001
+      orig_sleep 0.001
       Process.kill(:USR1, Process.pid)
     end
     suspend
