@@ -69,16 +69,18 @@ class Coprocess
   def run
     @calling_fiber = Fiber.current
 
-    @fiber = Fiber.new(location) { execute }
+    @fiber = Fiber.new(location) { |v| execute(v) }
     @fiber.schedule
     @ran = true
     self
   end
 
-  def execute
-    # uncaught_exception = nil
-    @@list[@fiber] = self
-    @fiber.coprocess = self
+  def execute(first_value)
+    # The first value passed to the coprocess can be used to stop it before it
+    # is scheduled for the first time
+    raise first_value if first_value.is_a?(Exception)
+
+    @@list[@fiber] = @fiber.coprocess = self
     @result = @block.call(self)
   rescue Exceptions::MoveOn => e
     @result = e.value

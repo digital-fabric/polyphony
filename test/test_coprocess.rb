@@ -230,6 +230,16 @@ class CoprocessTest < MiniTest::Test
     assert_equal('foo', raised_error.message)
   end
 
+  def test_that_coprocess_can_be_cancelled_before_first_scheduling
+    buffer = []
+    coproc = spin { buffer << 1 }
+    coproc.stop
+
+    snooze
+    assert_nil coproc.alive?
+    assert_equal [], buffer
+  end
+
   def test_exception_propagation_for_orphan_fiber
     raised_error = nil
     spin do

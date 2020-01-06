@@ -1,3 +1,4 @@
+* Fix stopping a coprocess before it being scheduled for the first time
 * Rewrite `thread`, `thread_pool` modules
 * Add `Kernel#orig_sleep` alias to sync `#sleep` method
 * Add optional resume value to `Gyro::Async#signal!`
