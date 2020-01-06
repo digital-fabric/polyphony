@@ -155,10 +155,6 @@ class Coprocess
   end
   alias_method :stop, :interrupt
 
-  def transfer(value = nil)
-    @fiber&.schedule(value)
-  end
-
   def cancel!
     return unless @fiber
 

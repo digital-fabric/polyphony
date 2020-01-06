@@ -292,39 +292,6 @@ class CoprocessTest < MiniTest::Test
 
     assert cp.location =~ location
   end
-end
-
-class MailboxTest < MiniTest::Test
-  def test_that_coprocess_can_receive_messages
-    msgs = []
-    coproc = spin { loop { msgs << receive } }
-
-    snooze # allow coproc to start
-
-    3.times do |i|
-      coproc << i
-      snooze
-    end
-
-    assert_equal([0, 1, 2], msgs)
-  ensure
-    coproc&.stop
-  end
-
-  def test_that_multiple_messages_sent_at_once_arrive_in_order
-    msgs = []
-    coproc = spin { loop { msgs << receive } }
-
-    snooze # allow coproc to start
-
-    3.times { |i| coproc << i }
-
-    snooze
-
-    assert_equal([0, 1, 2], msgs)
-  ensure
-    coproc&.stop
-  end
 
   def test_when_done
     flag = nil
@@ -409,5 +376,50 @@ class MailboxTest < MiniTest::Test
 
     snooze
     assert_equal :ok, value
+  end
+end
+
+class MailboxTest < MiniTest::Test
+  def test_that_coprocess_can_receive_messages
+    msgs = []
+    coproc = spin { loop { msgs << receive } }
+
+    snooze # allow coproc to start
+
+    3.times do |i|
+      coproc << i
+      snooze
+    end
+
+    assert_equal([0, 1, 2], msgs)
+  ensure
+    coproc&.stop
+  end
+
+  def test_that_multiple_messages_sent_at_once_arrive_in_order
+    msgs = []
+    coproc = spin { loop { msgs << receive } }
+
+    snooze # allow coproc to start
+
+    3.times { |i| coproc << i }
+
+    snooze
+
+    assert_equal([0, 1, 2], msgs)
+  ensure
+    coproc&.stop
+  end
+
+  def test_that_sent_message_are_queued_before_calling_receive
+    buffer = []
+    receiver = spin { suspend; 3.times { buffer << receive } }
+    sender = spin { 3.times { |i| receiver << (i * 10) } }
+
+    sender.await
+    receiver.schedule
+    receiver.await
+
+    assert_equal [0, 10, 20], buffer
   end
 end
