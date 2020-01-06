@@ -6,7 +6,7 @@ require 'simplecov'
 class << SimpleCov::LinesClassifier
   alias_method :orig_whitespace_line?, :whitespace_line?
   def whitespace_line?(line)
-    line.strip =~ /^(begin|end|ensure|else)|(\s*rescue\s.+)$/ || orig_whitespace_line?(line)
+    line.strip =~ /^(begin|end|ensure|else|\})|(\s*rescue\s.+)$/ || orig_whitespace_line?(line)
   end
 end
 

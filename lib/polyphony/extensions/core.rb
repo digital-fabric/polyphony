@@ -58,6 +58,9 @@ class ::Fiber
 
     def set_root_fiber
       @root_fiber = current
+    
+      # Associate a (pseudo-)coprocess with the root fiber
+      Coprocess.map[current] = current.coprocess = Coprocess.new(current)
     end
   end
 
@@ -74,8 +77,6 @@ class ::Fiber
     @cancelled
   end
 
-  # Associate a (pseudo-)coprocess with the root fiber
-  current.coprocess = Coprocess.new(current)
   set_root_fiber
 end
 

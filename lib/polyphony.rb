@@ -67,14 +67,15 @@ module Polyphony
     def reset!
       # Fiber.root.scheduled_value = nil
       Gyro.reset!
+      Coprocess.map.clear
     end
 
     private
 
     def setup_forked_process
+      Coprocess.map.delete Fiber.root
       Gyro.post_fork
       Fiber.set_root_fiber
-      Fiber.current.coprocess = Coprocess.new(Fiber.current)
     end
   end
 end
