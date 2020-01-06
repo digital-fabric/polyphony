@@ -25,13 +25,15 @@ class ::IO
 
     alias_method :orig_foreach, :foreach
     def foreach(name, sep = $/, limit = nil, getline_args = EMPTY_HASH, &block)
-      if sep.is_a?(Integer)
-        sep = $/
-        limit = sep
-      end
-      File.open(name, 'r') do |f|
-        f.each_line(sep, limit, getline_args, &block)
-      end
+      raise NotImplementedError
+
+      # if sep.is_a?(Integer)
+      #   sep = $/
+      #   limit = sep
+      # end
+      # File.open(name, 'r') do |f|
+      #   f.each_line(sep, limit, getline_args, &block)
+      # end
     end
 
     alias_method :orig_read, :read
