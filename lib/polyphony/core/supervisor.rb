@@ -70,12 +70,13 @@ class Supervisor
     !@pending.empty?
   end
 
-  def stop!(result = nil)
+  def interrupt(result = nil)
     return unless @supervisor_fiber && !@stopped
 
     @stopped = true
     @supervisor_fiber.schedule Exceptions::MoveOn.new(nil, result)
   end
+  alias_method :stop, :interrupt
 
   def stop_all_tasks
     exception = Exceptions::MoveOn.new

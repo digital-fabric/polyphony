@@ -90,6 +90,44 @@ class SupervisorTest < MiniTest::Test
     assert_equal [], buffer
   end
 
+  def test_await_interruption
+    buffer = []
+    supervisor = nil
+    supervisor = Polyphony::Supervisor.new
+    defer { supervisor.interrupt(42) }
+    buffer << supervisor.await { |s|
+      (1..3).each { |i|
+        s.spin {
+          buffer << i
+          sleep i
+          buffer << i * 10
+        }
+      }
+    }
+
+    snooze
+    assert_equal [1, 2, 3, 42], buffer
+  end
+
+  def test_select_interruption
+    buffer = []
+    supervisor = nil
+    supervisor = Polyphony::Supervisor.new
+    defer { supervisor.interrupt(42) }
+    buffer << supervisor.select { |s|
+      (1..3).each { |i|
+        s.spin {
+          buffer << i
+          sleep i
+          buffer << i * 10
+        }
+      }
+    }
+
+    snooze
+    assert_equal [1, 2, 3, 42], buffer
+  end
+
   def test_add
     supervisor = Polyphony::Supervisor.new
     supervisor << spin { :foo }
