@@ -10,6 +10,8 @@ Exceptions = import('./exceptions')
 class CancelScope
   def initialize(opts = {}, &block)
     @opts = opts
+    @fibers = []
+    start_timeout_waiter if @opts[:timeout]
     call(&block) if block
   end
 
@@ -19,33 +21,42 @@ class CancelScope
 
   def cancel!
     @cancelled = true
-    @fiber.cancelled = true
-    @fiber.transfer error_class.new(self, @opts[:value])
+    @fibers.each do |f|
+      f.cancelled = true
+      f.schedule error_class.new(self, @opts[:value])
+    end
+    defer { protect(&@on_cancel) } if @on_cancel
   end
 
-  def start_timeout
-    @timeout = Gyro::Timer.new(@opts[:timeout], 0)
-    @timeout.start { cancel! }
+  def start_timeout_waiter
+    @timeout_waiter = spin do
+      sleep @opts[:timeout]
+      @timeout_waiter = nil
+      cancel!
+    end
   end
 
-  def reset_timeout
-    @timeout.reset
+  def stop_timeout_waiter
+    return unless @timeout_waiter
+
+    @timeout_waiter.stop
+    @timeout_waiter = nil
   end
 
-  def disable
-    @timeout&.stop
-  end
+  # def disable
+  #   @timeout&.stop
+  # end
 
   def call
-    start_timeout if @opts[:timeout]
-    @fiber = Fiber.current
-    @fiber.cancelled = nil
+    fiber = Fiber.current
+    @fibers << fiber
+    fiber.cancelled = nil
     yield self
   rescue Exceptions::MoveOn => e
     e.scope == self ? e.value : raise(e)
   ensure
-    @timeout&.stop
-    protect(&@on_cancel) if @cancelled && @on_cancel
+    @fibers.delete fiber
+    stop_timeout_waiter if @fibers.empty? && @timeout_waiter
   end
 
   def on_cancel(&block)
