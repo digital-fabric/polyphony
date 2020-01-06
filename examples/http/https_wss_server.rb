@@ -4,8 +4,6 @@ require 'bundler/setup'
 require 'polyphony/http'
 require 'localhost/authority'
 
-STDOUT.sync = true
-
 def ws_handler(conn)
   timer = spin do
     throttled_loop(1) do

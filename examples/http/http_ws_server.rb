@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-STDOUT.sync = true
-
 require 'bundler/setup'
 require 'polyphony/http'
 require 'polyphony/websocket'

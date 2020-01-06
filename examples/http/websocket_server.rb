@@ -3,8 +3,6 @@
 require 'bundler/setup'
 require 'polyphony/http'
 
-STDOUT.sync = true
-
 def ws_handler(conn)
   while (msg = conn.recv)
     conn << "you said: #{msg}"
