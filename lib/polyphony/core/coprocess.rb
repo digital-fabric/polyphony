@@ -136,6 +136,10 @@ class Coprocess
     @when_done = block
   end
 
+  def schedule(value = nil)
+    @fiber&.schedule(value)
+  end
+
   def resume(value = nil)
     return unless @fiber
 
