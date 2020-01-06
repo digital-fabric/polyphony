@@ -7,7 +7,7 @@ Exceptions  = import('./exceptions')
 
 # Implements a supervision mechanism for controlling multiple coprocesses
 class Supervisor
-  def initialize(&block)
+  def initialize
     @coprocesses = []
     @pending = {}
   end
@@ -35,8 +35,7 @@ class Supervisor
   rescue Exceptions::MoveOn => e
     e.value
   ensure
-    stop_all_tasks if still_running?
-    @supervisor_fiber = nil
+    finalize_select
   end
 
   def finalize_await
@@ -46,6 +45,11 @@ class Supervisor
     else
       @supervisor_fiber = nil
     end
+  end
+
+  def finalize_select
+    stop_all_tasks if still_running?
+    @supervisor_fiber = nil
   end
 
   def spin(coproc = nil, &block)
@@ -88,13 +92,9 @@ class Supervisor
   def task_completed(coprocess)
     return unless @pending[coprocess]
 
-    # puts "task_completed #{coprocess.inspect}"
-
     @pending.delete(coprocess)
     return unless @pending.empty? || (@mode == :select && !@select_coproc)
-    
-    # puts "scheduling supervisor fiber"
-    # p [@pending.empty?, @mode == :select, !@select_coproc]
+
     @select_coproc = coprocess if @mode == :select
     @supervisor_fiber&.schedule
   end
