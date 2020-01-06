@@ -9,20 +9,21 @@ Exceptions  = import '../core/exceptions'
 Supervisor  = import '../core/supervisor'
 Throttler   = import '../core/throttler'
 
+# Global API methods to be included in ::Object
 module API
   def after(interval, &block)
-    spin {
+    spin do
       sleep interval
       block.()
-    }
+    end
   end
 
   def cancel_after(interval, &block)
     fiber = ::Fiber.current
-    canceller = spin {
+    canceller = spin do
       sleep interval
       fiber.schedule Exceptions::Cancel.new
-    }
+    end
     block.call
   ensure
     canceller.stop
@@ -40,17 +41,17 @@ module API
     spin { loop(&block) }
   end
 
-  def every(freq, &block)
+  def every(_freq, &_block)
     raise NotImplementedError
     # Gyro::Timer.new(freq, freq).start(&block)
   end
 
   def move_on_after(interval, with_value: nil, &block)
     fiber = ::Fiber.current
-    canceller = spin {
+    canceller = spin do
       sleep interval
       fiber.schedule Exceptions::MoveOn.new(nil, with_value)
-    }
+    end
     block.call
   rescue Exceptions::MoveOn => e
     e.value
@@ -58,14 +59,14 @@ module API
     canceller.stop
   end
 
-  def pulse(freq)
+  def pulse(_freq)
     NotImplementedError
     # Pulser.new(freq)
   end
 
   def receive
     Fiber.current.coprocess.receive
-  end  
+  end
 
   def sleep(duration)
     timer = Gyro::Timer.new(duration, 0)

@@ -60,7 +60,7 @@ class HTTP2Adapter
     rescue Exception => e
       p e
       puts e.backtrace.join("\n")
-    # ensure
+      # ensure
       # stream.close
     end
 

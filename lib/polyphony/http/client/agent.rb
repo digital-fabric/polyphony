@@ -104,21 +104,25 @@ class Agent
     key = uri_key(ctx[:uri])
 
     @pools[key].acquire do |adapter|
-      response = adapter.request(ctx)
-      case response.status_code
-      when 200, 204
-        if block
-          block.(response)
-        else
-          # read body
-          response.body
-        end
-      end
-      response
+      send_request_and_check_response(adapter, ctx, &block)
     end
   rescue Exception => e
     p e
     puts e.backtrace.join("\n")
+  end
+
+  def send_request_and_check_response(adapter, ctx, &block)
+    response = adapter.request(ctx)
+    case response.status_code
+    when 200, 204
+      if block
+        block.(response)
+      else
+        # read body
+        response.body
+      end
+    end
+    response
   end
 
   def uri_key(uri)

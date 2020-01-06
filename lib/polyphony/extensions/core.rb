@@ -26,23 +26,30 @@ class ::Fiber
   end
   alias_method :to_s, :inspect
 
+  def set_calling_context(location, calling_fiber, fiber_caller)
+    @__location__ = location
+    @__calling_fiber__ = calling_fiber
+    @__caller__ = fiber_caller
+    self
+  end
+
   class << self
     alias_method :orig_new, :new
     def new(location = nil, &block)
-      calling_fiber = Fiber.current
-      fiber_caller = caller
+      fiber = create_fiber_with_block(&block)
+      fiber.set_calling_context(location, Fiber.current, caller)
+      fiber
+    end
+
+    def create_fiber_with_block(&block)
       fiber = orig_new do |v|
         block.call(v)
       rescue Exception => e
-        calling_fiber.transfer e if calling_fiber.alive?
+        __calling_fiber__.transfer e if __calling_fiber__.alive?
       ensure
         fiber.mark_as_done!
         Gyro.run
       end
-      fiber.__location__ = location
-      fiber.__calling_fiber__ = calling_fiber
-      fiber.__caller__ = fiber_caller
-      fiber
     end
 
     def root

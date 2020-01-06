@@ -31,12 +31,12 @@ class ::OpenSSL::SSL::SSLSocket
   end
 
   def flush
-  #   osync = @sync
-  #   @sync = true
-  #   do_write ""
-  #   return self
-  # ensure
-  #   @sync = osync
+    # osync = @sync
+    # @sync = true
+    # do_write ""
+    # return self
+    # ensure
+    # @sync = osync
   end
 
   # def do_write(s)
