@@ -19,18 +19,13 @@ class ::OpenSSL::SSL::SSLSocket
   end
 
   def sysread(maxlen, buf)
+    read_watcher = nil
+    write_watcher = nil
     loop do
-      read_watcher = nil
-      write_watcher = nil
-      result = read_nonblock(maxlen, buf, exception: false)
-      if result == :wait_readable
-        read_watcher ||= Gyro::IO.new(io, :r)
-        read_watcher.await
-      elsif result == :wait_writable
-        write_watcher ||= Gyro::IO.new(io, :w)
-        write_watcher.await
-      else
-        return result
+      case (result = read_nonblock(maxlen, buf, exception: false))
+      when :wait_readable then (read_watcher ||= Gyro::IO.new(io, :r)).await
+      when :wait_writable then (write_watcher ||= Gyro::IO.new(io, :w)).await
+      else result
       end
     end
   end
@@ -62,18 +57,13 @@ class ::OpenSSL::SSL::SSLSocket
   # end
 
   def syswrite(buf)
+    read_watcher = nil
+    write_watcher = nil
     loop do
-      read_watcher = nil
-      write_watcher = nil
-      result = write_nonblock(buf, exception: false)
-      if result == :wait_readable
-        read_watcher ||= Gyro::IO.new(io, :r)
-        read_watcher.await
-      elsif result == :wait_writable
-        write_watcher ||= Gyro::IO.new(io, :w)
-        write_watcher.await
-      else
-        return result
+      case (result = write_nonblock(buf, exception: false))
+      when :wait_readable then (read_watcher ||= Gyro::IO.new(io, :r)).await
+      when :wait_writable then (write_watcher ||= Gyro::IO.new(io, :w)).await
+      else result
       end
     end
   end
