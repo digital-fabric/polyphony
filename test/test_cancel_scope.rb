@@ -69,4 +69,28 @@ class CancelScopeTest < MiniTest::Test
     assert Time.now - t0 < 0.05
     assert_equal [1, 2, 3], buffer
   end
+
+  def test_on_cancel
+    buffer = []
+    Polyphony::CancelScope.new { |scope|
+      defer { scope.cancel! }
+      scope.on_cancel { buffer << :cancelled }
+      buffer << 1
+      snooze
+      buffer << 2
+    }
+    assert_equal [1, :cancelled], buffer
+  end
+
+  def test_cancelled?
+    scope = Polyphony::CancelScope.new
+    spin {
+      scope.call { sleep 1 }
+    }
+
+    snooze
+    assert !scope.cancelled?
+    scope.cancel!
+    assert scope.cancelled?
+  end
 end

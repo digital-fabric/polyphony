@@ -25,7 +25,7 @@ class CancelScope
       f.cancelled = true
       f.schedule error_class.new(self, @opts[:value])
     end
-    defer { protect(&@on_cancel) } if @on_cancel
+    @on_cancel&.()
   end
 
   def start_timeout_waiter
@@ -41,6 +41,13 @@ class CancelScope
 
     @timeout_waiter.stop
     @timeout_waiter = nil
+  end
+
+  def reset_timeout
+    return unless @timeout_waiter
+
+    @timeout_waiter.stop
+    start_timeout_waiter
   end
 
   # def disable
@@ -65,12 +72,5 @@ class CancelScope
 
   def cancelled?
     @cancelled
-  end
-
-  def protect(&block)
-    @fiber.cancelled = false
-    block.()
-  ensure
-    @fiber.cancelled = @cancelled
   end
 end
