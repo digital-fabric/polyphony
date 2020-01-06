@@ -104,4 +104,23 @@ class ResourcePoolTest < MiniTest::Test
 
     assert_raises { pool.acquire { } }
   end
+
+  def test_method_delegation
+    resources = [+'a', +'b']
+    pool = Polyphony::ResourcePool.new(limit: 2) { resources.shift }
+
+    assert_respond_to pool, :upcase
+    assert_equal 'A', pool.upcase
+  end
+
+  def test_preheat
+    resources = [+'a', +'b']
+    pool = Polyphony::ResourcePool.new(limit: 2) { resources.shift }
+
+    assert_equal 2, pool.limit
+    assert_equal 0, pool.size
+
+    pool.preheat!
+    assert_equal 2, pool.size
+  end
 end

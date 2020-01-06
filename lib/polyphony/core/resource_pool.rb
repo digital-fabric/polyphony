@@ -102,6 +102,6 @@ class ResourcePool
   end
 
   def preheat!
-    (@limit - @size).times { @stock << from_stock }
+    (@limit - @size).times { @stock << allocate }
   end
 end
