@@ -422,4 +422,19 @@ class MailboxTest < MiniTest::Test
 
     assert_equal [0, 10, 20], buffer
   end
+
+  def test_map_and_count
+    assert_equal 1, Polyphony::Coprocess.count
+    map = { Fiber.current => Polyphony::Coprocess.current }
+    assert_equal map, Polyphony::Coprocess.map
+
+    cp = spin { sleep 1 }
+    snooze
+    assert_equal 2, Polyphony::Coprocess.count
+    assert_equal cp, Polyphony::Coprocess.map[cp.fiber]
+
+    cp.stop
+    snooze
+    assert_equal 1, Polyphony::Coprocess.count
+  end
 end

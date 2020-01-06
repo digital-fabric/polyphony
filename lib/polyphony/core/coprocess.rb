@@ -41,14 +41,14 @@ class Coprocess
 
   include Messaging
 
-  @@list = {}
+  @@map = {}
 
-  def self.list
-    @@list
+  def self.map
+    @@map
   end
 
   def self.count
-    @@list.size
+    @@map.size
   end
 
   attr_reader :result, :fiber
@@ -80,7 +80,7 @@ class Coprocess
     # is scheduled for the first time
     raise first_value if first_value.is_a?(Exception)
 
-    @@list[@fiber] = @fiber.coprocess = self
+    @@map[@fiber] = @fiber.coprocess = self
     @result = @block.call(self)
   rescue Exceptions::MoveOn => e
     @result = e.value
@@ -92,7 +92,7 @@ class Coprocess
   end
 
   def finish_execution(uncaught_exception)
-    @@list.delete(@fiber)
+    @@map.delete(@fiber)
     @fiber.coprocess = nil
     @fiber = nil
     @awaiting_fiber&.schedule @result
