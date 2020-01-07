@@ -5,7 +5,7 @@ require 'polyphony'
 
 resource_count = 0
 Pool = Polyphony::ResourcePool.new(limit: 3) do
-  :"resource#{resource_count += 1}"
+  +"resource#{resource_count += 1}"
 end
 
 def user(number)
@@ -13,7 +13,6 @@ def user(number)
     Polyphony::CancelScope.new(timeout: 0.2) do |scope|
       scope.on_cancel { puts "#{number} (cancelled)" }
       Pool.acquire do |r|
-        scope.disable
         puts "#{number} #{r.inspect} >"
         sleep(0.1 + rand * 0.2)
         puts "#{number} #{r.inspect} <"

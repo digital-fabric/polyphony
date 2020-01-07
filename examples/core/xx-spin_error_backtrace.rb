@@ -8,8 +8,8 @@ def error(t)
 end
 
 def deferred_error(t)
-  snooze
-  de2(t)
+  puts "deferred_error"
+  defer { de2(t) }
 end
 
 def de2(t)
@@ -28,3 +28,6 @@ spin do
     end.await
   end.await
 end.await
+
+suspend
+suspend

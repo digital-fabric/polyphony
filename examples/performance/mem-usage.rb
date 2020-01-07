@@ -24,6 +24,7 @@ def calculate_coprocess_memory_cost(count)
   GC.disable
   rss0 = mem_usage
   count.times { spin { :foo } }
+  snooze
   rss1 = mem_usage
   GC.start
   cost = (rss1 - rss0).to_f / count

@@ -65,14 +65,14 @@ module Map
   end
 end
 
-map_server = GenServer.start(Map, foo: :bar)
+map_server = GenServer.start(Map, {foo: :bar})
 
 puts 'getting value from map server'
 v = map_server.get(:foo)
 puts "value: #{v.inspect}"
 
 puts 'putting value in map server'
-map_server.put!(:foo, 42)
+map_server.put!(:foo, :baz)
 
 puts 'getting value from map server'
 v = map_server.get(:foo)

@@ -3,14 +3,10 @@
 require 'bundler/setup'
 require 'polyphony'
 
-def foo
-  spin do
-    spin do
-      raise 'This is an error'
-    end
+move_on_after(3) do
+  puts 'Start...'
+  every(1) do
+    puts Time.now
   end
 end
-
-foo
-
-suspend
+puts 'done!'

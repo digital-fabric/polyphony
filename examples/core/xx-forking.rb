@@ -13,6 +13,8 @@ pid = Polyphony.fork do
     sleep 1
     puts 'child woke up 1'
   end
+
+  suspend
 end
 
 puts "got child pid #{pid}"
