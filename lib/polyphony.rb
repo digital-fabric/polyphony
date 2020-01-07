@@ -68,6 +68,7 @@ module Polyphony
       # Fiber.root.scheduled_value = nil
       Gyro.reset!
       Coprocess.map.clear
+      Fiber.set_root_fiber
     end
 
     private
