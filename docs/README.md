@@ -1,8 +1,8 @@
 # Polyphony - Easy Concurrency for Ruby
 
-> Polyphony \| pəˈlɪf\(ə\)ni \| _Music_ - the style of simultaneously combining a number of parts, each forming an individual melody and harmonizing with each other.
-
-## What is Polyphony
+> Polyphony \| pəˈlɪf\(ə\)ni \|
+> 1. _Music_ the style of simultaneously combining a number of parts, each forming an individual melody and harmonizing with each other.
+> 2. _Programming_ a Ruby gem for concurrent programming focusing on performance and developer happiness.
 
 Polyphony is a library for building concurrent applications in Ruby. Polyphony harnesses the power of [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html) to provide a cooperative, sequential coprocess-based concurrency model. Under the hood, Polyphony uses [libev](https://github.com/enki/libev) as a high-performance event reactor that provides timers, I/O watchers and other asynchronous event primitives.
 
@@ -35,5 +35,4 @@ To learn more about using Polyphony to build concurrent applications, read the t
 
 ## Contributing to Polyphony
 
-If there's some blocking behavior you'd like to see handled by Polyphony, please let us know by [creating an issue](https://github.com/digital-fabric/polyphony/issues). Our aim is for Polyphony to be a comprehensive solution for writing concurrent Ruby programs.
-
+Issues and pull requests will be gladly accepted. Please use the git repository at https://github.com/digital-fabric/polyphony as your primary point of departure for contributing.
