@@ -43,37 +43,12 @@ end
 
 # Roadmap:
 
-## 0.23 More API work and tests
+## 0.24 Move HTTP code into separate gem
 
-- Tests for all APIs
-- Awaiting on recurring timer (with compensation for timer drift)
+- Pull out HTTP/websocket code, put into new `polyphony-http` gem
+- Pull out redis/postgres code, put into new `polyphony-contrib` gem
 
-  ```ruby
-  timer = Gyro::Timer.new(1, 1)
-  loop do
-    timer.await
-    puts Time.now.to_f
-  end
-  ```
-
-- Cancel multiple coprocesses with single cancel scope:
-
-  ```ruby
-  scope = CancelScope.new
-
-  3.times do
-    spin do
-      scope.call do
-        do_some_work
-      end
-    end
-  end
-
-  sleep 0.5
-  scope.cancel!
-  ```
-
-## 0.24 Full Rack adapter implementation
+## 0.25 Full Rack adapter implementation
 
 - Work better mechanism supervising multiple coprocesses (`when_done` feels a
   bit hacky)
@@ -81,23 +56,23 @@ end
 - Homogenize HTTP 1 and HTTP 2 headers - upcase ? downcase ?
 - find some demo Rack apps and test with Polyphony
 
-## 0.25 Working Sinatra application
+## 0.26 Working Sinatra application
 
 - app with database access (postgresql)
 - benchmarks!
 
-## 0.26 Support for multi-threading
+## 0.27 Support for multi-threading
 
 - Separate event loop for each thread
 
-## 0.27 Testing
+## 0.28 Testing
 
 - test thread / thread_pool modules
 - report test coverage
 
-## 0.28 Documentation
+## 0.29 Documentation
 
-## 0.29 Integration
+## 0.30 Integration
 
 - Sidekick
 - Rails?

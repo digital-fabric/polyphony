@@ -1,3 +1,15 @@
+0.23 2020-01-07
+---------------
+
+* Remove `API#pulse`
+* Better repeat timer, reimplement `API#every`
+* Move global API methods to separate module, include in `Object` instead of
+  `Kernel`
+* Improve setting root fiber and corresponding coprocess
+* Fix `ResourcePool#preheat!`
+* Rename `$Coprocess#list` to `Coprocess#map`
+* Fix `CancelScope#on_cancel`, remove `CancelScope#protect`
+* Remove `auto_run` mechanism. Just use `suspend`!
 * Optional coverage report for tests
 * More tests
 * Add `Coprocess.select` and `Supervisor#select` methods
