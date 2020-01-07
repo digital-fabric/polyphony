@@ -189,8 +189,3 @@ module ::Timeout
     raise error
   end
 end
-
-trap('SIGINT') do
-  Gyro.break!
-  exit
-end
