@@ -94,8 +94,6 @@ void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int
     VALUE fiber = timer->fiber;
     VALUE resume_value = DBL2NUM(timer->after);
 
-    ev_timer_stop(EV_DEFAULT, ev_timer);
-    timer->active = 0;
     timer->fiber = Qnil;
     Gyro_schedule_fiber(fiber, resume_value);
   }
@@ -108,18 +106,16 @@ static VALUE Gyro_Timer_await(VALUE self) {
   GetGyro_Timer(self, timer);
 
   timer->fiber = rb_fiber_current();
-  timer->active = 1;
-  ev_timer_start(EV_DEFAULT, &timer->ev_timer);
+  if (timer->active != 1) {
+    timer->active = 1;
+    ev_timer_start(EV_DEFAULT, &timer->ev_timer);
+  }
 
   ret = Gyro_await();
 
   // fiber is resumed, check if resumed value is an exception
   timer->fiber = Qnil;
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    if (timer->active) {
-      timer->active = 0;
-      ev_timer_stop(EV_DEFAULT, &timer->ev_timer);
-    }
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else
