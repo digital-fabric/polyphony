@@ -41,9 +41,12 @@ module API
     spin { loop(&block) }
   end
 
-  def every(_freq, &_block)
-    raise NotImplementedError
-    # Gyro::Timer.new(freq, freq).start(&block)
+  def every(interval)
+    timer = Gyro::Timer.new(interval, interval)
+    loop do
+      timer.await
+      yield
+    end
   end
 
   def move_on_after(interval, with_value: nil, &block)
@@ -57,11 +60,6 @@ module API
     e.value
   ensure
     canceller.stop
-  end
-
-  def pulse(_freq)
-    NotImplementedError
-    # Pulser.new(freq)
   end
 
   def receive
@@ -84,9 +82,5 @@ module API
     else
       loop { throttler.(&block) }
     end
-  end
-
-  def throttle(rate)
-    Throttler.new(rate)
   end
 end

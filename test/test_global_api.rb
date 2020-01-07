@@ -170,7 +170,7 @@ class SupervisorTest < MiniTest::Test
       supervisor.await
     end.await
 
-    assert_equal([0, 1, 2], result)
+    assert_equal([0, 1, 2], result.sort)
   end
 end
 
@@ -241,5 +241,58 @@ class MoveOnAfterTest < MiniTest::Test
 
     assert t1 - t0 < 0.02
     assert_equal :bar, v
+  end
+
+  def test_spin_loop
+    buffer = []
+    counter = 0
+    cp = spin_loop do
+      buffer << (counter += 1)
+      snooze
+    end
+
+    assert_kind_of Polyphony::Coprocess, cp
+    assert_equal [], buffer
+    snooze
+    assert_equal [1], buffer
+    snooze
+    assert_equal [1, 2], buffer
+    snooze
+    assert_equal [1, 2, 3], buffer
+    cp.stop
+    snooze
+    assert !cp.alive?
+    assert_equal [1, 2, 3], buffer
+  end
+
+  def test_throttled_loop
+    buffer = []
+    counter = 0
+    cp = spin do
+      throttled_loop(50) { buffer << (counter += 1) }
+    end
+    sleep 0.1
+    cp.stop
+    assert_equal [1, 2, 3, 4, 5], buffer    
+  end
+
+  def test_throttled_loop_with_count
+    buffer = []
+    counter = 0
+    cp = spin do
+      throttled_loop(50, count: 5) { buffer << (counter += 1) }
+    end
+    cp.await
+    assert_equal [1, 2, 3, 4, 5], buffer    
+  end
+
+  def test_every
+    buffer = []
+    cp = spin do
+      every(0.01) { buffer << 1 }
+    end
+    sleep 0.05
+    cp.stop
+    assert_equal 5, buffer.size
   end
 end
