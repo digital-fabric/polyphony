@@ -2,7 +2,6 @@
 
 require 'bundler/setup'
 require 'polyphony'
-require 'polyphony/extensions/backtrace'
 
 socket = Polyphony::Net.tcp_connect('127.0.0.1', 1234)
 

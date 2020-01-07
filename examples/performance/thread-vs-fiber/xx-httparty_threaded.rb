@@ -2,7 +2,7 @@
 
 require 'httparty'
 
-url = 'http://127.0.0.1:4411/?q=time'
+URL = 'http://worldtimeapi.org/api/timezone/Europe/Paris'
 results = Queue.new
 
 t0 = Time.now
@@ -11,7 +11,7 @@ threads = []
   threads << Thread.new do
     loop do
       STDOUT << '!'
-      if (result = HTTParty.get(url))
+      if (result = HTTParty.get(URL))
         results << result
         STDOUT << '.'
       end

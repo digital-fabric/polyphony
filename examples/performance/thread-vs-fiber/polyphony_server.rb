@@ -18,7 +18,7 @@ class Http::Parser
   end
 end
 
-async def handle_client(socket)
+def handle_client(socket)
   parser = Http::Parser.new
   req = nil
   parser.on_message_complete = proc do |env|
@@ -47,12 +47,12 @@ def handle_request(client, parser)
 end
 
 spin do
-  server = TCPServer.open(1234)
+  server = TCPServer.open('0.0.0.0', 1234)
   puts "listening on port 1234"
 
   loop do
     client = server.accept
-    coproc handle_client(client)
+    spin { handle_client(client) }
   end
 rescue Exception => e
   puts "uncaught exception: #{e.inspect}"
@@ -60,3 +60,5 @@ rescue Exception => e
   exit!
   server.close
 end
+
+suspend

@@ -5,7 +5,7 @@ require 'socket'
 def handle_client(client)
   Thread.new do
     parser = Http::Parser.new
-    parser.on_message_complete= proc do |env|
+    parser.on_message_complete = proc do |env|
       status_code = 200
       data = "Hello world!\n"
       headers = "Content-Length: #{data.bytesize}\r\n"

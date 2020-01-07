@@ -2,7 +2,6 @@
 
 require 'bundler/setup'
 require 'polyphony'
-require 'polyphony/extensions/backtrace'
 
 socket = TCPSocket.new('google.com', 80)
 

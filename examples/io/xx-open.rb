@@ -2,7 +2,6 @@
 
 require 'bundler/setup'
 require 'polyphony'
-require 'irb'
 
 stdin = IO.open(STDIN.to_i)
 
