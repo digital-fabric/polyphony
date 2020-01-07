@@ -20,6 +20,8 @@ def bm(fibers, iterations)
   puts "#{[fibers, iterations].inspect} count: #{count} #{count / dt.to_f}/s"
 end
 
+GC.disable
+
 bm(1, 1_000_000)
 bm(10, 100_000)
 bm(100, 10_000)

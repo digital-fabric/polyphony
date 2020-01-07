@@ -5,6 +5,8 @@ require 'polyphony'
 
 X = 1_000_000
 
+GC.disable
+
 STDOUT << 'Fiber.yield:      '
 f = Fiber.new do
   loop { Fiber.yield }

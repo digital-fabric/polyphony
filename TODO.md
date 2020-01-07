@@ -45,6 +45,8 @@ end
 
 ## 0.24 Move HTTP code into separate gem
 
+- Cull examples - a lot of stuff using old APIs, a lot of experiments, leave
+  only what's necessary
 - Pull out HTTP/websocket code, put into new `polyphony-http` gem
 - Pull out redis/postgres code, put into new `polyphony-contrib` gem
 
