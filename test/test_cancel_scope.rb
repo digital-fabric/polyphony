@@ -70,6 +70,19 @@ class CancelScopeTest < MiniTest::Test
     assert_equal [1, 2, 3], buffer
   end
 
+  def test_reset_timeout
+    buffer = []
+    scope = Polyphony::CancelScope.new(timeout: 0.01)
+    t0 = Time.now
+    scope.call {
+      sleep 0.005
+      scope.reset_timeout
+      sleep 0.010
+    }
+
+    assert !scope.cancelled?
+  end
+
   def test_on_cancel
     buffer = []
     Polyphony::CancelScope.new { |scope|
