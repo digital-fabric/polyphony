@@ -5,7 +5,7 @@ require 'bundler/setup'
 require 'fileutils'
 require_relative './eg'
 
-require_relative './coverage' if ENV['COV']
+require_relative './coverage' if ENV['COVERAGE']
 
 require 'minitest/autorun'
 require 'minitest/reporters'
