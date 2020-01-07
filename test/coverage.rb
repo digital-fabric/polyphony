@@ -14,7 +14,7 @@ module Coverage
   EXCLUDE = %w{coverage eg helper run
   }.map { |n| File.expand_path("test/#{n}.rb") }
 
-  LIB_DIR = File.join(FileUtils.pwd, 'lib')
+  LIB_FILES = Dir["#{File.join(FileUtils.pwd, 'lib')}/polyphony/**/*.rb"]
 
   class << self
     def relevant_lines_for_filename(filename)
@@ -28,8 +28,7 @@ module Coverage
         next if tp.path =~ /\(/
       
         absolute = File.expand_path(tp.path)
-        next unless absolute =~ /^#{LIB_DIR}/
-        next if EXCLUDE.include? absolute
+        next unless LIB_FILES.include?(absolute)# =~ /^#{LIB_DIR}/
         
         @result[absolute] ||= relevant_lines_for_filename(absolute)
         @result[absolute][tp.lineno - 1] = 1
