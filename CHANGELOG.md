@@ -1,3 +1,7 @@
+0.24 2020-01-08
+---------------
+
+* Extract HTTP code into separate polyphony-http gem
 * Cull core, io examples
 * Remove `SIGINT` handler
 

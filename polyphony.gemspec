@@ -18,15 +18,8 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.required_ruby_version = '>= 2.6'
 
-  s.executables   = ['poly']
-
-  s.add_runtime_dependency      'modulation',     '~>0.25'
+  s.add_runtime_dependency      'modulation',         '~>1.0'
   
-  s.add_runtime_dependency      'http_parser.rb', '0.6.0'
-  s.add_runtime_dependency      'http-2',         '0.10.0'
-  s.add_runtime_dependency      'rack'
-  
-  s.add_development_dependency  'hiredis',            '0.6.3'
   s.add_development_dependency  'httparty',           '0.17.0'
   s.add_development_dependency  'localhost',          '1.1.4'
   s.add_development_dependency  'minitest',           '5.11.3'
@@ -35,5 +28,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'pg',                 '1.1.3'
   s.add_development_dependency  'rake-compiler',      '1.0.5'
   s.add_development_dependency  'redis',              '4.1.0'
-  s.add_development_dependency  'websocket',          '1.2.8'
+  s.add_development_dependency  'hiredis',            '0.6.3'
+  s.add_development_dependency  'http_parser.rb',     '~>0.6.0'
 end

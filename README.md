@@ -13,9 +13,6 @@ Polyphony makes it possible to use normal Ruby built-in classes like `IO`, and `
 
 ## Features
 
-* **Full-blown, integrated, high-performance HTTP 1 / HTTP 2 / WebSocket server
-  with TLS/SSL termination, automatic ALPN protocol selection, and body
-  streaming**.
 * Co-operative scheduling of concurrent tasks using Ruby fibers.
 * High-performance event reactor for handling I/O events and timers.
 * Natural, sequential programming style that makes it easy to reason about
@@ -25,7 +22,6 @@ Polyphony makes it possible to use normal Ruby built-in classes like `IO`, and `
 * Code can use native networking classes and libraries, growing support for
   third-party gems such as `pg` and `redis`.
 * Use stdlib classes such as `TCPServer`, `TCPSocket` and 
-* HTTP 1 / HTTP 2 client agent with persistent connections.
 * Competitive performance and scalability characteristics, in terms of both
   throughput and memory consumption.
 
