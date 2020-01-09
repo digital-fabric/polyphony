@@ -66,7 +66,9 @@ module API
     Fiber.current.coprocess.receive
   end
 
-  def sleep(duration)
+  def sleep(duration = nil)
+    return suspend unless duration
+
     timer = Gyro::Timer.new(duration, 0)
     timer.await
   end

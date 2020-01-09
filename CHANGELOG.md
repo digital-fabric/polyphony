@@ -1,3 +1,5 @@
+* Add support for indefinite `#sleep`
+
 0.24 2020-01-08
 ---------------
 
