@@ -12,19 +12,17 @@ Polyphony takes Ruby's fibers and adds a way to schedule and switch between fibe
 
 Writing concurrent applications using Polyphony's fiber-based concurrency model offers a significant performance advantage. Computational tasks can be broken down into many fine-grained concurrent operations that cost very little in memory and context-switching time. More importantly, this concurrency model lets developers express their ideas in a sequential manner, leading to source code that is easy to read and reason about.
 
-## Coprocesses - Polyphony's basic unit of concurrency
+## Fibers - Polyphony's basic unit of concurrency
 
-While stock Ruby fibers can be used with Polyphony without any problem, the API they provide is very basic, and necessitates writing quite a bit of boilerplate code whenever they need to be synchronized, interrupted or otherwise controlled. For this reason, Polyphony provides entities that encapsulate fibers and provide a richer API, making it easier to compose concurrent applications employing fibers.
-
-A coprocess can be thought of as a fiber with enhanced powers. It makes sure any exception raised while it's running is [handled correctly](exception-handling.md). It can be interrupted or `await`ed \(just like `Thread#join`\). It provides methods for controlling its execution. Moreover, coprocesses can pass messages between themselves, turning them into autonomous actors in a fine-grained concurrent environment.
+Polyphony extends the core `Fiber` class with additional functionality that allows scheduling, synchronizing, interrupting and otherwise controlling running fibers. Polyphony makes sure any exception raised while a is running is [handled correctly](exception-handling.md). Moreover, fibers can communicate with each other using message passing, turning them into autonomous actors in a fine-grained concurrent environment.
 
 ## Higher-Order Concurrency Constructs
 
-Polyphony also provides several methods and constructs for controlling multiple coprocesses. Methods like `cancel_after` and `move_on_after` allow interrupting a coprocess that's blocking on any arbitrary operation.
+Polyphony also provides several methods and constructs for controlling multiple fibers. Methods like `cancel_after` and `move_on_after` allow interrupting a fiber that's blocking on any arbitrary operation.
 
 Cancel scopes \(borrowed from the brilliant Python library [Trio](https://trio.readthedocs.io/en/stable/)\) allows cancelling ongoing operations for any reason with more control over cancelling behaviour.
 
-Supervisors allow controlling multiple coprocesses. They offer enhanced exception handling and can be nested to create complex supervision trees ala [Erlang](https://adoptingerlang.org/docs/development/supervision_trees/).
+Supervisors allow controlling multiple fibers. They offer enhanced exception handling and can be nested to create complex supervision trees ala [Erlang](https://adoptingerlang.org/docs/development/supervision_trees/).
 
 Some other constructs offered by Polyphony:
 

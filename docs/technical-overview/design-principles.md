@@ -11,14 +11,14 @@ library. Polyphony's design is based on the following principles:
   should be no calls to initialize the event reactor, or other ceremonial code:
 
   ```ruby
-  require 'polyphony/auto_run'
+  require 'polyphony'
 
-  10.times {
-    # start 10 coprocesses, each sleeping for 1 second
-    spin { sleep 1 }
-  }
+  # start 10 fibers, each sleeping for 1 second
+  10.times { spin { sleep 1 } }
 
   puts 'going to sleep now'
+  # wait for other fibers to terminate
+  sleep
   ```
 
 - Blocking operations should yield to other concurrent tasks without any
@@ -27,7 +27,7 @@ library. Polyphony's design is based on the following principles:
 
   ```ruby
   # in Polyphony, I/O ops block the current fiber, but implicitly yield to other
-  # concurrent coprocesses:
+  # concurrent fibers:
   clients.each { |client|
     spin { client.puts 'Elvis has left the chatroom' }
   }
@@ -40,7 +40,7 @@ library. Polyphony's design is based on the following principles:
   more compact and more legible:
 
   ```ruby
-  coprocess = spin {
+  fiber = spin {
     move_on_after(3) {
       do_something_slow
     }
@@ -66,7 +66,7 @@ library. Polyphony's design is based on the following principles:
   cancel scopes:
 
   ```ruby
-  # wait for multiple coprocesses
+  # wait for multiple fibers
   supervise { |s|
     clients.each { |client|
       s.spin { client.puts 'Elvis has left the chatroom' }

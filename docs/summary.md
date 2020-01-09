@@ -23,7 +23,7 @@
 * [Use timers](howto/timers.md)
 * [Throttle recurrent operations](howto/throttle.md)
 * [Cancel ongoing operations](howto/cancel.md)
-* [Control coprocesses](howto/coprocesses.md)
+* [Control fibers](howto/fibers.md)
 * [Synchronize concurrent operations](howto/synchronize.md)
 * [Perform CPU-bound operations](howto/cpu-bound.md)
 * [Control backpressure](howto/backpressure.md)
@@ -43,8 +43,7 @@
 
 ## API Reference
 
-* [Polyphony::CancelScope](#)
-* [Polyphony::Coprocess](#)
+* [Fiber](#)
 * [Gyro](#)
 * [Gyro::Async](#)
 * [Gyro::Child](#)
@@ -52,6 +51,7 @@
 * [Gyro::Timer](#)
 * [Kernel](#)
 * [Polyphony](#)
+* [Polyphony::CancelScope](#)
 * [Polyphony::Mutex](#)
 * [Polyphony::Pulser](#)
 * [Polyphony::ResourcePool](#)

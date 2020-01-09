@@ -83,5 +83,5 @@ spin do
 end.await
 ```
 
-In this example, there are four coprocesses, nested one within the other. An exception is raised in the inner most coprocess, and having no exception handler, will bubble up through the different enclosing coprocesses, until reaching the top-most level, that of the root fiber, at which point the exception will cause the program to halt and print an error message.
+In this example, there are four fibers, nested one within the other. An exception is raised in the inner most fiber, and having no exception handler, will bubble up through the different enclosing fibers, until reaching the top-most level, that of the root fiber, at which point the exception will cause the program to halt and print an error message.
 
