@@ -3,7 +3,7 @@
 export_default :Supervisor
 
 import '../extensions/fiber'
-Exceptions  = import './exceptions'
+Exceptions = import './exceptions'
 
 # Implements a supervision mechanism for controlling multiple fibers
 class Supervisor
@@ -52,8 +52,8 @@ class Supervisor
     @supervisor_fiber = nil
   end
 
-  def spin(_caller = caller, &block)
-    add Fiber.spin(_caller, &block)
+  def spin(orig_caller = caller, &block)
+    add Fiber.spin(orig_caller, &block)
   end
 
   def add(fiber)
@@ -94,6 +94,7 @@ class Supervisor
   end
 end
 
+# Supervision extensions for Fiber class
 class ::Fiber
   class << self
     def await(*fibers)

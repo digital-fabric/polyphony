@@ -4,7 +4,7 @@ require 'fiber'
 require 'timeout'
 require 'open3'
 
-Exceptions  = import('../core/exceptions')
+Exceptions = import('../core/exceptions')
 
 # Exeption overrides
 class ::Exception

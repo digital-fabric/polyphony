@@ -2,8 +2,9 @@
 
 require 'fiber'
 
-Exceptions  = import '../core/exceptions'
+Exceptions = import '../core/exceptions'
 
+# Fiber control API
 module FiberControl
   def await
     if @running == false
@@ -33,6 +34,7 @@ module FiberControl
   end
 end
 
+# Messaging functionality
 module FiberMessaging
   def <<(value)
     if @receive_waiting && @running
@@ -70,31 +72,32 @@ class ::Fiber
   include FiberMessaging
 
   # map of currently running fibers
-  @@running_fibers_map = {}
-
   def self.root
     @root_fiber
   end
 
-  def self.set_root_fiber
-    @@running_fibers_map.clear
+  def self.reset!
     @root_fiber = current
-    @@running_fibers_map[@root_fiber] = true
+    @running_fibers_map = { @root_fiber => true }
   end
 
-  set_root_fiber
+  reset!
+
+  def self.map
+    @running_fibers_map
+  end
 
   def self.list
-    @@running_fibers_map.keys
+    @running_fibers_map.keys
   end
 
   def self.count
-    @@running_fibers_map.size
+    @running_fibers_map.size
   end
 
-  def self.spin(_caller = caller, &block)
+  def self.spin(orig_caller = caller, &block)
     f = new { |v| f.run(v) }
-    f.setup(block, _caller)
+    f.setup(block, orig_caller)
     f
   end
 
@@ -109,7 +112,7 @@ class ::Fiber
     raise first_value if first_value.is_a?(Exception)
 
     @running = true
-    @@running_fibers_map[self] = true
+    self.class.map[self] = true
     result = @block.(first_value)
     finish_execution(result)
   rescue Exceptions::MoveOn => e
@@ -121,9 +124,9 @@ class ::Fiber
   def finish_execution(result, uncaught_exception = false)
     @result = result
     @running = false
-    @@running_fibers_map.delete(self)
-    @when_done.(result) if @when_done
-    @waiting_fiber.schedule(result) if @waiting_fiber
+    self.class.map.delete(self)
+    @when_done&.(result)
+    @waiting_fiber&.schedule(result)
 
     return unless uncaught_exception && !@waiting_fiber
 
@@ -133,7 +136,7 @@ class ::Fiber
     Gyro.run
   end
 
-  attr :result
+  attr_reader :result
 
   def running?
     @running

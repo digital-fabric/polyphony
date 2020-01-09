@@ -24,7 +24,8 @@ class ::IO
     EMPTY_HASH = {}.freeze
 
     alias_method :orig_foreach, :foreach
-    def foreach(name, sep = $/, limit = nil, getline_args = EMPTY_HASH, &block)
+    def foreach(_name, _sep = $/, _limit = nil, _getline_args = EMPTY_HASH,
+                &_block)
       # IO.orig_read(name).each_line(&block)
       raise NotImplementedError
 

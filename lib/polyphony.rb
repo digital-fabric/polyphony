@@ -17,10 +17,10 @@ module Polyphony
   ::Object.include GlobalAPI
 
   exceptions = import './polyphony/core/exceptions'
-  Cancel        = exceptions::Cancel
-  MoveOn        = exceptions::MoveOn
+  Cancel = exceptions::Cancel
+  MoveOn = exceptions::MoveOn
 
-  Net       = import './polyphony/net'
+  Net = import './polyphony/net'
 
   auto_import(
     CancelScope:  './polyphony/core/cancel_scope',
@@ -67,14 +67,14 @@ module Polyphony
     def reset!
       # Fiber.root.scheduled_value = nil
       Gyro.reset!
-      Fiber.set_root_fiber
+      Fiber.reset!
     end
 
     private
 
     def setup_forked_process
       Gyro.post_fork
-      Fiber.set_root_fiber
+      Fiber.reset!
     end
   end
 end
