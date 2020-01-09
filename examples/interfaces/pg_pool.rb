@@ -11,7 +11,7 @@ PGOPTS = {
   sslmode:  'require'
 }.freeze
 
-DBPOOL = Polyphony::ResourcePool.new(limit: 8) { PG.connect(PGOPTS) }
+DBPOOL = Polyphony::ResourcePool.new(limit: 16) { PG.connect(PGOPTS) }
 
 def get_records(db)
   db.query('select pg_sleep(0.001) as test')
@@ -28,7 +28,7 @@ DBPOOL.preheat!
 t0 = Time.now
 count = 0
 
-coprocs = CONCURRENCY.times.map do
+fibers = CONCURRENCY.times.map do
   spin do
     loop do
       DBPOOL.acquire do |db|
@@ -40,4 +40,4 @@ coprocs = CONCURRENCY.times.map do
 end
 sleep 5
 puts "count: #{count} query rate: #{count / (Time.now - t0)} queries/s"
-coprocs.each(&:interrupt)
+fibers.each(&:interrupt)

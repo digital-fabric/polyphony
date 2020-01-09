@@ -35,7 +35,7 @@ calculate_thread_memory_cost(500)
 require 'bundler/setup'
 require 'polyphony'
 
-def calculate_coprocess_memory_cost(count)
+def calculate_extended_fiber_memory_cost(count)
   GC.disable
   rss0 = mem_usage
   count.times { spin { :foo } }
@@ -44,7 +44,7 @@ def calculate_coprocess_memory_cost(count)
   GC.start
   cost = (rss1 - rss0).to_f / count
 
-  puts "coprocess memory cost: #{cost}KB"
+  puts "extended fiber memory cost: #{cost}KB"
 end
 
-calculate_coprocess_memory_cost(10000)
+calculate_extended_fiber_memory_cost(10000)

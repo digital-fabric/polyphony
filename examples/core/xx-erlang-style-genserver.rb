@@ -5,7 +5,7 @@ require 'polyphony'
 
 class GenServer
   def self.start(receiver, *args)
-    coprocess = spin do
+    fiber = spin do
       state = receiver.initial_state(*args)
       loop do
         msg = receive
@@ -13,20 +13,20 @@ class GenServer
         msg[:from] << reply unless reply == :noreply
       end
     end
-    build_api(coprocess, receiver)
+    build_api(fiber, receiver)
     snooze
-    coprocess
+    fiber
   end
 
-  def self.build_api(coprocess, receiver)
+  def self.build_api(fiber, receiver)
     receiver.methods(false).each do |m|
       if m =~ /!$/
-        coprocess.define_singleton_method(m) do |*args|
-          GenServer.cast(coprocess, m, *args)
+        fiber.define_singleton_method(m) do |*args|
+          GenServer.cast(fiber, m, *args)
         end
       else
-        coprocess.define_singleton_method(m) do |*args|
-          GenServer.call(coprocess, m, *args)
+        fiber.define_singleton_method(m) do |*args|
+          GenServer.call(fiber, m, *args)
         end
       end
     end
@@ -34,7 +34,7 @@ class GenServer
 
   def self.cast(process, method, *args)
     process << {
-      from:   Polyphony::Coprocess.current,
+      from:   Fiber.current,
       method: method,
       args:   args
     }
@@ -42,7 +42,7 @@ class GenServer
 
   def self.call(process, method, *args)
     process << {
-      from:   Polyphony::Coprocess.current,
+      from:   Fiber.current,
       method: method,
       args:   args
     }

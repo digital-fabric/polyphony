@@ -10,7 +10,7 @@ def nap(tag, t)
   puts "#{Time.now} #{tag} done napping"
 end
 
-# We launch two concurrent coprocesses, each sleeping for the given duration.
+# We launch two concurrent fibers, each sleeping for the given duration.
 spin { nap(:a, 1) }
 spin { nap(:b, 2) }
 

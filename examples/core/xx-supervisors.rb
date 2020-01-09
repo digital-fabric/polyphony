@@ -15,7 +15,7 @@ supervise do |s|
   s.spin { my_sleep(2) }
   s.spin { my_sleep(3) }
   s.spin do
-    puts "fiber count: #{Polyphony::Coprocess.list.size}"
+    puts "fiber count: #{Fiber.count}"
   end
 end
 puts "#{Time.now} done waiting"

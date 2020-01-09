@@ -9,10 +9,10 @@ sleeper = spin do
   puts 'woke up'
 end
 
-# One way to synchronize coprocesses is by using `Coprocess#await`, which blocks
-# until the coprocess has finished running or has been interrupted.
+# One way to synchronize fibers is by using `Fiber#await`, which blocks
+# until the fiber has finished running or has been interrupted.
 waiter = spin do
-  puts 'waiting for coprocess to terminate'
+  puts 'waiting for fiber to terminate'
   sleeper.await
   puts 'done waiting'
 end
