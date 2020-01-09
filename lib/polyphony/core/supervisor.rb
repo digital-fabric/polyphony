@@ -2,13 +2,13 @@
 
 export_default :Supervisor
 
-Coprocess   = import('./coprocess')
-Exceptions  = import('./exceptions')
+import '../extensions/fiber'
+Exceptions  = import './exceptions'
 
-# Implements a supervision mechanism for controlling multiple coprocesses
+# Implements a supervision mechanism for controlling multiple fibers
 class Supervisor
   def initialize
-    @coprocesses = []
+    @fibers = []
     @pending = {}
   end
 
@@ -17,7 +17,7 @@ class Supervisor
     @supervisor_fiber = Fiber.current
     block&.(self)
     suspend
-    @coprocesses.map(&:result)
+    @fibers.map(&:result)
   rescue Exceptions::MoveOn => e
     e.value
   ensure
@@ -27,11 +27,11 @@ class Supervisor
 
   def select(&block)
     @mode = :select
-    @select_coproc = nil
+    @select_fiber = nil
     @supervisor_fiber = Fiber.current
     block&.(self)
     suspend
-    [@select_coproc.result, @select_coproc]
+    [@select_fiber.result, @select_fiber]
   rescue Exceptions::MoveOn => e
     e.value
   ensure
@@ -52,21 +52,15 @@ class Supervisor
     @supervisor_fiber = nil
   end
 
-  def spin(coproc = nil, &block)
-    coproc = Coprocess.new(&(coproc || block)) unless coproc.is_a?(Coprocess)
-    @coprocesses << coproc
-    @pending[coproc] = true
-    coproc.when_done { task_completed(coproc) }
-    coproc.run unless coproc.alive?
-    coproc
+  def spin(_caller = caller, &block)
+    add Fiber.spin(_caller, &block)
   end
 
-  def add(coproc)
-    @coprocesses << coproc
-    @pending[coproc] = true
-    coproc.when_done { task_completed(coproc) }
-    coproc.run unless coproc.alive?
-    coproc
+  def add(fiber)
+    @fibers << fiber
+    @pending[fiber] = true
+    fiber.when_done { task_completed(fiber) }
+    fiber
   end
   alias_method :<<, :add
 
@@ -89,30 +83,29 @@ class Supervisor
     end
   end
 
-  def task_completed(coprocess)
-    return unless @pending[coprocess]
+  def task_completed(fiber)
+    return unless @pending[fiber]
 
-    @pending.delete(coprocess)
-    return unless @pending.empty? || (@mode == :select && !@select_coproc)
+    @pending.delete(fiber)
+    return unless @pending.empty? || (@mode == :select && !@select_fiber)
 
-    @select_coproc = coprocess if @mode == :select
+    @select_fiber = fiber if @mode == :select
     @supervisor_fiber&.schedule
   end
 end
 
-# Extension for Coprocess class
-class Coprocess
+class ::Fiber
   class << self
-    def await(*coprocs)
+    def await(*fibers)
       supervisor = Supervisor.new
-      coprocs.each { |cp| supervisor << cp }
+      fibers.each { |f| supervisor << f }
       supervisor.await
     end
     alias_method :join, :await
 
-    def select(*coprocs)
+    def select(*fibers)
       supervisor = Supervisor.new
-      coprocs.each { |cp| supervisor << cp }
+      fibers.each { |f| supervisor << f }
       supervisor.select
     end
   end

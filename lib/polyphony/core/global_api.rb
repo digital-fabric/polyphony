@@ -3,8 +3,8 @@
 export_default :API
 
 import '../extensions/core'
+import '../extensions/fiber'
 
-Coprocess   = import '../core/coprocess'
 Exceptions  = import '../core/exceptions'
 Supervisor  = import '../core/supervisor'
 Throttler   = import '../core/throttler'
@@ -29,13 +29,10 @@ module API
     canceller.stop
   end
 
-  def defer(&block)
-    ::Fiber.new(&block).schedule
-  end
-
   def spin(&block)
-    Coprocess.new(&block).run
+    Fiber.spin(caller, &block)
   end
+  alias_method :defer, :spin
 
   def spin_loop(&block)
     spin { loop(&block) }
@@ -63,7 +60,7 @@ module API
   end
 
   def receive
-    Fiber.current.coprocess.receive
+    Fiber.current.receive
   end
 
   def sleep(duration = nil)

@@ -3,43 +3,42 @@
 require_relative 'helper'
 
 class SpinTest < MiniTest::Test
-  def test_that_spin_returns_a_coprocess
+  def test_that_spin_returns_a_fiber
     result = nil
-    coprocess = spin { result = 42 }
+    fiber = spin { result = 42 }
 
-    assert_kind_of(Polyphony::Coprocess, coprocess)
-    assert_nil(result)
+    assert_kind_of Fiber, fiber
+    assert_nil result
     suspend
-    assert_equal(42, result)
+    assert_equal 42, result
   end
 
-  def test_that_spin_accepts_coprocess_argument
+  def test_that_spin_accepts_fiber_argument
     result = nil
-    coprocess = Polyphony::Coprocess.new { result = 42 }
-    coprocess.run
+    fiber = Fiber.spin { result = 42 }
 
-    assert_nil(result)
+    assert_nil result
     suspend
-    assert_equal(42, result)
+    assert_equal 42, result
   end
 
-  def test_that_spined_coprocess_saves_result
-    coprocess = spin { 42 }
+  def test_that_spined_fiber_saves_result
+    fiber = spin { 42 }
 
-    assert_kind_of(Polyphony::Coprocess, coprocess)
-    assert_nil(coprocess.result)
+    assert_kind_of Fiber, fiber
+    assert_nil fiber.result
     suspend
-    assert_equal(42, coprocess.result)
+    assert_equal 42, fiber.result
   end
 
-  def test_that_spined_coprocess_can_be_interrupted
-    coprocess = spin do
+  def test_that_spined_fiber_can_be_interrupted
+    fiber = spin do
       sleep(1)
       42
     end
-    defer { coprocess.interrupt }
+    defer { fiber.interrupt }
     suspend
-    assert_nil(coprocess.result)
+    assert_nil fiber.result
   end
 end
 
@@ -51,7 +50,7 @@ class CancelScopeTest < Minitest::Test
     end
   end
 
-  def test_that_cancel_scope_cancels_coprocess
+  def test_that_cancel_scope_cancels_fiber
     ctx = {}
     spin do
       after(0.005) { ctx[:cancel_scope].cancel! }
@@ -60,13 +59,13 @@ class CancelScopeTest < Minitest::Test
       ctx[:result] = e
       nil
     end
-    assert_nil(ctx[:result])
+    assert_nil ctx[:result]
     # async operation will only begin on next iteration of event loop
-    assert_nil(ctx[:cancel_scope])
+    assert_nil ctx[:cancel_scope]
 
     Gyro.run
-    assert_kind_of(Polyphony::CancelScope, ctx[:cancel_scope])
-    assert_kind_of(Polyphony::Cancel, ctx[:result])
+    assert_kind_of Polyphony::CancelScope, ctx[:cancel_scope]
+    assert_kind_of Polyphony::Cancel, ctx[:result]
   end
 
   def test_that_cancel_scope_cancels_async_op_with_stop
@@ -77,8 +76,8 @@ class CancelScopeTest < Minitest::Test
     end
 
     Gyro.run
-    assert(ctx[:cancel_scope])
-    assert_nil(ctx[:result])
+    assert ctx[:cancel_scope]
+    assert_nil ctx[:result]
   end
 
   def test_that_cancel_after_raises_cancelled_exception
@@ -92,7 +91,7 @@ class CancelScopeTest < Minitest::Test
       result = :cancelled
     end
     suspend
-    assert_equal(:cancelled, result)
+    assert_equal :cancelled, result
   end
 
   # def test_that_cancel_scopes_can_be_nested
@@ -108,8 +107,8 @@ class CancelScopeTest < Minitest::Test
   #     outer_result = 42
   #   end
   #   suspend
-  #   assert_nil(inner_result)
-  #   assert_equal(42, outer_result)
+  #   assert_nil inner_result
+  #   assert_equal 42, outer_result
 
   #   Polyphony.reset!
 
@@ -124,8 +123,8 @@ class CancelScopeTest < Minitest::Test
   #     outer_result = 42
   #   end
   #   suspend
-  #   assert_equal(42, inner_result)
-  #   assert_equal(42, outer_result)
+  #   assert_equal 42, inner_result
+  #   assert_equal 42, outer_result
   # end
 end
 
@@ -139,22 +138,22 @@ class SupervisorTest < MiniTest::Test
 
   def parallel_sleep(ctx)
     supervise do |s|
-      (1..3).each { |idx| s.spin sleep_and_set(ctx, idx) }
+      (1..3).each { |idx| s.spin(&sleep_and_set(ctx, idx)) }
     end
   end
 
-  def test_that_supervisor_waits_for_all_nested_coprocesses_to_complete
+  def test_that_supervisor_waits_for_all_nested_fibers_to_complete
     ctx = {}
     spin do
       parallel_sleep(ctx)
     end
     suspend
-    assert(ctx[1])
-    assert(ctx[2])
-    assert(ctx[3])
+    assert ctx[1]
+    assert ctx[2]
+    assert ctx[3]
   end
 
-  def test_that_supervisor_can_add_coprocesses_after_having_started
+  def test_that_supervisor_can_add_fibers_after_having_started
     result = []
     spin do
       supervisor = Polyphony::Supervisor.new
@@ -170,7 +169,7 @@ class SupervisorTest < MiniTest::Test
       supervisor.await
     end.await
 
-    assert_equal([0, 1, 2], result.sort)
+    assert_equal [0, 1, 2], result.sort
   end
 end
 
@@ -193,7 +192,7 @@ class ExceptionTest < MiniTest::Test
       frames << 3
       raise e
     end
-    4.times { snooze }
+    5.times { |i| snooze }
   rescue Exception => e
     error = e
   ensure
@@ -246,12 +245,12 @@ class MoveOnAfterTest < MiniTest::Test
   def test_spin_loop
     buffer = []
     counter = 0
-    cp = spin_loop do
+    f = spin_loop do
       buffer << (counter += 1)
       snooze
     end
 
-    assert_kind_of Polyphony::Coprocess, cp
+    assert_kind_of Fiber, f
     assert_equal [], buffer
     snooze
     assert_equal [1], buffer
@@ -259,40 +258,40 @@ class MoveOnAfterTest < MiniTest::Test
     assert_equal [1, 2], buffer
     snooze
     assert_equal [1, 2, 3], buffer
-    cp.stop
+    f.stop
     snooze
-    assert !cp.alive?
+    assert !f.running?
     assert_equal [1, 2, 3], buffer
   end
 
   def test_throttled_loop
     buffer = []
     counter = 0
-    cp = spin do
+    f = spin do
       throttled_loop(50) { buffer << (counter += 1) }
     end
     sleep 0.1
-    cp.stop
+    f.stop
     assert_equal [1, 2, 3, 4, 5], buffer    
   end
 
   def test_throttled_loop_with_count
     buffer = []
     counter = 0
-    cp = spin do
+    f = spin do
       throttled_loop(50, count: 5) { buffer << (counter += 1) }
     end
-    cp.await
+    f.await
     assert_equal [1, 2, 3, 4, 5], buffer    
   end
 
   def test_every
     buffer = []
-    cp = spin do
+    f = spin do
       every(0.01) { buffer << 1 }
     end
     sleep 0.05
-    cp.stop
-    assert_equal 5, buffer.size
+    f.stop
+    assert (4..5).include?(buffer.size)
   end
 end

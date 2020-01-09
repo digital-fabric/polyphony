@@ -14,10 +14,10 @@ class CancelScopeTest < MiniTest::Test
     assert_equal [1], buffer
   end
 
-  def test_that_cancel_scope_can_cancel_multiple_coprocesses
+  def test_that_cancel_scope_can_cancel_multiple_fibers
     buffer = []
     scope = Polyphony::CancelScope.new
-    coprocs = (1..3).map { |i|
+    fibers = (1..3).map { |i|
       spin {
         scope.call do
           buffer << i
@@ -52,11 +52,11 @@ class CancelScopeTest < MiniTest::Test
     assert_nil scope.instance_variable_get(:@timeout_waiter)
   end
 
-  def test_that_cancel_scope_can_cancel_multiple_coprocs_with_timeout
+  def test_that_cancel_scope_can_cancel_multiple_fibers_with_timeout
     buffer = []
     t0 = Time.now
     scope = Polyphony::CancelScope.new(timeout: 0.02)
-    coprocs = (1..3).map { |i|
+    fibers = (1..3).map { |i|
       spin {
         scope.call do
           buffer << i
@@ -65,7 +65,7 @@ class CancelScopeTest < MiniTest::Test
         end
       }
     }
-    Polyphony::Coprocess.await(*coprocs)
+    Fiber.await(*fibers)
     assert Time.now - t0 < 0.05
     assert_equal [1, 2, 3], buffer
   end
@@ -77,7 +77,7 @@ class CancelScopeTest < MiniTest::Test
     scope.call {
       sleep 0.005
       scope.reset_timeout
-      sleep 0.010
+      sleep 0.008
     }
 
     assert !scope.cancelled?

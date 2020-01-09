@@ -20,7 +20,7 @@ class SignalTest < MiniTest::Test
       Process.kill(:USR1, Process.pid)
     end
     suspend
-    assert_equal(1, count)
+    assert_equal 1, count
   end
 
   def test_wait_for_signal_api

@@ -54,11 +54,7 @@ spin do
     client = server.accept
     spin { handle_client(client) }
   end
-rescue Exception => e
-  puts "uncaught exception: #{e.inspect}"
-  puts e.backtrace.join("\n")
-  exit!
-  server.close
 end
 
+puts "pid #{Process.pid}"
 suspend

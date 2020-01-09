@@ -4,81 +4,7 @@ require 'fiber'
 require 'timeout'
 require 'open3'
 
-Coprocess   = import('../core/coprocess')
 Exceptions  = import('../core/exceptions')
-Supervisor  = import('../core/supervisor')
-Throttler   = import('../core/throttler')
-
-# Fiber extensions
-class ::Fiber
-  attr_accessor :__calling_fiber__
-  attr_accessor :__caller__
-  attr_accessor :__location__
-  attr_writer :cancelled
-  attr_accessor :coprocess
-
-  def location
-    __location__ || (__caller__ && __caller__[0])
-  end
-
-  def inspect
-    "#<Fiber:#{object_id} #{location} (#{state})"
-  end
-  alias_method :to_s, :inspect
-
-  def set_calling_context(location, calling_fiber, fiber_caller)
-    @__location__ = location
-    @__calling_fiber__ = calling_fiber
-    @__caller__ = fiber_caller
-    self
-  end
-
-  class << self
-    alias_method :orig_new, :new
-    def new(location = nil, &block)
-      fiber = create_fiber_with_block(&block)
-      fiber.set_calling_context(location, Fiber.current, caller)
-      fiber
-    end
-
-    def create_fiber_with_block(&block)
-      fiber = orig_new do |v|
-        block.call(v)
-      rescue Exception => e
-        __calling_fiber__.transfer e if __calling_fiber__.alive?
-      ensure
-        fiber.mark_as_done!
-        Gyro.run
-      end
-    end
-
-    def root
-      @root_fiber
-    end
-
-    def set_root_fiber
-      @root_fiber = current
-    
-      # Associate a (pseudo-)coprocess with the root fiber
-      Coprocess.map[current] = current.coprocess = Coprocess.new(current)
-    end
-  end
-
-  def caller
-    @__caller__ ||= []
-    if @__calling_fiber__
-      @__caller__ + @__calling_fiber__.caller
-    else
-      @__caller__
-    end
-  end
-
-  def cancelled?
-    @cancelled
-  end
-
-  set_root_fiber
-end
 
 # Exeption overrides
 class ::Exception
@@ -120,9 +46,9 @@ end
 # Overrides for Process
 module ::Process
   def self.detach(pid)
-    spin do
-      Gyro::Child.new(pid).await
-    end.tap { |coproc| coproc.define_singleton_method(:pid) { pid } }
+    fiber = spin { Gyro::Child.new(pid).await }
+    fiber.define_singleton_method(:pid) { pid }
+    fiber
   end
 end
 

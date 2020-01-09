@@ -8,7 +8,7 @@ class GyroTest < MiniTest::Test
 
     f = Fiber.new {}
 
-    assert_equal :paused, f.state
+    assert_equal :suspended, f.state
     f.resume
     assert_equal :dead, f.state
 

@@ -2,8 +2,8 @@
 
 export :Interrupt, :MoveOn, :Cancel
 
-# Common exception class for interrupting coprocesses. These exceptions allow
-# control of coprocesses. Interrupt exceptions can encapsulate a value and thus
+# Common exception class for interrupting fibers. These exceptions allow
+# control of fibers. Interrupt exceptions can encapsulate a value and thus
 # provide a way to interrupt long-running blocking operations while still
 # passing a value back to the call site. Interrupt exceptions can also
 # references a cancel scope in order to allow correct bubbling of exceptions

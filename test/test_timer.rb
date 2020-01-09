@@ -11,7 +11,7 @@ class TimerTest < MiniTest::Test
       count += 1
     }
     suspend
-    assert_equal(1, count)
+    assert_equal 1, count
   end
 
   def test_that_repeating_timer_works
@@ -25,7 +25,7 @@ class TimerTest < MiniTest::Test
       }
     }
     suspend
-    assert_equal(3, count)
+    assert_equal 3, count
   end
 
   def test_that_repeating_timer_compensates_for_drift

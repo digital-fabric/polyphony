@@ -16,7 +16,7 @@ class AsyncTest < MiniTest::Test
       a.signal!
     end
     suspend
-    assert_equal(1, count)
+    assert_equal 1, count
   end
 
   def test_that_async_watcher_coalesces_signals
@@ -35,6 +35,6 @@ class AsyncTest < MiniTest::Test
       3.times { a.signal! }
     end
     coproc.await
-    assert_equal(1, count)
+    assert_equal 1, count
   end
 end

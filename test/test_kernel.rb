@@ -15,7 +15,7 @@ class KernelTest < MiniTest::Test
     $stdout = o
     system('echo "hello"')
     o.close
-    assert_equal("hello\n", i.read)
+    assert_equal "hello\n", i.read
   ensure
     $stdout = orig_stdout
     timer&.stop
@@ -29,7 +29,7 @@ class KernelTest < MiniTest::Test
     assert(counter >= 2)
 
     result = `echo "hello"`
-    assert_equal("hello\n", result)
+    assert_equal "hello\n", result
   ensure
     timer&.stop
   end

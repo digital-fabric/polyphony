@@ -22,7 +22,6 @@ class CancelScope
   def cancel!
     @cancelled = true
     @fibers.each do |f|
-      f.cancelled = true
       f.schedule error_class.new(self, @opts[:value])
     end
     @on_cancel&.()
@@ -57,7 +56,6 @@ class CancelScope
   def call
     fiber = Fiber.current
     @fibers << fiber
-    fiber.cancelled = nil
     yield self
   rescue Exceptions::MoveOn => e
     e.scope == self ? e.value : raise(e)

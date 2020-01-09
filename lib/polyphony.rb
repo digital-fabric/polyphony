@@ -8,6 +8,7 @@ require 'fiber'
 require_relative './gyro_ext'
 
 import './polyphony/extensions/core'
+import './polyphony/extensions/fiber'
 import './polyphony/extensions/io'
 
 # Main Polyphony API
@@ -19,7 +20,6 @@ module Polyphony
   Cancel        = exceptions::Cancel
   MoveOn        = exceptions::MoveOn
 
-  Coprocess = import './polyphony/core/coprocess'
   Net       = import './polyphony/net'
 
   auto_import(
@@ -67,14 +67,12 @@ module Polyphony
     def reset!
       # Fiber.root.scheduled_value = nil
       Gyro.reset!
-      Coprocess.map.clear
       Fiber.set_root_fiber
     end
 
     private
 
     def setup_forked_process
-      Coprocess.map.delete Fiber.root
       Gyro.post_fork
       Fiber.set_root_fiber
     end
