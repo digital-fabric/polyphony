@@ -171,7 +171,7 @@ class ::IO
     buf ? readpartial(maxlen, buf) : readpartial(maxlen)
   end
 
-  alias :orig_read, :read
+  alias_method :orig_read, :read
   def read(length = nil, outbuf = nil)
     if length
       return outbuf ? readpartial(length) : readpartial(length, outbuf)
