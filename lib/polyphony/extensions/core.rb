@@ -58,8 +58,6 @@ module ::Kernel
 
   alias_method :orig_backtick, :`
   def `(cmd)
-    # $stdout.orig_puts '*' * 60
-    # $stdout.orig_puts caller.join("\n")
     Open3.popen3(cmd) do |i, o, e, _t|
       i.close
       while (l = e.readpartial(8192))
@@ -70,25 +68,30 @@ module ::Kernel
   end
 
   ARGV_GETS_LOOP = proc do |calling_fiber|
-    ARGV.each do |fn|
+    while (fn = ARGV.shift)
       File.open(fn, 'r') do |f|
         while (line = f.gets)
           calling_fiber = calling_fiber.transfer(line)
         end
       end
     end
+    nil
   rescue Exception => e
     calling_fiber.transfer(e)
   end
 
   alias_method :orig_gets, :gets
   def gets(*_args)
-    return $stdin.gets if ARGV.empty?
+    if ARGV.size > 0 || @gets_fiber
+      @gets_fiber ||= Fiber.new(&ARGV_GETS_LOOP)
+      result = @gets_fiber.alive? && @gets_fiber.safe_transfer(Fiber.current)
+      return result if result
 
-    @gets_fiber ||= Fiber.new(&ARGV_GETS_LOOP)
-    return @gets_fiber.safe_transfer(Fiber.current) if @gets_fiber.alive?
+      @gets_fiber = nil
+    end
+  
+    return $stdin.gets
 
-    nil
   end
 
   alias_method :orig_system, :system
@@ -100,8 +103,6 @@ module ::Kernel
       end
     end
     true
-  rescue SystemCallError
-    nil
   end
 end
 
