@@ -65,7 +65,6 @@ module Polyphony
     end
 
     def reset!
-      # Fiber.root.scheduled_value = nil
       Gyro.reset!
       Fiber.reset!
     end

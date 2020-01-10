@@ -1,13 +1,17 @@
-## 0.26 Move Other interface code into separate gem
+## 0.26 Real IO#gets and IO#read
 
-- Pull out redis/postgres code, put into new `polyphony-contrib` gem
-- Implement some stuff missing in `IO`:
+- More tests
+- Implement some basic stuff missing:
+  - fix `IO_readpartial` to read from buffer
+  - override `IO#eof?` since it too reads into buffer
   - real `IO#gets` (with buffering)
   - `IO#read` (read to EOF)
   - `IO.foreach`
+  - `Process.waitpid`
 
 ## 0.27 Working Sinatra application
 
+- Pull out redis/postgres code, put into new `polyphony-xxx` gems
 - app with database access (postgresql)
 - benchmarks!
 

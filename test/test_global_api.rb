@@ -294,4 +294,20 @@ class MoveOnAfterTest < MiniTest::Test
     f.stop
     assert (4..5).include?(buffer.size)
   end
+
+  def test_sleep
+    t0 = Time.now
+    sleep 0.05
+    elapsed = Time.now - t0
+    puts "* elapsed: #{elapsed.inspect}"
+    assert (0.045..0.8).include? elapsed
+
+    f = spin { sleep }
+    snooze
+    assert f.running?
+    snooze
+    assert f.running?
+    f.stop
+    assert !f.running?
+  end
 end

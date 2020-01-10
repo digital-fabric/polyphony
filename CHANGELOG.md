@@ -1,3 +1,4 @@
+* Fix `Kernel#gets` with `ARGV`
 * Return `[pid, exit_status]` from `Gyro::Child#await`
 
 0.25 2020-01-10

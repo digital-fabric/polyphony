@@ -45,6 +45,6 @@ class TimerTest < MiniTest::Test
     }
     suspend
     deltas = times.each_with_object([]) { |t, a| a << t - last; last = t }
-    assert_equal 0, deltas.filter { |d| (d - 0.01).abs >= 0.005 }.size
+    assert_equal 0, deltas.filter { |d| (d - 0.01).abs >= 0.006 }.size
   end
 end
