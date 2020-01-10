@@ -89,7 +89,11 @@ void Gyro_Child_callback(struct ev_loop *ev_loop, struct ev_child *ev_child, int
 
   if (child->fiber != Qnil) {
     VALUE fiber = child->fiber;
-    VALUE resume_value = INT2NUM(child->pid);
+    int exit_status = ev_child->rstatus >> 8; // weird, why should we do this?
+
+    VALUE resume_value = rb_ary_new_from_args(
+      2, INT2NUM(ev_child->rpid), INT2NUM(exit_status)
+    );
     child->fiber = Qnil;
     Gyro_schedule_fiber(fiber, resume_value);
   }
