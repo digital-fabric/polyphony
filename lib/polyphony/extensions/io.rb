@@ -163,13 +163,25 @@ class ::IO
 
   alias_method :orig_write_nonblock, :write_nonblock
   def write_nonblock(string, _options = {})
-    # STDOUT << '>'
     write(string, 0)
   end
 
   alias_method :orig_read_nonblock, :read_nonblock
   def read_nonblock(maxlen, buf = nil, _options = nil)
-    # STDOUT << '<'
     buf ? readpartial(maxlen, buf) : readpartial(maxlen)
+  end
+
+  alias :orig_read, :read
+  def read(length = nil, outbuf = nil)
+    if length
+      return outbuf ? readpartial(length) : readpartial(length, outbuf)
+    end
+
+    while !eof?
+      result = outbuf ? readpartial(8192, outbuf) : readpartial(8192)
+      break unless result
+      outbuf = result
+    end
+    outbuf
   end
 end
