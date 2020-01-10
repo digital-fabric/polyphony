@@ -286,11 +286,28 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
   return str;
 }
 
+#define READ_DATA_PENDING_COUNT(fptr) ((fptr)->rbuf.len)
+#define MEMMOVE(p1,p2,type,n) memmove((p1), (p2), sizeof(type)*(size_t)(n))
+
+static long
+read_buffered_data(char *ptr, long len, rb_io_t *fptr)
+{
+    int n;
+
+    n = READ_DATA_PENDING_COUNT(fptr);
+    if (n <= 0) return 0;
+    if (n > len) n = (int)len;
+    MEMMOVE(ptr, fptr->rbuf.ptr+fptr->rbuf.off, char, n);
+    fptr->rbuf.off += n;
+    fptr->rbuf.len -= n;
+    return n;
+}
+
 static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
   VALUE underlying_io = rb_iv_get(io, "@io");
   if (!NIL_P(underlying_io)) io = underlying_io;
 
-  long len = argc == 1 ? NUM2LONG(argv[0]) : 8192;
+  long len = argc >= 1 ? NUM2LONG(argv[0]) : 8192;
 
   rb_io_t *fptr;
   long n;
@@ -312,21 +329,24 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
   if (len == 0)
   	return str;
 
-  while (1) {
-    n = read(fptr->fd, RSTRING_PTR(str), len);
-    if (n < 0) {
-      int e = errno;
-      if (e == EWOULDBLOCK || e == EAGAIN) {
-        if (read_watcher == Qnil)
-          read_watcher = IO_read_watcher(io);
-        Gyro_IO_await(read_watcher);
+  n = read_buffered_data(RSTRING_PTR(str), len, fptr);
+  if (n <= 0) {
+    while (1) {
+      n = read(fptr->fd, RSTRING_PTR(str), len);
+      if (n < 0) {
+        int e = errno;
+        if (e == EWOULDBLOCK || e == EAGAIN) {
+          if (read_watcher == Qnil)
+            read_watcher = IO_read_watcher(io);
+          Gyro_IO_await(read_watcher);
+        }
+        else
+          rb_syserr_fail(e, strerror(e));
+          // rb_syserr_fail_path(e, fptr->pathv);
       }
       else
-        rb_syserr_fail(e, strerror(e));
-        // rb_syserr_fail_path(e, fptr->pathv);
+        break;
     }
-    else
-      break;
   }
 
   io_set_read_length(str, n, shrinkable);
