@@ -156,11 +156,11 @@ class ::Fiber
   end
 
   def caller
-    @caller ||= []
+    spin_caller = @caller || []
     if @calling_fiber
-      @caller + @calling_fiber.caller
+      spin_caller + @calling_fiber.caller
     else
-      @caller
+      spin_caller
     end
   end
 end

@@ -56,14 +56,14 @@ class SupervisorTest < MiniTest::Test
     foo_f = bar_f = baz_f = nil
     result, f = Polyphony::Supervisor.new.select { |s|
       foo_f = s.spin { sleep 0.01; buffer << :foo; :foo }
-      bar_f = s.spin { sleep 0.02; buffer << :bar; :bar }
-      baz_f = s.spin { sleep 0.03; buffer << :baz; :baz }
+      bar_f = s.spin { sleep 0.03; buffer << :bar; :bar }
+      baz_f = s.spin { sleep 0.05; buffer << :baz; :baz }
     }
 
     assert_equal :foo, result
     assert_equal foo_f, f
 
-    sleep 0.03
+    sleep 0.05
     assert !bar_f.running?
     assert !baz_f.running?
     assert_equal [:foo], buffer

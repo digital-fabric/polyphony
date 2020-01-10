@@ -86,6 +86,19 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_that_fiber_can_be_interrupted_before_running
+    result = []
+    f = Fiber.spin do
+      result << 1
+    end
+    f.interrupt(42)
+    snooze
+
+    assert_equal :dead, f.state
+    assert_equal [], result
+    assert_equal 42, f.result
+  end
+
   def test_that_fiber_can_be_awaited
     result = nil
     f2 = nil
@@ -378,5 +391,30 @@ class MailboxTest < MiniTest::Test
     f.stop
     snooze
     assert_equal 1, Fiber.count
+  end
+
+  def test_inspect
+    expected = format('#<Fiber:%s (root) (running)>', Fiber.current.object_id)
+    assert_equal expected, Fiber.current.inspect
+
+    spin_line_no = __LINE__ + 1
+    f = spin { :foo }
+
+    expected = format(
+      '#<Fiber:%s %s:%d:in `test_inspect\' (scheduled)>',
+      f.object_id,
+      __FILE__,
+      spin_line_no
+    )
+    assert_equal expected, f.inspect
+
+    f.await
+    expected = format(
+      '#<Fiber:%s %s:%d:in `test_inspect\' (dead)>',
+      f.object_id,
+      __FILE__,
+      spin_line_no
+    )
+    assert_equal expected, f.inspect
   end
 end
