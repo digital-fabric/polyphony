@@ -3,13 +3,11 @@
 require 'coverage'
 require 'simplecov'
 
-class << SimpleCov::LinesClassifier
-  alias_method :orig_whitespace_line?, :whitespace_line?
-  def whitespace_line?(line)
-    line.strip =~ /^(begin|end|ensure|else|\})|(\s*rescue\s.+)$/ || orig_whitespace_line?(line)
-  end
-end
-
+# Since we load code using Modulation, and the stock coverage gem does not
+# calculate coverage for code loaded using `Kernel#eval` et al, we need to use
+# the TracePoint API in order to trace execution. Here we monkey-patch the two
+# main Coverage class methods, start and result to use TracePoint. Otherwise we
+# let SimpleCov do its business.
 module Coverage
   EXCLUDE = %w{coverage eg helper run
   }.map { |n| File.expand_path("test/#{n}.rb") }
@@ -39,6 +37,17 @@ module Coverage
     def result
       @result
     end
+  end
+end
+
+class << SimpleCov::LinesClassifier
+  alias_method :orig_whitespace_line?, :whitespace_line?
+  def whitespace_line?(line)
+    # apparently TracePoint tracing does not cover lines including only keywords
+    # such as begin end etc, so here we mark those lines as whitespace, so they
+    # won't count towards the coverage score.
+    line.strip =~ /^(begin|end|ensure|else|\})|(\s*rescue\s.+)$/ ||
+                  orig_whitespace_line?(line)
   end
 end
 
