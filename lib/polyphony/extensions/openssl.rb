@@ -23,8 +23,8 @@ class ::OpenSSL::SSL::SSLSocket
     write_watcher = nil
     loop do
       case (result = read_nonblock(maxlen, buf, exception: false))
-      when :wait_readable then (read_watcher ||= Gyro::IO.new(io, :r)).await
-      when :wait_writable then (write_watcher ||= Gyro::IO.new(io, :w)).await
+      when :wait_readable then (read_watcher ||= io.read_watcher).await
+      when :wait_writable then (write_watcher ||= io.write_watcher).await
       else result
       end
     end
@@ -61,8 +61,8 @@ class ::OpenSSL::SSL::SSLSocket
     write_watcher = nil
     loop do
       case (result = write_nonblock(buf, exception: false))
-      when :wait_readable then (read_watcher ||= Gyro::IO.new(io, :r)).await
-      when :wait_writable then (write_watcher ||= Gyro::IO.new(io, :w)).await
+      when :wait_readable then (read_watcher ||= io.read_watcher).await
+      when :wait_writable then (write_watcher ||= io.write_watcher).await
       else result
       end
     end

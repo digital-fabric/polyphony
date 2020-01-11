@@ -1,5 +1,4 @@
 #include "gyro.h"
-#include "../libev/ev.c"
 
 void Init_Gyro();
 void Init_Gyro_Async();

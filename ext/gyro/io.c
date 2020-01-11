@@ -32,6 +32,11 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write(int argc, VALUE *argv, VALUE io);
 static VALUE IO_write_chevron(VALUE io, VALUE str);
 
+ID ID_read_watcher;
+ID ID_write_watcher;
+VALUE SYM_r;
+VALUE SYM_w;
+
 void Init_Gyro_IO() {
   cGyro_IO = rb_define_class_under(mGyro, "IO", rb_cData);
   rb_define_alloc_func(cGyro_IO, Gyro_IO_allocate);
@@ -48,6 +53,11 @@ void Init_Gyro_IO() {
   rb_define_method(cIO, "<<", IO_write_chevron, 1);
   rb_define_method(cIO, "read_watcher", IO_read_watcher, 0);
   rb_define_method(cIO, "write_watcher", IO_write_watcher, 0);
+
+  ID_read_watcher = rb_intern("@read_watcher");
+  ID_write_watcher = rb_intern("@write_watcher");
+  SYM_r = ID2SYM(rb_intern("r"));
+  SYM_w = ID2SYM(rb_intern("w"));
 }
 
 static const rb_data_type_t Gyro_IO_type = {
@@ -426,19 +436,21 @@ static VALUE IO_write_chevron(VALUE io, VALUE str) {
 }
 
 VALUE IO_read_watcher(VALUE self) {
-  VALUE watcher = rb_iv_get(self, "@read_watcher");
+  VALUE watcher = rb_ivar_get(self, ID_read_watcher);
   if (watcher == Qnil) {
-    watcher = rb_funcall(cGyro_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("r")));
-    rb_iv_set(self, "@read_watcher", watcher);
+    VALUE args[] = {self, SYM_r};
+    watcher = rb_class_new_instance(2, args, cGyro_IO);
+    rb_ivar_set(self, ID_read_watcher, watcher);
   }
   return watcher;
 }
 
 VALUE IO_write_watcher(VALUE self) {
-  VALUE watcher = rb_iv_get(self, "@write_watcher");
+  VALUE watcher = rb_ivar_get(self, ID_write_watcher);
   if (watcher == Qnil) {
-    watcher = rb_funcall(cGyro_IO, rb_intern("new"), 2, self, ID2SYM(rb_intern("w")));
-    rb_iv_set(self, "@write_watcher", watcher);
+    VALUE args[] = {self, SYM_w};
+    watcher = rb_class_new_instance(2, args, cGyro_IO);
+    rb_ivar_set(self, ID_write_watcher, watcher);
   }
   return watcher;
 }
