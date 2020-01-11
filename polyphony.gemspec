@@ -8,9 +8,10 @@ Gem::Specification.new do |s|
   s.author      = 'Sharon Rosner'
   s.email       = 'ciconia@gmail.com'
   s.files       = `git ls-files`.split
-  s.homepage    = 'http://github.com/digital-fabric/polyphony'
+  s.homepage    = 'https://dfab.gitbook.io/polyphony/'
   s.metadata    = {
-    "source_code_uri" => "https://github.com/digital-fabric/polyphony"
+    "source_code_uri" => "https://github.com/digital-fabric/polyphony",
+    "documentation_uri" => "https://dfab.gitbook.io/polyphony/"
   }
   s.rdoc_options = ["--title", "polyphony", "--main", "README.md"]
   s.extra_rdoc_files = ["README.md"]
