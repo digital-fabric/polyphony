@@ -177,9 +177,10 @@ class ::IO
       return outbuf ? readpartial(length) : readpartial(length, outbuf)
     end
 
-    while !eof?
+    until eof?
       result = outbuf ? readpartial(8192, outbuf) : readpartial(8192)
       break unless result
+
       outbuf = result
     end
     outbuf

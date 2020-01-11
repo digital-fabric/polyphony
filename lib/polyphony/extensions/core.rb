@@ -82,16 +82,15 @@ module ::Kernel
 
   alias_method :orig_gets, :gets
   def gets(*_args)
-    if ARGV.size > 0 || @gets_fiber
+    if !ARGV.empty? || @gets_fiber
       @gets_fiber ||= Fiber.new(&ARGV_GETS_LOOP)
       result = @gets_fiber.alive? && @gets_fiber.safe_transfer(Fiber.current)
       return result if result
 
       @gets_fiber = nil
     end
-  
-    return $stdin.gets
 
+    $stdin.gets
   end
 
   alias_method :orig_system, :system
