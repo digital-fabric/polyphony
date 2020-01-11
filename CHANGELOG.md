@@ -1,3 +1,4 @@
+* Implement `Fiber#raise`
 * Fix `Kernel#gets` with `ARGV`
 * Return `[pid, exit_status]` from `Gyro::Child#await`
 

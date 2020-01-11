@@ -3,7 +3,7 @@
 require_relative 'helper'
 
 class FiberTest < MiniTest::Test
-  def test_that_new_spun_fiber_starts_in_suspended_state
+  def test_spin_initial_state
     result = nil
     f = Fiber.spin { result = 42 }
     assert_nil result
@@ -13,7 +13,7 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
-  def test_that_await_blocks_until_fiber_is_done
+  def test_await
     result = nil
     f = Fiber.spin do
       snooze
@@ -25,14 +25,14 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
-  def test_that_await_returns_the_fibers_return_value
+  def test_await_return_value
     f = Fiber.spin { %i[foo bar] }
     assert_equal %i[foo bar], f.await
   ensure
     f&.stop
   end
 
-  def test_that_await_raises_error_raised_by_fiber
+  def test_await_with_error
     result = nil
     f = Fiber.spin { raise 'foo' }
     begin
@@ -46,7 +46,123 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
-  def test_that_running_fiber_can_be_cancelled
+  def test_raise
+    result = []
+    error = nil
+    f = Fiber.spin do
+      result << 1
+      2.times { snooze }
+      result << 2
+    end
+    defer { f.raise }
+    assert_equal 0, result.size
+    begin
+      f.await
+    rescue Exception => e
+      error = e
+    end
+    assert_equal 1, result.size
+    assert_equal 1, result[0]
+    assert_kind_of RuntimeError, error
+  ensure
+    f&.stop
+  end
+
+  class MyError < RuntimeError
+  end
+
+  def test_raise_with_error_class
+    result = []
+    error = nil
+    f = Fiber.spin do
+      result << 1
+      2.times { snooze }
+      result << 2
+    end
+    defer { f.raise MyError }
+    assert_equal 0, result.size
+    begin
+      f.await
+    rescue Exception => e
+      error = e
+    end
+    assert_equal 1, result.size
+    assert_equal 1, result[0]
+    assert_kind_of MyError, error
+  ensure
+    f&.stop
+  end
+
+  def test_raise_with_error_class_and_message
+    result = []
+    error = nil
+    f = Fiber.spin do
+      result << 1
+      2.times { snooze }
+      result << 2
+    end
+    defer { f.raise(MyError, 'foo') }
+    assert_equal 0, result.size
+    begin
+      f.await
+    rescue Exception => e
+      error = e
+    end
+    assert_equal 1, result.size
+    assert_equal 1, result[0]
+    assert_kind_of MyError, error
+    assert_equal 'foo', error.message
+  ensure
+    f&.stop
+  end
+
+  def test_raise_with_message
+    result = []
+    error = nil
+    f = Fiber.spin do
+      result << 1
+      2.times { snooze }
+      result << 2
+    end
+    defer { f.raise 'foo' }
+    assert_equal 0, result.size
+    begin
+      f.await
+    rescue Exception => e
+      error = e
+    end
+    assert_equal 1, result.size
+    assert_equal 1, result[0]
+    assert_kind_of RuntimeError, error
+    assert_equal 'foo', error.message
+  ensure
+    f&.stop
+  end
+
+  def test_raise_with_exception
+    result = []
+    error = nil
+    f = Fiber.spin do
+      result << 1
+      2.times { snooze }
+      result << 2
+    end
+    defer { f.raise MyError.new('bar') }
+    assert_equal 0, result.size
+    begin
+      f.await
+    rescue Exception => e
+      error = e
+    end
+    assert_equal 1, result.size
+    assert_equal 1, result[0]
+    assert_kind_of MyError, error
+    assert_equal 'bar', error.message
+  ensure
+    f&.stop
+  end
+
+  def test_cancel
     result = []
     error = nil
     f = Fiber.spin do
@@ -68,7 +184,25 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
-  def test_that_running_fiber_can_be_interrupted
+  def test_interrupt
+    # that is, stopped without exception
+    result = []
+    f = Fiber.spin do
+      result << 1
+      2.times { snooze }
+      result << 2
+      3
+    end
+    defer { f.interrupt(42) }
+
+    await_result = f.await
+    assert_equal 1, result.size
+    assert_equal 42, await_result
+  ensure
+    f&.stop
+  end
+
+  def test_stop
     # that is, stopped without exception
     result = []
     f = Fiber.spin do
@@ -86,7 +220,7 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
-  def test_that_fiber_can_be_interrupted_before_running
+  def test_interrupt_before_start
     result = []
     f = Fiber.spin do
       result << 1
@@ -99,56 +233,7 @@ class FiberTest < MiniTest::Test
     assert_equal 42, f.result
   end
 
-  def test_that_fiber_can_be_awaited
-    result = nil
-    f2 = nil
-    f1 = spin do
-      f2 = Fiber.spin do
-        snooze
-        42
-      end
-      result = f2.await
-    end
-    suspend
-    assert_equal 42, result
-  ensure
-    f1&.stop
-    f2&.stop
-  end
-
-  def test_that_fiber_can_be_stopped
-    result = nil
-    f = spin do
-      snooze
-      result = 42
-    end
-    defer { f.interrupt }
-    suspend
-    assert_nil result
-  ensure
-    f&.stop
-  end
-
-  def test_that_fiber_can_be_cancelled
-    result = nil
-    f = spin do
-      snooze
-      result = 42
-    rescue Polyphony::Cancel => e
-      result = e
-    end
-    defer { f.cancel! }
-
-    suspend
-
-    assert_kind_of Polyphony::Cancel, result
-    assert_kind_of Polyphony::Cancel, f.result
-    assert_equal :dead, f.state
-  ensure
-    f&.stop
-  end
-
-  def test_that_inner_fiber_can_be_interrupted
+  def test_interrupt_nested_fiber
     result = nil
     f2 = nil
     f1 = spin do
@@ -188,7 +273,7 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
-  def test_fiber_exception_propagation
+  def test_exception_bubbling
     # error is propagated to calling fiber
     raised_error = nil
     spin do
@@ -205,17 +290,7 @@ class FiberTest < MiniTest::Test
     assert_equal 'foo', raised_error.message
   end
 
-  def test_that_fiber_can_be_interrupted_before_first_scheduling
-    buffer = []
-    f = spin { buffer << 1 }
-    f.stop
-
-    snooze
-    assert !f.running?
-    assert_equal [], buffer
-  end
-
-  def test_exception_propagation_for_orphan_fiber
+  def test_exception_bubling_for_orphan_fiber
     raised_error = nil
     spin do
       spin do
@@ -300,38 +375,6 @@ class FiberTest < MiniTest::Test
     snooze
     assert_equal [42], values
     assert !f.running?
-  end
-
-  def test_interrupt
-    f = spin do
-      sleep 1
-      :foo
-    end
-
-    snooze
-    assert f.alive?
-
-    f.interrupt :bar
-    assert !f.running?
-
-    assert_equal :bar, f.result
-  end
-
-  def test_cancel
-    error = nil
-    f = spin do
-      sleep 1
-      :foo
-    end
-
-    snooze
-    f.cancel!
-  rescue Polyphony::Cancel => e
-    # cancel error should bubble up
-    error = e
-  ensure
-    assert error
-    assert_equal :dead, f.state
   end
 end
 

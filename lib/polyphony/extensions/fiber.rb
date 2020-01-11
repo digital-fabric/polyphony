@@ -8,7 +8,7 @@ Exceptions = import '../core/exceptions'
 module FiberControl
   def await
     if @running == false
-      return @result.is_a?(Exception) ? (raise @result) : @result
+      return @result.is_a?(Exception) ? (Kernel.raise @result) : @result
     end
 
     @waiting_fiber = Fiber.current
@@ -31,6 +31,21 @@ module FiberControl
 
     schedule Exceptions::Cancel.new
     snooze
+  end
+
+  def raise(*args)
+    error = error_from_raise_args(args)
+    schedule error
+    snooze
+  end
+
+  def error_from_raise_args(args)
+    case (arg = args.shift)
+    when String then RuntimeError.new(arg)
+    when Class  then arg.new(args.shift)
+    when Exception then arg
+    else RuntimeError.new
+    end
   end
 end
 
@@ -109,7 +124,7 @@ class ::Fiber
   end
 
   def run(first_value)
-    raise first_value if first_value.is_a?(Exception)
+    Kernel.raise first_value if first_value.is_a?(Exception)
 
     @running = true
     self.class.map[self] = true

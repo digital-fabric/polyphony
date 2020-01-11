@@ -2,7 +2,6 @@
 
 - More tests
 - Implement some basic stuff missing:
-  - fix `IO_readpartial` to read from buffer
   - override `IO#eof?` since it too reads into buffer
   - real `IO#gets` (with buffering)
   - `IO#read` (read to EOF)
@@ -15,9 +14,13 @@
 - app with database access (postgresql)
 - benchmarks!
 
-## 0.28 Support for multi-threading
+## 0.28 Sidekick
 
-- Separate event loop for each thread
+Plan of action:
+
+- fork sidekiq, make adjustments to Polyphony code
+- test performance
+- proceed from there
 
 ## 0.29 Testing && Docs
 
