@@ -1,4 +1,31 @@
-## 0.26 Real IO#gets and IO#read
+## 0.27 Multithreaded scheduling
+
+- Look at dev-journal for details.
+- Put Init_xxxx functions at end of source file in order to get rid of funtion
+  declarations at top of file (look at thread.c for example).
+- Verify performance, compare to single-threaded version (on `master`)
+- Write tests
+
+## 0.28 Working Sinatra application
+
+- app with database access (postgresql)
+- benchmarks!
+
+## 0.29 Sidekick
+
+Plan of action:
+
+- fork sidekiq, make adjustments to Polyphony code
+- test performance
+- proceed from there
+
+## 0.30 Testing && Docs
+
+- Pull out redis/postgres code, put into new `polyphony-xxx` gems
+
+## 0.31 Integration
+
+## 0.32 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -8,25 +35,19 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.27 Working Sinatra application
+## 0.32 Support for multithreaded apps
 
-- Pull out redis/postgres code, put into new `polyphony-xxx` gems
-- app with database access (postgresql)
-- benchmarks!
+- Move fiber scheduling to the `Thread` class
+- Gyro selector conforming to the selector interface:
+  
+  ```ruby
+  class Selector
+    def wait
+  end
+  ```
 
-## 0.28 Sidekick
+- Better separation between 
 
-Plan of action:
-
-- fork sidekiq, make adjustments to Polyphony code
-- test performance
-- proceed from there
-
-## 0.29 Testing && Docs
-
-## 0.30 Integration
-
-- Sidekick
 - Rails?
 
 # DNS

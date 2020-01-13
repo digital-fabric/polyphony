@@ -32,8 +32,8 @@ X.times { snooze }
 dt = Time.now - t0
 puts format('%d/s', (X / dt))
 
-STDOUT << 'Kernel#sleep:     '
-t0 = Time.now
-X.times { sleep(0) }
-dt = Time.now - t0
-puts "%d/s" % (X / dt)
+# STDOUT << 'Kernel#sleep:     '
+# t0 = Time.now
+# X.times { sleep(0) }
+# dt = Time.now - t0
+# puts "%d/s" % (X / dt)

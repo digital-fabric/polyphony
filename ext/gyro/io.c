@@ -13,7 +13,7 @@ struct Gyro_IO {
   VALUE   fiber;
 };
 
-static VALUE cGyro_IO = Qnil;
+VALUE cGyro_IO = Qnil;
 
 static VALUE Gyro_IO_allocate(VALUE klass);
 static void Gyro_IO_mark(void *ptr);

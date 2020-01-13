@@ -24,21 +24,30 @@ int ref_count = 0;
 
 static VALUE scheduled_head;
 static VALUE scheduled_tail;
+static VALUE scheduled_fibers_queue;
 
 ID ID_call;
 ID ID_caller;
 ID ID_clear;
 ID ID_each;
 ID ID_inspect;
+ID ID_new;
 ID ID_raise;
 ID ID_running;
 ID ID_scheduled;
 ID ID_scheduled_next;
 ID ID_scheduled_value;
+ID ID_size;
+ID ID_signal_bang;
+ID ID_switch_fiber;
 ID ID_transfer;
 ID ID_R;
 ID ID_W;
 ID ID_RW;
+
+ID ID_empty;
+ID ID_pop;
+ID ID_push;
 
 VALUE SYM_DEAD;
 VALUE SYM_RUNNING;
@@ -72,15 +81,23 @@ void Init_Gyro() {
   ID_clear            = rb_intern("clear");
   ID_each             = rb_intern("each");
   ID_inspect          = rb_intern("inspect");
+  ID_new              = rb_intern("new");
   ID_raise            = rb_intern("raise");
   ID_running          = rb_intern("@running");
   ID_scheduled        = rb_intern("scheduled");
   ID_scheduled_next   = rb_intern("scheduled_next");
   ID_scheduled_value  = rb_intern("scheduled_value");
+  ID_size             = rb_intern("size");
+  ID_signal_bang      = rb_intern("signal!");
+  ID_switch_fiber     = rb_intern("switch_fiber");
   ID_transfer         = rb_intern("transfer");
   ID_R                = rb_intern("r");
   ID_W                = rb_intern("w");
   ID_RW               = rb_intern("rw");
+
+  ID_empty            = rb_intern("empty?");
+  ID_pop              = rb_intern("pop");
+  ID_push             = rb_intern("push");
 
   SYM_DEAD = ID2SYM(rb_intern("dead"));
   SYM_RUNNING = ID2SYM(rb_intern("running"));
@@ -94,6 +111,10 @@ void Init_Gyro() {
   scheduled_head = Qnil;
   scheduled_tail = Qnil;
   rb_global_variable(&scheduled_head);
+
+  VALUE cQueue = rb_const_get(rb_cObject, rb_intern("Queue"));
+  scheduled_fibers_queue = rb_funcall(cQueue, rb_intern("new"), 0);
+  rb_global_variable(&scheduled_fibers_queue);
 }
 
 static VALUE Gyro_ref(VALUE self) {
@@ -184,47 +205,57 @@ static VALUE Fiber_state(VALUE self) {
   return SYM_SUSPENDED;
 }
 
-VALUE Gyro_await() {
-  Gyro_ref_count_incr();
-  VALUE ret = Gyro_run_next_fiber();
-  Gyro_ref_count_decr();
+inline VALUE Gyro_await() {
+  VALUE thread = rb_thread_current();
+  Thread_ref(thread);
+  VALUE ret = Thread_switch_fiber(thread);
+  Thread_unref(thread);
   return ret;
 }
 
 VALUE Gyro_run_next_fiber() {
-  while (1) {
-    if (break_flag != 0) {
-      return Qnil;
-    }
-    if ((scheduled_head != Qnil) || (ref_count == 0)) {
-      break;
-    }
-    ev_run(EV_DEFAULT, EVRUN_ONCE);
-  }
+  return Thread_switch_fiber(rb_thread_current());
+  // while (1) {
+  //   if (break_flag != 0) {
+  //     return Qnil;
+  //   }
+  //   if ((rb_funcall(scheduled_fibers_queue, ID_empty, 0) == Qfalse) || (ref_count == 0)) {
+  //     break;
+  //   }
+  //   // if ((scheduled_head != Qnil) || (ref_count == 0)) {
+  //   //   break;
+  //   // }
+  //   ev_run(EV_DEFAULT, EVRUN_ONCE);
+  // }
 
-  // return if no fiber is scheduled
-  if (scheduled_head == Qnil) {
-    return Qnil;
-  }
+  // VALUE next_fiber = rb_funcall(scheduled_fibers_queue, ID_pop, 1, Qtrue);
+  // if (next_fiber == Qnil) {
+  //   return Qnil;
+  // }
 
-  // update scheduled linked list refs
-  VALUE next_fiber = scheduled_head;
-  VALUE next_next_fiber = rb_ivar_get(next_fiber, ID_scheduled_next);
-  rb_ivar_set(next_fiber, ID_scheduled_next, Qnil);
-  scheduled_head = next_next_fiber;
-  if (scheduled_head == Qnil) {
-    scheduled_tail = Qnil;
-  }
+  // // return if no fiber is scheduled
+  // // if (scheduled_head == Qnil) {
+  // //   return Qnil;
+  // // }
 
-  if (rb_fiber_alive_p(next_fiber) != Qtrue) {
-    return Qnil;
-  }
+  // // update scheduled linked list refs
+  // // VALUE next_fiber = scheduled_head;
+  // // VALUE next_next_fiber = rb_ivar_get(next_fiber, ID_scheduled_next);
+  // // rb_ivar_set(next_fiber, ID_scheduled_next, Qnil);
+  // // scheduled_head = next_next_fiber;
+  // // if (scheduled_head == Qnil) {
+  // //   scheduled_tail = Qnil;
+  // // }
 
-  // run next fiber
-  VALUE value = rb_ivar_get(next_fiber, ID_scheduled_value);
-  rb_ivar_set(next_fiber, ID_scheduled_value, Qnil);
-  rb_ivar_set(next_fiber, ID_scheduled, Qnil);
-  return rb_funcall(next_fiber, ID_transfer, 1, value);
+  // if (rb_fiber_alive_p(next_fiber) != Qtrue) {
+  //   return Qnil;
+  // }
+
+  // // run next fiber
+  // VALUE value = rb_ivar_get(next_fiber, ID_scheduled_value);
+  // // rb_ivar_set(next_fiber, ID_scheduled_value, Qnil);
+  // rb_ivar_set(next_fiber, ID_scheduled, Qnil);
+  // return rb_funcall(next_fiber, ID_transfer, 1, value);
 }
 
 void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
@@ -236,14 +267,16 @@ void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
   rb_ivar_set(fiber, ID_scheduled, Qtrue);
 
   // put fiber on scheduled list
-  if (scheduled_head != Qnil) {
-    VALUE last = scheduled_tail;
-    rb_ivar_set(last, ID_scheduled_next, fiber);
-    scheduled_tail = fiber;
-  }
-  else {
-    scheduled_tail = scheduled_head = fiber;
-  }
+  // if (scheduled_head != Qnil) {
+  //   VALUE last = scheduled_tail;
+  //   rb_ivar_set(last, ID_scheduled_next, fiber);
+  //   scheduled_tail = fiber;
+  // }
+  // else {
+  //   scheduled_tail = scheduled_head = fiber;
+  // }
+  Thread_schedule_fiber(rb_thread_current(), fiber);
+  // rb_funcall(scheduled_fibers_queue, ID_push, 1, fiber);
 }
 
 int Gyro_ref_count() {
