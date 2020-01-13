@@ -10,28 +10,26 @@ struct Gyro_Async {
 
 VALUE cGyro_Async = Qnil;
 
-/* Allocator/deallocator */
-static VALUE Gyro_Async_allocate(VALUE klass);
-static void Gyro_Async_mark(void *ptr);
-static void Gyro_Async_free(void *ptr);
-static size_t Gyro_Async_size(const void *ptr);
+static void Gyro_Async_mark(void *ptr) {
+  struct Gyro_Async *async = ptr;
+  if (async->fiber != Qnil) {
+    rb_gc_mark(async->fiber);
+  }
+  if (async->value != Qnil) {
+    rb_gc_mark(async->value);
+  }
+}
 
-/* Methods */
-static VALUE Gyro_Async_initialize(VALUE self);
+static void Gyro_Async_free(void *ptr) {
+  struct Gyro_Async *async = ptr;
+  if (async->active) {
+    rb_warn("Async watcher garbage collected while still active!\n");
+  }
+  xfree(async);
+}
 
-static VALUE Gyro_Async_signal(int argc, VALUE *argv, VALUE self);
-VALUE Gyro_Async_await(VALUE self);
-
-void Gyro_Async_callback(struct ev_loop *ev_loop, struct ev_async *async, int revents);
-
-/* async encapsulates an async watcher */
-void Init_Gyro_Async() {
-  cGyro_Async = rb_define_class_under(mGyro, "Async", rb_cData);
-  rb_define_alloc_func(cGyro_Async, Gyro_Async_allocate);
-
-  rb_define_method(cGyro_Async, "initialize", Gyro_Async_initialize, 0);
-  rb_define_method(cGyro_Async, "signal!", Gyro_Async_signal, -1);
-  rb_define_method(cGyro_Async, "await", Gyro_Async_await, 0);
+static size_t Gyro_Async_size(const void *ptr) {
+  return sizeof(struct Gyro_Async);
 }
 
 static const rb_data_type_t Gyro_Async_type = {
@@ -46,27 +44,17 @@ static VALUE Gyro_Async_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &Gyro_Async_type, async);
 }
 
-static void Gyro_Async_mark(void *ptr) {
-  struct Gyro_Async *async = ptr;
+void Gyro_Async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
+  struct Gyro_Async *async = (struct Gyro_Async*)ev_async;
+
+  ev_async_stop(async->ev_loop, ev_async);
+  async->active = 0;
+
   if (async->fiber != Qnil) {
-    rb_gc_mark(async->fiber);
+    Gyro_schedule_fiber(async->fiber, async->value);
+    async->fiber = Qnil;
+    async->value = Qnil;
   }
-  if (async->value != Qnil) {
-    rb_gc_mark(async->value);
-  }
-}
-
-static void Gyro_Async_free(void *ptr) {
-  struct Gyro_Async *async = ptr;
-  if (async->active) {
-    // printf("*** async still active when freed!\n");
-    // ev_async_stop(EV_DEFAULT, &async->ev_async);
-  }
-  xfree(async);
-}
-
-static size_t Gyro_Async_size(const void *ptr) {
-  return sizeof(struct Gyro_Async);
 }
 
 #define GetGyro_Async(obj, async) \
@@ -84,19 +72,6 @@ static VALUE Gyro_Async_initialize(VALUE self) {
   async->ev_loop = 0;
 
   return Qnil;
-}
-
-void Gyro_Async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
-  struct Gyro_Async *async = (struct Gyro_Async*)ev_async;
-
-  ev_async_stop(async->ev_loop, ev_async);
-  async->active = 0;
-
-  if (async->fiber != Qnil) {
-    Gyro_schedule_fiber(async->fiber, async->value);
-    async->fiber = Qnil;
-    async->value = Qnil;
-  }
 }
 
 static VALUE Gyro_Async_signal(int argc, VALUE *argv, VALUE self) {
@@ -127,14 +102,14 @@ VALUE Gyro_Async_await(VALUE self) {
     ev_async_start(async->ev_loop, &async->ev_async);
   }
 
-  ret = Gyro_await();
+  ret = Fiber_await();
 
   // fiber is resumed
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
     if (async->active) {
       async->active = 0;
-      ev_async_stop(async->ev_loop, &async->ev_async);
       async->fiber = Qnil;
+      ev_async_stop(async->ev_loop, &async->ev_async);
       async->value = Qnil;
     }
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);
@@ -142,4 +117,13 @@ VALUE Gyro_Async_await(VALUE self) {
   else {
     return ret;
   }
+}
+
+void Init_Gyro_Async() {
+  cGyro_Async = rb_define_class_under(mGyro, "Async", rb_cData);
+  rb_define_alloc_func(cGyro_Async, Gyro_Async_allocate);
+
+  rb_define_method(cGyro_Async, "initialize", Gyro_Async_initialize, 0);
+  rb_define_method(cGyro_Async, "signal!", Gyro_Async_signal, -1);
+  rb_define_method(cGyro_Async, "await", Gyro_Async_await, 0);
 }

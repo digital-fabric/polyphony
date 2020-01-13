@@ -1,26 +1,7 @@
 #include "gyro.h"
 #include <sys/socket.h>
 
-static VALUE BasicSocket_send(int argc, VALUE *argv, VALUE io);
-static VALUE BasicSocket_recv(int argc, VALUE *argv, VALUE io);
-
-static VALUE Socket_accept(VALUE sock);
-
 static VALUE cTCPSocket;
-
-void Init_Socket() {
-  rb_require("socket");
-  VALUE cBasicSocket = rb_const_get(rb_cObject, rb_intern("BasicSocket"));
-
-  rb_define_method(cBasicSocket, "send", BasicSocket_send, -1);
-  rb_define_method(cBasicSocket, "recv", BasicSocket_recv, -1);
-
-  VALUE cSocket = rb_const_get(rb_cObject, rb_intern("Socket"));
-  
-  rb_define_method(cSocket, "accept", Socket_accept, 0);
-
-  cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
-}
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -213,4 +194,18 @@ static VALUE Socket_accept(VALUE sock) {
       return connection;
     }
   }
+}
+
+void Init_Socket() {
+  rb_require("socket");
+  VALUE cBasicSocket = rb_const_get(rb_cObject, rb_intern("BasicSocket"));
+
+  rb_define_method(cBasicSocket, "send", BasicSocket_send, -1);
+  rb_define_method(cBasicSocket, "recv", BasicSocket_recv, -1);
+
+  VALUE cSocket = rb_const_get(rb_cObject, rb_intern("Socket"));
+  
+  rb_define_method(cSocket, "accept", Socket_accept, 0);
+
+  cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
 }

@@ -1,8 +1,5 @@
 ## 0.27 Multithreaded scheduling
 
-- Look at dev-journal for details.
-- Put Init_xxxx functions at end of source file in order to get rid of funtion
-  declarations at top of file (look at thread.c for example).
 - Verify performance, compare to single-threaded version (on `master`)
 - Write tests
 

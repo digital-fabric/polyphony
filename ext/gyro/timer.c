@@ -22,7 +22,7 @@ static void Gyro_Timer_mark(void *ptr) {
 static void Gyro_Timer_free(void *ptr) {
   struct Gyro_Timer *timer = ptr;
   if (timer->active) {
-    printf("*** timer still active when freed!\n");
+    rb_warn("Timer watcher garbage collected while still active!\n");
     // ev_timer_stop(timer->ev_loop, &timer->ev_timer);
   }
   xfree(timer);
@@ -92,7 +92,7 @@ VALUE Gyro_Timer_await(VALUE self) {
     ev_timer_start(timer->ev_loop, &timer->ev_timer);
   }
 
-  ret = Gyro_await();
+  ret = Fiber_await();
 
   // fiber is resumed, check if resumed value is an exception
   timer->fiber = Qnil;

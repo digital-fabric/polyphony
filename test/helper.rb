@@ -21,7 +21,7 @@ Minitest::Reporters.use! [
 class MiniTest::Test
   def teardown
     # wait for any remaining scheduled work
-    Gyro.run
+    Thread.current.switch_fiber
     Polyphony.reset!
   end
 end

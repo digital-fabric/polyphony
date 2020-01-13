@@ -7,6 +7,9 @@ export_default :Polyphony
 require 'fiber'
 require_relative './gyro_ext'
 
+Thread.event_selector = Gyro::Selector
+Thread.current.setup_fiber_scheduling
+
 import './polyphony/extensions/core'
 import './polyphony/extensions/fiber'
 import './polyphony/extensions/io'
@@ -65,7 +68,8 @@ module Polyphony
     end
 
     def reset!
-      Gyro.reset!
+      Thread.current.reset_fiber_scheduling
+      # Gyro.reset!
       Fiber.reset!
     end
 

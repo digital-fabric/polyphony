@@ -15,8 +15,6 @@ enum {
 // void Gyro_del_watcher_ref(VALUE obj);
 VALUE Gyro_snooze(VALUE self);
 
-VALUE Gyro_run_next_fiber();
-VALUE Gyro_await();
 void Gyro_schedule_fiber(VALUE fiber, VALUE value);
 
 int Gyro_ref_count();
@@ -41,10 +39,12 @@ VALUE Thread_current_event_selector();
 VALUE Thread_ref(VALUE thread);
 VALUE Thread_unref(VALUE thread);
 VALUE Thread_switch_fiber(VALUE thread);
+VALUE Fiber_await();
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber);
 struct ev_loop *Gyro_Selector_current_thread_ev_loop();
 
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
+#define INSPECT(...) (rb_funcall(rb_cObject, rb_intern("p"), __VA_ARGS__))
 
 extern VALUE mGyro;
 extern VALUE cGyro_Async;

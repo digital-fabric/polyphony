@@ -2,6 +2,7 @@
 
 struct Gyro_Signal {
   struct  ev_signal ev_signal;
+  struct  ev_loop *ev_loop;
   int     active;
   int     signum;
   VALUE   fiber;
@@ -9,26 +10,24 @@ struct Gyro_Signal {
 
 static VALUE cGyro_Signal = Qnil;
 
-/* Allocator/deallocator */
-static VALUE Gyro_Signal_allocate(VALUE klass);
-static void Gyro_Signal_mark(void *ptr);
-static void Gyro_Signal_free(void *ptr);
-static size_t Gyro_Signal_size(const void *ptr);
+static void Gyro_Signal_mark(void *ptr) {
+  struct Gyro_Signal *signal = ptr;
+  if (signal->fiber != Qnil) {
+    rb_gc_mark(signal->fiber);
+  }
+}
 
-/* Methods */
-static VALUE Gyro_Signal_initialize(VALUE self, VALUE sig);
+static void Gyro_Signal_free(void *ptr) {
+  struct Gyro_Signal *signal = ptr;
+  if (signal->active) {
+    rb_warn("Signal watcher garbage collected while still active!\n");
+    // ev_signal_stop(signal->ev_loop, &signal->ev_signal);
+  }
+  xfree(signal);
+}
 
-static VALUE Gyro_Signal_await(VALUE self);
-
-void Gyro_Signal_callback(struct ev_loop *ev_loop, struct ev_signal *signal, int revents);
-
-/* Signal encapsulates a signal watcher */
-void Init_Gyro_Signal() {
-  cGyro_Signal = rb_define_class_under(mGyro, "Signal", rb_cData);
-  rb_define_alloc_func(cGyro_Signal, Gyro_Signal_allocate);
-
-  rb_define_method(cGyro_Signal, "initialize", Gyro_Signal_initialize, 1);
-  rb_define_method(cGyro_Signal, "await", Gyro_Signal_await, 0);
+static size_t Gyro_Signal_size(const void *ptr) {
+  return sizeof(struct Gyro_Signal);
 }
 
 static const rb_data_type_t Gyro_Signal_type = {
@@ -43,21 +42,17 @@ static VALUE Gyro_Signal_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &Gyro_Signal_type, signal);
 }
 
-static void Gyro_Signal_mark(void *ptr) {
-  struct Gyro_Signal *signal = ptr;
+void Gyro_Signal_callback(struct ev_loop *ev_loop, struct ev_signal *ev_signal, int revents) {
+  struct Gyro_Signal *signal = (struct Gyro_Signal*)ev_signal;
+
   if (signal->fiber != Qnil) {
-    rb_gc_mark(signal->fiber);
+    VALUE fiber = signal->fiber;
+
+    ev_signal_stop(signal->ev_loop, ev_signal);
+    signal->active = 0;
+    signal->fiber = Qnil;
+    Gyro_schedule_fiber(fiber, INT2NUM(signal->signum));
   }
-}
-
-static void Gyro_Signal_free(void *ptr) {
-  struct Gyro_Signal *signal = ptr;
-  ev_signal_stop(EV_DEFAULT, &signal->ev_signal);
-  xfree(signal);
-}
-
-static size_t Gyro_Signal_size(const void *ptr) {
-  return sizeof(struct Gyro_Signal);
 }
 
 #define GetGyro_Signal(obj, signal) \
@@ -72,24 +67,7 @@ static VALUE Gyro_Signal_initialize(VALUE self, VALUE sig) {
 
   ev_signal_init(&signal->ev_signal, Gyro_Signal_callback, signal->signum);
 
-  // signal->active = 1;
-  // Gyro_ref_count_incr();
-  // ev_signal_start(EV_DEFAULT, &signal->ev_signal);
-
   return Qnil;
-}
-
-void Gyro_Signal_callback(struct ev_loop *ev_loop, struct ev_signal *ev_signal, int revents) {
-  struct Gyro_Signal *signal = (struct Gyro_Signal*)ev_signal;
-
-  if (signal->fiber != Qnil) {
-    VALUE fiber = signal->fiber;
-
-    ev_signal_stop(EV_DEFAULT, ev_signal);
-    signal->active = 0;
-    signal->fiber = Qnil;
-    Gyro_schedule_fiber(fiber, INT2NUM(signal->signum));
-  }
 }
 
 static VALUE Gyro_Signal_await(VALUE self) {
@@ -100,19 +78,29 @@ static VALUE Gyro_Signal_await(VALUE self) {
 
   signal->fiber = rb_fiber_current();
   signal->active = 1;
-  ev_signal_start(EV_DEFAULT, &signal->ev_signal);
+  signal->ev_loop = Gyro_Selector_current_thread_ev_loop();
+  ev_signal_start(signal->ev_loop, &signal->ev_signal);
 
-  ret = Gyro_await();
+  ret = Fiber_await();
 
   // fiber is resumed, check if resumed value is an exception
   signal->fiber = Qnil;
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
     if (signal->active) {
       signal->active = 0;
-      ev_signal_stop(EV_DEFAULT, &signal->ev_signal);
+      signal->fiber = Qnil;
+      ev_signal_stop(signal->ev_loop, &signal->ev_signal);
     }
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else
     return ret;
+}
+
+void Init_Gyro_Signal() {
+  cGyro_Signal = rb_define_class_under(mGyro, "Signal", rb_cData);
+  rb_define_alloc_func(cGyro_Signal, Gyro_Signal_allocate);
+
+  rb_define_method(cGyro_Signal, "initialize", Gyro_Signal_initialize, 1);
+  rb_define_method(cGyro_Signal, "await", Gyro_Signal_await, 0);
 }

@@ -35,7 +35,7 @@ module FiberControl
 
   def raise(*args)
     error = error_from_raise_args(args)
-    schedule error
+    schedule(error)
     snooze
   end
 
@@ -83,7 +83,7 @@ end
 
 # Fiber extensions
 class ::Fiber
-  include FiberControl
+  prepend FiberControl
   include FiberMessaging
 
   # map of currently running fibers
@@ -148,7 +148,7 @@ class ::Fiber
     parent_fiber = @calling_fiber.running? ? @calling_fiber : Fiber.root
     parent_fiber.schedule(result)
   ensure
-    Gyro.run
+    Thread.current.switch_fiber
   end
 
   attr_reader :result
