@@ -8,6 +8,7 @@ struct Gyro_Timer {
   double  repeat;
   VALUE   self;
   VALUE   fiber;
+  VALUE   selector;
 };
 
 VALUE cGyro_Timer = Qnil;
@@ -17,13 +18,15 @@ static void Gyro_Timer_mark(void *ptr) {
   if (timer->fiber != Qnil) {
     rb_gc_mark(timer->fiber);
   }
+  if (timer->selector != Qnil) {
+    rb_gc_mark(timer->selector);
+  }
 }
 
 static void Gyro_Timer_free(void *ptr) {
   struct Gyro_Timer *timer = ptr;
   if (timer->active) {
-    rb_warn("Timer watcher garbage collected while still active!\n");
-    // ev_timer_stop(timer->ev_loop, &timer->ev_timer);
+    ev_timer_stop(timer->ev_loop, &timer->ev_timer);
   }
   xfree(timer);
 }
@@ -51,6 +54,7 @@ void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int
 
   if (!timer->repeat) {
     timer->active = 0;
+    timer->selector = Qnil;
   }
 
   if (timer->fiber != Qnil) {
@@ -75,6 +79,7 @@ static VALUE Gyro_Timer_initialize(VALUE self, VALUE after, VALUE repeat) {
   
   ev_timer_init(&timer->ev_timer, Gyro_Timer_callback, timer->after, timer->repeat);
   timer->ev_loop = 0;
+  timer->selector = Qnil;
 
   return Qnil;
 }
@@ -89,6 +94,7 @@ VALUE Gyro_Timer_await(VALUE self) {
   if (timer->active != 1) {
     timer->active = 1;
     timer->ev_loop = Gyro_Selector_current_thread_ev_loop();
+    timer->selector = Thread_current_event_selector();
     ev_timer_start(timer->ev_loop, &timer->ev_timer);
   }
 
@@ -100,6 +106,7 @@ VALUE Gyro_Timer_await(VALUE self) {
     if (timer->active) {
       timer->active = 0;
       timer->fiber = Qnil;
+      timer->selector = Qnil;
       ev_timer_stop(timer->ev_loop, &timer->ev_timer);
     }
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);

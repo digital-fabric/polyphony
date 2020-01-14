@@ -2,6 +2,7 @@
 
 struct Gyro_Selector {
   struct  ev_loop *ev_loop;
+  int     use_default_loop;
 };
 
 VALUE cGyro_Selector = Qnil;
@@ -12,7 +13,7 @@ static void Gyro_Selector_mark(void *ptr) {
 
 static void Gyro_Selector_free(void *ptr) {
   struct Gyro_Selector *selector = ptr;
-  if (selector->ev_loop) {
+  if (selector->ev_loop && !selector->use_default_loop) {
     // rb_warn("Selector garbage collected before being stopped!\n");
     ev_loop_destroy(selector->ev_loop);
   }
@@ -48,7 +49,12 @@ inline struct ev_loop *Gyro_Selector_current_thread_ev_loop() {
 static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
   struct Gyro_Selector *selector;
   GetGyro_Selector(self, selector);
-  selector->ev_loop = ev_loop_new(EVFLAG_AUTO);
+
+  selector->use_default_loop = (rb_thread_current() == rb_thread_main());
+  selector->ev_loop = selector->use_default_loop ? EV_DEFAULT : ev_loop_new(EVFLAG_AUTO);
+  
+  ev_run(selector->ev_loop, EVRUN_ONCE);
+  
   return Qnil;
 }
 
