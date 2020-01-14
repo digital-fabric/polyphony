@@ -1,8 +1,3 @@
-## 0.27 Multithreaded scheduling
-
-- Code cleanup
-- Remove thread, thread_pool modules
-
 ## 0.28 Working Sinatra application
 
 - app with database access (postgresql)
