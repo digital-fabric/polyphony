@@ -50,6 +50,7 @@ struct ev_loop *Gyro_Selector_current_thread_ev_loop();
 extern VALUE mGyro;
 extern VALUE cGyro_Async;
 extern VALUE cGyro_IO;
+extern VALUE cGyro_Queue;
 extern VALUE cGyro_Selector;
 extern VALUE cGyro_Timer;
 

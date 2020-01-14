@@ -78,6 +78,22 @@ VALUE Gyro_Queue_shift(VALUE self) {
   return Gyro_Async_await(async);
 }
 
+VALUE Gyro_Queue_shift_all(VALUE self) {
+  struct Gyro_Queue *queue;
+  GetGyro_Queue(self, queue);
+
+  if (rb_block_given_p()) {
+    while (RARRAY_LEN(queue->queue) > 0) {
+      rb_yield(rb_ary_shift(queue->queue));
+    }
+  }
+  else {
+    rb_ary_clear(queue->queue);
+  }
+
+  return self;
+}
+
 void Init_Gyro_Queue() {
   cGyro_Queue = rb_define_class_under(mGyro, "Queue", rb_cData);
   rb_define_alloc_func(cGyro_Queue, Gyro_Queue_allocate);
@@ -88,4 +104,6 @@ void Init_Gyro_Queue() {
 
   rb_define_method(cGyro_Queue, "pop", Gyro_Queue_shift, 0);
   rb_define_method(cGyro_Queue, "shift", Gyro_Queue_shift, 0);
+
+  rb_define_method(cGyro_Queue, "shift_each", Gyro_Queue_shift_all, 0);
 }
