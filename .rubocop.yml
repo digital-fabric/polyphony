@@ -62,7 +62,7 @@ Style/ClassVars:
   Exclude:
     - lib/polyphony/core/coprocess.rb
 
-Layout/AlignHash:
+Layout/HashAlignment:
   EnforcedColonStyle: table
   EnforcedHashRocketStyle: table
 
@@ -76,7 +76,7 @@ Naming/MethodName:
   Exclude:
     - test/test_signal.rb
 
-Lint/HandleExceptions:
+Lint/SuppressedException:
   Exclude:
     - lib/polyphony/http/server/http1.rb
     - lib/polyphony/http/server/http2.rb
@@ -126,7 +126,7 @@ Style/FormatStringToken:
     - test/**/*.rb
     - examples/**/*.rb
 
-Naming/UncommunicativeMethodParamName:
+Naming/MethodParameterName:
   Exclude:
     - test/**/*.rb
     - examples/**/*.rb

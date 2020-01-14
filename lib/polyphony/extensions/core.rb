@@ -102,7 +102,7 @@ module ::Kernel
       end
     end
     true
-  rescue => e
+  rescue RuntimeError
     nil
   end
 end

@@ -58,11 +58,8 @@ module Polyphony
     end
 
     def fork(&block)
-      # Gyro.break!
       pid = Kernel.fork do
         Gyro.post_fork
-        # setup_forked_process
-        # reset!
         block.()
       end
       pid
@@ -70,15 +67,7 @@ module Polyphony
 
     def reset!
       Thread.current.reset_fiber_scheduling
-      # Gyro.reset!
       Fiber.reset!
     end
-
-    private
-
-    # def setup_forked_process
-    #   Gyro.post_fork
-    #   Fiber.reset!
-    # end
   end
 end
