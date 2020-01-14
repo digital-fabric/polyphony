@@ -31,7 +31,7 @@ static void Gyro_IO_mark(void *ptr) {
 static void Gyro_IO_free(void *ptr) {
   struct Gyro_IO *io = ptr;
   if (io->active) {
-    rb_warn("IO watcher garbage collected while still active!\n");
+    // rb_warn("IO watcher garbage collected while still active!\n");
     // ev_io_stop(io->ev_loop, &io->ev_io);
   }
   xfree(io);

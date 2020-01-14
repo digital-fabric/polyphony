@@ -41,6 +41,7 @@ VALUE Thread_unref(VALUE thread);
 VALUE Thread_switch_fiber(VALUE thread);
 VALUE Fiber_await();
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber);
+VALUE Thread_post_fork(VALUE thread);
 struct ev_loop *Gyro_Selector_current_thread_ev_loop();
 
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))

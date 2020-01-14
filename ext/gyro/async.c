@@ -23,7 +23,7 @@ static void Gyro_Async_mark(void *ptr) {
 static void Gyro_Async_free(void *ptr) {
   struct Gyro_Async *async = ptr;
   if (async->active) {
-    rb_warn("Async watcher garbage collected while still active!\n");
+    // rb_warn("Async watcher garbage collected while still active!\n");
   }
   xfree(async);
 }

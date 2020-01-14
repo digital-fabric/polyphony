@@ -21,7 +21,7 @@ static void Gyro_Child_mark(void *ptr) {
 static void Gyro_Child_free(void *ptr) {
   struct Gyro_Child *child = ptr;
   if (child->active) {
-    rb_warn("Child watcher garbage collected while still active!\n");
+    // rb_warn("Child watcher garbage collected while still active!\n");
   }
   xfree(child);
 }

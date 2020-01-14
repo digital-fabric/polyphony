@@ -2,13 +2,6 @@
 
 VALUE mGyro;
 
-int break_flag = 0;
-int ref_count = 0;
-
-static VALUE scheduled_head;
-static VALUE scheduled_tail;
-static VALUE scheduled_fibers_queue;
-
 ID ID_call;
 ID ID_caller;
 ID ID_clear;
@@ -18,7 +11,6 @@ ID ID_new;
 ID ID_raise;
 ID ID_running;
 ID ID_scheduled;
-ID ID_scheduled_next;
 ID ID_scheduled_value;
 ID ID_size;
 ID ID_signal_bang;
@@ -37,46 +29,15 @@ VALUE SYM_RUNNING;
 VALUE SYM_SCHEDULED;
 VALUE SYM_SUSPENDED;
 
-static void Gyro_clear_scheduled_fibers() {
-  while (scheduled_head != Qnil) {
-    VALUE fiber = scheduled_head;
-    scheduled_head = rb_ivar_get(fiber, ID_scheduled_next);
-    rb_ivar_set(fiber, ID_scheduled_next, Qnil);
-  }
-  scheduled_tail = Qnil;
-}
+// static VALUE Gyro_break_set(VALUE self) {
+//   break_flag = 1;
+//   ev_break(EV_DEFAULT, EVBREAK_ALL);
+//   return Qnil;
+// }
 
-static VALUE Gyro_ref(VALUE self) {
-  Gyro_ref_count_incr();
-  return Qnil;
-}
-
-static VALUE Gyro_unref(VALUE self) {
-  Gyro_ref_count_decr();
-  return Qnil;
-}
-
-static VALUE Gyro_run(VALUE self) {
-  return Thread_switch_fiber(rb_thread_current());
-}
-
-static VALUE Gyro_reset(VALUE self) {
-  break_flag = 0;
-  ref_count = 0;
-
-  Gyro_clear_scheduled_fibers();
-  return Qnil;
-}
-
-static VALUE Gyro_break_set(VALUE self) {
-  break_flag = 1;
-  ev_break(EV_DEFAULT, EVBREAK_ALL);
-  return Qnil;
-}
-
-static VALUE Gyro_break_get(VALUE self) {
-  return (break_flag == 0) ? Qfalse : Qtrue;
-}
+// static VALUE Gyro_break_get(VALUE self) {
+//   return (break_flag == 0) ? Qfalse : Qtrue;
+// }
 
 VALUE Gyro_snooze(VALUE self) {
   VALUE fiber = rb_fiber_current();
@@ -90,13 +51,22 @@ VALUE Gyro_snooze(VALUE self) {
 }
 
 static VALUE Gyro_post_fork(VALUE self) {
-  ev_loop_fork(EV_DEFAULT);
-  break_flag = 0;
-  ref_count = 0;
+  Thread_post_fork(rb_thread_current());
+  // ev_loop_fork(EV_DEFAULT);
+  // break_flag = 0;
+  // ref_count = 0;
   
-  Gyro_clear_scheduled_fibers();
+  // Gyro_clear_scheduled_fibers();
 
   return Qnil;
+}
+
+static VALUE Gyro_ref(VALUE self) {
+  return Thread_ref(rb_thread_current());
+}
+
+static VALUE Gyro_unref(VALUE self) {
+  return Thread_unref(rb_thread_current());
 }
 
 static VALUE Gyro_suspend(VALUE self) {
@@ -145,31 +115,15 @@ inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
   Thread_schedule_fiber(rb_thread_current(), fiber);
 }
 
-int Gyro_ref_count() {
-  return ref_count;
-}
-
-void Gyro_ref_count_incr() {
-  ref_count += 1;
-}
-
-void Gyro_ref_count_decr() {
-  ref_count -= 1;
-}
-
 void Init_Gyro() {
   mGyro = rb_define_module("Gyro");
 
+  rb_define_singleton_method(mGyro, "post_fork", Gyro_post_fork, 0);
   rb_define_singleton_method(mGyro, "ref", Gyro_ref, 0);
   rb_define_singleton_method(mGyro, "unref", Gyro_unref, 0);
 
-  rb_define_singleton_method(mGyro, "run", Gyro_run, 0);
-  rb_define_singleton_method(mGyro, "reset!", Gyro_reset, 0);
-  rb_define_singleton_method(mGyro, "post_fork", Gyro_post_fork, 0);
-  rb_define_singleton_method(mGyro, "snooze", Gyro_snooze, 0);
-
-  rb_define_singleton_method(mGyro, "break!", Gyro_break_set, 0);
-  rb_define_singleton_method(mGyro, "break?", Gyro_break_get, 0);
+  // rb_define_singleton_method(mGyro, "break!", Gyro_break_set, 0);
+  // rb_define_singleton_method(mGyro, "break?", Gyro_break_get, 0);
 
   rb_define_global_function("snooze", Gyro_snooze, 0);
   rb_define_global_function("suspend", Gyro_suspend, 0);
@@ -188,7 +142,6 @@ void Init_Gyro() {
   ID_raise            = rb_intern("raise");
   ID_running          = rb_intern("@running");
   ID_scheduled        = rb_intern("scheduled");
-  ID_scheduled_next   = rb_intern("scheduled_next");
   ID_scheduled_value  = rb_intern("scheduled_value");
   ID_size             = rb_intern("size");
   ID_signal_bang      = rb_intern("signal!");
@@ -210,12 +163,4 @@ void Init_Gyro() {
   rb_global_variable(&SYM_RUNNING);
   rb_global_variable(&SYM_SCHEDULED);
   rb_global_variable(&SYM_SUSPENDED);
-
-  scheduled_head = Qnil;
-  scheduled_tail = Qnil;
-  rb_global_variable(&scheduled_head);
-
-  VALUE cQueue = rb_const_get(rb_cObject, rb_intern("Queue"));
-  scheduled_fibers_queue = rb_funcall(cQueue, rb_intern("new"), 0);
-  rb_global_variable(&scheduled_fibers_queue);
 }

@@ -9,7 +9,6 @@ static ID ID_fiber_ref_count;
 static ID ID_run_queue;
 
 static ID ID_scheduled;
-// static ID ID_scheduled_next;
 
 static ID ID_empty;
 static ID ID_pop;
@@ -90,56 +89,28 @@ VALUE Thread_switch_fiber(VALUE self) {
     // if (break_flag != 0) {
     //   return Qnil;
     // }
-    // if (RTEST(rb_funcall(queue, ID_empty, 0))) {
-    //   printf("run_queue empty!\n");
-    // }
-    // if (Thread_fiber_ref_count(self) == 0) {
-    //   printf("ref_count = 0\n");
-    // }
     if ((RARRAY_LEN(queue) > 0) || (Thread_fiber_ref_count(self) == 0)) {
-    // if (!RTEST(rb_funcall(queue, ID_empty, 0)) || (Thread_fiber_ref_count(self) == 0)) {
       break;
     }
-    // if ((scheduled_head != Qnil) || (ref_count == 0)) {
-    //   break;
-    // }
 
     Gyro_Selector_run(selector);
   }
 
   VALUE next_fiber;
-  if (RARRAY_LEN(queue) == 0) {
-  // if (RTEST(rb_funcall(queue, ID_empty, 0))) {
-    return Qnil;
-  }
-  else {
+  // while (1) {
+    if (RARRAY_LEN(queue) == 0) {
+      return Qnil;
+    }
     next_fiber = rb_ary_shift(queue);
-    // next_fiber = rb_funcall(queue, ID_pop, 1, Qtrue);
-  }
-
-  // return if no fiber is scheduled
-  // if (scheduled_head == Qnil) {
-  //   return Qnil;
+    // break;
+    // if (rb_fiber_alive_p(next_fiber) == Qtrue) {
+    //   break;
+    // }
   // }
-
-  // update scheduled linked list refs
-  // VALUE next_fiber = scheduled_head;
-  // VALUE next_next_fiber = rb_ivar_get(next_fiber, ID_scheduled_next);
-  // rb_ivar_set(next_fiber, ID_scheduled_next, Qnil);
-  // scheduled_head = next_next_fiber;
-  // if (scheduled_head == Qnil) {
-  //   scheduled_tail = Qnil;
-  // }
-
-  if (rb_fiber_alive_p(next_fiber) != Qtrue) {
-    return Qnil;
-  }
 
   // run next fiber
   VALUE value = rb_ivar_get(next_fiber, ID_scheduled_value);
-  // rb_ivar_set(next_fiber, ID_scheduled_value, Qnil);
   rb_ivar_set(next_fiber, ID_scheduled, Qnil);
-
   return rb_funcall(next_fiber, ID_transfer, 1, value);
 
   RB_GC_GUARD(queue);
@@ -152,6 +123,12 @@ VALUE Thread_reset_fiber_scheduling(VALUE self) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   rb_ary_clear(queue);
   Thread_fiber_reset_ref_count(self);
+  return self;
+}
+
+VALUE Thread_post_fork(VALUE self) {
+  ev_loop_fork(EV_DEFAULT);
+  Thread_setup_fiber_scheduling(self);
   return self;
 }
 
@@ -189,10 +166,7 @@ void Init_Thread() {
   ID_ivar_event_selector_proc = rb_intern("@event_selector_proc");
   ID_fiber_ref_count          = rb_intern("fiber_ref_count");
   ID_run_queue                = rb_intern("run_queue");
-
   ID_scheduled                = rb_intern("scheduled");
-  // ID_scheduled_next           = rb_intern("scheduled_next");
-  
   ID_empty                    = rb_intern("empty?");
   ID_pop                      = rb_intern("pop");
   ID_push                     = rb_intern("push");
