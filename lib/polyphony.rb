@@ -33,7 +33,6 @@ module Polyphony
     ResourcePool: './polyphony/core/resource_pool',
     Supervisor:   './polyphony/core/supervisor',
     Sync:         './polyphony/core/sync',
-    Thread:       './polyphony/core/thread',
     ThreadPool:   './polyphony/core/thread_pool',
     Websocket:    './polyphony/websocket'
   )
