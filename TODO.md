@@ -1,7 +1,7 @@
 ## 0.27 Multithreaded scheduling
 
-- Verify performance, compare to single-threaded version (on `master`)
-- Write tests
+- Code cleanup
+- Remove thread, thread_pool modules
 
 ## 0.28 Working Sinatra application
 

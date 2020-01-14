@@ -102,7 +102,7 @@ module ::Kernel
       end
     end
     true
-  rescue RuntimeError
+  rescue SystemCallError
     nil
   end
 end
