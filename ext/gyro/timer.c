@@ -26,7 +26,7 @@ static void Gyro_Timer_mark(void *ptr) {
 static void Gyro_Timer_free(void *ptr) {
   struct Gyro_Timer *timer = ptr;
   if (timer->active) {
-    ev_timer_stop(timer->ev_loop, &timer->ev_timer);
+    // ev_timer_stop(timer->ev_loop, &timer->ev_timer);
   }
   xfree(timer);
 }

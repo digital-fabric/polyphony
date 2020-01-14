@@ -11,6 +11,7 @@ Thread.event_selector = Gyro::Selector
 Thread.current.setup_fiber_scheduling
 
 import './polyphony/extensions/core'
+import './polyphony/extensions/thread'
 import './polyphony/extensions/fiber'
 import './polyphony/extensions/io'
 

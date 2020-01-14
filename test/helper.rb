@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
+require 'polyphony'
 
 require 'fileutils'
 require_relative './eg'
@@ -9,8 +10,6 @@ require_relative './coverage' if ENV['COVERAGE']
 
 require 'minitest/autorun'
 require 'minitest/reporters'
-
-require 'polyphony'
 
 ::Exception.__disable_sanitized_backtrace__ = true
 
