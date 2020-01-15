@@ -57,9 +57,7 @@ static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
   GetGyro_Selector(self, selector);
 
   int use_default_loop = (rb_thread_current() == rb_thread_main());
-  selector->ev_loop = use_default_loop ? EV_DEFAULT : ev_loop_new(EVFLAG_AUTO);
-  
-  ev_run(selector->ev_loop, EVRUN_ONCE);
+  selector->ev_loop = use_default_loop ? EV_DEFAULT : ev_loop_new(EVFLAG_NOSIGMASK);
   
   return Qnil;
 }
