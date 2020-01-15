@@ -287,6 +287,7 @@ class MoveOnAfterTest < MiniTest::Test
 
   def test_every
     buffer = []
+    sleep 0.05
     f = spin do
       every(0.01) { buffer << 1 }
     end
@@ -299,7 +300,6 @@ class MoveOnAfterTest < MiniTest::Test
     t0 = Time.now
     sleep 0.05
     elapsed = Time.now - t0
-    puts "* elapsed: #{elapsed.inspect}"
     assert (0.045..0.8).include? elapsed
 
     f = spin { sleep }
