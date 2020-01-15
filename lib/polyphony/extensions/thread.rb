@@ -9,6 +9,7 @@ class ::Thread
   alias_method :orig_initialize, :initialize
   def initialize(*args, &block)
     @join_wait_queue = Gyro::Queue.new
+    @block = block
     orig_initialize do
       setup_fiber_scheduling
       block.(*args)
@@ -34,5 +35,18 @@ class ::Thread
     else
       async.await
     end
+  end
+
+  alias_method :orig_inspect, :inspect
+  def inspect
+    return orig_inspect if self == Thread.main
+
+    state = status || 'dead'
+    "#<Thread:#{object_id} #{location} (#{state})>"
+  end
+  alias_method :to_s, :inspect
+
+  def location
+    @block.source_location.join(':')
   end
 end
