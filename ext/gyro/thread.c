@@ -7,6 +7,8 @@ static ID ID_ivar_event_selector;
 static ID ID_ivar_event_selector_proc;
 static ID ID_fiber_ref_count;
 static ID ID_run_queue;
+static ID ID_ivar_main_fiber;
+static ID ID_stop;
 
 static ID ID_scheduled;
 
@@ -36,7 +38,7 @@ static VALUE Thread_create_event_selector(VALUE self, VALUE thread) {
 }
 
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
-  rb_ivar_set(self, rb_intern("@main_fiber"), rb_fiber_current());
+  rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
   rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(0));
   VALUE queue = rb_ary_new();
   rb_ivar_set(self, ID_run_queue, queue);
@@ -49,7 +51,7 @@ static VALUE Thread_setup_fiber_scheduling(VALUE self) {
 static VALUE Thread_stop_event_selector(VALUE self) {
   VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
   if (selector != Qnil) {
-    rb_funcall(selector, rb_intern("stop"), 0);
+    rb_funcall(selector, ID_stop, 0);
   }
 
   return self;
@@ -186,12 +188,14 @@ void Init_Thread() {
   ID_create_event_selector    = rb_intern("create_event_selector");
   ID_ivar_event_selector      = rb_intern("@event_selector");
   ID_ivar_event_selector_proc = rb_intern("@event_selector_proc");
+  ID_ivar_main_fiber          = rb_intern("@main_fiber");
   ID_fiber_ref_count          = rb_intern("fiber_ref_count");
   ID_run_queue                = rb_intern("run_queue");
   ID_scheduled                = rb_intern("scheduled");
   ID_empty                    = rb_intern("empty?");
   ID_pop                      = rb_intern("pop");
   ID_push                     = rb_intern("push");
+  ID_stop                     = rb_intern("stop");
 
   SYM_scheduled_fibers = ID2SYM(rb_intern("scheduled_fibers"));
   SYM_pending_watchers = ID2SYM(rb_intern("pending_watchers"));

@@ -9,7 +9,7 @@ ID ID_each;
 ID ID_inspect;
 ID ID_new;
 ID ID_raise;
-ID ID_running;
+ID ID_ivar_running;
 ID ID_scheduled;
 ID ID_scheduled_value;
 ID ID_size;
@@ -24,10 +24,10 @@ ID ID_empty;
 ID ID_pop;
 ID ID_push;
 
-VALUE SYM_DEAD;
-VALUE SYM_RUNNING;
-VALUE SYM_SCHEDULED;
-VALUE SYM_SUSPENDED;
+VALUE SYM_dead;
+VALUE SYM_running;
+VALUE SYM_scheduled;
+VALUE SYM_suspended;
 
 // static VALUE Gyro_break_set(VALUE self) {
 //   break_flag = 1;
@@ -91,12 +91,12 @@ static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
 }
 
 static VALUE Fiber_state(VALUE self) {
-  if (!rb_fiber_alive_p(self) || (rb_ivar_get(self, ID_running) == Qfalse))
-    return SYM_DEAD;
-  if (rb_fiber_current() == self) return SYM_RUNNING;
-  if (rb_ivar_get(self, ID_scheduled) != Qnil) return SYM_SCHEDULED;
+  if (!rb_fiber_alive_p(self) || (rb_ivar_get(self, ID_ivar_running) == Qfalse))
+    return SYM_dead;
+  if (rb_fiber_current() == self) return SYM_running;
+  if (rb_ivar_get(self, ID_scheduled) != Qnil) return SYM_scheduled;
   
-  return SYM_SUSPENDED;
+  return SYM_suspended;
 }
 
 inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
@@ -134,7 +134,7 @@ void Init_Gyro() {
   ID_inspect          = rb_intern("inspect");
   ID_new              = rb_intern("new");
   ID_raise            = rb_intern("raise");
-  ID_running          = rb_intern("@running");
+  ID_ivar_running          = rb_intern("@running");
   ID_scheduled        = rb_intern("scheduled");
   ID_scheduled_value  = rb_intern("scheduled_value");
   ID_size             = rb_intern("size");
@@ -149,12 +149,12 @@ void Init_Gyro() {
   ID_pop              = rb_intern("pop");
   ID_push             = rb_intern("push");
 
-  SYM_DEAD = ID2SYM(rb_intern("dead"));
-  SYM_RUNNING = ID2SYM(rb_intern("running"));
-  SYM_SCHEDULED = ID2SYM(rb_intern("scheduled"));
-  SYM_SUSPENDED = ID2SYM(rb_intern("suspended"));
-  rb_global_variable(&SYM_DEAD);
-  rb_global_variable(&SYM_RUNNING);
-  rb_global_variable(&SYM_SCHEDULED);
-  rb_global_variable(&SYM_SUSPENDED);
+  SYM_dead = ID2SYM(rb_intern("dead"));
+  SYM_running = ID2SYM(rb_intern("running"));
+  SYM_scheduled = ID2SYM(rb_intern("scheduled"));
+  SYM_suspended = ID2SYM(rb_intern("suspended"));
+  rb_global_variable(&SYM_dead);
+  rb_global_variable(&SYM_running);
+  rb_global_variable(&SYM_scheduled);
+  rb_global_variable(&SYM_suspended);
 }
