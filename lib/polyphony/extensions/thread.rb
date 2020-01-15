@@ -13,6 +13,8 @@ class ::Thread
       setup_fiber_scheduling
       block.(*args)
       signal_waiters
+    ensure
+      stop_event_selector
     end
   end
 
