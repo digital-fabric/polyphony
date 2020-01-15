@@ -126,6 +126,8 @@ class ::Fiber
     finish_execution(result)
   rescue Exceptions::MoveOn => e
     finish_execution(e.value)
+  rescue ::Interrupt, ::SystemExit => e
+    Thread.current.main_fiber.transfer e.class.new
   rescue Exception => e
     finish_execution(e, true)
   end
@@ -136,13 +138,15 @@ class ::Fiber
     self.class.map.delete(self)
     @when_done&.(result)
     @waiting_fiber&.schedule(result)
-
     return unless uncaught_exception && !@waiting_fiber
 
-    parent_fiber = @calling_fiber.running? ? @calling_fiber : Fiber.root
-    parent_fiber.schedule(result)
+    exception_receiving_fiber.schedule(result)
   ensure
     Thread.current.switch_fiber
+  end
+
+  def exception_receiving_fiber
+    @calling_fiber.running? ? @calling_fiber : Thread.current.main_fiber
   end
 
   attr_reader :result
