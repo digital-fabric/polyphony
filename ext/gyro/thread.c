@@ -48,7 +48,9 @@ static VALUE Thread_setup_fiber_scheduling(VALUE self) {
 
 static VALUE Thread_stop_event_selector(VALUE self) {
   VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
-  rb_funcall(selector, rb_intern("stop"), 0);
+  if (selector != Qnil) {
+    rb_funcall(selector, rb_intern("stop"), 0);
+  }
 
   return self;
 }
