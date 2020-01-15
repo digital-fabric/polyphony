@@ -19,7 +19,6 @@ class Http::Parser
 end
 
 def handle_client(socket)
-  STDOUT.write ':'
   parser = Http::Parser.new
   reqs = []
   parser.on_message_complete = proc do |env|
@@ -30,7 +29,7 @@ def handle_client(socket)
     while (req = reqs.shift)
       handle_request(socket, req)
       req = nil
-      snooze
+      # snooze
     end
   end
 rescue IOError, SystemCallError => e
@@ -41,8 +40,6 @@ ensure
 end
 
 def handle_request(client, parser)
-  STDOUT.write '*'
-
   status_code = 200
   data = "Hello world!\n"
   headers = "Content-Length: #{data.bytesize}\r\n"
@@ -54,17 +51,16 @@ spin do
   puts "listening on port 1234"
 
   loop do
-    STDOUT << '.'
     client = server.accept
     spin { handle_client(client) }
-    snooze
+    # snooze
   end
 end
 
 spin do
   loop do
     sleep 1
-    # puts "#{Time.now} #{Thread.current.fiber_scheduling_stats}"
+    puts "#{Time.now} #{Thread.current.fiber_scheduling_stats}"
   end
 end
 

@@ -13,7 +13,6 @@ def bm(fibers, iterations)
   t0 = Time.now
   threads = (1..1).map do |i|
     Thread.new do
-      Thread.current.setup_fiber_scheduling
       count[i] = 0
       supervise do |s|
         fibers.times do
@@ -25,8 +24,6 @@ def bm(fibers, iterations)
           end
         end
       end
-    ensure
-      Thread.current.stop_event_selector
     end
   end
   threads.each(&:join)
