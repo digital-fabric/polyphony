@@ -75,21 +75,39 @@ inline void Thread_fiber_reset_ref_count(VALUE self) {
   rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(0));
 }
 
+static VALUE SYM_scheduled_fibers;
+static VALUE SYM_pending_watchers;
+
+static VALUE Thread_fiber_scheduling_stats(VALUE self) {
+  VALUE stats = rb_hash_new();
+  VALUE queue = rb_ivar_get(self, ID_run_queue);
+  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
+  
+  long scheduled_count = RARRAY_LEN(queue);
+  rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(scheduled_count));
+
+  long pending_count = Gyro_Selector_pending_count(selector);
+  rb_hash_aset(stats, SYM_pending_watchers, INT2NUM(pending_count));
+
+  return stats;
+}
+
 inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   rb_ary_push(queue, fiber);
   return self;
-  // return rb_funcall(queue, ID_push, 1, fiber);
 }
 
 VALUE Thread_switch_fiber(VALUE self) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
+  long scheduled_count;
   while (1) {
+    scheduled_count = RARRAY_LEN(queue);
     // if (break_flag != 0) {
     //   return Qnil;
     // }
-    if ((RARRAY_LEN(queue) > 0) || (Thread_fiber_ref_count(self) == 0)) {
+    if ((scheduled_count > 0) || (Thread_fiber_ref_count(self) == 0)) {
       break;
     }
 
@@ -98,7 +116,7 @@ VALUE Thread_switch_fiber(VALUE self) {
 
   VALUE next_fiber;
   // while (1) {
-    if (RARRAY_LEN(queue) == 0) {
+    if (scheduled_count == 0) {
       return Qnil;
     }
     next_fiber = rb_ary_shift(queue);
@@ -150,16 +168,17 @@ void Init_Thread() {
   rb_define_singleton_method(rb_cThread, "event_selector=", Thread_event_selector_set_proc, 1);
   rb_define_singleton_method(rb_cThread, "create_event_selector", Thread_create_event_selector, 1);
 
-  rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
-  rb_define_method(rb_cThread, "stop_event_selector", Thread_stop_event_selector, 0);
-
   rb_define_method(rb_cThread, "fiber_ref", Thread_ref, 0);
   rb_define_method(rb_cThread, "fiber_unref", Thread_unref, 0);
+
+  rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
+  rb_define_method(rb_cThread, "stop_event_selector", Thread_stop_event_selector, 0);
+  rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
+  rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
 
   rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 1);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
 
-  rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
 
   ID_create_event_selector    = rb_intern("create_event_selector");
   ID_ivar_event_selector      = rb_intern("@event_selector");
@@ -170,4 +189,9 @@ void Init_Thread() {
   ID_empty                    = rb_intern("empty?");
   ID_pop                      = rb_intern("pop");
   ID_push                     = rb_intern("push");
+
+  SYM_scheduled_fibers = ID2SYM(rb_intern("scheduled_fibers"));
+  SYM_pending_watchers = ID2SYM(rb_intern("pending_watchers"));
+  rb_global_variable(&SYM_scheduled_fibers);
+  rb_global_variable(&SYM_pending_watchers);
 }

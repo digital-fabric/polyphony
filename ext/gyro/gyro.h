@@ -43,6 +43,7 @@ VALUE Fiber_await();
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber);
 VALUE Thread_post_fork(VALUE thread);
 struct ev_loop *Gyro_Selector_current_thread_ev_loop();
+long Gyro_Selector_pending_count(VALUE self);
 
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
 #define INSPECT(...) (rb_funcall(rb_cObject, rb_intern("p"), __VA_ARGS__))

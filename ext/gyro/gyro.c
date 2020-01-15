@@ -52,12 +52,6 @@ VALUE Gyro_snooze(VALUE self) {
 
 static VALUE Gyro_post_fork(VALUE self) {
   Thread_post_fork(rb_thread_current());
-  // ev_loop_fork(EV_DEFAULT);
-  // break_flag = 0;
-  // ref_count = 0;
-  
-  // Gyro_clear_scheduled_fibers();
-
   return Qnil;
 }
 
