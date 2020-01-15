@@ -77,7 +77,7 @@ VALUE Gyro_Selector_stop(VALUE self) {
   struct Gyro_Selector *selector;
   GetGyro_Selector(self, selector);
 
-  if (selector->ev_loop) {
+  if (selector->ev_loop && !ev_is_default_loop(selector->ev_loop)) {
     ev_loop_destroy(selector->ev_loop);
     selector->ev_loop = 0;
   }
