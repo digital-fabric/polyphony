@@ -86,14 +86,8 @@ class ::Fiber
   prepend FiberControl
   include FiberMessaging
 
-  # map of currently running fibers
-  def self.root
-    @root_fiber
-  end
-
   def self.reset!
-    @root_fiber = current
-    @running_fibers_map = { @root_fiber => true }
+    @running_fibers_map = { Thread.current.main_fiber => true }
   end
 
   reset!

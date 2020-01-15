@@ -36,8 +36,9 @@ static VALUE Thread_create_event_selector(VALUE self, VALUE thread) {
 }
 
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
+  rb_ivar_set(self, rb_intern("@main_fiber"), rb_fiber_current());
   rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(0));
-  VALUE queue = rb_ary_new();//rb_funcall(cQueue, ID_new, 0);
+  VALUE queue = rb_ary_new();
   rb_ivar_set(self, ID_run_queue, queue);
   VALUE selector = rb_funcall(rb_cThread, ID_create_event_selector, 1, self);
   rb_ivar_set(self, ID_ivar_event_selector, selector);

@@ -4,6 +4,8 @@ Exceptions = import '../core/exceptions'
 
 # Thread extensions
 class ::Thread
+  attr_reader :main_fiber
+
   alias_method :orig_initialize, :initialize
   def initialize(*args, &block)
     @join_wait_queue = Gyro::Queue.new
