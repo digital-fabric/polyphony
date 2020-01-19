@@ -26,6 +26,8 @@ class TimerTest < MiniTest::Test
     }
     suspend
     assert_equal 3, count
+  ensure
+    t.stop
   end
 
   def test_that_repeating_timer_compensates_for_drift
@@ -48,5 +50,7 @@ class TimerTest < MiniTest::Test
     }
     suspend
     assert_equal 0, deltas[1..-1].filter { |d| (d - 0.1).abs >= 0.05 }.size
+  ensure
+    t.stop
   end
 end
