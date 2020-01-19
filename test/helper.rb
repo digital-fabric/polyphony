@@ -18,6 +18,12 @@ Minitest::Reporters.use! [
 ]
 
 class MiniTest::Test
+  def setup
+    # for some reason, the first call to sleep in the context of tests returns
+    # too early
+    sleep 0
+  end
+
   def teardown
     # wait for any remaining scheduled work
     Thread.current.switch_fiber

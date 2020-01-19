@@ -27,7 +27,7 @@ static void Gyro_Timer_mark(void *ptr) {
 static void Gyro_Timer_free(void *ptr) {
   struct Gyro_Timer *timer = ptr;
   if (timer->active) {
-    printf("Timer watcher garbage collected while still active!\n");
+    printf("Timer watcher garbage collected while still active (%g, %g)!\n", timer->after, timer->repeat);
     timer->should_free = 1;
   } else {
     xfree(timer);

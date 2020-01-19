@@ -37,6 +37,8 @@ class ThreadTest < MiniTest::Test
     assert_equal [1, 2, 3], buffer
     assert_nil r
   ensure
+    # killing the thread will prevent stopping the sleep timer, as well as the
+    # thread's event selector, leading to a memory leak.
     t.kill if t.alive?
   end
 end

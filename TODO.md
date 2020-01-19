@@ -1,3 +1,10 @@
+## 0.27 Multithreaded fiber scheduling
+
+- `Gyro_schedule_fiber` - schedule using fiber's associated thread (store thread
+  ref in fiber), instead of current thread
+- Check why first call to `#sleep` returns too early in tests. Check the
+  sleep behaviour in a spawned thread.
+
 ## 0.28 Working Sinatra application
 
 - app with database access (postgresql)
