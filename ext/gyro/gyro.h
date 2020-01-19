@@ -35,6 +35,10 @@ int io_setstrbuf(VALUE *str, long len);
 void io_set_read_length(VALUE str, long n, int shrinkable);
 VALUE io_enc_str(VALUE str, rb_io_t *fptr);
 
+struct ev_loop *Gyro_Selector_ev_loop(VALUE selector);
+struct ev_loop *Gyro_Selector_current_thread_ev_loop();
+long Gyro_Selector_pending_count(VALUE self);
+
 VALUE Thread_current_event_selector();
 VALUE Thread_ref(VALUE thread);
 VALUE Thread_unref(VALUE thread);
@@ -42,8 +46,7 @@ VALUE Thread_switch_fiber(VALUE thread);
 VALUE Fiber_await();
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber);
 VALUE Thread_post_fork(VALUE thread);
-struct ev_loop *Gyro_Selector_current_thread_ev_loop();
-long Gyro_Selector_pending_count(VALUE self);
+
 
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
 #define INSPECT(...) (rb_funcall(rb_cObject, rb_intern("p"), __VA_ARGS__))

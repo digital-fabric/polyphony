@@ -44,6 +44,8 @@ module API
       timer.await
       yield
     end
+  ensure
+    timer.stop
   end
 
   def move_on_after(interval, with_value: nil, &block)

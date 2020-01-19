@@ -38,6 +38,13 @@ static VALUE Gyro_Selector_allocate(VALUE klass) {
 #define GetGyro_Selector(obj, selector) \
   TypedData_Get_Struct((obj), struct Gyro_Selector, &Gyro_Selector_type, (selector))
 
+inline struct ev_loop *Gyro_Selector_ev_loop(VALUE self) {
+  struct Gyro_Selector *selector;
+  GetGyro_Selector(self, selector);
+
+  return selector->ev_loop;
+}
+
 inline struct ev_loop *Gyro_Selector_current_thread_ev_loop() {
   struct Gyro_Selector *selector;
   GetGyro_Selector(Thread_current_event_selector(), selector);
@@ -58,7 +65,7 @@ static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
 
   int use_default_loop = (rb_thread_current() == rb_thread_main());
   selector->ev_loop = use_default_loop ? EV_DEFAULT : ev_loop_new(EVFLAG_NOSIGMASK);
-  
+
   return Qnil;
 }
 
@@ -76,8 +83,8 @@ VALUE Gyro_Selector_stop(VALUE self) {
   GetGyro_Selector(self, selector);
 
   if (selector->ev_loop && !ev_is_default_loop(selector->ev_loop)) {
-    ev_loop_destroy(selector->ev_loop);
-    selector->ev_loop = 0;
+    // ev_loop_destroy(selector->ev_loop);
+    // selector->ev_loop = 0;
   }
   return Qnil;
 }
