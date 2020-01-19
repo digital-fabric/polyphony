@@ -1,3 +1,11 @@
+0.27 2020-01-19
+---------------
+
+* Reimplement `Throttler` using recurring timer
+* Add `Gyro::Selector` for wrapping libev
+* Add `Gyro::Queue`, a fiber-aware thread-safe queue
+* Implement multithreaded fiber scheduling
+
 0.26 2020-01-12
 ---------------
 

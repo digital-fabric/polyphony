@@ -102,6 +102,8 @@ module ::Kernel
       end
     end
     true
+  rescue SystemCallError
+    nil
   end
 end
 

@@ -327,8 +327,8 @@ class FiberTest < MiniTest::Test
   def test_select_from_multiple_fibers
     buffer = []
     f1 = spin { sleep 0.01; buffer << :foo; :foo }
-    f2 = spin { sleep 0.02; buffer << :bar; :bar }
-    f3 = spin { sleep 0.03; buffer << :baz; :baz }
+    f2 = spin { sleep 0.03; buffer << :bar; :bar }
+    f3 = spin { sleep 0.05; buffer << :baz; :baz }
 
     result, selected = Fiber.select(f1, f2, f3)
     assert_equal :foo, result

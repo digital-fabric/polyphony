@@ -7,7 +7,11 @@ export_default :Polyphony
 require 'fiber'
 require_relative './gyro_ext'
 
+Thread.event_selector = Gyro::Selector
+Thread.current.setup_fiber_scheduling
+
 import './polyphony/extensions/core'
+import './polyphony/extensions/thread'
 import './polyphony/extensions/fiber'
 import './polyphony/extensions/io'
 
@@ -29,8 +33,8 @@ module Polyphony
     ResourcePool: './polyphony/core/resource_pool',
     Supervisor:   './polyphony/core/supervisor',
     Sync:         './polyphony/core/sync',
-    Thread:       './polyphony/core/thread',
     ThreadPool:   './polyphony/core/thread_pool',
+    Throttler:    './polyphony/core/throttler',
     Websocket:    './polyphony/websocket'
   )
 
@@ -55,24 +59,15 @@ module Polyphony
     end
 
     def fork(&block)
-      Gyro.break!
       pid = Kernel.fork do
-        setup_forked_process
+        Gyro.post_fork
         block.()
       end
-      Gyro.reset!
       pid
     end
 
     def reset!
-      Gyro.reset!
-      Fiber.reset!
-    end
-
-    private
-
-    def setup_forked_process
-      Gyro.post_fork
+      Thread.current.reset_fiber_scheduling
       Fiber.reset!
     end
   end

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    polyphony (0.26)
+    polyphony (0.27)
       modulation (~> 1.0)
 
 GEM

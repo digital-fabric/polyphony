@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
+require 'polyphony'
 
 require 'fileutils'
 require_relative './eg'
@@ -10,8 +11,6 @@ require_relative './coverage' if ENV['COVERAGE']
 require 'minitest/autorun'
 require 'minitest/reporters'
 
-require 'polyphony'
-
 ::Exception.__disable_sanitized_backtrace__ = true
 
 Minitest::Reporters.use! [
@@ -19,9 +18,15 @@ Minitest::Reporters.use! [
 ]
 
 class MiniTest::Test
+  def setup
+    # for some reason, the first call to sleep in the context of tests returns
+    # too early
+    sleep 0
+  end
+
   def teardown
     # wait for any remaining scheduled work
-    Gyro.run
+    Thread.current.switch_fiber
     Polyphony.reset!
   end
 end

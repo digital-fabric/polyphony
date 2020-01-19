@@ -28,6 +28,7 @@ end
 
 class IOTest < MiniTest::Test
   def setup
+    super
     @i, @o = IO.pipe
   end
 

@@ -63,7 +63,7 @@ class CancelScopeTest < Minitest::Test
     # async operation will only begin on next iteration of event loop
     assert_nil ctx[:cancel_scope]
 
-    Gyro.run
+    Thread.current.switch_fiber
     assert_kind_of Polyphony::CancelScope, ctx[:cancel_scope]
     assert_kind_of Polyphony::Cancel, ctx[:result]
   end
@@ -75,7 +75,7 @@ class CancelScopeTest < Minitest::Test
       sleep_with_cancel(ctx, :stop)
     end
 
-    Gyro.run
+    Thread.current.switch_fiber
     assert ctx[:cancel_scope]
     assert_nil ctx[:result]
   end
@@ -272,7 +272,7 @@ class MoveOnAfterTest < MiniTest::Test
     end
     sleep 0.1
     f.stop
-    assert_equal [1, 2, 3, 4, 5], buffer    
+    assert counter >= 5 && counter <= 6
   end
 
   def test_throttled_loop_with_count
@@ -299,8 +299,7 @@ class MoveOnAfterTest < MiniTest::Test
     t0 = Time.now
     sleep 0.05
     elapsed = Time.now - t0
-    puts "* elapsed: #{elapsed.inspect}"
-    assert (0.045..0.8).include? elapsed
+    assert (0.045..0.08).include? elapsed
 
     f = spin { sleep }
     snooze

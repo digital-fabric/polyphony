@@ -3809,7 +3809,10 @@ rb_thread_unsafe_dangerous_crazy_blocking_region_end(...);
 
         poll_args.loop = loop;
         poll_args.waittime = waittime;
+
         rb_thread_call_without_gvl(ev_backend_poll, (void *)&poll_args, RUBY_UBF_IO, 0);
+
+        // backend_poll (EV_A_ waittime);
 /*
 ############################# END PATCHERY ############################
 */

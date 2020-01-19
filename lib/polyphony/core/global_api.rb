@@ -44,6 +44,8 @@ module API
       timer.await
       yield
     end
+  ensure
+    timer.stop
   end
 
   def move_on_after(interval, with_value: nil, &block)
@@ -74,12 +76,14 @@ module API
     Supervisor.new.await(&block)
   end
 
-  def throttled_loop(rate, count: nil, &block)
+  def throttled_loop(rarote, count: nil, &block)
     throttler = Throttler.new(rate)
     if count
       count.times { throttler.(&block) }
     else
       loop { throttler.(&block) }
     end
+  ensure
+    throttler.stop
   end
 end
