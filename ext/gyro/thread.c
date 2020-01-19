@@ -107,6 +107,7 @@ VALUE Thread_switch_fiber(VALUE self) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
   long scheduled_count;
+
   while (1) {
     scheduled_count = RARRAY_LEN(queue);
     // if (break_flag != 0) {
@@ -134,12 +135,9 @@ VALUE Thread_switch_fiber(VALUE self) {
   // run next fiber
   VALUE value = rb_ivar_get(next_fiber, ID_scheduled_value);
   rb_ivar_set(next_fiber, ID_scheduled, Qnil);
-  return rb_funcall(next_fiber, ID_transfer, 1, value);
-
-  RB_GC_GUARD(queue);
   RB_GC_GUARD(next_fiber);
   RB_GC_GUARD(value);
-  RB_GC_GUARD(selector);
+  return rb_funcall(next_fiber, ID_transfer, 1, value);
 }
 
 VALUE Thread_reset_fiber_scheduling(VALUE self) {
@@ -160,6 +158,7 @@ inline VALUE Fiber_await() {
   Thread_ref(thread);
   VALUE ret = Thread_switch_fiber(thread);
   Thread_unref(thread);
+  RB_GC_GUARD(ret);
   return ret;
 }
 
