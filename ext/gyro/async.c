@@ -23,7 +23,7 @@ static void Gyro_Async_mark(void *ptr) {
 static void Gyro_Async_free(void *ptr) {
   struct Gyro_Async *async = ptr;
   if (async->active) {
-    // rb_warn("Async watcher garbage collected while still active!\n");
+    printf("Async watcher garbage collected while still active!\n");
   }
   xfree(async);
 }
@@ -103,15 +103,17 @@ VALUE Gyro_Async_await(VALUE self) {
   }
 
   ret = Fiber_await();
+  RB_GC_GUARD(ret);
+
+  if (async->active) {
+    async->active = 0;
+    async->fiber = Qnil;
+    ev_async_stop(async->ev_loop, &async->ev_async);
+    async->value = Qnil;
+  }
 
   // fiber is resumed
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    if (async->active) {
-      async->active = 0;
-      async->fiber = Qnil;
-      ev_async_stop(async->ev_loop, &async->ev_async);
-      async->value = Qnil;
-    }
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else {

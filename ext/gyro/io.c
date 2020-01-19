@@ -31,8 +31,7 @@ static void Gyro_IO_mark(void *ptr) {
 static void Gyro_IO_free(void *ptr) {
   struct Gyro_IO *io = ptr;
   if (io->active) {
-    // rb_warn("IO watcher garbage collected while still active!\n");
-    // ev_io_stop(io->ev_loop, &io->ev_io);
+    printf("IO watcher garbage collected while still active!\n");
   }
   xfree(io);
 }
@@ -119,15 +118,18 @@ VALUE Gyro_IO_await(VALUE self) {
   io->active = 1;
   io->ev_loop = Gyro_Selector_current_thread_ev_loop();
   ev_io_start(io->ev_loop, &io->ev_io);
+
   ret = Fiber_await();
+  RB_GC_GUARD(ret);
+
+  if (io->active) {
+    io->active = 0;
+    io->fiber = Qnil;
+    ev_io_stop(io->ev_loop, &io->ev_io);
+  }
 
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    if (io->active) {
-      io->active = 0;
-      io->fiber = Qnil;
-      ev_io_stop(io->ev_loop, &io->ev_io);
-    }
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else {

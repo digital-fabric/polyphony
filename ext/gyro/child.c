@@ -21,7 +21,7 @@ static void Gyro_Child_mark(void *ptr) {
 static void Gyro_Child_free(void *ptr) {
   struct Gyro_Child *child = ptr;
   if (child->active) {
-    // rb_warn("Child watcher garbage collected while still active!\n");
+    printf("Child watcher garbage collected while still active!\n");
   }
   xfree(child);
 }
@@ -91,14 +91,16 @@ static VALUE Gyro_Child_await(VALUE self) {
   ev_child_start(child->ev_loop, &child->ev_child);
 
   ret = Fiber_await();
+  RB_GC_GUARD(ret);
+
+  if (child->active) {
+    child->active = 0;
+    child->fiber = Qnil;
+    ev_child_stop(child->ev_loop, &child->ev_child);
+  }
 
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    if (child->active) {
-      child->active = 0;
-      child->fiber = Qnil;
-      ev_child_stop(child->ev_loop, &child->ev_child);
-    }
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else {

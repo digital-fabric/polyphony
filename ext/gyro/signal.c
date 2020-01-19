@@ -20,7 +20,7 @@ static void Gyro_Signal_mark(void *ptr) {
 static void Gyro_Signal_free(void *ptr) {
   struct Gyro_Signal *signal = ptr;
   if (signal->active) {
-    // rb_warn("Signal watcher garbage collected while still active!\n");
+    printf("Signal watcher garbage collected while still active!\n");
     // ev_signal_stop(signal->ev_loop, &signal->ev_signal);
   }
   xfree(signal);
@@ -82,15 +82,17 @@ static VALUE Gyro_Signal_await(VALUE self) {
   ev_signal_start(signal->ev_loop, &signal->ev_signal);
 
   ret = Fiber_await();
+  RB_GC_GUARD(ret);
+
+  if (signal->active) {
+    signal->active = 0;
+    signal->fiber = Qnil;
+    ev_signal_stop(signal->ev_loop, &signal->ev_signal);
+  }
 
   // fiber is resumed, check if resumed value is an exception
   signal->fiber = Qnil;
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    if (signal->active) {
-      signal->active = 0;
-      signal->fiber = Qnil;
-      ev_signal_stop(signal->ev_loop, &signal->ev_signal);
-    }
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
   else

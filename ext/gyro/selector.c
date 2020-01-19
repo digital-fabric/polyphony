@@ -13,7 +13,7 @@ static void Gyro_Selector_mark(void *ptr) {
 static void Gyro_Selector_free(void *ptr) {
   struct Gyro_Selector *selector = ptr;
   if (selector->ev_loop && !ev_is_default_loop(selector->ev_loop)) {
-    // rb_warn("Selector garbage collected before being stopped!\n");
+    // printf("Selector garbage collected before being stopped!\n");
     ev_loop_destroy(selector->ev_loop);
   }
   xfree(selector);
