@@ -34,6 +34,7 @@ module Polyphony
     Supervisor:   './polyphony/core/supervisor',
     Sync:         './polyphony/core/sync',
     ThreadPool:   './polyphony/core/thread_pool',
+    Throttler:    './polyphony/core/throttler',
     Websocket:    './polyphony/websocket'
   )
 
