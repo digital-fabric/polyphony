@@ -272,7 +272,7 @@ class MoveOnAfterTest < MiniTest::Test
     end
     sleep 0.1
     f.stop
-    assert_equal [1, 2, 3, 4, 5], buffer    
+    assert counter >= 5 && counter <= 6
   end
 
   def test_throttled_loop_with_count

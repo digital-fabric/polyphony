@@ -11,6 +11,8 @@ class ThrottlerTest < MiniTest::Test
     f.stop
     assert buffer.size >= 2
     assert buffer.size <= 3
+  ensure
+    t.stop
   end
 
   def test_throttler_with_hash_of_rate
@@ -21,6 +23,8 @@ class ThrottlerTest < MiniTest::Test
     f.stop
     assert buffer.size >= 2
     assert buffer.size <= 3
+  ensure
+    t.stop
   end
 
   def test_throttler_with_hash_of_interval
@@ -31,5 +35,7 @@ class ThrottlerTest < MiniTest::Test
     f.stop
     assert buffer.size >= 2
     assert buffer.size <= 3
+  ensure
+    t.stop
   end
 end
