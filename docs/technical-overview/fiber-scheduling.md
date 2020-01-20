@@ -1,3 +1,9 @@
+---
+layout: page
+title: How Fibers are Scheduled
+nav_order: 3
+parent: Technical Overview
+---
 # How Fibers are Scheduled
 
 Ruby provides two mechanisms for transferring control between fibers: `Fiber#resume` / `Fiber.yield` and `Fiber#transfer`. The first is inherently asymmetric and is famously used for implementing generators and [resumable enumerators](https://blog.appsignal.com/2018/11/27/ruby-magic-fibers-and-enumerators-in-ruby.html). Another limiting factor of using resume / yield is that the root fiber can't yield away, limiting its usability as a resumable fiber.

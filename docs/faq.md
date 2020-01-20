@@ -1,10 +1,15 @@
+---
+layout: page
+title: Frequently Asked Questions
+nav_order: 100
+---
 # Frequently Asked Questions
 
 ## Why not just use callbacks instead of fibers?
 
 It is true that reactor engines such as libev use callbacks to handle events. There's also programming platforms such as [node.js](https://nodejs.org/) that base their entire API on the callback pattern. [EventMachine](https://www.rubydoc.info/gems/eventmachine/1.2.7) is a popular reactor library for Ruby that uses callbacks for handling events.
 
-Using callbacks means splitting your application logic into disjunct pieces of code. Consider the following example:
+Using callbacks means splitting your application logic into disjunct pieces of code. Consider the following implementation of an echo server using EventMachine:
 
 ```ruby
 require 'eventmachine'

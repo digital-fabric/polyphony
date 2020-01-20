@@ -1,3 +1,11 @@
+---
+layout: default
+title: Home
+nav_order: 1
+description: Lorem ipsum
+permalink: /
+---
+
 # Polyphony - Easy Concurrency for Ruby
 
 > Polyphony \| pəˈlɪf\(ə\)ni \|

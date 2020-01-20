@@ -1,3 +1,9 @@
+---
+layout: page
+title: Tutorial
+nav_order: 2
+parent: Getting Started
+---
 # Tutorial
 
 ## Building a Simple Echo Server with Polyphony

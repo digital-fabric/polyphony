@@ -1,3 +1,11 @@
+---
+layout: page
+title: Installing Polyphony
+nav_order: 1
+parent: Getting Started
+---
+# Getting Started
+
 ## System Requirements
 
 In order to use Polyphony you need to have:
@@ -6,7 +14,7 @@ In order to use Polyphony you need to have:
   being)
 - Ruby (MRI) 2.6 or newer
 
-## Installing Polyphony
+## Installing the Polyphony Gem
 
 Add this line to your application's Gemfile:
 
@@ -25,4 +33,3 @@ Or install it yourself as:
 ```bash
 $ gem install polyphony
 ```
-

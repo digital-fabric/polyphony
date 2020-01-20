@@ -1,0 +1,36 @@
+.navigation-list-item.section-title {
+  padding-top: 0.75em;
+  padding-bottom: 0.75em;
+}
+
+span.section-title {
+  text-transform: uppercase;
+  font-weight: bold;
+  color: #888;
+}
+
+.navigation-list-item .navigation-list-child-list {
+  display: block;
+}
+
+.navigation-list-child-list {
+  padding-left: 0;
+
+  .navigation-list-item {
+    position: relative;
+
+    &::before {
+      position: absolute;
+      margin-top: 0.3em;
+      margin-left: -0.8em;
+      color: rgba($body-text-color, 0.3);
+      content: "";
+    }
+
+    &.active {
+      &::before {
+        color: $body-text-color;
+      }
+    }
+  }
+}

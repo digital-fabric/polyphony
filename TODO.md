@@ -1,16 +1,21 @@
-## 0.27 Multithreaded fiber scheduling
+## 0.28 Redo docs
+
+- Move to Jekyll on Github Pages
+- Landing page like drawn in my notebook
+
+## 0.29 Multithreaded fiber scheduling - some rough corners
 
 - `Gyro_schedule_fiber` - schedule using fiber's associated thread (store thread
   ref in fiber), instead of current thread
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
 
-## 0.28 Working Sinatra application
+## 0.30 Working Sinatra application
 
 - app with database access (postgresql)
 - benchmarks!
 
-## 0.29 Sidekick
+## 0.31 Sidekick
 
 Plan of action:
 
@@ -18,13 +23,13 @@ Plan of action:
 - test performance
 - proceed from there
 
-## 0.30 Testing && Docs
+## 0.32 Testing && Docs
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.31 Integration
+## 0.33 Integration
 
-## 0.32 Real IO#gets and IO#read
+## 0.34 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -34,24 +39,13 @@ Plan of action:
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.32 Support for multithreaded apps
-
-- Move fiber scheduling to the `Thread` class
-- Gyro selector conforming to the selector interface:
-  
-  ```ruby
-  class Selector
-    def wait
-  end
-  ```
-
-- Better separation between 
+## 0.35 Rails
 
 - Rails?
 
-# DNS
+## 0.36 DNS
 
-## DNS client
+### DNS client
 
 ```ruby
 ip_address = DNS.lookup('google.com', 'A')

@@ -1,3 +1,9 @@
+---
+layout: page
+title: Extending Polyphony
+nav_order: 5
+parent: Technical Overview
+---
 # Extending Polyphony
 
 Polyphony was designed to ease the transition from blocking APIs and 

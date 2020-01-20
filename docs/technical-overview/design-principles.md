@@ -1,3 +1,9 @@
+---
+layout: page
+title: Design Principles
+nav_order: 1
+parent: Technical Overview
+---
 # Design Principles
 
 Polyphony was created in order to enable creating high-performance concurrent

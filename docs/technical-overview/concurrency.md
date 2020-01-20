@@ -1,3 +1,9 @@
+---
+layout: page
+title: Concurrency the Easy Way
+nav_order: 2
+parent: Technical Overview
+---
 # Concurrency the Easy Way
 
 Concurrency is a major consideration for modern programmers. Applications and digital platforms are nowadays expected to do multiple things at once: serve multiple clients, process multiple background jobs, talk to multiple external services. Concurrency is the property of our programming environment allowing us to schedule and control multiple ongoing operations.

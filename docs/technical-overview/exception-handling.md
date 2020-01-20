@@ -1,3 +1,9 @@
+---
+layout: page
+title: Exception Handling
+nav_order: 4
+parent: Technical Overview
+---
 # Exception Handling
 
 Ruby employs a pretty robust exception handling mechanism. An raised exception will bubble up the call stack until a suitable exception handler is found, based on the exception's class. In addition, the exception will include a stack trace showing the execution path from the exception's locus back to the program's entry point. Unfortunately, when exceptions are raised while switching between fibers, stack traces will only include partial information. Here's a simple demonstration:
