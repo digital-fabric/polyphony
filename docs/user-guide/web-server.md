@@ -1,3 +1,9 @@
+---
+layout: page
+title: Web Server
+nav_order: 5
+parent: User Guide
+---
 # Web Server
 
 Polyphony's web server functionality offers a powerful and flexible way to
