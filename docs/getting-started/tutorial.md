@@ -73,8 +73,10 @@ Let's consider the advantage of the Polyphony approach:
 
 - We didn't need to create custom handler classes with callbacks.
 - We didn't need to use custom classes or APIs for our networking code.
-- Our code is terse, easy to read and - most importantly - expresses the order of events clearly and without being split across callbacks.
-- We have a server that can scale to thousands of clients without breaking a sweat.
+- Our code is terse, easy to read and - most importantly - expresses the order
+  of events clearly and without being split across callbacks.
+- We have a server that can scale to thousands of clients without breaking a
+  sweat.
 
 ## Handling Inactive Connections
 

@@ -1,7 +1,43 @@
 ## 0.28 Redo docs
 
 - Move to Jekyll on Github Pages
+- Write about threads: FAQ, scheduling, etc
 - Landing page like drawn in my notebook
+
+- New copy:
+
+  <div class="landing-hero">
+
+  # Polyphony
+
+  ### Fine-grained Concurrency for Ruby
+  </div>
+
+  <div class="landing-features">
+  ## Focused on Developer Happiness
+
+  Lorem ipsum
+
+  ## Optimized for High Performane
+
+  Lorem ipsum
+
+  ## Designed for Interoperability
+
+  Lorem ipsum
+
+  ## A Growing Ecosystem
+
+  </div>
+
+- Offloading DB work to a worker thread (or thread pool), for example when using
+    SQLite
+  - Restore ThreadPool
+  - Introduce concept of Worker, which acts more or less like Erlang's GenServer
+    - it accepts an RPC invocation as a fiber message, sends back result
+    - It can be used to do CPU-bound stuff on a separate thread while allowing a
+      so-called "UI" thread to remain responsive by using fiber-aware
+      concurrency.
 
 ## 0.29 Multithreaded fiber scheduling - some rough corners
 
