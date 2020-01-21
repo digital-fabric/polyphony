@@ -8,13 +8,13 @@ class GyroTest < MiniTest::Test
 
     f = Fiber.new {}
 
-    assert_equal :suspended, f.state
+    assert_equal :waiting, f.state
     f.resume
     assert_equal :dead, f.state
 
     f = Fiber.new { }
     f.schedule
-    assert_equal :scheduled, f.state
+    assert_equal :runnable, f.state
     snooze
     assert_equal :dead, f.state
   end

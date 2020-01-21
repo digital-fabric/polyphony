@@ -76,7 +76,7 @@ module API
     Supervisor.new.await(&block)
   end
 
-  def throttled_loop(rarote, count: nil, &block)
+  def throttled_loop(rate, count: nil, &block)
     throttler = Throttler.new(rate)
     if count
       count.times { throttler.(&block) }

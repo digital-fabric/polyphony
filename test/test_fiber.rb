@@ -261,13 +261,16 @@ class FiberTest < MiniTest::Test
         snooze
         counter += 1
       end
+      suspend
     end
 
-    assert_equal :scheduled, f.state
+    assert_equal :runnable, f.state
     assert_equal :running, Fiber.current.state
     snooze
-    assert_equal :scheduled, f.state
+    assert_equal :runnable, f.state
     snooze while counter < 3
+    assert_equal :waiting, f.state
+    f.stop
     assert_equal :dead, f.state
   ensure
     f&.stop
@@ -444,7 +447,7 @@ class MailboxTest < MiniTest::Test
     f = spin { :foo }
 
     expected = format(
-      '#<Fiber:%s %s:%d:in `test_inspect\' (scheduled)>',
+      '#<Fiber:%s %s:%d:in `test_inspect\' (runnable)>',
       f.object_id,
       __FILE__,
       spin_line_no

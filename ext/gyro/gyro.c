@@ -26,8 +26,8 @@ ID ID_push;
 
 VALUE SYM_dead;
 VALUE SYM_running;
-VALUE SYM_scheduled;
-VALUE SYM_suspended;
+VALUE SYM_runnable;
+VALUE SYM_waiting;
 
 // static VALUE Gyro_break_set(VALUE self) {
 //   break_flag = 1;
@@ -94,9 +94,9 @@ static VALUE Fiber_state(VALUE self) {
   if (!rb_fiber_alive_p(self) || (rb_ivar_get(self, ID_ivar_running) == Qfalse))
     return SYM_dead;
   if (rb_fiber_current() == self) return SYM_running;
-  if (rb_ivar_get(self, ID_scheduled) != Qnil) return SYM_scheduled;
+  if (rb_ivar_get(self, ID_scheduled) != Qnil) return SYM_runnable;
   
-  return SYM_suspended;
+  return SYM_waiting;
 }
 
 inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
@@ -151,10 +151,10 @@ void Init_Gyro() {
 
   SYM_dead = ID2SYM(rb_intern("dead"));
   SYM_running = ID2SYM(rb_intern("running"));
-  SYM_scheduled = ID2SYM(rb_intern("scheduled"));
-  SYM_suspended = ID2SYM(rb_intern("suspended"));
+  SYM_runnable = ID2SYM(rb_intern("runnable"));
+  SYM_waiting = ID2SYM(rb_intern("waiting"));
   rb_global_variable(&SYM_dead);
   rb_global_variable(&SYM_running);
-  rb_global_variable(&SYM_scheduled);
-  rb_global_variable(&SYM_suspended);
+  rb_global_variable(&SYM_runnable);
+  rb_global_variable(&SYM_waiting);
 }
