@@ -69,6 +69,11 @@ Let's examine the the flow of control in our echo server program:
 
 ![Echo fibers](../assets/img/echo-fibers.svg)
 
+> In the above figure, the fat blue dots represents moments at which fibers can
+> be switched. The light blue horizontal arrows represent switching from one
+> fiber to another. The blue vertical lines represent a train of execution on a
+> single fiber.
+
 - The main fiber (fiber 1) runs a loop waiting for incoming connections.
 - The call to `server.accept` blocks, and an I/O event watcher is set up. The
   main fiber is suspended.
