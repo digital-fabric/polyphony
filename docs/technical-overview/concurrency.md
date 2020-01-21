@@ -1,6 +1,8 @@
 ---
-layout: page title: Concurrency the Easy Way nav_order: 2 parent: Technical
-Overview
+layout: page
+title: Concurrency the Easy Way
+nav_order: 2
+parent: Technical Overview
 ---
 # Concurrency the Easy Way
 

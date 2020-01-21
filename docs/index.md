@@ -1,8 +1,12 @@
 ---
-layout: default title: Home nav_order: 1 description: Lorem ipsum permalink: /
+layout: page
+title: Home
+nav_order: 1
+description: Lorem ipsum
+permalink: /
 ---
 
-# Polyphony - Easy Concurrency for Ruby
+# Polyphony - fine-grained concurrency for Ruby
 
 > Polyphony \| pəˈlɪf\(ə\)ni \|
 > 1. _Music_ the style of simultaneously combining a number of parts, each

@@ -1,5 +1,8 @@
 ---
-layout: page title: Exception Handling nav_order: 4 parent: Technical Overview
+layout: page
+title: Exception Handling
+nav_order: 4
+parent: Technical Overview
 ---
 # Exception Handling
 
