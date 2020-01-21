@@ -3,6 +3,7 @@ layout: page
 title: Web Server
 nav_order: 5
 parent: User Guide
+permalink: /user-guide/web-server/
 ---
 # Web Server
 

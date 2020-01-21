@@ -3,6 +3,7 @@ layout: page
 title: Tutorial
 nav_order: 2
 parent: Getting Started
+permalink: /getting-started/tutorial/
 ---
 # Tutorial
 

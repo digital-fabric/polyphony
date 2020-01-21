@@ -3,6 +3,7 @@ layout: page
 title: Design Principles
 nav_order: 1
 parent: Technical Overview
+permalink: /technical-overview/design-principles/
 ---
 # Design Principles
 

@@ -34,3 +34,12 @@ span.section-title {
     }
   }
 }
+
+a.navigation-list-link {
+  color: $nav-child-link-color;
+  font-weight: 600;
+}
+
+a.navigation-list-link:hover {
+  color: $link-color;
+}

@@ -9,7 +9,7 @@
                      {% if node.section %}section-title{% endif %}
                     ">
             {%- if page.parent == node.title or page.grand_parent == node.title -%}
-              {%- assign first_level_url = node.url | absolute_url -%}
+              {%- assign first_level_url = node.section_link | node.url | absolute_url -%}
             {%- endif -%}
             {%- if node.section -%}
               <span class="section-title">{{ node.title }}</span>

@@ -3,6 +3,7 @@ layout: page
 title: How Fibers are Scheduled
 nav_order: 3
 parent: Technical Overview
+permalink: /technical-overview/fiber-scheduling/
 ---
 # How Fibers are Scheduled
 
@@ -67,7 +68,7 @@ end
 
 Let's examine the the flow of control in our echo server program:
 
-<p style="text-align: center"><img src="../assets/img/echo-fibers.svg"></p>
+<p style="text-align: center"><img src="../../assets/img/echo-fibers.svg"></p>
 
 > In the above figure, the fat blue dots represents moments at which fibers can
 > be switched. The light blue horizontal arrows represent switching from one

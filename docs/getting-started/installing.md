@@ -3,6 +3,7 @@ layout: page
 title: Installing Polyphony
 nav_order: 1
 parent: Getting Started
+permalink: /getting-started/installing/
 ---
 # Getting Started
 

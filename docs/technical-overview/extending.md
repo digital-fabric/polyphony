@@ -3,6 +3,7 @@ layout: page
 title: Extending Polyphony
 nav_order: 5
 parent: Technical Overview
+permalink: /technical-overview/extending/
 ---
 # Extending Polyphony
 

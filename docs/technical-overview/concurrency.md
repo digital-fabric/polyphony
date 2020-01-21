@@ -3,6 +3,7 @@ layout: page
 title: Concurrency the Easy Way
 nav_order: 2
 parent: Technical Overview
+permalink: /technical-overview/concurrency/
 ---
 # Concurrency the Easy Way
 

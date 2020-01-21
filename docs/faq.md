@@ -5,7 +5,7 @@ nav_order: 100
 ---
 # Frequently Asked Questions
 
-## Why not just use callbacks instead of fibers?
+### Why not just use callbacks instead of fibers?
 
 It is true that reactor engines such as libev use callbacks to handle events.
 There's also programming platforms such as [node.js](https://nodejs.org/) that
@@ -85,7 +85,7 @@ In conclusion:
 * Callbacks often lead to code bloat.
 * Callbacks are harder to debug.
 
-## If callbacks suck, why not use promises?
+### If callbacks suck, why not use promises?
 
 Promises have gained a lot of traction during the last few years as an  
 alternative to callbacks, above all in the Javascript community. While promises
@@ -94,7 +94,7 @@ found to offer enough of a benefit. Promises still cause split logic, are quite
 verbose and provide a non-native exception handling mechanism. In addition, they
 do not make it easier to debug your code.
 
-## Why is awaiting implicit? Why not use explicit async/await?
+### Why is awaiting implicit? Why not use explicit async/await?
 
 Actually, async/await was contemplated while developing Polyphony, but at a
 certain point it was decided to abandon these methods / decorators in favor of a
@@ -106,7 +106,7 @@ Instead, we have decided to make blocking operations implicit and thus allow the
 use of common APIs such as `Kernel#sleep` or `IO.popen` in a transparent manner.
 After all, these APIs in their stock form block execution just as well.
 
-## Why use `Fiber#transfer` and not `Fiber#resume`?
+### Why use `Fiber#transfer` and not `Fiber#resume`?
 
 The API for `Fiber.yield`/`Fiber#resume` is stateful and is intended for the
 asymmetric execution of coroutines. This is useful when using generators, or
@@ -116,7 +116,7 @@ between them, which is much easier to achieve using `Fiber#transfer`. In
 addition, using `Fiber#transfer` allows us to perform blocking operations from
 the main fiber, which is not possible when using `Fiber#resume`.
 
-## Why is Polyphony not split into multiple gems?
+### Why is Polyphony not split into multiple gems?
 
 Polyphony is currently at an experimental stage, and its different APIs are
 still in flux. For that reason, all the different parts of Polyphony are
@@ -124,7 +124,7 @@ currently kept in a single gem. Once things stabilize, and as Polyphony
 approaches version 1.0, it will be split into separate gems, each with its own
 functionality.
 
-## Can I use Polyphony in a multithreaded program?
+### Can I use Polyphony in a multithreaded program?
 
 Yes, as of version 0.27 Polyphony implements per-thread fiber-scheduling. It is
 however important to note that Polyphony places the emphasis on a multi-fiber
@@ -133,17 +133,17 @@ web servers. It is not recommended to spin up per-task threads owing to Ruby's
 GVL, and the high cost associated with threads (this is discussed detail
 elsewhere in the Polyphony docs).
 
-## Can I run Rails using Polyphony?
+### Can I run Rails using Polyphony?
 
 Not yet. We do plan to support running Rails when our multithreaded support is
 ready (see above).
 
-## How can I contribute to Polyphony?
+### How can I contribute to Polyphony?
 
 The Polyphony repository is at https://github.com/digital-fabric/polyphony. Feel
 free to create issues and contribute pull requests.
 
-## Who is behind this project?
+### Who is behind this project?
 
 I'm Sharon Rosner, an independent software developer living in France. Here's my
 [github profile](https://github.com/ciconia). You can contact me by writing to

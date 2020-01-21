@@ -3,6 +3,7 @@ layout: page
 title: Exception Handling
 nav_order: 4
 parent: Technical Overview
+permalink: /technical-overview/exception-handling/
 ---
 # Exception Handling
 
