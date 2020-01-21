@@ -67,7 +67,7 @@ end
 
 Let's examine the the flow of control in our echo server program:
 
-![Echo fibers](/assets/img/echo-fibers.svg)
+![Echo fibers](../assets/img/echo-fibers.svg)
 
 - The main fiber (fiber 1) runs a loop waiting for incoming connections.
 - The call to `server.accept` blocks, and an I/O event watcher is set up. The
