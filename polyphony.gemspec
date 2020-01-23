@@ -11,7 +11,9 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://dfab.gitbook.io/polyphony/'
   s.metadata    = {
     "source_code_uri" => "https://github.com/digital-fabric/polyphony",
-    "documentation_uri" => "https://dfab.gitbook.io/polyphony/"
+    "documentation_uri" => "https://digital-fabric.github.io/polyphony/",
+    "homepage_uri" => "https://digital-fabric.github.io/polyphony/",
+    "changelog_uri" => "https://github.com/digital-fabric/polyphony/blob/master/CHANGELOG.md"
   }
   s.rdoc_options = ["--title", "polyphony", "--main", "README.md"]
   s.extra_rdoc_files = ["README.md"]
