@@ -1,6 +1,7 @@
 ## 0.28 Redo docs
 
-- Move to Jekyll on Github Pages
+- Return to linked list run queue (check performance)
+- Reimplement thread pool
 - Write about threads: FAQ, scheduling, etc
 - Landing page like drawn in my notebook
 
@@ -38,6 +39,23 @@
     - It can be used to do CPU-bound stuff on a separate thread while allowing a
       so-called "UI" thread to remain responsive by using fiber-aware
       concurrency.
+- API for terminating a fiber from within the fiber. We already have:
+  
+  - `suspend`
+  - `snooze`
+  - `spin`
+  - `spin_loop`
+  
+  And there's also:
+
+  - `Fiber#schedule`
+  - `Fiber#stop`
+  - `Fiber#await`
+
+  What we can possibly do is perhaps:
+
+  - `resolve`
+  - `terminate`
 
 ## 0.29 Multithreaded fiber scheduling - some rough corners
 
