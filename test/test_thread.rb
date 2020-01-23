@@ -31,9 +31,11 @@ class ThreadTest < MiniTest::Test
     spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new { sleep 1; buffer << 4 }
     t0 = Time.now
-    r = t.join(0.01)
+    r = t.join(0.02)
+    t1 = Time.now
 
-    assert Time.now - t0 < 0.2
+    assert t1 - t0 >= 0.02
+    assert t1 - t0 < 0.04
     assert_equal [1, 2, 3], buffer
     assert_nil r
   ensure

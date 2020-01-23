@@ -11,8 +11,8 @@ static ID ID_ivar_main_fiber;
 static ID ID_pop;
 static ID ID_push;
 static ID ID_run_queue;
-// static ID ID_run_queue_head;
-// static ID ID_run_queue_tail;
+static ID ID_run_queue_head;
+static ID ID_run_queue_tail;
 static ID ID_runnable_next;
 static ID ID_stop;
 
@@ -40,8 +40,8 @@ static VALUE Thread_create_event_selector(VALUE self, VALUE thread) {
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
   rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(0));
-  VALUE queue = rb_ary_new();
-  rb_ivar_set(self, ID_run_queue, queue);
+  // VALUE queue = rb_ary_new();
+  // rb_ivar_set(self, ID_run_queue, queue);
   VALUE selector = rb_funcall(rb_cThread, ID_create_event_selector, 1, self);
   rb_ivar_set(self, ID_ivar_event_selector, selector);
 
@@ -85,11 +85,11 @@ static VALUE SYM_pending_watchers;
 
 static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   VALUE stats = rb_hash_new();
-  VALUE queue = rb_ivar_get(self, ID_run_queue);
+  // VALUE queue = rb_ivar_get(self, ID_run_queue);
   VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
   
-  long scheduled_count = RARRAY_LEN(queue);
-  rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(scheduled_count));
+  // long scheduled_count = RARRAY_LEN(queue);
+  // rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(scheduled_count));
 
   long pending_count = Gyro_Selector_pending_count(selector);
   rb_hash_aset(stats, SYM_pending_watchers, INT2NUM(pending_count));
@@ -97,35 +97,56 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   return stats;
 }
 
-inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber) {
-  VALUE queue = rb_ivar_get(self, ID_run_queue);
-  rb_ary_push(queue, fiber);
+inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+  rb_ivar_set(fiber, ID_runnable_value, value);
+  // if fiber is already scheduled, we just set the scheduled value, then return
+  if (rb_ivar_get(fiber, ID_runnable) != Qnil)
+    return self;
+
+  rb_ivar_set(fiber, ID_runnable, Qtrue);
+
+
+  VALUE head = rb_ivar_get(self, ID_run_queue_head);
+  VALUE tail;
+  if (head != Qnil) {
+    tail = rb_ivar_get(self, ID_run_queue_tail);
+    rb_ivar_set(tail, ID_runnable_next, fiber);
+    rb_ivar_set(self, ID_run_queue_tail, fiber);
+  }
+  else {
+    rb_ivar_set(self, ID_run_queue_head, fiber);
+    rb_ivar_set(self, ID_run_queue_tail, fiber);
+  }
+  rb_ivar_set(fiber, ID_runnable_next, Qnil);
+  // VALUE queue = rb_ivar_get(self, ID_run_queue);
+  // rb_ary_push(queue, fiber);
   return self;
 }
 
 VALUE Thread_switch_fiber(VALUE self) {
-  VALUE queue = rb_ivar_get(self, ID_run_queue);
+  // VALUE queue = rb_ivar_get(self, ID_run_queue);
   VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
-  long scheduled_count;
+  // long scheduled_count;
+  VALUE next_runnable;
 
   while (1) {
-    scheduled_count = RARRAY_LEN(queue);
+    next_runnable = rb_ivar_get(self, ID_run_queue_head);
+    // scheduled_count = RARRAY_LEN(queue);
     // if (break_flag != 0) {
     //   return Qnil;
     // }
-    if ((scheduled_count > 0) || (Thread_fiber_ref_count(self) == 0)) {
+    if ((next_runnable != Qnil) || (Thread_fiber_ref_count(self) == 0)) {
       break;
     }
 
     Gyro_Selector_run(selector);
   }
 
-  VALUE next_fiber;
   // while (1) {
-    if (scheduled_count == 0) {
-      return Qnil;
-    }
-    next_fiber = rb_ary_shift(queue);
+  if (next_runnable == Qnil) {
+    return Qnil;
+  }
+    // next_fiber = rb_ary_shift(queue);
     // break;
     // if (rb_fiber_alive_p(next_fiber) == Qtrue) {
     //   break;
@@ -133,16 +154,38 @@ VALUE Thread_switch_fiber(VALUE self) {
   // }
 
   // run next fiber
-  VALUE value = rb_ivar_get(next_fiber, ID_runnable_value);
-  rb_ivar_set(next_fiber, ID_runnable, Qnil);
-  RB_GC_GUARD(next_fiber);
+  VALUE value = rb_ivar_get(next_runnable, ID_runnable_value);
+  rb_ivar_set(next_runnable, ID_runnable, Qnil);
+  rb_ivar_set(next_runnable, ID_runnable_value, Qnil);
+  VALUE next_next_runnable = rb_ivar_get(next_runnable, ID_runnable_next);
+
+  rb_ivar_set(self, ID_run_queue_head, next_next_runnable);
+  if (next_next_runnable != Qnil) {
+    rb_ivar_set(next_runnable, ID_runnable_next, Qnil);
+  }
+  else {
+    rb_ivar_set(self, ID_run_queue_tail, Qnil);
+  }
+  
+  RB_GC_GUARD(next_runnable);
   RB_GC_GUARD(value);
-  return rb_funcall(next_fiber, ID_transfer, 1, value);
+  return rb_funcall(next_runnable, ID_transfer, 1, value);
 }
 
 VALUE Thread_reset_fiber_scheduling(VALUE self) {
-  VALUE queue = rb_ivar_get(self, ID_run_queue);
-  rb_ary_clear(queue);
+  VALUE next = rb_ivar_get(self, ID_run_queue_head);
+  while (next != Qnil) {
+    VALUE next_next = rb_ivar_get(next, ID_runnable_next);
+    rb_ivar_set(next, ID_runnable, Qnil);
+    rb_ivar_set(next, ID_runnable_value, Qnil);
+    rb_ivar_set(next, ID_runnable_next, Qnil);
+    next = next_next;
+  }
+  rb_ivar_set(self, ID_run_queue_head, Qnil);
+  rb_ivar_set(self, ID_run_queue_tail, Qnil);
+
+  // VALUE queue = rb_ivar_get(self, ID_run_queue);
+  // rb_ary_clear(queue);
   Thread_fiber_reset_ref_count(self);
   return self;
 }
@@ -180,9 +223,8 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
 
-  rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 1);
+  rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
-
 
   ID_create_event_selector    = rb_intern("create_event_selector");
   ID_empty                    = rb_intern("empty?");
@@ -193,6 +235,8 @@ void Init_Thread() {
   ID_pop                      = rb_intern("pop");
   ID_push                     = rb_intern("push");
   ID_run_queue                = rb_intern("run_queue");
+  ID_run_queue_head           = rb_intern("run_queue_head");
+  ID_run_queue_tail           = rb_intern("run_queue_tail");
   ID_runnable_next            = rb_intern("runnable_next");
   ID_stop                     = rb_intern("stop");
 

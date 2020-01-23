@@ -131,24 +131,31 @@ class GyroTest < MiniTest::Test
   def test_reset
     values = []
     f1 = Fiber.new do
+      # 1
       values << :foo
       snooze
+      # 5
       values << :bar
       suspend
     end.schedule
 
     f2 = Fiber.new do
+      # 2
       Thread.current.reset_fiber_scheduling
       values << :restarted
       snooze
+      # 4
       values << :baz
     end.schedule
 
+    # 0
     suspend
 
+    # 3
     f1.schedule
     suspend
-    assert_equal %i[foo restarted baz], values
+
+    assert_equal %i[foo restarted baz bar], values
   end
 
   def test_restart

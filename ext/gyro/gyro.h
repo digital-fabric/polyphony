@@ -44,11 +44,13 @@ VALUE Thread_ref(VALUE thread);
 VALUE Thread_unref(VALUE thread);
 VALUE Thread_switch_fiber(VALUE thread);
 VALUE Fiber_await();
-VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber);
+VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_post_fork(VALUE thread);
 
 
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
+
+// Use for trace debugging, e.g. INSPECT(2, self, value);
 #define INSPECT(...) (rb_funcall(rb_cObject, rb_intern("p"), __VA_ARGS__))
 
 extern VALUE mGyro;
