@@ -100,13 +100,7 @@ static VALUE Fiber_state(VALUE self) {
 }
 
 inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
-  rb_ivar_set(fiber, ID_runnable_value, value);
-  // if fiber is already scheduled, we just set the scheduled value, then return
-  if (rb_ivar_get(fiber, ID_runnable) != Qnil)
-    return;
-
-  rb_ivar_set(fiber, ID_runnable, Qtrue);
-  Thread_schedule_fiber(rb_thread_current(), fiber);
+  Thread_schedule_fiber(rb_thread_current(), fiber, value);
 }
 
 void Init_Gyro() {

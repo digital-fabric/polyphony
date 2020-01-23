@@ -97,9 +97,14 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   return stats;
 }
 
-inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber) {
-  VALUE queue = rb_ivar_get(self, ID_run_queue);
-  rb_ary_push(queue, fiber);
+inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+  // if fiber is already scheduled, just set the scheduled value, then return
+  rb_ivar_set(fiber, ID_runnable_value, value);
+  if (rb_ivar_get(fiber, ID_runnable) == Qnil) {
+    VALUE queue = rb_ivar_get(self, ID_run_queue);
+    rb_ary_push(queue, fiber);
+    rb_ivar_set(fiber, ID_runnable, Qtrue);
+  }
   return self;
 }
 
@@ -180,7 +185,7 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
 
-  rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 1);
+  rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
 
 
