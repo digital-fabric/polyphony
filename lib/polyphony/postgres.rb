@@ -91,4 +91,18 @@ class ::PG::Connection
   end
 
   self.async_api = true
+
+  def wait_for_notify(timeout = nil, &block)
+    return move_on_after(timeout) { wait_for_notify(&block) } if timeout
+
+    loop do
+      socket_io.read_watcher.await
+      consume_input
+      if (notice = self.notifies)
+        values = notice.values
+        block&.(*values)
+        return values.first
+      end
+    end
+  end
 end
