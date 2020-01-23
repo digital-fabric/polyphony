@@ -3,18 +3,18 @@
 static VALUE cQueue;
 
 static ID ID_create_event_selector;
-static ID ID_ivar_event_selector;
-static ID ID_ivar_event_selector_proc;
-static ID ID_fiber_ref_count;
-static ID ID_run_queue;
-static ID ID_ivar_main_fiber;
-static ID ID_stop;
-
-static ID ID_scheduled;
-
 static ID ID_empty;
+static ID ID_fiber_ref_count;
+static ID ID_ivar_event_selector_proc;
+static ID ID_ivar_event_selector;
+static ID ID_ivar_main_fiber;
 static ID ID_pop;
 static ID ID_push;
+static ID ID_run_queue;
+// static ID ID_run_queue_head;
+// static ID ID_run_queue_tail;
+static ID ID_runnable_next;
+static ID ID_stop;
 
 VALUE event_selector_factory_proc(RB_BLOCK_CALL_FUNC_ARGLIST(args, klass)) {
   return rb_funcall(klass, ID_new, 1, rb_ary_entry(args, 0));
@@ -133,8 +133,8 @@ VALUE Thread_switch_fiber(VALUE self) {
   // }
 
   // run next fiber
-  VALUE value = rb_ivar_get(next_fiber, ID_scheduled_value);
-  rb_ivar_set(next_fiber, ID_scheduled, Qnil);
+  VALUE value = rb_ivar_get(next_fiber, ID_runnable_value);
+  rb_ivar_set(next_fiber, ID_runnable, Qnil);
   RB_GC_GUARD(next_fiber);
   RB_GC_GUARD(value);
   return rb_funcall(next_fiber, ID_transfer, 1, value);
@@ -185,15 +185,15 @@ void Init_Thread() {
 
 
   ID_create_event_selector    = rb_intern("create_event_selector");
+  ID_empty                    = rb_intern("empty?");
+  ID_fiber_ref_count          = rb_intern("fiber_ref_count");
   ID_ivar_event_selector      = rb_intern("@event_selector");
   ID_ivar_event_selector_proc = rb_intern("@event_selector_proc");
   ID_ivar_main_fiber          = rb_intern("@main_fiber");
-  ID_fiber_ref_count          = rb_intern("fiber_ref_count");
-  ID_run_queue                = rb_intern("run_queue");
-  ID_scheduled                = rb_intern("scheduled");
-  ID_empty                    = rb_intern("empty?");
   ID_pop                      = rb_intern("pop");
   ID_push                     = rb_intern("push");
+  ID_run_queue                = rb_intern("run_queue");
+  ID_runnable_next            = rb_intern("runnable_next");
   ID_stop                     = rb_intern("stop");
 
   SYM_scheduled_fibers = ID2SYM(rb_intern("scheduled_fibers"));

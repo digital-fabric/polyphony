@@ -10,8 +10,8 @@ ID ID_inspect;
 ID ID_new;
 ID ID_raise;
 ID ID_ivar_running;
-ID ID_scheduled;
-ID ID_scheduled_value;
+ID ID_runnable;
+ID ID_runnable_value;
 ID ID_size;
 ID ID_signal_bang;
 ID ID_switch_fiber;
@@ -64,7 +64,7 @@ static VALUE Gyro_unref(VALUE self) {
 }
 
 static VALUE Gyro_suspend(VALUE self) {
-  rb_ivar_set(self, ID_scheduled_value, Qnil);
+  rb_ivar_set(self, ID_runnable_value, Qnil);
   VALUE ret = Thread_switch_fiber(rb_thread_current());
   
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
@@ -94,18 +94,18 @@ static VALUE Fiber_state(VALUE self) {
   if (!rb_fiber_alive_p(self) || (rb_ivar_get(self, ID_ivar_running) == Qfalse))
     return SYM_dead;
   if (rb_fiber_current() == self) return SYM_running;
-  if (rb_ivar_get(self, ID_scheduled) != Qnil) return SYM_runnable;
+  if (rb_ivar_get(self, ID_runnable) != Qnil) return SYM_runnable;
   
   return SYM_waiting;
 }
 
 inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
-  rb_ivar_set(fiber, ID_scheduled_value, value);
+  rb_ivar_set(fiber, ID_runnable_value, value);
   // if fiber is already scheduled, we just set the scheduled value, then return
-  if (rb_ivar_get(fiber, ID_scheduled) != Qnil)
+  if (rb_ivar_get(fiber, ID_runnable) != Qnil)
     return;
 
-  rb_ivar_set(fiber, ID_scheduled, Qtrue);
+  rb_ivar_set(fiber, ID_runnable, Qtrue);
   Thread_schedule_fiber(rb_thread_current(), fiber);
 }
 
@@ -134,9 +134,9 @@ void Init_Gyro() {
   ID_inspect          = rb_intern("inspect");
   ID_new              = rb_intern("new");
   ID_raise            = rb_intern("raise");
-  ID_ivar_running          = rb_intern("@running");
-  ID_scheduled        = rb_intern("scheduled");
-  ID_scheduled_value  = rb_intern("scheduled_value");
+  ID_ivar_running     = rb_intern("@running");
+  ID_runnable         = rb_intern("runnable");
+  ID_runnable_value   = rb_intern("runnable_value");
   ID_size             = rb_intern("size");
   ID_signal_bang      = rb_intern("signal!");
   ID_switch_fiber     = rb_intern("switch_fiber");
