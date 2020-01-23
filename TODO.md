@@ -1,35 +1,8 @@
 ## 0.28 Redo docs
 
-- Return to linked list run queue (check performance)
 - Reimplement thread pool
 - Write about threads: FAQ, scheduling, etc
 - Landing page like drawn in my notebook
-
-- New copy:
-
-  <div class="landing-hero">
-
-  # Polyphony
-
-  ### Fine-grained Concurrency for Ruby
-  </div>
-
-  <div class="landing-features">
-  ## Focused on Developer Happiness
-
-  Lorem ipsum
-
-  ## Optimized for High Performane
-
-  Lorem ipsum
-
-  ## Designed for Interoperability
-
-  Lorem ipsum
-
-  ## A Growing Ecosystem
-
-  </div>
 
 - Offloading DB work to a worker thread (or thread pool), for example when using
     SQLite

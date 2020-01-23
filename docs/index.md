@@ -21,10 +21,33 @@ the hood, Polyphony uses [libev](https://github.com/enki/libev) as a
 high-performance event reactor that provides timers, I/O watchers and other
 asynchronous event primitives.
 
+
+## Focused on Developer Happiness
+
+Polyphony is designed to make concurrent Ruby programming feel natural and
+fluent. Polyphony reduces the boilerplate usually associated with concurrent
+programming, and introduces concurrency primitives that are easy to use, easy to
+understand, and above all idiomatic.
+
+## Optimized for High Performance
+
+Polyphony offers high performance for I/O bound Ruby apps. Distributing
+concurrent tasks over fibers, instead of threads or processes, minimizes memory
+consumption and reduces the cost of context-switching.
+
+## Designed for Interoperability
+
 Polyphony makes it possible to use normal Ruby built-in classes like `IO`, and
-`Socket` in a concurrent fashion without having to resort to threads. Polyphony
-takes care of context-switching automatically whenever a blocking call like
-`Socket#accept` or `IO#read` is issued.
+`Socket` in a concurrent multi-fiber environment. Polyphony takes care of
+context-switching automatically whenever a blocking call like `Socket#accept`,
+`IO#read` or `Kernel#sleep` is issued.
+
+## A Growing Ecosystem
+
+Polyphony includes a full-blown HTTP server implementation with integrated
+support for HTTP 1, HTTP 2 and WebSockets, TLS/SSL termination, automatic
+ALPN protocol selection, and body streaming. Polyphony also includes fiber-aware
+extensions for PostgreSQL and Redis. More databases and services are forthcoming.
 
 ## Features
 
@@ -48,6 +71,7 @@ Polyphony draws inspiration from the following, in no particular order:
   [async](https://github.com/socketry/async) (Polyphony's C-extension code is
   largely a spinoff of
   [nio4r's](https://github.com/socketry/nio4r/tree/master/ext))
+* The [go scheduler](https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html)
 * [EventMachine](https://github.com/eventmachine/eventmachine)
 * [Trio](https://trio.readthedocs.io/)
 * [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) (and actually,
