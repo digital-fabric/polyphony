@@ -120,16 +120,20 @@ class ::Fiber
   def run(first_value)
     Kernel.raise first_value if first_value.is_a?(Exception)
 
+    start_execution(first_value)
+  rescue ::Interrupt, ::SystemExit => e
+    Thread.current.main_fiber.transfer e.class.new
+  rescue Exceptions::MoveOn => e
+    finish_execution(e.value)
+  rescue Exception => e
+    finish_execution(e, true)
+  end
+
+  def start_execution(first_value)
     @running = true
     self.class.map[self] = true
     result = @block.(first_value)
     finish_execution(result)
-  rescue Exceptions::MoveOn => e
-    finish_execution(e.value)
-  rescue ::Interrupt, ::SystemExit => e
-    Thread.current.main_fiber.transfer e.class.new
-  rescue Exception => e
-    finish_execution(e, true)
   end
 
   def finish_execution(result, uncaught_exception = false)
