@@ -111,32 +111,24 @@ inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
 VALUE Thread_switch_fiber(VALUE self) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
-  long scheduled_count;
+  VALUE next_fiber;
 
   while (1) {
-    scheduled_count = RARRAY_LEN(queue);
+    next_fiber = rb_ary_shift(queue);
     // if (break_flag != 0) {
     //   return Qnil;
     // }
-    if ((scheduled_count > 0) || (Thread_fiber_ref_count(self) == 0)) {
+    if ((next_fiber != Qnil) || (Thread_fiber_ref_count(self) == 0)) {
       break;
     }
 
     Gyro_Selector_run(selector);
   }
 
-  VALUE next_fiber;
-  // while (1) {
-    if (scheduled_count == 0) {
-      return Qnil;
-    }
-    next_fiber = rb_ary_shift(queue);
-    // break;
-    // if (rb_fiber_alive_p(next_fiber) == Qtrue) {
-    //   break;
-    // }
-  // }
-
+  if (next_fiber == Qnil) {
+    return Qnil;
+  }
+    
   // run next fiber
   VALUE value = rb_ivar_get(next_fiber, ID_runnable_value);
   rb_ivar_set(next_fiber, ID_runnable, Qnil);
