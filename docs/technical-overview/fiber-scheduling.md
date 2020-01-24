@@ -68,7 +68,7 @@ end
 
 Let's examine the the flow of control in our echo server program:
 
-<p style="text-align: center"><img src="../../assets/img/echo-fibers.svg"></p>
+<p class="img-figure"><img src="../../assets/img/echo-fibers.svg"></p>
 
 > In the above figure, the fat blue dots represents moments at which fibers can
 > be switched. The light blue horizontal arrows represent switching from one
