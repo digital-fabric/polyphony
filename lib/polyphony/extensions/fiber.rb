@@ -104,13 +104,18 @@ class ::Fiber
     @running_fibers_map.size
   end
 
-  def self.spin(orig_caller = caller, &block)
+  def self.spin(tag, orig_caller = caller, &block)
     f = new { |v| f.run(v) }
-    f.setup(block, orig_caller)
+    f.setup(tag, block, orig_caller)
     f
   end
 
-  def setup(block, caller)
+  attr_accessor :tag
+  Fiber.current.tag = :main
+
+  def setup(tag, block, caller)
+    __fiber_trace__(:fiber_create, self)
+    @tag = tag
     @calling_fiber = Fiber.current
     @caller = caller
     @block = block
@@ -137,6 +142,7 @@ class ::Fiber
   end
 
   def finish_execution(result, uncaught_exception = false)
+    __fiber_trace__(:fiber_terminate, self, result)
     @result = result
     @running = false
     self.class.map.delete(self)

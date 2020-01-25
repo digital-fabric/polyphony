@@ -29,8 +29,8 @@ module API
     canceller.stop
   end
 
-  def spin(&block)
-    Fiber.spin(caller, &block)
+  def spin(tag = nil, &block)
+    Fiber.spin(tag, caller, &block)
   end
   alias_method :defer, :spin
 

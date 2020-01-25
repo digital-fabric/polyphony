@@ -109,6 +109,13 @@ inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
 }
 
 VALUE Thread_switch_fiber(VALUE self) {
+  VALUE current_fiber;
+  if (__tracing_enabled__) {
+    current_fiber = rb_fiber_current();
+    if (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse) {
+      rb_funcall(rb_cObject, ID_fiber_trace, 2, SYM_fiber_switchpoint, current_fiber);
+    }
+  }
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
   VALUE next_fiber;
@@ -122,15 +129,26 @@ VALUE Thread_switch_fiber(VALUE self) {
       break;
     }
 
+    if (__tracing_enabled__) {
+      rb_funcall(rb_cObject, ID_fiber_trace, 2, SYM_fiber_ev_loop_enter, current_fiber);
+    }
     Gyro_Selector_run(selector);
+    if (__tracing_enabled__) {
+      rb_funcall(rb_cObject, ID_fiber_trace, 2, SYM_fiber_ev_loop_leave, current_fiber);
+    }
   }
 
   if (next_fiber == Qnil) {
     return Qnil;
   }
-    
+
   // run next fiber
   VALUE value = rb_ivar_get(next_fiber, ID_runnable_value);
+
+  if (__tracing_enabled__) {
+    rb_funcall(rb_cObject, ID_fiber_trace, 3, SYM_fiber_run, next_fiber, value);
+  }
+
   rb_ivar_set(next_fiber, ID_runnable, Qnil);
   RB_GC_GUARD(next_fiber);
   RB_GC_GUARD(value);

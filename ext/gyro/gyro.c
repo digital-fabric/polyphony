@@ -6,6 +6,7 @@ ID ID_call;
 ID ID_caller;
 ID ID_clear;
 ID ID_each;
+ID ID_fiber_trace;
 ID ID_inspect;
 ID ID_new;
 ID ID_raise;
@@ -20,6 +21,13 @@ ID ID_R;
 ID ID_W;
 ID ID_RW;
 
+ID ID_trace_ev_loop_enter;
+ID ID_trace_ev_loop_leave;
+ID ID_trace_run;
+ID ID_trace_runnable;
+ID ID_trace_terminate;
+ID ID_trace_wait;
+
 ID ID_empty;
 ID ID_pop;
 ID ID_push;
@@ -28,6 +36,15 @@ VALUE SYM_dead;
 VALUE SYM_running;
 VALUE SYM_runnable;
 VALUE SYM_waiting;
+
+VALUE SYM_fiber_create;
+VALUE SYM_fiber_ev_loop_enter;
+VALUE SYM_fiber_ev_loop_leave;
+VALUE SYM_fiber_run;
+VALUE SYM_fiber_schedule;
+VALUE SYM_fiber_switchpoint;
+VALUE SYM_fiber_terminate;
+
 
 // static VALUE Gyro_break_set(VALUE self) {
 //   break_flag = 1;
@@ -100,6 +117,9 @@ static VALUE Fiber_state(VALUE self) {
 }
 
 inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
+  if (__tracing_enabled__) {
+    rb_funcall(rb_cObject, ID_fiber_trace, 3, SYM_fiber_schedule, fiber, value);
+  }
   Thread_schedule_fiber(rb_thread_current(), fiber, value);
 }
 
@@ -121,27 +141,31 @@ void Init_Gyro() {
   rb_define_method(cFiber, "schedule", Fiber_schedule, -1);
   rb_define_method(cFiber, "state", Fiber_state, 0);
 
-  ID_call             = rb_intern("call");
-  ID_caller           = rb_intern("caller");
-  ID_clear            = rb_intern("clear");
-  ID_each             = rb_intern("each");
-  ID_inspect          = rb_intern("inspect");
-  ID_new              = rb_intern("new");
-  ID_raise            = rb_intern("raise");
-  ID_ivar_running     = rb_intern("@running");
-  ID_runnable         = rb_intern("runnable");
-  ID_runnable_value   = rb_intern("runnable_value");
-  ID_size             = rb_intern("size");
-  ID_signal_bang      = rb_intern("signal!");
-  ID_switch_fiber     = rb_intern("switch_fiber");
-  ID_transfer         = rb_intern("transfer");
-  ID_R                = rb_intern("r");
-  ID_W                = rb_intern("w");
-  ID_RW               = rb_intern("rw");
+  ID_call           = rb_intern("call");
+  ID_caller         = rb_intern("caller");
+  ID_clear          = rb_intern("clear");
+  ID_each           = rb_intern("each");
+  ID_empty          = rb_intern("empty?");
+  ID_inspect        = rb_intern("inspect");
+  ID_ivar_running   = rb_intern("@running");
+  ID_new            = rb_intern("new");
+  ID_pop            = rb_intern("pop");
+  ID_push           = rb_intern("push");
+  ID_raise          = rb_intern("raise");
+  ID_runnable       = rb_intern("runnable");
+  ID_runnable_value = rb_intern("runnable_value");
+  ID_signal_bang    = rb_intern("signal!");
+  ID_size           = rb_intern("size");
+  ID_switch_fiber   = rb_intern("switch_fiber");
+  ID_transfer       = rb_intern("transfer");
 
-  ID_empty            = rb_intern("empty?");
-  ID_pop              = rb_intern("pop");
-  ID_push             = rb_intern("push");
+  ID_R              = rb_intern("r");
+  ID_RW             = rb_intern("rw");
+  ID_W              = rb_intern("w");
+
+  ID_fiber_trace          = rb_intern("__fiber_trace__");
+
+  #define GLOBAL_SYM(sym) var = ID2SYM(rb_intern(sym)); rb_global_variable(sym)
 
   SYM_dead = ID2SYM(rb_intern("dead"));
   SYM_running = ID2SYM(rb_intern("running"));
@@ -151,4 +175,19 @@ void Init_Gyro() {
   rb_global_variable(&SYM_running);
   rb_global_variable(&SYM_runnable);
   rb_global_variable(&SYM_waiting);
+
+  SYM_fiber_create        = ID2SYM(rb_intern("fiber_create"));
+  SYM_fiber_ev_loop_enter = ID2SYM(rb_intern("fiber_ev_loop_enter"));
+  SYM_fiber_ev_loop_leave = ID2SYM(rb_intern("fiber_ev_loop_leave"));
+  SYM_fiber_run           = ID2SYM(rb_intern("fiber_run"));
+  SYM_fiber_schedule      = ID2SYM(rb_intern("fiber_schedule"));
+  SYM_fiber_switchpoint   = ID2SYM(rb_intern("fiber_switchpoint"));
+  SYM_fiber_terminate     = ID2SYM(rb_intern("fiber_terminate"));
+  rb_global_variable(&SYM_fiber_create);
+  rb_global_variable(&SYM_fiber_ev_loop_enter);
+  rb_global_variable(&SYM_fiber_ev_loop_leave);
+  rb_global_variable(&SYM_fiber_run);
+  rb_global_variable(&SYM_fiber_schedule);
+  rb_global_variable(&SYM_fiber_switchpoint);
+  rb_global_variable(&SYM_fiber_terminate);
 }

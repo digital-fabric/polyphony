@@ -23,20 +23,20 @@ class ::IO
 
     EMPTY_HASH = {}.freeze
 
-    alias_method :orig_foreach, :foreach
-    def foreach(_name, _sep = $/, _limit = nil, _getline_args = EMPTY_HASH,
-                &_block)
-      # IO.orig_read(name).each_line(&block)
-      raise NotImplementedError
+    # alias_method :orig_foreach, :foreach
+    # def foreach(_name, _sep = $/, _limit = nil, _getline_args = EMPTY_HASH,
+    #             &_block)
+    #   # IO.orig_read(name).each_line(&block)
+    #   raise NotImplementedError
 
-      # if sep.is_a?(Integer)
-      #   sep = $/
-      #   limit = sep
-      # end
-      # File.open(name, 'r') do |f|
-      #   f.each_line(sep, limit, getline_args, &block)
-      # end
-    end
+    #   # if sep.is_a?(Integer)
+    #   #   sep = $/
+    #   #   limit = sep
+    #   # end
+    #   # File.open(name, 'r') do |f|
+    #   #   f.each_line(sep, limit, getline_args, &block)
+    #   # end
+    # end
 
     alias_method :orig_read, :read
     def read(name, length = nil, offset = nil, opt = EMPTY_HASH)

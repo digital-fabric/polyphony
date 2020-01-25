@@ -58,14 +58,13 @@ extern VALUE cGyro_Queue;
 extern VALUE cGyro_Selector;
 extern VALUE cGyro_Timer;
 
-extern VALUE Gyro_reactor_fiber;
-extern VALUE Gyro_root_fiber;
-
 extern ID ID_call;
 extern ID ID_caller;
 extern ID ID_clear;
 extern ID ID_each;
+extern ID ID_fiber_trace;
 extern ID ID_inspect;
+extern ID ID_ivar_running;
 extern ID ID_new;
 extern ID ID_raise;
 extern ID ID_runnable;
@@ -77,5 +76,16 @@ extern ID ID_transfer;
 extern ID ID_R;
 extern ID ID_W;
 extern ID ID_RW;
+
+extern VALUE SYM_fiber_create;
+extern VALUE SYM_fiber_ev_loop_enter;
+extern VALUE SYM_fiber_ev_loop_leave;
+extern VALUE SYM_fiber_run;
+extern VALUE SYM_fiber_schedule;
+extern VALUE SYM_fiber_switchpoint;
+extern VALUE SYM_fiber_terminate;
+
+
+extern int __tracing_enabled__;
 
 #endif /* RUBY_EV_H */

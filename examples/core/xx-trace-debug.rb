@@ -22,8 +22,14 @@ f2 = spin(:f2) {
 
 $start_stamp = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
 
+watcher_fiber = nil
+debug_mode = :step
+
+cache = {}
+
 trace = TracePoint.new(:line, :call, :return, :c_call, :c_return, :b_call, :b_return, :fiber_switch) do |tp|
-  # next if tp.path =~ /^#{Exception::POLYPHONY_DIR}/
+
+  next if tp.path =~ /^#{Exception::POLYPHONY_DIR}/
   # next unless Fiber.current == f1
 
   r = {
@@ -39,11 +45,19 @@ trace = TracePoint.new(:line, :call, :return, :c_call, :c_return, :b_call, :b_re
     exception: tp.event == :raise && tp.raised_exception
   }
 
+  if tp.event == :line
+    source = cache[r[:file]] ||= IO.orig_read(r[:file]).lines
+    STDOUT.orig_puts format("* %s:%d", r[:file], r[:lineno])
+    STDOUT.orig_puts format("%04d %s", r[:lineno], source[r[:lineno] - 1])
+    orig_gets
+    next
+  end
+
   if (tp.event =~ /return/) && (r[:method_id] =~ /^__trace_(.+)__/)
-    event = $1
+    event = $1.to_sym
     fiber = r[:return_value][0]
     value = r[:return_value][1]
-    puts "#{r[:stamp]} #{fiber&.tag} #{event} (#{value.inspect})"
+    STDOUT.orig_puts "#{r[:stamp]} #{fiber&.tag} #{event} (#{value.inspect})"
     next
   end
 
@@ -51,9 +65,6 @@ trace = TracePoint.new(:line, :call, :return, :c_call, :c_return, :b_call, :b_re
   
   # STDOUT.orig_puts "#{r[:file]}:#{r[:lineno]} #{r[:event]} (#{r[:fiber]})"
   # STDOUT.orig_puts "(continue),("
-rescue => e
-  p e
-  exit!
 end
 
 trace.enable
