@@ -116,6 +116,14 @@ between them, which is much easier to achieve using `Fiber#transfer`. In
 addition, using `Fiber#transfer` allows us to perform blocking operations from
 the main fiber, which is not possible when using `Fiber#resume`.
 
+### Why does Polyphony reimplements core APIs such as `IO#read` and `Kernel#sleep`?
+
+Polyphony "patches" some Ruby core and stdlib APIs, providing behavioraly
+compatible fiber-aware implementations. We believe Polyphony has the potential
+to profoundly change the way concurrent Ruby apps are written. Polyphony is
+therefore designed to feel as much as possible like an integral part of the Ruby
+runtime.
+
 ### Why is Polyphony not split into multiple gems?
 
 Polyphony is currently at an experimental stage, and its different APIs are
