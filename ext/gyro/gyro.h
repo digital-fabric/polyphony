@@ -85,7 +85,6 @@ extern VALUE SYM_fiber_schedule;
 extern VALUE SYM_fiber_switchpoint;
 extern VALUE SYM_fiber_terminate;
 
-
 extern int __tracing_enabled__;
 
 #endif /* RUBY_EV_H */

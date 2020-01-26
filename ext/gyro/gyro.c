@@ -123,12 +123,18 @@ inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
   Thread_schedule_fiber(rb_thread_current(), fiber, value);
 }
 
+VALUE Gyro_trace(VALUE self, VALUE enabled) {
+  __tracing_enabled__ = RTEST(enabled) ? 1 : 0;
+  return Qnil;
+}
+
 void Init_Gyro() {
   mGyro = rb_define_module("Gyro");
 
   rb_define_singleton_method(mGyro, "post_fork", Gyro_post_fork, 0);
   rb_define_singleton_method(mGyro, "ref", Gyro_ref, 0);
   rb_define_singleton_method(mGyro, "unref", Gyro_unref, 0);
+  rb_define_singleton_method(mGyro, "trace", Gyro_trace, 1);
 
   // rb_define_singleton_method(mGyro, "break!", Gyro_break_set, 0);
   // rb_define_singleton_method(mGyro, "break?", Gyro_break_get, 0);
