@@ -1,33 +1,7 @@
 ## 0.28 Redo docs
 
-- Reimplement thread pool
+- Docs: explain difference between `sleep` and `suspend`
 - Write about threads: FAQ, scheduling, etc
-
-- Offloading DB work to a worker thread (or thread pool), for example when using
-    SQLite
-  - Restore ThreadPool
-  - Introduce concept of Worker, which acts more or less like Erlang's GenServer
-    - it accepts an RPC invocation as a fiber message, sends back result
-    - It can be used to do CPU-bound stuff on a separate thread while allowing a
-      so-called "UI" thread to remain responsive by using fiber-aware
-      concurrency.
-- API for terminating a fiber from within the fiber. We already have:
-  
-  - `suspend`
-  - `snooze`
-  - `spin`
-  - `spin_loop`
-  
-  And there's also:
-
-  - `Fiber#schedule`
-  - `Fiber#stop`
-  - `Fiber#await`
-
-  What we can possibly do is perhaps:
-
-  - `resolve`
-  - `terminate`
 
 ## 0.29 Multithreaded fiber scheduling - some rough corners
 

@@ -41,4 +41,16 @@ class ThreadTest < MiniTest::Test
     # thread's event selector, leading to a memory leak.
     t.kill if t.alive?
   end
+
+  def test_thread_inspect
+    lineno = __LINE__ + 1
+    t = Thread.new {}
+    str = format(
+      "#<Thread:%d %s:%d (run)>",
+      t.object_id,
+      __FILE__,
+      lineno,
+    )
+    assert_equal str, t.inspect
+  end
 end

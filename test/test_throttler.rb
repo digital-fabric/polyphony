@@ -38,4 +38,10 @@ class ThrottlerTest < MiniTest::Test
   ensure
     t.stop
   end
+
+  def test_throttler_with_invalid_argument
+    assert_raises RuntimeError do
+      Polyphony::Throttler.new(:foobar)
+    end
+  end
 end
