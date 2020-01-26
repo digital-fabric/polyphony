@@ -129,14 +129,38 @@ functionality.
 Yes, as of version 0.27 Polyphony implements per-thread fiber-scheduling. It is
 however important to note that Polyphony places the emphasis on a multi-fiber
 concurrency model, which is highly beneficial for I/O-bound workloads, such as
-web servers. It is not recommended to spin up per-task threads owing to Ruby's
-GVL, and the high cost associated with threads (this is discussed detail
-elsewhere in the Polyphony docs).
+web servers and web apps.
+
+Because of Ruby's [global interpreter lock](https://en.wikipedia.org/wiki/Global_interpreter_lock),
+multiple threads can not in fact run in parallel, and this is actually one of
+the reasons fibers are such a better fit for I/O bound Ruby programs. Threads
+should really be used when performing synchronous operations that are not
+fiber-aware, such as running an expensive SQLite query, or some other expensive
+system call.
+
+### How Does Polyphony Fit Into the Ruby's Future Concurrency Plans
+
+To our understanding, two things are currently on the horizon when it comes to
+concurrency in Ruby: [auto-fibers](https://bugs.ruby-lang.org/issues/13618), and
+[guilds](https://olivierlacan.com/posts/concurrency-in-ruby-3-with-guilds/).
+While the auto-fibers proposal introduces an event reactor into Ruby and
+automates waiting for file descriptors to become ready, allowing scheduling
+other fibers meanwhile. It is still too early to see how Polyphony can coexist
+with that. Another proposal is the addition of a fiber-aware [event
+selector](https://bugs.ruby-lang.org/issues/14736). It is our intention to
+eventually contribute to the discussion in this area by proposing a uniform
+fiber scheduler interface that could be implemented in pure Ruby in order to
+support all platforms and multiple Ruby runtimes.
+
+The guilds proposal, on the other hand, promises to be a perfect match for
+Polyphony's fiber-based concurrency model. Guilds will allow true parallelism
+and together with Polyphony will allow taking full advantage of multiple CPU
+cores in a single Ruby process.
 
 ### Can I run Rails using Polyphony?
 
-Not yet. We do plan to support running Rails when our multithreaded support is
-ready (see above).
+We haven't yet tested Rails with Polyphony, but most probably not. We do plan to
+support running Rails in an eventual release.
 
 ### How can I contribute to Polyphony?
 

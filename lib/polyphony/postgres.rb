@@ -98,11 +98,12 @@ class ::PG::Connection
     loop do
       socket_io.read_watcher.await
       consume_input
-      if (notice = self.notifies)
-        values = notice.values
-        block&.(*values)
-        return values.first
-      end
+      notice = notifies
+      next unless notice
+
+      values = notice.values
+      block&.(*values)
+      return values.first
     end
   end
 end

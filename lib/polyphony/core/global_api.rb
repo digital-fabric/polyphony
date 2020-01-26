@@ -29,8 +29,8 @@ module API
     canceller.stop
   end
 
-  def spin(&block)
-    Fiber.spin(caller, &block)
+  def spin(tag = nil, &block)
+    Fiber.spin(tag, caller, &block)
   end
   alias_method :defer, :spin
 
@@ -66,10 +66,17 @@ module API
   end
 
   def sleep(duration = nil)
-    return suspend unless duration
+    return sleep_forever unless duration
 
     timer = Gyro::Timer.new(duration, 0)
     timer.await
+  end
+
+  def sleep_forever
+    Thread.current.fiber_ref
+    suspend
+  ensure
+    Thread.current.fiber_unref
   end
 
   def supervise(&block)

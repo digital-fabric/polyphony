@@ -35,6 +35,7 @@ module Polyphony
     Sync:         './polyphony/core/sync',
     ThreadPool:   './polyphony/core/thread_pool',
     Throttler:    './polyphony/core/throttler',
+    Trace:        './polyphony/trace',
     Websocket:    './polyphony/websocket'
   )
 

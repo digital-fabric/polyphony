@@ -15,6 +15,10 @@ task :test do
   exec 'ruby test/run.rb'
 end
 
+task :docs do
+  exec 'jekyll serve -s docs'
+end
+
 task default: %w[compile]
 
 CLEAN.include "**/*.o", "**/*.so", "**/*.bundle", "**/*.jar", "pkg", "tmp"

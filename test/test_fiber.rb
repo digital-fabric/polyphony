@@ -25,6 +25,15 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_tag
+    assert_equal :main, Fiber.current.tag
+    Fiber.current.tag = :foo
+    assert_equal :foo, Fiber.current.tag
+
+    f = Fiber.spin(:bar) { }
+    assert_equal :bar, f.tag
+  end
+
   def test_await_return_value
     f = Fiber.spin { %i[foo bar] }
     assert_equal %i[foo bar], f.await
@@ -462,5 +471,43 @@ class MailboxTest < MiniTest::Test
       spin_line_no
     )
     assert_equal expected, f.inspect
+  end
+
+  def test_system_exit_in_fiber
+    parent_error = nil
+    main_fiber_error = nil
+    f2 = nil
+    f1 = spin do
+      f2 = spin { raise SystemExit }
+      suspend
+    rescue Exception => parent_error
+    end
+
+    begin
+      suspend
+    rescue Exception => main_fiber_error
+    end
+
+    assert_nil parent_error
+    assert_kind_of SystemExit, main_fiber_error
+  end
+
+  def test_interrupt_in_fiber
+    parent_error = nil
+    main_fiber_error = nil
+    f2 = nil
+    f1 = spin do
+      f2 = spin { raise Interrupt }
+      suspend
+    rescue Exception => parent_error
+    end
+
+    begin
+      suspend
+    rescue Exception => main_fiber_error
+    end
+
+    assert_nil parent_error
+    assert_kind_of Interrupt, main_fiber_error
   end
 end

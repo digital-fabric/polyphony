@@ -10,6 +10,7 @@ void Init_Gyro_Signal();
 void Init_Gyro_Timer();
 void Init_Socket();
 void Init_Thread();
+void Init_Tracing();
 
 void Init_gyro_ext() {
   ev_set_allocator(xrealloc);
@@ -25,4 +26,6 @@ void Init_gyro_ext() {
 
   Init_Socket();
   Init_Thread();
+
+  Init_Tracing();
 }

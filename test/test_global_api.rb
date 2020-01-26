@@ -242,6 +242,18 @@ class MoveOnAfterTest < MiniTest::Test
     assert_equal :bar, v
   end
 
+  def test_spin_without_tag
+    f = spin { }
+    assert_kind_of Fiber, f
+    assert_nil f.tag
+  end
+
+  def test_spin_with_tag
+    f = spin(:foo) { }
+    assert_kind_of Fiber, f
+    assert_equal :foo, f.tag
+  end
+
   def test_spin_loop
     buffer = []
     counter = 0

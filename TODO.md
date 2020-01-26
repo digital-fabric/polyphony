@@ -2,7 +2,6 @@
 
 - Reimplement thread pool
 - Write about threads: FAQ, scheduling, etc
-- Landing page like drawn in my notebook
 
 - Offloading DB work to a worker thread (or thread pool), for example when using
     SQLite

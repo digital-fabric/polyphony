@@ -11,7 +11,9 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://dfab.gitbook.io/polyphony/'
   s.metadata    = {
     "source_code_uri" => "https://github.com/digital-fabric/polyphony",
-    "documentation_uri" => "https://dfab.gitbook.io/polyphony/"
+    "documentation_uri" => "https://digital-fabric.github.io/polyphony/",
+    "homepage_uri" => "https://digital-fabric.github.io/polyphony/",
+    "changelog_uri" => "https://github.com/digital-fabric/polyphony/blob/master/CHANGELOG.md"
   }
   s.rdoc_options = ["--title", "polyphony", "--main", "README.md"]
   s.extra_rdoc_files = ["README.md"]
@@ -26,6 +28,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'minitest',             '5.13.0'
   s.add_development_dependency  'minitest-reporters',   '1.4.2'
   s.add_development_dependency  'simplecov',            '0.17.1'
+  s.add_development_dependency  'rubocop',              '0.79.0'
   s.add_development_dependency  'pg',                   '1.1.3'
   s.add_development_dependency  'rake-compiler',        '1.0.5'
   s.add_development_dependency  'redis',                '4.1.0'
