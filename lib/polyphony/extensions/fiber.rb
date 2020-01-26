@@ -104,7 +104,7 @@ class ::Fiber
     @running_fibers_map.size
   end
 
-  def self.spin(tag, orig_caller = caller, &block)
+  def self.spin(tag = nil, orig_caller = caller, &block)
     f = new { |v| f.run(v) }
     f.setup(tag, block, orig_caller)
     f

@@ -25,6 +25,15 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_tag
+    assert_equal :main, Fiber.current.tag
+    Fiber.current.tag = :foo
+    assert_equal :foo, Fiber.current.tag
+
+    f = Fiber.spin(:bar) { }
+    assert_equal :bar, f.tag
+  end
+
   def test_await_return_value
     f = Fiber.spin { %i[foo bar] }
     assert_equal %i[foo bar], f.await
