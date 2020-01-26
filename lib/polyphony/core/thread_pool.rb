@@ -1,38 +1,46 @@
 # frozen_string_literal: true
 
-export :process, :setup, :size=, :busy?
+export_default :ThreadPool
 
-@size = 10
+require 'etc'
 
-def process(&block)
-  setup unless @task_queue
+class ThreadPool
+  attr_reader :size
 
-  watcher = Gyro::Async.new
-  @task_queue << [block, watcher]
-  watcher.await
-end
+  def initialize(size = Etc.nprocessors)
+    @size = size
+    @task_queue = ::Queue.new
+    @threads = (1..@size).map { Thread.new { thread_loop } }
+  end
 
-def size=(size)
-  @size = size
-end
-
-def busy?
-  !@queue.empty?
-end
-
-def setup
-  @task_queue = ::Queue.new
-  @threads = (1..@size).map { Thread.new { thread_loop } }
-end
-
-def thread_loop
-  loop { run_queued_task }
-end
-
-def run_queued_task
-  (block, watcher) = @task_queue.pop
-  result = block.()
-  watcher.signal!(result)
-rescue Exception => e
-  watcher.signal!(e)
+  def process(&block)
+    setup unless @task_queue
+  
+    watcher = Gyro::Async.new
+    @task_queue << [block, watcher]
+    watcher.await
+  end
+  
+  def cast(&block)
+    setup unless @task_queue
+  
+    @task_queue << [block, nil]
+    self
+  end
+  
+  def busy?
+    !@task_queue.empty?
+  end
+  
+  def thread_loop
+    loop { run_queued_task }
+  end
+  
+  def run_queued_task
+    (block, watcher) = @task_queue.pop
+    result = block.()
+    watcher&.signal!(result)
+  rescue Exception => e
+    watcher ? watcher.signal!(e) : raise(e)
+  end
 end
