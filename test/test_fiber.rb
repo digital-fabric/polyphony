@@ -472,4 +472,42 @@ class MailboxTest < MiniTest::Test
     )
     assert_equal expected, f.inspect
   end
+
+  def test_system_exit_in_fiber
+    parent_error = nil
+    main_fiber_error = nil
+    f2 = nil
+    f1 = spin do
+      f2 = spin { raise SystemExit }
+      suspend
+    rescue Exception => parent_error
+    end
+
+    begin
+      suspend
+    rescue Exception => main_fiber_error
+    end
+
+    assert_nil parent_error
+    assert_kind_of SystemExit, main_fiber_error
+  end
+
+  def test_interrupt_in_fiber
+    parent_error = nil
+    main_fiber_error = nil
+    f2 = nil
+    f1 = spin do
+      f2 = spin { raise Interrupt }
+      suspend
+    rescue Exception => parent_error
+    end
+
+    begin
+      suspend
+    rescue Exception => main_fiber_error
+    end
+
+    assert_nil parent_error
+    assert_kind_of Interrupt, main_fiber_error
+  end
 end
