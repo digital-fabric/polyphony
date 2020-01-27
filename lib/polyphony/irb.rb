@@ -7,7 +7,13 @@ require 'polyphony'
 # readline to return
 module ::Readline
   alias_method :orig_readline, :readline
+
   def readline(*args)
-    Polyphony::ThreadPool.process { orig_readline(*args) }
+    async = Gyro::Async.new
+    worker = Thread.new do
+      result = orig_readline(*args)
+      async.signal!(result)
+    end
+    async.await
   end
 end
