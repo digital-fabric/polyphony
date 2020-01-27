@@ -10,6 +10,8 @@ Rake::ExtensionTask.new("gyro_ext") do |ext|
   ext.ext_dir = "ext/gyro"
 end
 
+task :recompile => [:clean, :compile]
+
 task :default => [:compile, :test]
 task :test do
   exec 'ruby test/run.rb'
