@@ -3,3 +3,23 @@ $link-color: $blue-000;
 .img-figure {
   text-align: center;
 }
+
+#prevnext {
+  padding-top: 1em;
+}
+
+#prevnext span {
+}
+
+#prevnext span.prev {
+  float: left;
+  padding-right: 4em;
+}
+
+#prevnext span.next {
+  float: right;
+}
+
+#prevnext span.clear {
+  clear: both;
+}

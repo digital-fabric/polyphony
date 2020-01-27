@@ -4,6 +4,7 @@ title: Extending Polyphony
 nav_order: 5
 parent: Technical Overview
 permalink: /technical-overview/extending/
+prev_title: Exception Handling
 ---
 # Extending Polyphony
 

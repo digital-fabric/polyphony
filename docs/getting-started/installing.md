@@ -4,6 +4,8 @@ title: Installing Polyphony
 nav_order: 1
 parent: Getting Started
 permalink: /getting-started/installing/
+prev_title: Home
+next_title: A Gentle Introduction to Polyphony
 ---
 # Getting Started
 

@@ -4,6 +4,8 @@ title: A Gentle Introduction to Polyphony
 nav_order: 2
 parent: Getting Started
 permalink: /getting-started/tutorial/
+prev_title: Installing Polyphony
+next_title: Design Principles
 ---
 # A Gentle Introduction to Polyphony
 
@@ -369,9 +371,9 @@ machine's location). Also notice how we just used `httparty` with fiber-level
 concurrency, without any boilerplate or employing special wrapper classes.
 
 Just as before, we suspend the main fiber after spinning off the worker fibers,
-in order to wait for everything else to be done. But if we needed to do other
-work? For example, we might want to collect the different local times into a
-hash to be processed later. In that case, we can use a `Supervisor`:
+in order to wait for everything else to be done. But what if we needed to do
+other work? For example, we might want to collect the different local times into
+a hash to be processed later. In that case, we can use a `Supervisor`:
 
 ```ruby
 def get_times(zones)

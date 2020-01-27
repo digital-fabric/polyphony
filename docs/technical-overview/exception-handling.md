@@ -4,6 +4,8 @@ title: Exception Handling
 nav_order: 4
 parent: Technical Overview
 permalink: /technical-overview/exception-handling/
+prev_title: How Fibers are Scheduled
+next_title: Extending Polyphony
 ---
 # Exception Handling
 

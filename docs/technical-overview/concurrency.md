@@ -4,6 +4,8 @@ title: Concurrency the Easy Way
 nav_order: 2
 parent: Technical Overview
 permalink: /technical-overview/concurrency/
+prev_title: Design Principles
+next_title: How Fibers are Scheduled
 ---
 # Concurrency the Easy Way
 
@@ -36,37 +38,37 @@ resumed once the database has sent back its reply. Meanwhile, another
 computation is started that opens a socket to a remote service, and then
 suspends itself, waiting for the connection to be established.
 
-This form of concurrency, called cooperative concurrency \(in contrast to
-pre-emptive concurrency, like threads and processes\), offers many advantages,
+This form of concurrency, called cooperative concurrency (in contrast to
+pre-emptive concurrency, like in threads and processes), offers many advantages,
 especially for applications that are [I/O
 bound](https://en.wikipedia.org/wiki/I/O_bound). Fibers are very lightweight
-\(starting at about 20KB\), can be context-switched faster than threads or
+(starting at about 10KB), can be context-switched faster than threads or
 processes, and literally millions of them can be created on a single system -
 the only limiting factor is available memory.
 
-Polyphony takes Ruby's fibers and adds a way to schedule and switch between
-fibers automatically whenever a blocking operation is started, such as waiting
-for a TCP connection to be established, or waiting for an I/O object to be
-readable, or waiting for a timer to elapse. In addition, Polyphony patches the
-stock Ruby classes to support its concurrency model, letting developers use all
-of Ruby's stdlib, for example `Net::HTTP` and `Mail` while reaping the benefits
-of lightweight, highly performant, fiber-based concurrency.
+Polyphony takes Ruby's fibers and adds a way to schedule and switch between them
+automatically whenever a blocking operation is started, such as waiting for a
+TCP connection to be established, for incoming data on an HTTP conection, or for
+a timer to elapse. In addition, Polyphony patches the stock Ruby classes to
+support its concurrency model, letting developers use all of Ruby's stdlib, for
+example `Net::HTTP` and `Mail` while reaping the benefits of lightweight,
+fine-grained, performant, fiber-based concurrency.
 
 Writing concurrent applications using Polyphony's fiber-based concurrency model
-offers a significant performance advantage. Computational tasks can be broken
-down into many fine-grained concurrent operations that cost very little in
-memory and context-switching time. More importantly, this concurrency model lets
-developers express their ideas in a sequential manner, leading to source code
-that is easy to read and reason about.
+offers a significant performance advantage. Complex concurrent tasks can be
+broken down into many fine-grained concurrent operations with very low overhead.
+More importantly, this concurrency model lets developers express their ideas in
+a sequential fashion, leading to source code that is much easier to read and
+understand, compared to callback-style programming.
 
 ## Fibers - Polyphony's basic unit of concurrency
 
 Polyphony extends the core `Fiber` class with additional functionality that
 allows scheduling, synchronizing, interrupting and otherwise controlling running
-fibers. Polyphony makes sure any exception raised while a is running is [handled
-correctly](exception-handling.md). Moreover, fibers can communicate with each
-other using message passing, turning them into autonomous actors in a
-fine-grained concurrent environment.
+fibers. Polyphony makes sure any exception raised while a fiber is running is
+[handled correctly](exception-handling.md). Moreover, fibers can communicate
+with each other using message passing, turning them into autonomous actors in a
+highly concurrent environment.
 
 ## Higher-Order Concurrency Constructs
 

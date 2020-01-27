@@ -2,8 +2,8 @@
 layout: page
 title: Home
 nav_order: 1
-description: Lorem ipsum
 permalink: /
+next_title: Installing Polyphony
 ---
 
 # Polyphony - fine-grained concurrency for Ruby
