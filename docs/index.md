@@ -85,6 +85,6 @@ A thorough reference is forthcoming.
 
 ## Contributing to Polyphony
 
-Issues and pull requests will be gladly accepted. Please use the git repository
-at https://github.com/digital-fabric/polyphony as your primary point of
-departure for contributing.
+Issues and pull requests will be gladly accepted. Please use the [Polyphony git
+repository](https://github.com/digital-fabric/polyphony) as your primary point
+of departure for contributing.

@@ -28,7 +28,8 @@ asynchronous event primitives.
   supervisors, cancel scopes, throttling, resource pools etc.
 * Code can use native networking classes and libraries, growing support for
   third-party gems such as `pg` and `redis`.
-* Use stdlib classes such as `TCPServer`, `TCPSocket` and 
+* Use stdlib classes such as `TCPServer`, `TCPSocket` and
+  `OpenSSL::SSL::SSLSocket`.
 * Competitive performance and scalability characteristics, in terms of both
   throughput and memory consumption.
 
@@ -36,3 +37,9 @@ asynchronous event primitives.
 
 The complete documentation for Polyphony could be found on the
 [Polyphony website](https://digital-fabric.github.io/polyphony).
+
+## Contributing to Polyphony
+
+Issues and pull requests will be gladly accepted. Please use the [Polyphony git
+repository](https://github.com/digital-fabric/polyphony) as your primary point
+of departure for contributing.
