@@ -21,7 +21,6 @@ the hood, Polyphony uses [libev](https://github.com/enki/libev) as a
 high-performance event reactor that provides timers, I/O watchers and other
 asynchronous event primitives.
 
-
 ## Focused on Developer Happiness
 
 Polyphony is designed to make concurrent Ruby programming feel natural and

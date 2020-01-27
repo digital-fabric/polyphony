@@ -37,7 +37,7 @@ Note that requests are handled using a callback block which takes a single
 argument. The `request` object provides the entire API for responding to the
 client.
 
-Each client connection will be handled in a separate coprocess, allowing
+Each client connection will be handled in a separate fiber, allowing
 concurrent processing of incoming requests.
 
 ## HTTP 2 support
@@ -47,7 +47,7 @@ HTTP 2 support is baked in to the server, which supports both HTTP 2 upgrades
 in a completely effortless manner.
 
 Since HTTP 2 connections are multiplexed, allowing multiple concurrent requests
-on a single connection, each HTTP 2 stream is handled in a separate coprocess.
+on a single connection, each HTTP 2 stream is handled in a separate fiber.
 
 ## TLS termination
 

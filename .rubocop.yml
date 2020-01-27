@@ -58,10 +58,6 @@ Style/GlobalVars:
     - lib/polyphony/extensions/core.rb
     - examples/**/*.rb
 
-Style/ClassVars:
-  Exclude:
-    - lib/polyphony/core/coprocess.rb
-
 Layout/HashAlignment:
   EnforcedColonStyle: table
   EnforcedHashRocketStyle: table
