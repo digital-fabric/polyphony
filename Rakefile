@@ -16,7 +16,7 @@ task :test do
 end
 
 task :docs do
-  exec 'jekyll serve -s docs'
+  exec 'RUBYOPT=-W0 jekyll serve -s docs'
 end
 
 task default: %w[compile]
