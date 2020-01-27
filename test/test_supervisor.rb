@@ -25,6 +25,18 @@ class SupervisorTest < MiniTest::Test
     assert_equal [10, 20, 30], result
   end
 
+  def test_new_with_block
+    supervisor = Polyphony::Supervisor.new { |s|
+      (1..3).each { |i|
+        s.spin {
+          snooze
+          i * 10
+        }
+      }
+    }
+    assert_equal [10, 20, 30], supervisor.await
+  end
+
   def test_join_multiple_fibers
     result = Polyphony::Supervisor.new.join { |s|
       (1..3).each { |i|

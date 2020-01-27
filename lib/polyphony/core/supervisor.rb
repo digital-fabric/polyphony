@@ -10,6 +10,7 @@ class Supervisor
   def initialize
     @fibers = []
     @pending = {}
+    yield(self) if block_given?
   end
 
   def await(&block)
