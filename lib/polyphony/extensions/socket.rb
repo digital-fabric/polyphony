@@ -10,7 +10,7 @@ class ::Socket
 
   def connect(remotesockaddr)
     loop do
-      result = connect_nonblock(remotesockaddr, NO_EXCEPTION)
+      result = connect_nonblock(remotesockaddr, **NO_EXCEPTION)
       return if result == 0
 
       result == :wait_writable ? write_watcher.await : (raise IOError)
@@ -20,7 +20,7 @@ class ::Socket
   def recv(maxlen, flags = 0, outbuf = nil)
     outbuf ||= +''
     loop do
-      result = recv_nonblock(maxlen, flags, outbuf, NO_EXCEPTION)
+      result = recv_nonblock(maxlen, flags, outbuf, **NO_EXCEPTION)
       raise IOError unless result
 
       result == :wait_readable ? read_watcher.await : (return result)
@@ -30,7 +30,7 @@ class ::Socket
   def recvfrom(maxlen, flags = 0)
     @read_buffer ||= +''
     loop do
-      result = recvfrom_nonblock(maxlen, flags, @read_buffer, NO_EXCEPTION)
+      result = recvfrom_nonblock(maxlen, flags, @read_buffer, **NO_EXCEPTION)
       raise IOError unless result
 
       result == :wait_readable ? read_watcher.await : (return result)
