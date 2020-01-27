@@ -8,10 +8,10 @@
 {%- endfor -%}
 <div id="prevnext">
   {%- if prev_url -%}
-    <span class="prev"><a href="{{prev_url}}">☜ {{page.prev_title}}</a></span>
+    <span class="prev"><a href="{{prev_url | relative_url}}">☜ {{page.prev_title}}</a></span>
   {%- endif -%}
   {%- if next_url -%}
-    <span class="next"><a href="{{next_url}}">{{page.next_title}} ☞</a></span>
+    <span class="next"><a href="{{next_url | relative_url}}">{{page.next_title}} ☞</a></span>
   {%- endif -%}
   <span class="clear">&nbsp;</span>
 </div>
