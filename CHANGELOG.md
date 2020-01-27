@@ -1,3 +1,16 @@
+0.28 2020-01-27
+---------------
+
+* Accept block in Supervisor#initialize
+* Refactor `ThreadPool`
+* Implement fiber switch events for `TracePoint`
+* Add optional tag parameter to #spin
+* Correctly increment ref count for indefinite sleep
+* Add `irb` adapter
+* Add support for listen/notify to postgres adapter
+* Use `:waiting`, `:runnable`, `:running`, `:dead` for fiber states
+* Move docs to https://digital-fabric.github.io/polyphony/
+
 0.27 2020-01-19
 ---------------
 
