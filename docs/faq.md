@@ -14,8 +14,10 @@ base their entire API on the callback pattern.
 reactor library for Ruby that uses callbacks for handling events.
 
 Using callbacks means splitting your application logic into disjunct pieces of
-code. Consider the following implementation of an echo server using
-EventMachine:
+code. It also often means having to write elaborate state machines to keep track
+of events happening at different points in time. Using fibers allows you to keep
+state in local variables. Consider the following implementation of an echo
+server using EventMachine:
 
 ```ruby
 require 'eventmachine'
@@ -139,12 +141,12 @@ however important to note that Polyphony places the emphasis on a multi-fiber
 concurrency model, which is highly beneficial for I/O-bound workloads, such as
 web servers and web apps.
 
-Because of Ruby's [global interpreter lock](https://en.wikipedia.org/wiki/Global_interpreter_lock),
-multiple threads can not in fact run in parallel, and this is actually one of
-the reasons fibers are such a better fit for I/O bound Ruby programs. Threads
-should really be used when performing synchronous operations that are not
-fiber-aware, such as running an expensive SQLite query, or some other expensive
-system call.
+Because of Ruby's [global interpreter
+lock](https://en.wikipedia.org/wiki/Global_interpreter_lock), multiple threads
+can not in fact run in parallel, and this is actually one of the reasons fibers
+are such a better fit for I/O bound Ruby programs. Threads should really be used
+when performing synchronous operations that are not fiber-aware, such as running
+an expensive SQLite query, or some other expensive system call.
 
 ### How Does Polyphony Fit Into the Ruby's Future Concurrency Plans
 
