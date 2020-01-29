@@ -77,7 +77,7 @@ class CancelScopeTest < MiniTest::Test
     scope.call {
       sleep 0.005
       scope.reset_timeout
-      sleep 0.008
+      sleep 0.005
     }
 
     assert !scope.cancelled?

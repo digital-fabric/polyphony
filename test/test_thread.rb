@@ -11,6 +11,7 @@ class ThreadTest < MiniTest::Test
       s2 = spin { (21..23).each { |i| snooze; buffer << i } }
       Fiber.join(s1, s2)
     end
+    snooze
     t.join
 
     assert_equal [1, 2, 3, 11, 12, 13, 21, 22, 23], buffer.sort
@@ -52,5 +53,66 @@ class ThreadTest < MiniTest::Test
       lineno,
     )
     assert_equal str, t.inspect
+  end
+
+  def test_that_suspend_returns_immediately_if_no_watchers
+    records = []
+    t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
+    t.enable
+    Gyro.trace(true)
+
+    suspend
+    t.disable
+    assert_equal [:fiber_switchpoint], records.map { |r| r[:event] }
+  ensure
+    t.disable
+    Gyro.trace(false)
+  end
+
+  def test_reset
+    values = []
+    f1 = Fiber.new do
+      values << :foo
+      snooze
+      values << :bar
+      suspend
+    end.schedule
+
+    f2 = Fiber.new do
+      Thread.current.reset_fiber_scheduling
+      values << :restarted
+      snooze
+      values << :baz
+    end.schedule
+
+    suspend
+
+    f1.schedule
+    suspend
+    assert_equal %i[foo restarted baz], values
+  end
+
+  def test_restart
+    values = []
+    Fiber.new do
+      values << :foo
+      snooze
+      # this part will not be reached, as Gyro state is reset
+      values << :bar
+      suspend
+    end.schedule
+
+    Fiber.new do
+      Thread.current.reset_fiber_scheduling
+
+      # control is transfer to the fiber that called Gyro.restart
+      values << :restarted
+      snooze
+      values << :baz
+    end.schedule
+
+    suspend
+
+    assert_equal %i[foo restarted baz], values
   end
 end

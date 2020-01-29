@@ -25,6 +25,34 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_schedule
+    # Gyro.trace(true)
+    # trace = Polyphony::Trace.new(:c_return) { |r| p [r[:event], r[:fiber], r[:value]] if r[:event] =~ /fiber/ }
+    # trace.enable
+
+    values = []
+    fibers = (0..2).map { |i| spin { suspend; values << i } }
+    snooze
+
+    fibers[0].schedule
+    assert_equal [], values
+
+    snooze
+
+    assert_equal [0], values
+    assert_equal :dead, fibers[0].state
+
+    fibers[1].schedule
+    fibers[2].schedule
+
+    assert_equal [0], values
+    snooze
+    assert_equal [0, 1, 2], values
+  ensure
+    # Gyro.trace(false)
+    # trace&.disable
+  end
+
   def test_tag
     assert_equal :main, Fiber.current.tag
     Fiber.current.tag = :foo
