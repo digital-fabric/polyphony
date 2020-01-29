@@ -6,9 +6,10 @@ require 'polyphony'
 
 STOCK_EVENTS = %i[line call return c_call c_return b_call b_return].freeze
 
-def new(events = STOCK_EVENTS)
+def new(*events)
   start_stamp = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
-  ::TracePoint.new(*STOCK_EVENTS) { |tp| yield trace_record(tp, start_stamp) }
+  events = STOCK_EVENTS if events.empty?
+  ::TracePoint.new(*events) { |tp| yield trace_record(tp, start_stamp) }
 end
 
 def trace_record(trp, start_stamp)
@@ -89,16 +90,42 @@ class << ::TracePoint
   def new(*args, &block)
     polyphony_file_regexp = /^#{::Exception::POLYPHONY_DIR}/
 
-    orig_new(*args) do |tp|
+    events_mask, fiber_events_mask = event_masks(args)
+
+    orig_new(*events_mask) do |tp|
       # next unless !$watched_fiber || Fiber.current == $watched_fiber
 
       if tp.method_id == :__fiber_trace__
-        block.(FiberTracePoint.new(tp)) if tp.event == :c_return
+        next if tp.event != :c_return
+        next unless fiber_events_mask.include?(tp.return_value[0])
+        
+        block.(FiberTracePoint.new(tp))
       else
         next if tp.path =~ polyphony_file_regexp
 
         block.(tp)
       end
+    end
+  end
+
+  ALL_FIBER_EVENTS = %i[
+    fiber_create fiber_terminate fiber_schedule fiber_switchpoint fiber_run
+    fiber_ev_loop_enter fiber_ev_loop_leave
+  ]
+
+  def event_masks(events)
+    events.inject([[], []]) do |masks, e|
+      case e
+      when :fiber_all
+        masks[1] += ALL_FIBER_EVENTS
+        masks[0] << :c_return unless masks[0].include?(:c_return)
+      when /fiber_/
+        masks[1] << e
+        masks[0] << :c_return unless masks[0].include?(:c_return)
+      else
+        masks[0] << e
+      end
+      masks
     end
   end
 end

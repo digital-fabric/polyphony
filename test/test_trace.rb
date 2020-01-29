@@ -10,13 +10,13 @@ class TraceTest < MiniTest::Test
     snooze
     assert_equal 0, records.size
   ensure
-    t.disable
+    t&.disable
     Gyro.trace(nil)
   end
 
   def test_tracing_enabled
     records = []
-    t = Polyphony::Trace.new { |r| records << r if r[:event] =~ /^fiber_/ }
+    t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
     t.enable
     Gyro.trace(true)
     snooze
@@ -27,13 +27,13 @@ class TraceTest < MiniTest::Test
     assert_equal [:fiber_schedule, :fiber_switchpoint, :fiber_run], events
     assert_equal [Fiber.current], records.map { |r| r[:fiber] }.uniq
   ensure
-    t.disable
+    t&.disable
     Gyro.trace(nil)
   end
 
   def test_2_fiber_trace
     records = []
-    t = Polyphony::Trace.new { |r| records << r if r[:event] =~ /^fiber_/ }
+    t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
     t.enable
     Gyro.trace(true)
 
@@ -60,7 +60,7 @@ class TraceTest < MiniTest::Test
       [Fiber.current, :fiber_run]
     ], events
   ensure
-    t.disable
+    t&.disable
     Gyro.trace(nil)
   end
 end

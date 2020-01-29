@@ -65,7 +65,7 @@ class ThreadTest < MiniTest::Test
     t.disable
     assert_equal [:fiber_switchpoint], records.map { |r| r[:event] }
   ensure
-    t.disable
+    t&.disable
     Gyro.trace(false)
   end
 
