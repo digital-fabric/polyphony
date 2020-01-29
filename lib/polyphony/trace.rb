@@ -6,7 +6,7 @@ require 'polyphony'
 
 STOCK_EVENTS = %i[line call return c_call c_return b_call b_return].freeze
 
-def new
+def new(events = STOCK_EVENTS)
   start_stamp = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
   ::TracePoint.new(*STOCK_EVENTS) { |tp| yield trace_record(tp, start_stamp) }
 end
@@ -16,7 +16,7 @@ def trace_record(trp, start_stamp)
   { stamp: stamp, self: trp.self, binding: trp.binding, event: trp.event,
     fiber: tp_fiber(trp), lineno: trp.lineno, method_id: trp.method_id,
     file: trp.path, parameters: tp_params(trp),
-    return_value: tp_return_value(trp),
+    return_value: tp_return_value(trp), schedule_value: tp_schedule_value(trp),
     exception: tp_raised_exception(trp) }
 end
 
@@ -34,6 +34,12 @@ RETURN_VALUE_EVENTS = %i[return c_return b_return].freeze
 
 def tp_return_value(trp)
   RETURN_VALUE_EVENTS.include?(trp.event) ? trp.return_value : nil
+end
+
+SCHEDULE_VALUE_EVENTS = %i[fiber_schedule fiber_run].freeze
+
+def tp_schedule_value(trp)
+  SCHEDULE_VALUE_EVENTS.include?(trp.event) ? trp.value : nil
 end
 
 def tp_raised_exception(trp)

@@ -5,13 +5,12 @@ require 'polyphony'
 
 Exception.__disable_sanitized_backtrace__ = true
 
-Gyro.trace(true)
 
 sleep 0
 $records = []
 
+Gyro.trace(true)
 trace = Polyphony::Trace.new { |r| $records << r }
-
 trace.enable
 
 f2 = spin(:f2) { 3.times { sleep 0.1 } }
