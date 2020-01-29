@@ -10,7 +10,7 @@ module ::Readline
 
   def readline(*args)
     async = Gyro::Async.new
-    worker = Thread.new do
+    Thread.new do
       result = orig_readline(*args)
       async.signal!(result)
     end
