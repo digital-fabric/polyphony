@@ -106,7 +106,7 @@ class SupervisorTest < MiniTest::Test
     buffer = []
     supervisor = nil
     supervisor = Polyphony::Supervisor.new
-    defer { supervisor.interrupt(42) }
+    spin { supervisor.interrupt(42) }
     buffer << supervisor.await { |s|
       (1..3).each { |i|
         s.spin {
@@ -125,7 +125,7 @@ class SupervisorTest < MiniTest::Test
     buffer = []
     supervisor = nil
     supervisor = Polyphony::Supervisor.new
-    defer { supervisor.interrupt(42) }
+    spin { supervisor.interrupt(42) }
     buffer << supervisor.select { |s|
       (1..3).each { |i|
         s.spin {

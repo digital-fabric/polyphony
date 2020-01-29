@@ -3,9 +3,9 @@
 require 'bundler/setup'
 require 'polyphony'
 
-defer do
+spin do
   puts 'two'
-  defer { puts 'four' }
+  spin { puts 'four' }
   puts 'three'
 end
 

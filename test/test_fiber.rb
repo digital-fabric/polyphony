@@ -106,7 +106,7 @@ class FiberTest < MiniTest::Test
       2.times { snooze }
       result << 2
     end
-    defer { f.raise }
+    spin { f.raise }
     assert_equal 0, result.size
     begin
       f.await
@@ -131,7 +131,7 @@ class FiberTest < MiniTest::Test
       2.times { snooze }
       result << 2
     end
-    defer { f.raise MyError }
+    spin { f.raise MyError }
     assert_equal 0, result.size
     begin
       f.await
@@ -153,7 +153,7 @@ class FiberTest < MiniTest::Test
       2.times { snooze }
       result << 2
     end
-    defer { f.raise(MyError, 'foo') }
+    spin { f.raise(MyError, 'foo') }
     assert_equal 0, result.size
     begin
       f.await
@@ -176,7 +176,7 @@ class FiberTest < MiniTest::Test
       2.times { snooze }
       result << 2
     end
-    defer { f.raise 'foo' }
+    spin { f.raise 'foo' }
     assert_equal 0, result.size
     begin
       f.await
@@ -199,7 +199,7 @@ class FiberTest < MiniTest::Test
       2.times { snooze }
       result << 2
     end
-    defer { f.raise MyError.new('bar') }
+    spin { f.raise MyError.new('bar') }
     assert_equal 0, result.size
     begin
       f.await
@@ -222,7 +222,7 @@ class FiberTest < MiniTest::Test
       2.times { snooze }
       result << 2
     end
-    defer { f.cancel! }
+    spin { f.cancel! }
     assert_equal 0, result.size
     begin
       f.await
@@ -245,7 +245,7 @@ class FiberTest < MiniTest::Test
       result << 2
       3
     end
-    defer { f.interrupt(42) }
+    spin { f.interrupt(42) }
 
     await_result = f.await
     assert_equal 1, result.size
@@ -263,7 +263,7 @@ class FiberTest < MiniTest::Test
       result << 2
       3
     end
-    defer { f.stop(42) }
+    spin { f.stop(42) }
 
     await_result = f.await
     assert_equal 1, result.size
@@ -296,7 +296,7 @@ class FiberTest < MiniTest::Test
       f2.await
       result && result += 1
     end
-    defer { f2.interrupt }
+    spin { f2.interrupt }
     suspend
     assert_nil result
     assert_equal :dead, f1.state

@@ -32,7 +32,6 @@ module API
   def spin(tag = nil, &block)
     Fiber.spin(tag, caller, &block)
   end
-  alias_method :defer, :spin
 
   def spin_loop(&block)
     spin { loop(&block) }

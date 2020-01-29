@@ -26,7 +26,7 @@ class AsyncTest < MiniTest::Test
       loop {
         a.await
         count += 1
-        defer { coproc.stop }
+        spin { coproc.stop }
       }
     }
     snooze

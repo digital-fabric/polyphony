@@ -16,7 +16,7 @@ class GyroIOTest < MiniTest::Test
     }
     snooze
     sequence << 3
-    defer do
+    spin do
       o << 'hello'
       sequence << 4
     end

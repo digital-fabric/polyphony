@@ -5,13 +5,13 @@ require_relative 'helper'
 class ThreadTest < MiniTest::Test
   def test_thread_spin
     buffer = []
-    spin { (1..3).each { |i| snooze; buffer << i } }
+    f = spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new do
       s1 = spin { (11..13).each { |i| snooze; buffer << i } }
       s2 = spin { (21..23).each { |i| snooze; buffer << i } }
       Fiber.join(s1, s2)
     end
-    snooze
+    f.join
     t.join
 
     assert_equal [1, 2, 3, 11, 12, 13, 21, 22, 23], buffer.sort

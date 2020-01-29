@@ -6,7 +6,7 @@ class CancelScopeTest < MiniTest::Test
   def test_that_cancel_scope_can_cancel_provided_block
     buffer = []
     Polyphony::CancelScope.new { |scope|
-      defer { scope.cancel! }
+      spin { scope.cancel! }
       buffer << 1
       snooze
       buffer << 2
@@ -86,7 +86,7 @@ class CancelScopeTest < MiniTest::Test
   def test_on_cancel
     buffer = []
     Polyphony::CancelScope.new { |scope|
-      defer { scope.cancel! }
+      spin { scope.cancel! }
       scope.on_cancel { buffer << :cancelled }
       buffer << 1
       snooze

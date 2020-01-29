@@ -9,7 +9,7 @@ end
 
 def deferred_error(t)
   puts "deferred_error"
-  defer { de2(t) }
+  spin { de2(t) }
 end
 
 def de2(t)

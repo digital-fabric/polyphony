@@ -36,7 +36,7 @@ class SpinTest < MiniTest::Test
       sleep(1)
       42
     end
-    defer { fiber.interrupt }
+    spin { fiber.interrupt }
     suspend
     assert_nil fiber.result
   end
@@ -340,9 +340,9 @@ class MoveOnAfterTest < MiniTest::Test
 
   def test_defer
     values = []
-    defer { values << 1 }
-    defer { values << 2 }
-    defer { values << 3 }
+    spin { values << 1 }
+    spin { values << 2 }
+    spin { values << 3 }
     suspend
 
     assert_equal [1, 2, 3], values
