@@ -117,9 +117,7 @@ static VALUE Fiber_state(VALUE self) {
 }
 
 inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
-  if (__tracing_enabled__) {
-    rb_funcall(rb_cObject, ID_fiber_trace, 3, SYM_fiber_schedule, fiber, value);
-  }
+  FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
   Thread_schedule_fiber(rb_thread_current(), fiber, value);
 }
 

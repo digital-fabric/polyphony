@@ -2,6 +2,7 @@
 
 struct Gyro_Selector {
   struct  ev_loop *ev_loop;
+  long run_no_wait_count;
 };
 
 VALUE cGyro_Selector = Qnil;
@@ -52,6 +53,13 @@ inline struct ev_loop *Gyro_Selector_current_thread_ev_loop() {
   return selector->ev_loop;
 }
 
+inline ev_tstamp Gyro_Selector_now(VALUE self) {
+  struct Gyro_Selector *selector;
+  GetGyro_Selector(self, selector);
+
+  return ev_now(selector->ev_loop);
+}
+
 long Gyro_Selector_pending_count(VALUE self) {
   struct Gyro_Selector *selector;
   GetGyro_Selector(self, selector);
@@ -65,17 +73,36 @@ static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
 
   int use_default_loop = (rb_thread_current() == rb_thread_main());
   selector->ev_loop = use_default_loop ? EV_DEFAULT : ev_loop_new(EVFLAG_NOSIGMASK);
+  selector->run_no_wait_count = 0;
 
   return Qnil;
 }
 
-inline VALUE Gyro_Selector_run(VALUE self) {
+inline VALUE Gyro_Selector_run(VALUE self, VALUE current_fiber) {
   struct Gyro_Selector *selector;
   GetGyro_Selector(self, selector);
   if (selector->ev_loop) {
+    selector->run_no_wait_count = 0;
+    FIBER_TRACE(2, SYM_fiber_ev_loop_enter, current_fiber);
     ev_run(selector->ev_loop, EVRUN_ONCE);
+    FIBER_TRACE(2, SYM_fiber_ev_loop_leave, current_fiber);
   }
   return Qnil;
+}
+
+inline void Gyro_Selector_run_no_wait(VALUE self, VALUE current_fiber, long runnable_count) {
+  struct Gyro_Selector *selector;
+  GetGyro_Selector(self, selector);
+
+  selector->run_no_wait_count++;
+  if (selector->run_no_wait_count < runnable_count || selector->run_no_wait_count < 10) {
+    return;
+  }
+
+  selector->run_no_wait_count = 0;
+  FIBER_TRACE(2, SYM_fiber_ev_loop_enter, current_fiber);
+  ev_run(selector->ev_loop, EVRUN_NOWAIT);
+  FIBER_TRACE(2, SYM_fiber_ev_loop_leave, current_fiber);
 }
 
 VALUE Gyro_Selector_stop(VALUE self) {
@@ -109,7 +136,7 @@ void Init_Gyro_Selector() {
   rb_define_alloc_func(cGyro_Selector, Gyro_Selector_allocate);
 
   rb_define_method(cGyro_Selector, "initialize", Gyro_Selector_initialize, 1);
-  rb_define_method(cGyro_Selector, "run", Gyro_Selector_run, 0);
+  rb_define_method(cGyro_Selector, "run", Gyro_Selector_run, 1);
   rb_define_method(cGyro_Selector, "stop", Gyro_Selector_stop, 0);
   rb_define_method(cGyro_Selector, "wait_readable", Gyro_Selector_wait_readable, 1);
   rb_define_method(cGyro_Selector, "wait_writable", Gyro_Selector_wait_writable, 1);

@@ -53,6 +53,21 @@ class FiberTest < MiniTest::Test
     # trace&.disable
   end
 
+  def test_ev_loop_anti_starve_mechanism
+    async = Gyro::Async.new
+    t = Thread.new do
+      f = spin_loop { snooze }
+      sleep 0.001
+      async.signal!(:foo)
+    end
+
+    result = move_on_after(0.01) { async.await }
+
+    assert_equal :foo, result
+  ensure
+    t.kill if t.alive?
+  end
+
   def test_tag
     assert_equal :main, Fiber.current.tag
     Fiber.current.tag = :foo

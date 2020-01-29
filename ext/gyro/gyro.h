@@ -27,7 +27,8 @@ VALUE IO_read_watcher(VALUE io);
 VALUE IO_write_watcher(VALUE io);
 VALUE Gyro_IO_await(VALUE self);
 
-VALUE Gyro_Selector_run(VALUE self);
+VALUE Gyro_Selector_run(VALUE self, VALUE current_fiber);
+void Gyro_Selector_run_no_wait(VALUE self, VALUE current_fiber, long runnable_count);
 
 VALUE Gyro_Timer_await(VALUE self);
 
@@ -36,6 +37,7 @@ void io_set_read_length(VALUE str, long n, int shrinkable);
 VALUE io_enc_str(VALUE str, rb_io_t *fptr);
 
 struct ev_loop *Gyro_Selector_ev_loop(VALUE selector);
+ev_tstamp Gyro_Selector_now(VALUE selector);
 struct ev_loop *Gyro_Selector_current_thread_ev_loop();
 long Gyro_Selector_pending_count(VALUE self);
 
@@ -50,6 +52,9 @@ VALUE Thread_post_fork(VALUE thread);
 
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
 #define INSPECT(...) (rb_funcall(rb_cObject, rb_intern("p"), __VA_ARGS__))
+#define FIBER_TRACE(...) if (__tracing_enabled__) { \
+  rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__); \
+}
 
 extern VALUE mGyro;
 extern VALUE cGyro_Async;

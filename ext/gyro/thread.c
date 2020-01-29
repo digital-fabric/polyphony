@@ -118,6 +118,7 @@ VALUE Thread_switch_fiber(VALUE self) {
   }
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
+
   VALUE next_fiber;
 
   while (1) {
@@ -125,17 +126,16 @@ VALUE Thread_switch_fiber(VALUE self) {
     // if (break_flag != 0) {
     //   return Qnil;
     // }
-    if ((next_fiber != Qnil) || (Thread_fiber_ref_count(self) == 0)) {
+    int ref_count = Thread_fiber_ref_count(self);
+    if (next_fiber != Qnil && ref_count > 0) {
+      Gyro_Selector_run_no_wait(selector, current_fiber, RARRAY_LEN(queue));
+      break;
+    }
+    if (ref_count == 0) {
       break;
     }
 
-    if (__tracing_enabled__) {
-      rb_funcall(rb_cObject, ID_fiber_trace, 2, SYM_fiber_ev_loop_enter, current_fiber);
-    }
-    Gyro_Selector_run(selector);
-    if (__tracing_enabled__) {
-      rb_funcall(rb_cObject, ID_fiber_trace, 2, SYM_fiber_ev_loop_leave, current_fiber);
-    }
+    Gyro_Selector_run(selector, current_fiber);
   }
 
   if (next_fiber == Qnil) {
@@ -144,10 +144,7 @@ VALUE Thread_switch_fiber(VALUE self) {
 
   // run next fiber
   VALUE value = rb_ivar_get(next_fiber, ID_runnable_value);
-
-  if (__tracing_enabled__) {
-    rb_funcall(rb_cObject, ID_fiber_trace, 3, SYM_fiber_run, next_fiber, value);
-  }
+  FIBER_TRACE(3, SYM_fiber_run, next_fiber, value);
 
   rb_ivar_set(next_fiber, ID_runnable, Qnil);
   RB_GC_GUARD(next_fiber);

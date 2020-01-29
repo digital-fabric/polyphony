@@ -1,6 +1,8 @@
 ## 0.29 Multithreaded fiber scheduling - some rough corners
 
 - Docs: explain difference between `sleep` and `suspend`
+- `defer`: right now `defer` is just an alias to `spin`. It should be removed.
+  Later we could introduce it as a way to run stuff on fiber termination.
 - Write about threads: scheduling, etc
 - `Gyro_schedule_fiber` - schedule using fiber's associated thread (store thread
   ref in fiber), instead of current thread
