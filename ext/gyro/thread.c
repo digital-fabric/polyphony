@@ -127,8 +127,10 @@ VALUE Thread_switch_fiber(VALUE self) {
     //   return Qnil;
     // }
     int ref_count = Thread_fiber_ref_count(self);
-    if (next_fiber != Qnil && ref_count > 0) {
-      Gyro_Selector_run_no_wait(selector, current_fiber, RARRAY_LEN(queue));
+    if (next_fiber != Qnil) {
+      if (ref_count > 0) {
+        Gyro_Selector_run_no_wait(selector, current_fiber, RARRAY_LEN(queue));
+      }
       break;
     }
     if (ref_count == 0) {
