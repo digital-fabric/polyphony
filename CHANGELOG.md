@@ -1,3 +1,11 @@
+* Add (restore) default thread pool
+* Prevent race condition in Thread#join
+* Add support for cross-thread fiber scheduling
+* Remove `#defer` global method
+* Prevent starvation of waiting fibers when using snooze (#7)
+* Improve tracing
+* Fix IRB adapter
+
 0.28 2020-01-27
 ---------------
 

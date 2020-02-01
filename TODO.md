@@ -1,9 +1,6 @@
 ## 0.29 Multithreaded fiber scheduling - some rough corners
 
 - Docs: explain difference between `sleep` and `suspend`
-- Write about threads: scheduling, etc
-- `Gyro_schedule_fiber` - schedule using fiber's associated thread (store thread
-  ref in fiber), instead of current thread
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
 
