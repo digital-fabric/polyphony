@@ -325,13 +325,13 @@ class MoveOnAfterTest < MiniTest::Test
   def test_snooze
     values = []
     3.times.map do |i|
-      Fiber.new do
+      spin do
         3.times do
           snooze
           values << i
         end
         suspend
-      end.schedule
+      end
     end
     suspend
 
@@ -350,10 +350,10 @@ class MoveOnAfterTest < MiniTest::Test
 
   def test_suspend
     values = []
-    Fiber.new do
+    spin do
       values << :foo
       suspend
-    end.schedule
+    end
     suspend
 
     assert_equal [:foo], values
@@ -362,10 +362,10 @@ class MoveOnAfterTest < MiniTest::Test
   def test_schedule_and_suspend
     values = []
     3.times.map do |i|
-      Fiber.new do
+      spin do
         values << i
         suspend
-      end.schedule
+      end
     end
     suspend
 

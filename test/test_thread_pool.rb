@@ -5,10 +5,11 @@ require_relative 'helper'
 class ThreadPoolTest < MiniTest::Test
   def setup
     super
-    @pool = Polyphony::ThreadPool.new
+    # @pool = Polyphony::ThreadPool.new
   end
 
   def test_process
+    skip
     current_thread = Thread.current
 
     processing_thread = nil
@@ -21,6 +22,7 @@ class ThreadPoolTest < MiniTest::Test
   end
 
   def test_multi_process
+    skip
     current_thread = Thread.current
     threads = []
     results = []
@@ -42,6 +44,7 @@ class ThreadPoolTest < MiniTest::Test
   end
 
   def test_process_with_exception
+    skip
     result = nil
     begin
       result = @pool.process { raise 'foo' }
@@ -53,6 +56,7 @@ class ThreadPoolTest < MiniTest::Test
   end
 
   def test_cast
+    skip
     t0 = Time.now
     threads = []
     buffer = []

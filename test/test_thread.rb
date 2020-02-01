@@ -18,13 +18,22 @@ class ThreadTest < MiniTest::Test
   end
 
   def test_thread_join
+    tr = nil
+    # tr = Polyphony::Trace.new(:fiber_all) { |r| p r[:event] }
+    # Gyro.trace(true)
+    # tr.enable
+
     buffer = []
     spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new { sleep 0.01; buffer << 4 }
+
     r = t.join
 
     assert_equal [1, 2, 3, 4], buffer
     assert_equal t, r
+  ensure
+    tr&.disable
+    Gyro.trace(nil)
   end
 
   def test_thread_join_with_timeout
@@ -71,19 +80,19 @@ class ThreadTest < MiniTest::Test
 
   def test_reset
     values = []
-    f1 = Fiber.new do
+    f1 = spin do
       values << :foo
       snooze
       values << :bar
       suspend
-    end.schedule
+    end
 
-    f2 = Fiber.new do
+    f2 = spin do
       Thread.current.reset_fiber_scheduling
       values << :restarted
       snooze
       values << :baz
-    end.schedule
+    end
 
     suspend
 
@@ -94,22 +103,22 @@ class ThreadTest < MiniTest::Test
 
   def test_restart
     values = []
-    Fiber.new do
+    spin do
       values << :foo
       snooze
       # this part will not be reached, as Gyro state is reset
       values << :bar
       suspend
-    end.schedule
+    end
 
-    Fiber.new do
+    spin do
       Thread.current.reset_fiber_scheduling
 
       # control is transfer to the fiber that called Gyro.restart
       values << :restarted
       snooze
       values << :baz
-    end.schedule
+    end
 
     suspend
 

@@ -17,8 +17,8 @@ class TraceTest < MiniTest::Test
   def test_tracing_enabled
     records = []
     t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
-    t.enable
     Gyro.trace(true)
+    t.enable
     snooze
     t.disable
     

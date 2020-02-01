@@ -19,6 +19,10 @@ Minitest::Reporters.use! [
 ]
 
 class MiniTest::Test
+  def setup
+    Fiber.current.setup_main_fiber
+  end
+
   def teardown
     # wait for any remaining scheduled work
     Thread.current.switch_fiber

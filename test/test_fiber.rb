@@ -26,10 +26,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_schedule
-    # Gyro.trace(true)
-    # trace = Polyphony::Trace.new(:c_return) { |r| p [r[:event], r[:fiber], r[:value]] if r[:event] =~ /fiber/ }
-    # trace.enable
-
     values = []
     fibers = (0..2).map { |i| spin { suspend; values << i } }
     snooze
@@ -48,9 +44,26 @@ class FiberTest < MiniTest::Test
     assert_equal [0], values
     snooze
     assert_equal [0, 1, 2], values
+  end
+
+  def test_cross_thread_schedule
+    buffer = []
+    worker_fiber = nil
+    async = Gyro::Async.new
+    worker = Thread.new do
+      worker_fiber = Fiber.current
+      async.signal!
+      suspend
+      buffer << :foo
+    end
+
+    async.await
+    assert worker_fiber
+    worker_fiber.schedule
+    worker.join
+    assert_equal [:foo], buffer
   ensure
-    # Gyro.trace(false)
-    # trace&.disable
+    worker&.kill
   end
 
   def test_ev_loop_anti_starve_mechanism
@@ -61,7 +74,7 @@ class FiberTest < MiniTest::Test
       async.signal!(:foo)
     end
 
-    result = move_on_after(0.01) { async.await }
+    result = move_on_after(0.05) { async.await }
 
     assert_equal :foo, result
   ensure
@@ -380,6 +393,7 @@ class FiberTest < MiniTest::Test
   end
 
   def test_select_from_multiple_fibers
+    sleep 0
     buffer = []
     f1 = spin { sleep 0.01; buffer << :foo; :foo }
     f2 = spin { sleep 0.03; buffer << :bar; :bar }
@@ -430,51 +444,6 @@ class FiberTest < MiniTest::Test
     snooze
     assert_equal [42], values
     assert !f.running?
-  end
-end
-
-class MailboxTest < MiniTest::Test
-  def test_that_fiber_can_receive_messages
-    msgs = []
-    f = spin { loop { msgs << receive } }
-
-    snooze # allow fiber to start
-
-    3.times do |i|
-      f << i
-      snooze
-    end
-
-    assert_equal [0, 1, 2], msgs
-  ensure
-    f&.stop
-  end
-
-  def test_that_multiple_messages_sent_at_once_arrive_in_order
-    msgs = []
-    f = spin { loop { msgs << receive } }
-
-    snooze # allow coproc to start
-
-    3.times { |i| f << i }
-
-    snooze
-
-    assert_equal [0, 1, 2], msgs
-  ensure
-    f&.stop
-  end
-
-  def test_that_sent_message_are_queued_before_calling_receive
-    buffer = []
-    receiver = spin { suspend; 3.times { buffer << receive } }
-    sender = spin { 3.times { |i| receiver << (i * 10) } }
-
-    sender.await
-    receiver.schedule
-    receiver.await
-
-    assert_equal [0, 10, 20], buffer
   end
 
   def test_list_and_count
@@ -552,5 +521,77 @@ class MailboxTest < MiniTest::Test
 
     assert_nil parent_error
     assert_kind_of Interrupt, main_fiber_error
+  end
+end
+
+class MailboxTest < MiniTest::Test
+  def test_that_fiber_can_receive_messages
+    msgs = []
+    f = spin { loop { msgs << receive } }
+
+    snooze # allow fiber to start
+
+    3.times do |i|
+      f << i
+      snooze
+    end
+
+    assert_equal [0, 1, 2], msgs
+  ensure
+    f&.stop
+  end
+
+  def test_that_multiple_messages_sent_at_once_arrive_in_order
+    msgs = []
+    f = spin { loop { msgs << receive } }
+
+    snooze # allow coproc to start
+
+    3.times { |i| f << i }
+
+    snooze
+
+    assert_equal [0, 1, 2], msgs
+  ensure
+    f&.stop
+  end
+
+  def test_that_sent_message_are_queued_before_calling_receive
+    buffer = []
+    receiver = spin { suspend; 3.times { buffer << receive } }
+    sender = spin { 3.times { |i| receiver << (i * 10) } }
+
+    sender.await
+    receiver.schedule
+    receiver.await
+
+    assert_equal [0, 10, 20], buffer
+  end
+
+  def test_cross_thread_send_receive
+    skip "There's currently a race condition in cross-thread send/receive. We're going to rewrite it in C"
+    ping_receive_buffer = []
+    pong_receive_buffer = []
+    pong = Thread.new do
+      loop do
+        peer, data = receive
+        pong_receive_buffer << data
+        peer << 'pong'
+      end
+    end
+
+    ping = Thread.new do
+      3.times do
+        pong << [Fiber.current, 'ping']
+        data = receive
+        ping_receive_buffer << data
+      end
+    end
+
+    ping.join
+    pong.kill
+
+    assert_equal %w{pong pong pong}, ping_receive_buffer
+    assert_equal %w{ping ping ping}, pong_receive_buffer
   end
 end

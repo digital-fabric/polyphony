@@ -16,13 +16,15 @@ class ThrottlerTest < MiniTest::Test
   end
 
   def test_throttler_with_hash_of_rate
-    t = Polyphony::Throttler.new(rate: 100)
+    t = Polyphony::Throttler.new(rate: 20)
     buffer = []
-    f = spin { loop { t.process { buffer << 1 } } }
-    sleep 0.02
+    f = spin do
+      loop { t.process { buffer << 1 } }
+    end
+    sleep 0.25
     f.stop
-    assert buffer.size >= 2
-    assert buffer.size <= 3
+    puts "count: #{buffer.size}"
+    assert (2..6).include?(buffer.size)
   ensure
     t.stop
   end
