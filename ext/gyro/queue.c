@@ -78,20 +78,48 @@ VALUE Gyro_Queue_shift(VALUE self) {
   return Gyro_Async_await(async);
 }
 
+VALUE Gyro_Queue_shift_no_wait(VALUE self) {
+  struct Gyro_Queue *queue;
+  GetGyro_Queue(self, queue);
+
+  return rb_ary_shift(queue->queue);
+}
+
 VALUE Gyro_Queue_shift_all(VALUE self) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
+  VALUE old_queue = queue->queue;
+  queue->queue = rb_ary_new();
+
   if (rb_block_given_p()) {
-    while (RARRAY_LEN(queue->queue) > 0) {
-      rb_yield(rb_ary_shift(queue->queue));
+    long len = RARRAY_LEN(old_queue);
+    for (long i = 0; i < len; i++) {
+      rb_yield(RARRAY_AREF(old_queue, i));
     }
+    // while (RARRAY_LEN(old_queue) > 0) {
+    //   rb_yield(rb_ary_shift(old_queue));
+    // }
+    return self;
   }
   else {
-    rb_ary_clear(queue->queue);
+    return old_queue;
   }
+}
 
+VALUE Gyro_Queue_clear(VALUE self) {
+  struct Gyro_Queue *queue;
+  GetGyro_Queue(self, queue);
+
+  rb_ary_clear(queue->queue);
   return self;
+}
+
+VALUE Gyro_Queue_empty_p(VALUE self) {
+  struct Gyro_Queue *queue;
+  GetGyro_Queue(self, queue);
+
+  return (RARRAY_LEN(queue->queue) == 0) ? Qtrue : Qfalse;
 }
 
 void Init_Gyro_Queue() {
@@ -104,6 +132,10 @@ void Init_Gyro_Queue() {
 
   rb_define_method(cGyro_Queue, "pop", Gyro_Queue_shift, 0);
   rb_define_method(cGyro_Queue, "shift", Gyro_Queue_shift, 0);
+  
+  rb_define_method(cGyro_Queue, "shift_no_wait", Gyro_Queue_shift_no_wait, 0);
 
   rb_define_method(cGyro_Queue, "shift_each", Gyro_Queue_shift_all, 0);
+  rb_define_method(cGyro_Queue, "clear", Gyro_Queue_clear, 0);
+  rb_define_method(cGyro_Queue, "empty?", Gyro_Queue_empty_p, 0);
 }
