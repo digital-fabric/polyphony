@@ -8,6 +8,11 @@ require 'etc'
 class ThreadPool
   attr_reader :size
 
+  def self.process(&block)
+    @default_pool ||= self.new
+    @default_pool.process(&block)
+  end
+
   def initialize(size = Etc.nprocessors)
     @size = size
     @task_queue = ::Queue.new
