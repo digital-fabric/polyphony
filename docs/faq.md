@@ -174,8 +174,9 @@ support running Rails in an eventual release.
 
 ### How can I contribute to Polyphony?
 
-The Polyphony repository is at https://github.com/digital-fabric/polyphony. Feel
-free to create issues and contribute pull requests.
+The Polyphony repository is at
+[https://github.com/digital-fabric/polyphony](https://github.com/digital-fabric/polyphony).
+Feel free to create issues and contribute pull requests.
 
 ### Who is behind this project?
 
