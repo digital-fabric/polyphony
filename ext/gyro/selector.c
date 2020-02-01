@@ -75,6 +75,8 @@ static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
   selector->ev_loop = use_default_loop ? EV_DEFAULT : ev_loop_new(EVFLAG_NOSIGMASK);
   selector->run_no_wait_count = 0;
 
+  ev_run(selector->ev_loop, EVRUN_NOWAIT);
+
   return Qnil;
 }
 
