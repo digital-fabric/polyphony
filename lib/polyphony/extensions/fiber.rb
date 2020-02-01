@@ -55,11 +55,12 @@ module FiberMessaging
     if @receive_waiting && @running
       schedule value
     else
-      @queued_messages ||= []
+      @queued_messages ||= Gyro::Queue.new
       @queued_messages << value
     end
     snooze
   end
+  alias_method :send, :<<
 
   def receive
     if !@queued_messages || @queued_messages&.empty?
