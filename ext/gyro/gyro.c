@@ -11,6 +11,7 @@ ID ID_inspect;
 ID ID_new;
 ID ID_raise;
 ID ID_ivar_running;
+ID ID_ivar_thread;
 ID ID_runnable;
 ID ID_runnable_value;
 ID ID_size;
@@ -117,8 +118,13 @@ static VALUE Fiber_state(VALUE self) {
 }
 
 inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
-  FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
-  Thread_schedule_fiber(rb_thread_current(), fiber, value);
+  VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
+  if (thread != Qnil) {
+    Thread_schedule_fiber(thread, fiber, value);
+  }
+  else {
+    rb_warn("No thread set for fiber");
+  }
 }
 
 VALUE Gyro_trace(VALUE self, VALUE enabled) {
@@ -152,6 +158,7 @@ void Init_Gyro() {
   ID_empty          = rb_intern("empty?");
   ID_inspect        = rb_intern("inspect");
   ID_ivar_running   = rb_intern("@running");
+  ID_ivar_thread    = rb_intern("@thread");
   ID_new            = rb_intern("new");
   ID_pop            = rb_intern("pop");
   ID_push           = rb_intern("push");

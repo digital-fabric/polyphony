@@ -70,6 +70,7 @@ extern ID ID_each;
 extern ID ID_fiber_trace;
 extern ID ID_inspect;
 extern ID ID_ivar_running;
+extern ID ID_ivar_thread;
 extern ID ID_new;
 extern ID ID_raise;
 extern ID ID_runnable;

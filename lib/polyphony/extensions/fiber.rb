@@ -110,16 +110,22 @@ class ::Fiber
     f
   end
 
-  attr_accessor :tag
-  Fiber.current.tag = :main
+  attr_accessor :tag, :thread
 
   def setup(tag, block, caller)
     __fiber_trace__(:fiber_create, self)
+    @thread = Thread.current
     @tag = tag
     @calling_fiber = Fiber.current
     @caller = caller
     @block = block
     schedule
+  end
+
+  def setup_main_fiber
+    @tag = :main
+    @thread = Thread.current
+    @running = true
   end
 
   def run(first_value)
@@ -187,3 +193,5 @@ class ::Fiber
     end
   end
 end
+
+Fiber.current.setup_main_fiber

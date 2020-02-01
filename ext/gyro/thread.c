@@ -98,13 +98,16 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
 }
 
 inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+  FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
   // if fiber is already scheduled, just set the scheduled value, then return
   rb_ivar_set(fiber, ID_runnable_value, value);
-  if (rb_ivar_get(fiber, ID_runnable) == Qnil) {
-    VALUE queue = rb_ivar_get(self, ID_run_queue);
-    rb_ary_push(queue, fiber);
-    rb_ivar_set(fiber, ID_runnable, Qtrue);
+  if (rb_ivar_get(fiber, ID_runnable) != Qnil) {
+    return self;
   }
+
+  VALUE queue = rb_ivar_get(self, ID_run_queue);
+  rb_ary_push(queue, fiber);
+  rb_ivar_set(fiber, ID_runnable, Qtrue);
   return self;
 }
 
