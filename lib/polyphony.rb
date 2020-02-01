@@ -62,6 +62,7 @@ module Polyphony
     def fork(&block)
       pid = Kernel.fork do
         Gyro.post_fork
+        Fiber.current.setup_main_fiber
         block.()
       end
       pid
