@@ -4,7 +4,9 @@ Exceptions = import '../core/exceptions'
 
 # Thread extensions
 class ::Thread
-  @@join_queue_mutex = Mutex.new
+  def self.join_queue_mutex
+    @join_queue_mutex ||= Mutex.new
+  end
 
   attr_reader :main_fiber
 
@@ -29,7 +31,7 @@ class ::Thread
   alias_method :orig_join, :join
   def join(timeout = nil)
     async = Gyro::Async.new
-    @@join_queue_mutex.synchronize do
+    Thread.join_queue_mutex.synchronize do
       return unless alive?
 
       @join_wait_queue << async

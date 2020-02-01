@@ -86,46 +86,46 @@ class FiberTracePoint
 end
 
 class << ::TracePoint
+  POLYPHONY_FILE_REGEXP = /^#{::Exception::POLYPHONY_DIR}/.freeze
+
   alias_method :orig_new, :new
   def new(*args, &block)
-    polyphony_file_regexp = /^#{::Exception::POLYPHONY_DIR}/
-
     events_mask, fiber_events_mask = event_masks(args)
 
     orig_new(*events_mask) do |tp|
-      # next unless !$watched_fiber || Fiber.current == $watched_fiber
-
-      if tp.method_id == :__fiber_trace__
-        next if tp.event != :c_return
-        next unless fiber_events_mask.include?(tp.return_value[0])
-        
-        block.(FiberTracePoint.new(tp))
-      else
-        next if tp.path =~ polyphony_file_regexp
-
-        block.(tp)
-      end
+      handle_tp_event(tp, fiber_events_mask, &block)
     end
+  end
+
+  def handle_tp_event(tpoint, fiber_events_mask)
+    # next unless !$watched_fiber || Fiber.current == $watched_fiber
+
+    if tpoint.method_id == :__fiber_trace__
+      return if tpoint.event != :c_return
+      return unless fiber_events_mask.include?(tpoint.return_value[0])
+
+      tpoint = FiberTracePoint.new(tpoint)
+    elsif tpoint.path =~ POLYPHONY_FILE_REGEXP
+      return
+    end
+
+    yield tpoint
   end
 
   ALL_FIBER_EVENTS = %i[
     fiber_create fiber_terminate fiber_schedule fiber_switchpoint fiber_run
     fiber_ev_loop_enter fiber_ev_loop_leave
-  ]
+  ].freeze
 
   def event_masks(events)
-    events.inject([[], []]) do |masks, e|
+    events.each_with_object([[], []]) do |e, masks|
       case e
-      when :fiber_all
-        masks[1] += ALL_FIBER_EVENTS
-        masks[0] << :c_return unless masks[0].include?(:c_return)
       when /fiber_/
-        masks[1] << e
+        masks[1] += e == :fiber_all ? ALL_FIBER_EVENTS : [e]
         masks[0] << :c_return unless masks[0].include?(:c_return)
       else
         masks[0] << e
       end
-      masks
     end
   end
 end

@@ -14,7 +14,6 @@ class Throttler
     @timer.await
     block.call(self)
   end
-
   alias_method :process, :call
 
   def stop
