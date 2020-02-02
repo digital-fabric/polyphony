@@ -522,6 +522,25 @@ class FiberTest < MiniTest::Test
     assert_nil parent_error
     assert_kind_of Interrupt, main_fiber_error
   end
+
+  def test_signal_exception_in_fiber
+    parent_error = nil
+    main_fiber_error = nil
+    f2 = nil
+    f1 = spin do
+      f2 = spin { raise SignalException.new('HUP') }
+      suspend
+    rescue Exception => parent_error
+    end
+
+    begin
+      suspend
+    rescue Exception => main_fiber_error
+    end
+
+    assert_nil parent_error
+    assert_kind_of SignalException, main_fiber_error
+  end
 end
 
 class MailboxTest < MiniTest::Test

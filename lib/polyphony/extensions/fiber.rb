@@ -135,6 +135,8 @@ class ::Fiber
     start_execution(first_value)
   rescue ::Interrupt, ::SystemExit => e
     Thread.current.main_fiber.transfer e.class.new
+  rescue ::SignalException => e
+    Thread.current.main_fiber.transfer e
   rescue Exceptions::MoveOn => e
     finish_execution(e.value)
   rescue Exception => e

@@ -1,3 +1,4 @@
+* Pass SignalException to main fiber
 * Add (restore) default thread pool
 * Prevent race condition in Thread#join
 * Add support for cross-thread fiber scheduling
