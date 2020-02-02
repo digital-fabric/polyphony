@@ -77,7 +77,28 @@ Exception.__disable_sanitized_backtrace__ = true
 ...
 ```
 
-## Cleaning up after exceptions
+## Exceptions and Fiber Scheduling
+
+Polyphony takes advantages of Ruby's `Fiber#transfer` API to allow interrupting
+fiber execution and raise cross-fiber exceptions. This is done by inspecting the
+return value of `Fiber#transfer`, which returns when the fiber resumes, at every
+[switchpoint](../fiber-scheduling/#switchpoints). If the return value is an
+exception, it is raised in the context of the resumed fiber, and is then subject
+to any `rescue` statements in the context of that fiber.
+
+Exceptions can be passed to arbitrary fibers by using `Fiber#raise`. They can also be manually raised in fibers by using `Fiber#schedule`:
+
+```ruby
+f = spin do
+  suspend
+rescue => e
+  puts e.message
+end
+
+f.schedule(RuntimeError.new('foo')) #=> will print 'foo'
+```
+
+## Cleaning Up After Exceptions - Using Ensure
 
 A major issue when handling exceptions is cleaning up - freeing up resources
 that have been allocated, cancelling ongoing operations, etc. Polyphony allows
@@ -135,3 +156,49 @@ will bubble up through the different enclosing fibers, until reaching the
 top-most level, that of the root fiber, at which point the exception will cause
 the program to halt and print an error message.
 
+## MoveOn and Cancel - Interrupting Fiber Execution
+
+In addition to enhancing Ruby's normal exception-handling mechanism, Polyphony
+provides two exception classes that used exclusively to interrupt fiber
+execution: `MoveOn` and `Cancel`. Both of these classes are used in various
+fiber-control APIs, and `MoveOn` exceptions in particular are handled in a
+particular manner by Polyphony. The difference between `MoveOn` and `Cancel` is
+that `MoveOn` stops fiber execution without the exception bubbling up. It can
+optionally provide an arbitrary return value for the fiber. `Cancel` will bubble
+up like all exceptions.
+
+The `MoveOn` and `Cancel` classes are normally used indirectly, through the
+`Fiber#interrupt` and `Fiber#cancel` APIs, and also through the use of [cancel
+scopes](#):
+
+```ruby
+f1 = spin { sleep 100; return 'foo' }
+f2 = spin { f1.await }
+...
+f1.interrupt('bar')
+f2.result #=> 'bar'
+
+f3 = spin { sleep 100 }
+...
+f3.cancel #=> will raise a Cancel exception
+```
+
+## Signal Handling and Termination
+
+Polyphony does not normally intercept process signals, though it is possible to
+intercept them using `Gyro::Signal` watchers. It is, however, recommended for
+the time being to not interfere with Ruby's normal signal processing.
+
+In Ruby there are three core exception classes are related to signal handling
+and process termination: `Interrupt` - raised upon receiving an `INT` signal;
+`SystemExit` - raised upon calling `Kernel#exit`; and `SignalException` - raised
+upon receiving other signals.
+
+These exceptions are raised on the main thread and in a multi-fiber environment
+can occur in any fiber, as long as it is the currently running fiber. In
+Polyphony, when these exceptions are raised in a fiber other than the main
+fiber, they will be effectively tranferred to the main fiber for processing.
+
+This means that any handlers for these three exception classes should be put
+only in the main fiber. This mechanism also helps with showing a correct
+backtrace for these exceptions.
