@@ -1,3 +1,6 @@
+0.29 2020-02-02
+---------------
+
 * Pass SignalException to main fiber
 * Add (restore) default thread pool
 * Prevent race condition in Thread#join
