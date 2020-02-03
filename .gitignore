@@ -53,6 +53,7 @@ test.rb
 .vscode
 
 lib/gyro_ext.bundle
+lib/gyro_ext.so
 
 _site
 .sass-cache
