@@ -552,7 +552,7 @@ class MailboxTest < MiniTest::Test
 
     3.times do |i|
       f << i
-      snooze
+      sleep 0
     end
 
     assert_equal [0, 1, 2], msgs
@@ -568,7 +568,7 @@ class MailboxTest < MiniTest::Test
 
     3.times { |i| f << i }
 
-    snooze
+    sleep 0
 
     assert_equal [0, 1, 2], msgs
   ensure
@@ -612,5 +612,23 @@ class MailboxTest < MiniTest::Test
 
     assert_equal %w{pong pong pong}, ping_receive_buffer
     assert_equal %w{ping ping ping}, pong_receive_buffer
+  end
+
+  def test_message_queueing
+    messages = []
+    f = spin do
+      loop {
+        msg = receive
+        break if msg == 'stop'
+
+        messages << msg
+      }
+    end
+
+    100.times { f << 'foo' }
+    f << 'stop'
+
+    f.await
+    assert_equal ['foo'] * 100, messages
   end
 end

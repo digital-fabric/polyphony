@@ -52,33 +52,35 @@ end
 # Messaging functionality
 module FiberMessaging
   def <<(value)
-    if @receive_waiting && @running
-      schedule value
-    else
-      @queued_messages ||= Gyro::Queue.new
-      @queued_messages << value
-    end
+    @mailbox << value
+    # if @receive_waiting && @running
+    #   schedule value
+    # else
+    #   @queued_messages ||= Gyro::Queue.new
+    #   @queued_messages << value
+    # end
     snooze
   end
   alias_method :send, :<<
 
   def receive
-    if !@queued_messages || @queued_messages&.empty?
-      wait_for_message
-    else
-      value = @queued_messages.shift
-      snooze
-      value
-    end
+    # if !@queued_messages || @queued_messages&.empty?
+    #   wait_for_message
+    # else
+    #   value = @queued_messages.shift
+    #   snooze
+    #   value
+    # end
+    @mailbox.shift
   end
 
   def wait_for_message
-    Gyro.ref
-    @receive_waiting = true
-    suspend
-  ensure
-    Gyro.unref
-    @receive_waiting = nil
+  #   Gyro.ref
+  #   @receive_waiting = true
+  #   suspend
+  # ensure
+  #   Gyro.unref
+  #   @receive_waiting = nil
   end
 end
 
@@ -120,6 +122,7 @@ class ::Fiber
     @calling_fiber = Fiber.current
     @caller = caller
     @block = block
+    @mailbox = Gyro::Queue.new
     schedule
   end
 
