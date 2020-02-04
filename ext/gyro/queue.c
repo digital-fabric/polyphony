@@ -75,7 +75,9 @@ VALUE Gyro_Queue_shift(VALUE self) {
   
   VALUE async = rb_funcall(cGyro_Async, ID_new, 0);
   rb_ary_push(queue->wait_queue, async);
-  return Gyro_Async_await(async);
+  VALUE ret = Gyro_Async_await(async);
+  RB_GC_GUARD(async);
+  return ret;
 }
 
 VALUE Gyro_Queue_shift_no_wait(VALUE self) {
