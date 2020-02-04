@@ -112,9 +112,8 @@ inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
 }
 
 VALUE Thread_switch_fiber(VALUE self) {
-  VALUE current_fiber;
+  VALUE current_fiber = rb_fiber_current();
   if (__tracing_enabled__) {
-    current_fiber = rb_fiber_current();
     if (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse) {
       rb_funcall(rb_cObject, ID_fiber_trace, 2, SYM_fiber_switchpoint, current_fiber);
     }
