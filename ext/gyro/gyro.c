@@ -117,7 +117,7 @@ static VALUE Fiber_state(VALUE self) {
   return SYM_waiting;
 }
 
-inline void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
+void Gyro_schedule_fiber(VALUE fiber, VALUE value) {
   VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
   if (thread != Qnil) {
     Thread_schedule_fiber(thread, fiber, value);

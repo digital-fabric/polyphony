@@ -57,26 +57,26 @@ static VALUE Thread_stop_event_selector(VALUE self) {
   return self;
 }
 
-inline VALUE Thread_ref(VALUE self) {
+VALUE Thread_ref(VALUE self) {
   VALUE count = rb_ivar_get(self, ID_fiber_ref_count);
   int new_count = NUM2INT(count) + 1;
   rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(new_count));
   return self;
 }
 
-inline VALUE Thread_unref(VALUE self) {
+VALUE Thread_unref(VALUE self) {
   VALUE count = rb_ivar_get(self, ID_fiber_ref_count);
   int new_count = NUM2INT(count) - 1;
   rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(new_count));
   return self;
 }
 
-inline int Thread_fiber_ref_count(VALUE self) {
+int Thread_fiber_ref_count(VALUE self) {
   VALUE count = rb_ivar_get(self, ID_fiber_ref_count);
   return NUM2INT(count);
 }
 
-inline void Thread_fiber_reset_ref_count(VALUE self) {
+void Thread_fiber_reset_ref_count(VALUE self) {
   rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(0));
 }
 
@@ -97,7 +97,7 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   return stats;
 }
 
-inline VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
   // if fiber is already scheduled, just set the scheduled value, then return
   rb_ivar_set(fiber, ID_runnable_value, value);
@@ -169,7 +169,7 @@ VALUE Thread_post_fork(VALUE self) {
   return self;
 }
 
-inline VALUE Fiber_await() {
+VALUE Fiber_await() {
   VALUE thread = rb_thread_current();
   Thread_ref(thread);
   VALUE ret = Thread_switch_fiber(thread);
@@ -178,7 +178,7 @@ inline VALUE Fiber_await() {
   return ret;
 }
 
-inline VALUE Thread_current_event_selector() {
+VALUE Thread_current_event_selector() {
   return rb_ivar_get(rb_thread_current(), ID_ivar_event_selector);
 }
 
