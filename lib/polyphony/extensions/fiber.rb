@@ -130,6 +130,7 @@ class ::Fiber
     @tag = :main
     @thread = Thread.current
     @running = true
+    @mailbox = Gyro::Queue.new
   end
 
   def run(first_value)
