@@ -129,6 +129,7 @@ VALUE Gyro_Timer_await(VALUE self) {
     timer->fiber = Qnil;
     timer->selector = Qnil;
     ev_timer_stop(timer->ev_loop, &timer->ev_timer);
+    timer->ev_loop = 0;
   }
   RB_GC_GUARD(self);
 

@@ -22,9 +22,9 @@ class ThreadPool
   def process(&block)
     setup unless @task_queue
 
-    watcher = Gyro::Async.new
-    @task_queue << [block, watcher]
-    watcher.await
+    async = Gyro::Async.new
+    @task_queue << [block, async]
+    async.await
   end
 
   def cast(&block)

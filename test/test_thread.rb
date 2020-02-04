@@ -19,10 +19,6 @@ class ThreadTest < MiniTest::Test
 
   def test_thread_join
     tr = nil
-    # tr = Polyphony::Trace.new(:fiber_all) { |r| p r[:event] }
-    # Gyro.trace(true)
-    # tr.enable
-
     buffer = []
     spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new { sleep 0.01; buffer << 4 }

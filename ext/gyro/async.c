@@ -78,7 +78,7 @@ static VALUE Gyro_Async_signal(int argc, VALUE *argv, VALUE self) {
   struct Gyro_Async *async;
   GetGyro_Async(self, async);
 
-  if (!async->ev_loop) {
+  if (!async->active) {
     // printf("signal! called before await\n");
     return Qnil;
   }
