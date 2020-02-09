@@ -194,4 +194,12 @@ class IOClassMethodsTest < MiniTest::Test
   ensure
     $stdout = orig_stdout
   end
+
+  def test_read_large_file
+    fn = '/tmp/test.txt'
+    File.open(fn, 'w') { |f| f << ('*' * 1e6) }
+    s = IO.read(fn)
+    assert_equal 1e6, s.bytesize
+    assert s == IO.orig_read(fn)
+  end
 end
