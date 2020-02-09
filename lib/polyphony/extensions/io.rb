@@ -177,8 +177,8 @@ class ::IO
       return outbuf ? readpartial(length) : readpartial(length, outbuf)
     end
 
-    outbuf ||= +''
     until eof?
+      outbuf ||= +''
       outbuf << readpartial(8192)
     end
     outbuf

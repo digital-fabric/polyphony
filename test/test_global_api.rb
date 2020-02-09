@@ -319,6 +319,7 @@ class MoveOnAfterTest < MiniTest::Test
     snooze
     assert f.running?
     f.stop
+    snooze
     assert !f.running?
   end
 

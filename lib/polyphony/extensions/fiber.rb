@@ -22,7 +22,6 @@ module FiberControl
     return if @running == false
 
     schedule Exceptions::MoveOn.new(nil, value)
-    snooze
   end
   alias_method :stop, :interrupt
 
@@ -30,13 +29,11 @@ module FiberControl
     return if @running == false
 
     schedule Exceptions::Cancel.new
-    snooze
   end
 
   def raise(*args)
     error = error_from_raise_args(args)
     schedule(error)
-    snooze
   end
 
   def error_from_raise_args(args)

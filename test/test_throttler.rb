@@ -9,6 +9,7 @@ class ThrottlerTest < MiniTest::Test
     f = spin { loop { t.process { buffer << 1 } } }
     sleep 0.02
     f.stop
+    snooze
     assert buffer.size >= 2
     assert buffer.size <= 3
   ensure

@@ -336,6 +336,7 @@ class FiberTest < MiniTest::Test
     snooze while counter < 3
     assert_equal :waiting, f.state
     f.stop
+    snooze
     assert_equal :dead, f.state
   ensure
     f&.stop

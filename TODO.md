@@ -1,5 +1,17 @@
 ## 0.29 Multithreaded fiber scheduling - some rough corners
 
+- Introduce following APIs:
+  - `defer`
+  - `spin_worker`
+  - `spin_worker_loop`
+- Accept rate/interval in `spin_loop` and `spin_worker_loop`:
+
+  ```ruby
+  spin_loop(10) { ... } # 10 times per second
+  spin_loop(rate: 10) { ... } # 10 times per second
+  spin_loop(interval: 10) { ... } # once every ten seconds
+  ```
+
 - Docs: explain difference between `sleep` and `suspend`
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
