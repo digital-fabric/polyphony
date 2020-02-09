@@ -267,6 +267,20 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_interrupt_timer
+    result = []
+    f = Fiber.spin do
+      result << :start
+      t = Gyro::Timer.new(1, 0)
+      result << t.await
+    end
+    snooze
+    f.interrupt
+    f.join
+
+    assert_equal [:start], result
+  end
+
   def test_stop
     # that is, stopped without exception
     result = []

@@ -82,7 +82,6 @@ static VALUE Gyro_unref(VALUE self) {
 }
 
 static VALUE Gyro_suspend(VALUE self) {
-  rb_ivar_set(self, ID_runnable_value, Qnil);
   VALUE ret = Thread_switch_fiber(rb_thread_current());
   
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
