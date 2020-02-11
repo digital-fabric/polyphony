@@ -1,3 +1,12 @@
+* Fix TERM and INT signal handling (close #11)
+* Fix compiling on Linux
+* Do not reset runnable value in Gyro_suspend (prevents interrupting timers)
+* Don't snooze when stopping a fiber
+* Fix IO#read for files larger than 8KB (#10)
+* Fix fiber messaging in main fiber
+* Prevent signalling of inactive async watcher
+* Better fiber messaging
+
 0.29 2020-02-02
 ---------------
 

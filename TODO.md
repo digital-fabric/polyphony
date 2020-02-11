@@ -1,4 +1,4 @@
-## 0.29 Multithreaded fiber scheduling - some rough corners
+## 0.30 Multithreaded fiber scheduling - some rough corners
 
 - Introduce following APIs:
   - `defer`
@@ -16,12 +16,12 @@
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
 
-## 0.30 Working Sinatra application
+## 0.31 Working Sinatra application
 
 - app with database access (postgresql)
 - benchmarks!
 
-## 0.31 Sidekick
+## 0.32 Sidekick
 
 Plan of action:
 
@@ -29,13 +29,13 @@ Plan of action:
 - test performance
 - proceed from there
 
-## 0.32 Testing && Docs
+## 0.33 Testing && Docs
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.33 Integration
+## 0.34 Integration
 
-## 0.34 Real IO#gets and IO#read
+## 0.35 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -45,11 +45,11 @@ Plan of action:
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.35 Rails
+## 0.36 Rails
 
 - Rails?
 
-## 0.36 DNS
+## 0.37 DNS
 
 ### DNS client
 
