@@ -74,3 +74,19 @@ module Polyphony
     end
   end
 end
+
+# install signal handlers
+
+def install_terminating_signal_handler(signal, exception_class)
+  trap(signal) do
+    exception = exception_class.new#, nil#, [Fiber.current.location]
+    if Fiber.current.main?
+      raise exception
+    else
+      Thread.current.break_out_of_ev_loop(exception)
+    end
+  end
+end
+
+install_terminating_signal_handler('SIGTERM', SystemExit)
+install_terminating_signal_handler('SIGINT', Interrupt)

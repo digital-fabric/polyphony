@@ -48,6 +48,7 @@ VALUE Thread_switch_fiber(VALUE thread);
 VALUE Fiber_await();
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_post_fork(VALUE thread);
+VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self);
 
 
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))

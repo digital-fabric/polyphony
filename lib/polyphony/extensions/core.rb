@@ -26,6 +26,10 @@ class ::Exception
       return orig_backtrace
     end
 
+    if self.class == Interrupt || self.class == SystemExit
+      return orig_backtrace
+    end
+
     if @__raising_fiber__
       backtrace = orig_backtrace || []
       sanitize(backtrace + @__raising_fiber__.caller)

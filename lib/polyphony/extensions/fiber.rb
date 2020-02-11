@@ -124,6 +124,7 @@ class ::Fiber
   end
 
   def setup_main_fiber
+    @main = true
     @tag = :main
     @thread = Thread.current
     @running = true
@@ -135,7 +136,7 @@ class ::Fiber
 
     start_execution(first_value)
   rescue ::Interrupt, ::SystemExit => e
-    Thread.current.main_fiber.transfer e.class.new
+    Thread.current.main_fiber.transfer e
   rescue ::SignalException => e
     Thread.current.main_fiber.transfer e
   rescue Exceptions::MoveOn => e
@@ -195,6 +196,10 @@ class ::Fiber
     else
       spin_caller
     end
+  end
+
+  def main?
+    @main
   end
 end
 

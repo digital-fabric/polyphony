@@ -3,6 +3,7 @@
 struct Gyro_Selector {
   struct  ev_loop *ev_loop;
   long run_no_wait_count;
+  int ev_loop_running;
 };
 
 VALUE cGyro_Selector = Qnil;
@@ -86,7 +87,9 @@ inline VALUE Gyro_Selector_run(VALUE self, VALUE current_fiber) {
   if (selector->ev_loop) {
     selector->run_no_wait_count = 0;
     FIBER_TRACE(2, SYM_fiber_ev_loop_enter, current_fiber);
+    selector->ev_loop_running = 1;
     ev_run(selector->ev_loop, EVRUN_ONCE);
+    selector->ev_loop_running = 0;
     FIBER_TRACE(2, SYM_fiber_ev_loop_leave, current_fiber);
   }
   return Qnil;
@@ -118,6 +121,18 @@ VALUE Gyro_Selector_stop(VALUE self) {
   return Qnil;
 }
 
+VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self) {
+  struct Gyro_Selector *selector;
+  GetGyro_Selector(self, selector);
+
+  if (selector->ev_loop_running) {
+    ev_break(selector->ev_loop, EVBREAK_ALL);
+    return Qtrue;
+  }
+
+  return Qnil;
+}
+
 inline static VALUE Gyro_Selector_wait_readable(VALUE self, VALUE io) {
   VALUE watcher = IO_read_watcher(io);
   return Gyro_IO_await(watcher);
@@ -143,4 +158,5 @@ void Init_Gyro_Selector() {
   rb_define_method(cGyro_Selector, "wait_readable", Gyro_Selector_wait_readable, 1);
   rb_define_method(cGyro_Selector, "wait_writable", Gyro_Selector_wait_writable, 1);
   rb_define_method(cGyro_Selector, "wait_timeout", Gyro_Selector_wait_timeout, 1);
+  rb_define_method(cGyro_Selector, "break_out_of_ev_loop", Gyro_Selector_break_out_of_ev_loop, 0);
 }

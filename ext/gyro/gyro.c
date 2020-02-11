@@ -47,11 +47,11 @@ VALUE SYM_fiber_switchpoint;
 VALUE SYM_fiber_terminate;
 
 
-// static VALUE Gyro_break_set(VALUE self) {
-//   break_flag = 1;
-//   ev_break(EV_DEFAULT, EVBREAK_ALL);
-//   return Qnil;
-// }
+static VALUE Gyro_break_set(VALUE self) {
+  // break_flag = 1;
+  ev_break(Gyro_Selector_current_thread_ev_loop(), EVBREAK_ALL);
+  return Qnil;
+}
 
 // static VALUE Gyro_break_get(VALUE self) {
 //   return (break_flag == 0) ? Qfalse : Qtrue;
@@ -139,7 +139,7 @@ void Init_Gyro() {
   rb_define_singleton_method(mGyro, "unref", Gyro_unref, 0);
   rb_define_singleton_method(mGyro, "trace", Gyro_trace, 1);
 
-  // rb_define_singleton_method(mGyro, "break!", Gyro_break_set, 0);
+  rb_define_singleton_method(mGyro, "break!", Gyro_break_set, 0);
   // rb_define_singleton_method(mGyro, "break?", Gyro_break_get, 0);
 
   rb_define_global_function("snooze", Gyro_snooze, 0);

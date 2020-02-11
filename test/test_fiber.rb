@@ -556,6 +556,50 @@ class FiberTest < MiniTest::Test
     assert_nil parent_error
     assert_kind_of SignalException, main_fiber_error
   end
+
+  def test_signal_handling_int
+    i, o = IO.pipe
+    pid = Polyphony.fork do
+      f = spin { sleep 100 }
+      begin
+        i.close
+        f.await
+      rescue Exception => e
+        o << e.class.name
+        o.close
+      end
+    end
+    sleep 0.2
+    f = spin { Gyro::Child.new(pid).await }
+    o.close
+    Process.kill('INT', pid)
+    f.await
+    klass = i.read
+    o.close
+    assert_equal 'Interrupt', klass
+  end
+
+  def test_signal_handling_term
+    i, o = IO.pipe
+    pid = Polyphony.fork do
+      f = spin { sleep 100 }
+      begin
+        i.close
+        f.await
+      rescue Exception => e
+        o << e.class.name
+        o.close
+      end
+    end
+    sleep 0.2
+    f = spin { Gyro::Child.new(pid).await }
+    o.close
+    Process.kill('TERM', pid)
+    f.await
+    klass = i.read
+    o.close
+    assert_equal 'SystemExit', klass
+  end
 end
 
 class MailboxTest < MiniTest::Test

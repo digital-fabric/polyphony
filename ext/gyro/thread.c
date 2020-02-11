@@ -182,6 +182,18 @@ VALUE Thread_current_event_selector() {
   return rb_ivar_get(rb_thread_current(), ID_ivar_event_selector);
 }
 
+VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE resume_obj) {
+  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
+  Thread_schedule_fiber(self, rb_fiber_current(), resume_obj);
+
+  if (Gyro_Selector_break_out_of_ev_loop(selector) == Qnil) {
+    // we're not inside the ev_loop, so we just do a switchpoint
+    Thread_switch_fiber(self);
+  }
+
+  return self;
+}
+
 void Init_Thread() {
   cQueue = rb_const_get(rb_cObject, rb_intern("Queue"));
 
@@ -195,6 +207,7 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "stop_event_selector", Thread_stop_event_selector, 0);
   rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
+  rb_define_method(rb_cThread, "break_out_of_ev_loop", Thread_fiber_break_out_of_ev_loop, 1);
 
   rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
