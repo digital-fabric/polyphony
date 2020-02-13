@@ -2,12 +2,8 @@
 
 - Implement nested fibers
   - Add tests:
-    - Child fiber termination after fork
-    - `Thread#join` / `Thread#await` result
-    - `Thread#join` error propagation
     - `Fiber#await` from multiple fibers at once
       (reimplement `Fiber#await` using `Fiber#when_done`)
-  - Add `Thread#await` alias to `Thread#join`
 
 ## 0.31 Working Sinatra application
 

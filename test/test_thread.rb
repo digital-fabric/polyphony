@@ -46,6 +46,48 @@ class ThreadTest < MiniTest::Test
     t&.kill if t&.alive?
   end
 
+  def test_thread_await_alias_method
+    buffer = []
+    spin { (1..3).each { |i| snooze; buffer << i } }
+    t = Thread.new { sleep 0.01; buffer << 4; :foo }
+
+    r = t.await
+
+    assert_equal [1, 2, 3, 4], buffer
+    assert_equal :foo, r
+  ensure
+    t.kill
+  end
+
+  def test_join_race_condition_on_thread_spawning
+    buffer = []
+    t = Thread.new do
+      :foo
+    end
+    r = t.join
+    assert_equal :foo, r
+  end
+
+  def test_thread_uncaught_exception_propagation
+    t = Thread.new do
+      sleep 1
+    end
+    snooze
+    t.kill
+    t.await
+
+    t = Thread.new do
+      raise 'foo'
+    end
+    e = nil
+    begin
+      t.await
+    rescue Exception => e
+    end
+    assert_kind_of RuntimeError, e
+    assert_equal 'foo', e.message
+  end
+
   def test_thread_inspect
     lineno = __LINE__ + 1
     t = Thread.new { sleep 1 }

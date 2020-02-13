@@ -15,31 +15,21 @@ class ::Thread
     @join_wait_queue = Gyro::Queue.new
     @block = block
     orig_initialize do
-      t0 = Time.now
       @main_fiber = Fiber.current
       @main_fiber.setup_main_fiber
       setup_fiber_scheduling
-      if (elapsed = Time.now - t0) >= 0.01
-        puts "abnormal setup time #{elapsed}s for #{Thread.current.inspect}"
-      end
       result = block.(*args)
     rescue Exceptions::MoveOn, Exceptions::Terminate => e
       result = e.value
     rescue Exception => e
-      puts "Thread got uncaught exception #{e.inspect}"
-      puts e.backtrace.join("\n")
       result = e
     ensure
-      t0 = Time.now
       unless Fiber.current.children.empty?
         Fiber.current.terminate_all_children
         Fiber.current.await_all_children
       end
       signal_waiters(result)
       stop_event_selector
-      if (elapsed = (Time.now - t0)) >= 0.01
-        puts "abnormal teardown time #{elapsed}s for #{Thread.current.inspect}"
-      end
     end
   end
 
@@ -55,6 +45,7 @@ class ::Thread
       join_perform
     end
   end
+  alias_method :await, :join
 
   alias_method :orig_raise, :raise
   def raise(error = nil)
