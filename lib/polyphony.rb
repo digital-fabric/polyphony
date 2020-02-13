@@ -21,8 +21,9 @@ module Polyphony
   ::Object.include GlobalAPI
 
   exceptions = import './polyphony/core/exceptions'
-  Cancel = exceptions::Cancel
-  MoveOn = exceptions::MoveOn
+  Cancel    = exceptions::Cancel
+  MoveOn    = exceptions::MoveOn
+  Terminate = exceptions::Terminate
 
   Net = import './polyphony/net'
 
@@ -55,6 +56,9 @@ module Polyphony
         Gyro.post_fork
         Fiber.current.setup_main_fiber
         block.()
+      ensure
+        Fiber.current.terminate_all_children
+        Fiber.current.await_all_children
       end
       pid
     end

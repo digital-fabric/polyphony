@@ -536,7 +536,7 @@ class FiberTest < MiniTest::Test
         o.close
       end
     end
-    sleep 0.2
+    sleep 0.1
     f = spin { Gyro::Child.new(pid).await }
     o.close
     Process.kill('INT', pid)
@@ -558,7 +558,7 @@ class FiberTest < MiniTest::Test
         o.close
       end
     end
-    sleep 0.2
+    sleep 0.1
     f = spin { Gyro::Child.new(pid).await }
     o.close
     Process.kill('TERM', pid)
@@ -566,6 +566,26 @@ class FiberTest < MiniTest::Test
     klass = i.read
     o.close
     assert_equal 'SystemExit', klass
+  end
+
+  def test_main_fiber_child_termination_after_fork
+    i, o = IO.pipe
+    pid = Polyphony.fork do
+      i.close
+      f = spin do
+        sleep 100
+      rescue Exception => e
+        o << e.class.to_s
+        o.close
+      end
+      snooze
+    ensure
+    end
+    o.close
+    Gyro::Child.new(pid).await
+    klass = i.read
+    i.close
+    assert_equal 'Polyphony::Terminate', klass
   end
 end
 

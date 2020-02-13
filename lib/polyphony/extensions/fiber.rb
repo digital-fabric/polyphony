@@ -60,7 +60,7 @@ module FiberControlClassMethods
 
     pending = fibers.each_with_object({}) { |f, h| h[f] = true }
     current = Fiber.current
-    done = true
+    done = nil
     fibers.each do |f|
       f.when_done do |r|
         pending.delete(f)
@@ -184,6 +184,7 @@ class ::Fiber
     @tag = :main
     @thread = Thread.current
     @running = true
+    @children&.clear
     @mailbox = Gyro::Queue.new
   end
 
