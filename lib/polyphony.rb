@@ -21,8 +21,9 @@ module Polyphony
   ::Object.include GlobalAPI
 
   exceptions = import './polyphony/core/exceptions'
-  Cancel = exceptions::Cancel
-  MoveOn = exceptions::MoveOn
+  Cancel    = exceptions::Cancel
+  MoveOn    = exceptions::MoveOn
+  Terminate = exceptions::Terminate
 
   Net = import './polyphony/net'
 
@@ -31,7 +32,6 @@ module Polyphony
     Channel:      './polyphony/core/channel',
     FS:           './polyphony/fs',
     ResourcePool: './polyphony/core/resource_pool',
-    Supervisor:   './polyphony/core/supervisor',
     Sync:         './polyphony/core/sync',
     ThreadPool:   './polyphony/core/thread_pool',
     Throttler:    './polyphony/core/throttler',
@@ -40,21 +40,13 @@ module Polyphony
   )
 
   class << self
-    # def trap(sig, ref = false, &callback)
-    #   sig = Signal.list[sig.to_s.upcase] if sig.is_a?(Symbol)
-    #   puts "sig = #{sig.inspect}"
-    #   watcher = Gyro::Signal.new(sig, &callback)
-    #   # Gyro.unref unless ref
-    #   watcher
-    # end
-
     def wait_for_signal(sig)
       fiber = Fiber.current
       Gyro.ref
-      trap(sig) do
-        trap(sig, :DEFAULT)
+      old_trap = trap(sig) do
         Gyro.unref
-        fiber.transfer(sig)
+        fiber.schedule(sig)
+        trap(sig, old_trap)
       end
       suspend
     end
@@ -64,13 +56,11 @@ module Polyphony
         Gyro.post_fork
         Fiber.current.setup_main_fiber
         block.()
+      ensure
+        Fiber.current.terminate_all_children
+        Fiber.current.await_all_children
       end
       pid
-    end
-
-    def reset!
-      Thread.current.reset_fiber_scheduling
-      Fiber.reset!
     end
   end
 end
@@ -79,7 +69,7 @@ end
 
 def install_terminating_signal_handler(signal, exception_class)
   trap(signal) do
-    exception = exception_class.new#, nil#, [Fiber.current.location]
+    exception = exception_class.new
     if Fiber.current.main?
       raise exception
     else

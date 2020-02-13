@@ -1,9 +1,7 @@
 ## 0.30 Multithreaded fiber scheduling - some rough corners
 
-- Introduce following APIs:
-  - `defer`
-  - `spin_worker`
-  - `spin_worker_loop`
+## 0.31 Working Sinatra application
+
 - Accept rate/interval in `spin_loop` and `spin_worker_loop`:
 
   ```ruby
@@ -15,9 +13,6 @@
 - Docs: explain difference between `sleep` and `suspend`
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
-
-## 0.31 Working Sinatra application
-
 - app with database access (postgresql)
 - benchmarks!
 

@@ -15,33 +15,50 @@ class ::Thread
     @join_wait_queue = Gyro::Queue.new
     @block = block
     orig_initialize do
-      Fiber.current.setup_main_fiber
+      @main_fiber = Fiber.current
+      @main_fiber.setup_main_fiber
       setup_fiber_scheduling
-      block.(*args)
+      result = block.(*args)
+    rescue Exceptions::MoveOn, Exceptions::Terminate => e
+      result = e.value
+    rescue Exception => e
+      result = e
     ensure
-      signal_waiters
+      unless Fiber.current.children.empty?
+        Fiber.current.terminate_all_children
+        Fiber.current.await_all_children
+      end
+      signal_waiters(result)
       stop_event_selector
     end
   end
 
-  def signal_waiters
-    @join_wait_queue.shift_each { |w| w.signal!(self) }
+  def signal_waiters(result)
+    @join_wait_queue.shift_each { |w| w.signal!(result) }
   end
 
   alias_method :orig_join, :join
   def join(timeout = nil)
-    async = Gyro::Async.new
-    Thread.join_queue_mutex.synchronize do
-      return unless alive?
-
-      @join_wait_queue << async
-    end
-
     if timeout
-      move_on_after(timeout) { async.await }
+      move_on_after(timeout) { join_perform }
     else
-      async.await
+      join_perform
     end
+  end
+  alias_method :await, :join
+
+  alias_method :orig_raise, :raise
+  def raise(error = nil)
+    Thread.pass until @main_fiber
+    error = RuntimeError.new if error.nil?
+    error = RuntimeError.new(error) if error.is_a?(String)
+    error = error.new if error.is_a?(Class)
+    @main_fiber.raise(error)
+  end
+
+  alias_method :orig_kill, :kill
+  def kill
+    raise Exceptions::Terminate
   end
 
   alias_method :orig_inspect, :inspect

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :Interrupt, :MoveOn, :Cancel
+export :Interrupt, :MoveOn, :Cancel, :Terminate
 
 # Common exception class for interrupting fibers. These exceptions allow
 # control of fibers. Interrupt exceptions can encapsulate a value and thus
@@ -24,3 +24,6 @@ class MoveOn < Interrupt; end
 # Cancel is used to interrupt a long-running blocking operation, bubbling the
 # exception up through cancel scopes and supervisors.
 class Cancel < Interrupt; end
+
+# Terminate is used to interrupt a fiber once its parent fiber has terminated.
+class Terminate < Interrupt; end

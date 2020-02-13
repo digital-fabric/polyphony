@@ -53,6 +53,9 @@ static VALUE Thread_stop_event_selector(VALUE self) {
   if (selector != Qnil) {
     rb_funcall(selector, ID_stop, 0);
   }
+  // Nullify the selector in order to prevent running the
+  // selector after the thread is done running.
+  rb_ivar_set(self, ID_ivar_event_selector, Qnil);
 
   return self;
 }
@@ -98,6 +101,9 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
 }
 
 VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+  if (rb_fiber_alive_p(fiber) != Qtrue) {
+    return self;
+  }
   FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
   // if fiber is already scheduled, just set the scheduled value, then return
   rb_ivar_set(fiber, ID_runnable_value, value);
@@ -108,6 +114,18 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   rb_ary_push(queue, fiber);
   rb_ivar_set(fiber, ID_runnable, Qtrue);
+
+  if (rb_thread_current() != self) {
+    // if the fiber scheduling is done across threads, we need to make sure the
+    // target thread is woken up in case it is in the middle of running its
+    // event selector. Otherwise it's gonna be stuck waiting for an event to
+    // happen, not knowing that it there's already a fiber ready to run in its
+    // run queue.
+    VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
+    if (selector != Qnil) {
+      Gyro_Selector_break_out_of_ev_loop(selector);
+    }
+  }
   return self;
 }
 
@@ -194,6 +212,21 @@ VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE resume_obj) {
   return self;
 }
 
+VALUE Thread_join_perform(VALUE self) {
+  if (!RTEST(rb_funcall(self, rb_intern("alive?"), 0))) {
+    return self;
+  }
+
+  VALUE async = rb_funcall(cGyro_Async, ID_new, 0);
+  VALUE wait_queue = rb_ivar_get(self, rb_intern("@join_wait_queue"));
+
+  Gyro_Queue_push(wait_queue, async);
+
+  VALUE ret = Gyro_Async_await(async);
+  RB_GC_GUARD(async);
+  return ret;
+}
+
 void Init_Thread() {
   cQueue = rb_const_get(rb_cObject, rb_intern("Queue"));
 
@@ -212,6 +245,7 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
 
+  rb_define_method(rb_cThread, "join_perform", Thread_join_perform, 0);
 
   ID_create_event_selector    = rb_intern("create_event_selector");
   ID_empty                    = rb_intern("empty?");

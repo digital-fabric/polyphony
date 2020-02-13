@@ -9,7 +9,7 @@ class ThreadTest < MiniTest::Test
     t = Thread.new do
       s1 = spin { (11..13).each { |i| snooze; buffer << i } }
       s2 = spin { (21..23).each { |i| snooze; buffer << i } }
-      Fiber.join(s1, s2)
+      Fiber.current.await_all_children
     end
     f.join
     t.join
@@ -18,18 +18,16 @@ class ThreadTest < MiniTest::Test
   end
 
   def test_thread_join
-    tr = nil
     buffer = []
     spin { (1..3).each { |i| snooze; buffer << i } }
-    t = Thread.new { sleep 0.01; buffer << 4 }
+    t = Thread.new { sleep 0.01; buffer << 4; :foo }
 
     r = t.join
 
     assert_equal [1, 2, 3, 4], buffer
-    assert_equal t, r
+    assert_equal :foo, r
   ensure
-    tr&.disable
-    Gyro.trace(nil)
+    t.kill
   end
 
   def test_thread_join_with_timeout
@@ -45,12 +43,54 @@ class ThreadTest < MiniTest::Test
   ensure
     # killing the thread will prevent stopping the sleep timer, as well as the
     # thread's event selector, leading to a memory leak.
-    t.kill if t.alive?
+    t&.kill if t&.alive?
+  end
+
+  def test_thread_await_alias_method
+    buffer = []
+    spin { (1..3).each { |i| snooze; buffer << i } }
+    t = Thread.new { sleep 0.01; buffer << 4; :foo }
+
+    r = t.await
+
+    assert_equal [1, 2, 3, 4], buffer
+    assert_equal :foo, r
+  ensure
+    t.kill
+  end
+
+  def test_join_race_condition_on_thread_spawning
+    buffer = []
+    t = Thread.new do
+      :foo
+    end
+    r = t.join
+    assert_equal :foo, r
+  end
+
+  def test_thread_uncaught_exception_propagation
+    t = Thread.new do
+      sleep 1
+    end
+    snooze
+    t.kill
+    t.await
+
+    t = Thread.new do
+      raise 'foo'
+    end
+    e = nil
+    begin
+      t.await
+    rescue Exception => e
+    end
+    assert_kind_of RuntimeError, e
+    assert_equal 'foo', e.message
   end
 
   def test_thread_inspect
     lineno = __LINE__ + 1
-    t = Thread.new {}
+    t = Thread.new { sleep 1 }
     str = format(
       "#<Thread:%d %s:%d (run)>",
       t.object_id,
@@ -58,11 +98,18 @@ class ThreadTest < MiniTest::Test
       lineno,
     )
     assert_equal str, t.inspect
+  rescue => e
+    p e
+  ensure
+    t.kill
+    t.join
   end
 
   def test_that_suspend_returns_immediately_if_no_watchers
     records = []
-    t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
+    t = Polyphony::Trace.new(:fiber_all) do |r|
+      records << r if r[:event] =~ /^fiber_/
+    end
     t.enable
     Gyro.trace(true)
 
@@ -74,50 +121,27 @@ class ThreadTest < MiniTest::Test
     Gyro.trace(false)
   end
 
-  def test_reset
-    values = []
-    f1 = spin do
-      values << :foo
-      snooze
-      values << :bar
-      suspend
+  def test_thread_child_fiber_termination
+    buffer = []
+    t = Thread.new do
+      spin do
+        sleep 61
+      ensure
+        buffer << :foo
+      end
+      spin do
+        sleep 62
+      ensure
+        buffer << :bar
+      end
+      assert 2, Fiber.current.children.size
+      sleep 1
     end
+    sleep 0.05
+    assert_equal 2, t.main_fiber.children.size
+    t.kill
+    t.join
 
-    f2 = spin do
-      Thread.current.reset_fiber_scheduling
-      values << :restarted
-      snooze
-      values << :baz
-    end
-
-    suspend
-
-    f1.schedule
-    suspend
-    assert_equal %i[foo restarted baz], values
-  end
-
-  def test_restart
-    values = []
-    spin do
-      values << :foo
-      snooze
-      # this part will not be reached, as Gyro state is reset
-      values << :bar
-      suspend
-    end
-
-    spin do
-      Thread.current.reset_fiber_scheduling
-
-      # control is transfer to the fiber that called Gyro.restart
-      values << :restarted
-      snooze
-      values << :baz
-    end
-
-    suspend
-
-    assert_equal %i[foo restarted baz], values
+    assert_equal [:foo, :bar], buffer
   end
 end
