@@ -1,10 +1,5 @@
 ## 0.30 Multithreaded fiber scheduling - some rough corners
 
-- Implement nested fibers
-  - Add tests:
-    - `Fiber#await` from multiple fibers at once
-      (reimplement `Fiber#await` using `Fiber#when_done`)
-
 ## 0.31 Working Sinatra application
 
 - Accept rate/interval in `spin_loop` and `spin_worker_loop`:

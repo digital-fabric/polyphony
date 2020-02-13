@@ -25,6 +25,49 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_await_from_multiple_fibers
+    buffer = []
+    f1 = spin {
+      sleep 0.02
+      buffer << :foo
+    }
+    f2 = spin {
+      f1.await
+      buffer << :bar
+    }
+    f3 = spin {
+      f1.await
+      buffer << :baz
+    }
+    Fiber.await(f2, f3)
+    assert_equal [:foo, :bar, :baz], buffer
+    assert_equal 0, Fiber.current.children.size
+  end
+
+  def test_await_from_multiple_fibers_with_interruption
+    buffer = []
+    f1 = spin {
+      sleep 0.02
+      buffer << :foo
+    }
+    f2 = spin {
+      f1.await
+      buffer << :bar
+    }
+    f3 = spin {
+      f1.await
+      buffer << :baz
+    }
+    snooze
+    f2.stop
+    f3.stop
+    snooze
+    f1.stop
+
+    snooze
+    assert_equal [], Fiber.current.children
+  end
+
   def test_schedule
     values = []
     fibers = (0..2).map { |i| spin { suspend; values << i } }
@@ -637,6 +680,7 @@ class MailboxTest < MiniTest::Test
     ping_receive_buffer = []
     pong_receive_buffer = []
     pong = Thread.new do
+      sleep 0.05
       loop do
         peer, data = receive
         pong_receive_buffer << data
@@ -645,6 +689,7 @@ class MailboxTest < MiniTest::Test
     end
 
     ping = Thread.new do
+      sleep 0.05
       3.times do
         pong << [Fiber.current, 'ping']
         data = receive
