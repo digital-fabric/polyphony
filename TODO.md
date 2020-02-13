@@ -2,18 +2,12 @@
 
 - Implement nested fibers
   - Add tests:
-    - Fiber spins up mltiple children, then terminates
-    - `Fiber#select_from_children`
-    - Exception propagation
-    - Spinning fibers on main fiber
-    - Terminating of child fibers on main fiber after fork
-  - `Fiber#spin_child` for spinning a child
-  - Add `ParentTerminated` exception class used for terminating child fibers
-  - `Fiber#terminate_all_children` - terminate all children
-  - `Fiber#await_all_children` - await all children
-  - `Fiber#select_from_children` - select first child that terminates
-  - Modify `Fiber#finish_execution` to terminate and await all children
-  - Add `Kernel#at_exit` handler that terminates main fiber's child fibers
+    - Child fiber termination after fork
+    - `Thread#join` / `Thread#await` result
+    - `Thread#join` error propagation
+    - `Fiber#await` from multiple fibers at once
+      (reimplement `Fiber#await` using `Fiber#when_done`)
+  - Add `Thread#await` alias to `Thread#join`
 
 ## 0.31 Working Sinatra application
 

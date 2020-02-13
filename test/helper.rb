@@ -20,13 +20,17 @@ Minitest::Reporters.use! [
 
 class MiniTest::Test
   def setup
+    if Fiber.current.children.size > 0
+      puts "Children left: #{Fiber.current.children.inspect}"
+      exit!
+    end
     Fiber.current.setup_main_fiber
+    sleep 0
   end
 
   def teardown
-    # wait for any remaining scheduled work
-    Thread.current.switch_fiber
-    Polyphony.reset!
+    Fiber.current.terminate_all_children
+    Fiber.current.await_all_children
   end
 end
 

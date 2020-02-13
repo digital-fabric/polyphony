@@ -50,6 +50,7 @@ VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_post_fork(VALUE thread);
 VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self);
 
+VALUE Gyro_Queue_push(VALUE self, VALUE value);
 
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
 #define INSPECT(...) (rb_funcall(rb_cObject, rb_intern("p"), __VA_ARGS__))

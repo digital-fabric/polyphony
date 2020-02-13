@@ -32,6 +32,7 @@ class SignalTest < MiniTest::Test
 
     snooze
     Process.kill(:HUP, Process.pid)
+    snooze
     assert_equal 1, count
   end
 end

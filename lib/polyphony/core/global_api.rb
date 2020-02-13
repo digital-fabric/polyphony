@@ -6,7 +6,6 @@ import '../extensions/core'
 import '../extensions/fiber'
 
 Exceptions  = import '../core/exceptions'
-Supervisor  = import '../core/supervisor'
 Throttler   = import '../core/throttler'
 
 # Global API methods to be included in ::Object
@@ -30,7 +29,7 @@ module API
   end
 
   def spin(tag = nil, &block)
-    Fiber.spin(tag, caller, &block)
+    Fiber.current.spin(tag, caller, &block)
   end
 
   def spin_loop(&block)
@@ -76,10 +75,6 @@ module API
     suspend
   ensure
     Thread.current.fiber_unref
-  end
-
-  def supervise(&block)
-    Supervisor.new.await(&block)
   end
 
   def throttled_loop(rate, count: nil, &block)

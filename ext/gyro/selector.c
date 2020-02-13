@@ -2,8 +2,9 @@
 
 struct Gyro_Selector {
   struct  ev_loop *ev_loop;
-  long run_no_wait_count;
-  int ev_loop_running;
+  long    run_no_wait_count;
+  int     ev_loop_running;
+  struct  ev_async async;
 };
 
 VALUE cGyro_Selector = Qnil;
@@ -14,6 +15,7 @@ static void Gyro_Selector_mark(void *ptr) {
 
 static void Gyro_Selector_free(void *ptr) {
   struct Gyro_Selector *selector = ptr;
+  ev_async_stop(selector->ev_loop, &selector->async);
   if (selector->ev_loop && !ev_is_default_loop(selector->ev_loop)) {
     // printf("Selector garbage collected before being stopped!\n");
     ev_loop_destroy(selector->ev_loop);
@@ -68,6 +70,11 @@ long Gyro_Selector_pending_count(VALUE self) {
   return ev_pending_count(selector->ev_loop);
 }
 
+void dummy_async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
+  // This callback does nothing, the selector's async is used solely for waking
+  // up the event loop.
+}
+
 static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
   struct Gyro_Selector *selector;
   GetGyro_Selector(self, selector);
@@ -75,6 +82,9 @@ static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
   int use_default_loop = (rb_thread_current() == rb_thread_main());
   selector->ev_loop = use_default_loop ? EV_DEFAULT : ev_loop_new(EVFLAG_NOSIGMASK);
   selector->run_no_wait_count = 0;
+
+  ev_async_init(&selector->async, dummy_async_callback);
+  ev_async_start(selector->ev_loop, &selector->async);
 
   ev_run(selector->ev_loop, EVRUN_NOWAIT);
 
@@ -126,7 +136,12 @@ VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self) {
   GetGyro_Selector(self, selector);
 
   if (selector->ev_loop_running) {
-    ev_break(selector->ev_loop, EVBREAK_ALL);
+    // Since the loop will run until at least one event has occurred, we signal
+    // the associated async watcher, which will cause the ev loop to return. In
+    // contrast to using `ev_break` to break out of the loop, which should be
+    // called from the same thread (from within the ev_loop), using an
+    // `ev_async` allows us to interrupt the event loop across threads.
+    ev_async_send(selector->ev_loop, &selector->async);
     return Qtrue;
   }
 

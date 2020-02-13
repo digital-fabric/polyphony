@@ -15,7 +15,7 @@ class SpinTest < MiniTest::Test
 
   def test_that_spin_accepts_fiber_argument
     result = nil
-    fiber = Fiber.spin { result = 42 }
+    fiber = Fiber.current.spin { result = 42 }
 
     assert_nil result
     suspend
@@ -128,51 +128,6 @@ class CancelScopeTest < Minitest::Test
   # end
 end
 
-class SupervisorTest < MiniTest::Test
-  def sleep_and_set(ctx, idx)
-    proc do
-      sleep(0.001 * idx)
-      ctx[idx] = true
-    end
-  end
-
-  def parallel_sleep(ctx)
-    supervise do |s|
-      (1..3).each { |idx| s.spin(&sleep_and_set(ctx, idx)) }
-    end
-  end
-
-  def test_that_supervisor_waits_for_all_nested_fibers_to_complete
-    ctx = {}
-    spin do
-      parallel_sleep(ctx)
-    end
-    suspend
-    assert ctx[1]
-    assert ctx[2]
-    assert ctx[3]
-  end
-
-  def test_that_supervisor_can_add_fibers_after_having_started
-    result = []
-    spin do
-      supervisor = Polyphony::Supervisor.new
-      3.times do |i|
-        spin do
-          sleep(0.001)
-          supervisor.spin do
-            sleep(0.001)
-            result << i
-          end
-        end
-      end
-      supervisor.await
-    end.await
-
-    assert_equal [0, 1, 2], result.sort
-  end
-end
-
 class ExceptionTest < MiniTest::Test
   def test_cross_fiber_backtrace
     error = nil
@@ -191,8 +146,8 @@ class ExceptionTest < MiniTest::Test
     rescue Exception => e
       frames << 3
       raise e
-    end
-    5.times { |i| snooze }
+    end#.await
+    5.times { snooze }
   rescue Exception => e
     error = e
   ensure
@@ -206,10 +161,9 @@ class ExceptionTest < MiniTest::Test
       spin do
         spin do
           raise 'foo'
-        end
-      end
-    end
-    4.times { snooze }
+        end.await
+      end.await
+    end.await
   rescue Exception => e
     error = e
   ensure
