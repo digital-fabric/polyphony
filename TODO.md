@@ -1,5 +1,3 @@
-## 0.30 Multithreaded fiber scheduling - some rough corners
-
 ## 0.31 Working Sinatra application
 
 - Accept rate/interval in `spin_loop` and `spin_worker_loop`:
