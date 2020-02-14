@@ -46,7 +46,7 @@ class << SimpleCov::LinesClassifier
     # apparently TracePoint tracing does not cover lines including only keywords
     # such as begin end etc, so here we mark those lines as whitespace, so they
     # won't count towards the coverage score.
-    line.strip =~ /^(begin|end|ensure|else|\})|(\s*rescue\s.+)$/ ||
+    line.strip =~ /^(begin|end|ensure|else|\{|\})|(\s*rescue\s.+)$/ ||
                   orig_whitespace_line?(line)
   end
 end

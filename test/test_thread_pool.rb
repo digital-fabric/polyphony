@@ -72,4 +72,30 @@ class ThreadPoolTest < MiniTest::Test
     assert_equal @pool.size, threads.uniq.size
     assert_equal (0..9).to_a, buffer.sort
   end
+
+  def test_busy?
+    assert_equal false, @pool.busy?
+
+    f = spin do
+      @pool.process { sleep 0.001 }
+    end
+
+    snooze
+    assert_equal true, @pool.busy?
+    f.await
+
+    assert_equal false, @pool.busy?
+  end
+
+  def test_default_thread_pool_process
+    current_thread = Thread.current
+
+    processing_thread = nil
+    result = Polyphony::ThreadPool.process do
+      processing_thread = Thread.current
+      +'foo' + 'bar'
+    end
+    assert_equal 'foobar', result
+    assert processing_thread != current_thread
+  end
 end

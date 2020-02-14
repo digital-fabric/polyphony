@@ -4,10 +4,6 @@ Exceptions = import '../core/exceptions'
 
 # Thread extensions
 class ::Thread
-  def self.join_queue_mutex
-    @join_queue_mutex ||= Mutex.new
-  end
-
   attr_reader :main_fiber
 
   alias_method :orig_initialize, :initialize

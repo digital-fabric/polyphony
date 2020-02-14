@@ -59,10 +59,7 @@ module FiberControlClassMethods
   def await(*fibers)
     return [] if fibers.empty?
 
-    state = {
-      awaiter: Fiber.current,
-      pending: fibers.each_with_object({}) { |f, h| h[f] = true }
-    }
+    state = setup_await_select_state(fibers)
     await_setup_monitoring(fibers, state)
     suspend
     fibers.map(&:result)
@@ -70,6 +67,13 @@ module FiberControlClassMethods
     await_select_cleanup(state)
   end
   alias_method :join, :await
+
+  def setup_await_select_state(fibers)
+    {
+      awaiter: Fiber.current,
+      pending: fibers.each_with_object({}) { |f, h| h[f] = true }
+    }
+  end
 
   def await_setup_monitoring(fibers, state)
     fibers.each do |f|
@@ -98,11 +102,7 @@ module FiberControlClassMethods
   end
 
   def select(*fibers)
-    state = {
-      selector: Fiber.current,
-      pending:  fibers.each_with_object({}) { |f, h| h[f] = true }
-    }
-
+    state = setup_await_select_state(fibers)
     select_setup_monitoring(fibers, state)
     suspend
   ensure
@@ -119,10 +119,10 @@ module FiberControlClassMethods
     state[:pending].delete(fiber)
     if state[:cleanup]
       # in cleanup mode the selector is resumed if no more pending fibers
-      state[:selector].schedule if state[:pending].empty?
+      state[:awaiter].schedule if state[:pending].empty?
     elsif !state[:selected]
       # first fiber to complete, we schedule the result
-      state[:selector].schedule([fiber, result])
+      state[:awaiter].schedule([fiber, result])
       state[:selected] = true
     end
   end

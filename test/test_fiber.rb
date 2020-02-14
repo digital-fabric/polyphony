@@ -310,6 +310,21 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_terminate
+    buffer = []
+    f = spin do
+      buffer << :foo
+      sleep 1
+      buffer << :bar
+    rescue Polyphony::Terminate
+      buffer << :terminate
+    end
+    snooze
+    f.terminate
+    snooze
+    assert_equal [:foo, :terminate], buffer
+  end
+
   def test_interrupt_timer
     result = []
     f = Fiber.current.spin do
@@ -397,6 +412,14 @@ class FiberTest < MiniTest::Test
     assert_equal :dead, f.state
   ensure
     f&.stop
+  end
+
+  def test_main?
+    f = spin {
+      sleep
+    }
+    assert_nil f.main?
+    assert_equal true, Fiber.current.main?
   end
 
   def test_exception_propagation
