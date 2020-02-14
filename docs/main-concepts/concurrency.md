@@ -1,10 +1,10 @@
 ---
 layout: page
 title: Concurrency the Easy Way
-nav_order: 2
-parent: Technical Overview
-permalink: /technical-overview/concurrency/
-prev_title: Design Principles
+nav_order: 1
+parent: Main Concepts
+permalink: /main-concepts/concurrency/
+prev_title: A Gentle Introduction to Polyphony
 next_title: How Fibers are Scheduled
 ---
 # Concurrency the Easy Way
@@ -65,10 +65,64 @@ understand, compared to callback-style programming.
 
 Polyphony extends the core `Fiber` class with additional functionality that
 allows scheduling, synchronizing, interrupting and otherwise controlling running
-fibers. Polyphony makes sure any exception raised while a fiber is running is
-[handled correctly](exception-handling.md). Moreover, fibers can communicate
-with each other using message passing, turning them into autonomous actors in a
-highly concurrent environment.
+fibers. Starting a concurrent operation inside a fiber is as simple as a `spin`
+method call:
+
+```ruby
+while (connection = server.accept)
+  spin { handle_connection(connection) }
+end
+```
+
+In order to facilitate developing applications that employ complex concurrent
+patterns and can scale easily, Polyphony employs a [structured
+approach](https://en.wikipedia.org/wiki/Structured_concurrency) to controlling
+fiber lifetime. A spun fiber is considered the *child* of the fiber from which
+it was spun, and is always limited to the life time of its parent:
+
+```ruby
+parent = spin do
+  do_something
+  child = spin do
+    do_some_other_stuff
+  end
+  # the child fiber is guaranteed to stop executing before the parent fiber
+  # terminates
+end
+```
+
+Any uncaught exception raised in a fiber will be
+[propagated]((exception-handling.md)) to its parent, and potentially further up
+the fiber hierarchy, all the way to the main fiber:
+
+```ruby
+parent = spin do
+  child = spin do
+    raise 'foo'
+  end
+  sleep
+end
+
+sleep
+# the exception will be propagated from the child fiber to the parent fiber,
+# and from the parent fiber to the main fiber, which will cause the program to
+# abort.
+```
+
+In addition, fibers can communicate with each other using message passing,
+turning them into autonomous actors in a highly concurrent environment. Message
+passing is in many ways a superior way to pass data between concurrent entities,
+obviating the need to synchronize access to shared resources:
+
+```ruby
+writer = spin do
+  while (write_request = receive)
+    do_write(write_request)
+  end
+end
+...
+writer << { stamp: Time.now, value: rand }
+```
 
 ## Higher-Order Concurrency Constructs
 
@@ -80,19 +134,13 @@ Cancel scopes \(borrowed from the brilliant Python library
 [Trio](https://trio.readthedocs.io/en/stable/)\) allows cancelling ongoing
 operations for any reason with more control over cancelling behaviour.
 
-Supervisors allow controlling multiple fibers. They offer enhanced exception
-handling and can be nested to create complex supervision trees ala
-[Erlang](https://adoptingerlang.org/docs/development/supervision_trees/).
-
 Some other constructs offered by Polyphony:
 
 * `Mutex` - a mutex used to synchronize access to a single shared resource.
 * `ResourcePool` - used for synchronizing access to a limited amount of shared 
-
   resources, for example a pool of database connections.
 
 * `Throttler` - used for throttling repeating operations, for example throttling
-
   access to a shared resource, or throttling incoming requests.
 
 ## A Compelling Concurrency Solution for Ruby
@@ -106,4 +154,3 @@ way to write concurrent applications in Ruby. Polyphony aims to show that Ruby
 can be used for developing sufficiently high-performance applications, while
 offering all the advantages of Ruby, with source code that is easy to read and
 understand.
-

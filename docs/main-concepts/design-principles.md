@@ -1,16 +1,26 @@
 ---
 layout: page
 title: Design Principles
-nav_order: 1
-parent: Technical Overview
-permalink: /technical-overview/design-principles/
-prev_title: A Gentle Introduction to Polyphony
-next_title: Concurrency the Easy Way
+nav_order: 5
+parent: Main Concepts
+permalink: /main-concepts/design-principles/
+prev_title: Extending Polyphony
 ---
 # Design Principles
 
-Polyphony was created in order to enable creating high-performance concurrent
-applications in Ruby, by utilizing Ruby fibers together with the
+Polyphony was created in order to enable developing high-performance concurrent
+applications in Ruby using a fluent, compact syntax and API. Polyphony enables
+fine-grained concurrency - the splitting up of operations into a large number of
+concurrent tasks, each concerned with small part of the whole and advancing at
+its own pace.
+
+
+
+
+a single Ruby process may spin up millions of
+concurrent fibers.
+
+, by utilizing Ruby fibers together with the
 [libev](http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod) event reactor
 library. Polyphony's design is based on the following principles:
 
@@ -57,8 +67,11 @@ library. Polyphony's design is based on the following principles:
   }
   ```
 
+- Breaking up operations into 
+
 - Polyphony should embrace Ruby's standard `raise/rescue/ensure` exception
-  handling mechanism:
+  handling mechanism. Exception handling in a highly concurrent environment
+  should be robust and foolproof:
 
   ```ruby
   cancel_after(0.5) do

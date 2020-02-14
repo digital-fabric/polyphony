@@ -78,10 +78,9 @@ Polyphony draws inspiration from the following, in no particular order:
 
 ## Going further
 
-To learn more about using Polyphony to build concurrent applications, read the
-technical overview below, or look at the [included
+To learn more about using Polyphony to build concurrent applications, continue reading, or look at the [bundled
 examples](https://github.com/digital-fabric/polyphony/tree/9e0f3b09213156bdf376ef33684ef267517f06e8/examples/README.md).
-A thorough reference is forthcoming.
+A thorough API reference is forthcoming.
 
 ## Contributing to Polyphony
 

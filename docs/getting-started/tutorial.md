@@ -5,7 +5,7 @@ nav_order: 2
 parent: Getting Started
 permalink: /getting-started/tutorial/
 prev_title: Installing Polyphony
-next_title: Design Principles
+next_title: Concurrency the Easy Way
 ---
 # A Gentle Introduction to Polyphony
 
@@ -332,7 +332,7 @@ fiber.raise 'foo'
 ```
 
 For more information on how exceptions are handled in Polyphony, see [exception
-handling](../../technical-overview/exception-handling/).
+handling](../../main-concepts/exception-handling/).
 
 ## Supervising - controlling multiple fibers at once
 
@@ -441,6 +441,6 @@ possibilities for Ruby. Polyphony has the performance characteristics and
 provides the necessary tools for transforming how concurrent Ruby apps are
 written. Polyphony is still new, and the present documentation is far from being
 complete. To learn more about Polyphony, read the [technical
-overview](../../technical-overview/design-principles/). For more examples please
+overview](../../main-concepts/design-principles/). For more examples please
 consult the [Github
 repository](https://github.com/digital-fabric/polyphony/tree/master/examples).

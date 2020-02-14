@@ -1,10 +1,11 @@
 ---
 layout: page
 title: Extending Polyphony
-nav_order: 5
-parent: Technical Overview
-permalink: /technical-overview/extending/
+nav_order: 4
+parent: Main Concepts
+permalink: /main-concepts/extending/
 prev_title: Exception Handling
+next_title: Design Principles
 ---
 # Extending Polyphony
 

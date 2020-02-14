@@ -1,21 +1,21 @@
 ---
 layout: page
 title: Exception Handling
-nav_order: 4
-parent: Technical Overview
-permalink: /technical-overview/exception-handling/
+nav_order: 3
+parent: Main Concepts
+permalink: /main-concepts/exception-handling/
 prev_title: How Fibers are Scheduled
 next_title: Extending Polyphony
 ---
 # Exception Handling
 
 Ruby employs a pretty robust exception handling mechanism. An raised exception
-will bubble up the call stack until a suitable exception handler is found, based
-on the exception's class. In addition, the exception will include a stack trace
-showing the execution path from the exception's locus back to the program's
-entry point. Unfortunately, when exceptions are raised while switching between
-fibers, stack traces will only include partial information. Here's a simple
-demonstration:
+will propagate up the fiber tree until a suitable exception handler is found,
+based on the exception's class. In addition, the exception will include a stack
+trace showing the execution path from the exception's locus back to the
+program's entry point. Unfortunately, when exceptions are raised while switching
+between fibers, stack traces will only include partial information. Here's a
+simple demonstration:
 
 _fiber\_exception.rb_
 
@@ -124,7 +124,7 @@ fired or not. We call `timer.stop` inside an ensure block, thus ensuring that
 the timer will have stopped once the awaiting fiber has resumed, even if it has
 not fired.
 
-## Bubbling Up - A Robust Solution for Uncaught Exceptions
+## Exception Propagation
 
 One of the "annoying" things about exceptions is that for them to be useful, you
 have to intercept them \(using `rescue`\). If you forget to do that, you'll end
@@ -132,9 +132,9 @@ up with uncaught exceptions that can wreak havoc. For example, by default a Ruby
 `Thread` in which an exception was raised without being caught, will simply
 terminate with the exception silently swallowed.
 
-To prevent the same from happening with fibers, Polyphony provides a mechanism
-that lets uncaught exceptions bubble up through the chain of calling fibers.
-Let's discuss the following example:
+To prevent the same from happening with fibers, Polyphony provides a robust
+mechanism that propagates uncaught exceptions up through the chain of parent
+fibers. Let's discuss the following example:
 
 ```ruby
 require 'polyphony'
@@ -144,17 +144,23 @@ spin do
     spin do
       spin do
         raise 'foo'
-      end.await
-    end.await
-  end.await
-end.await
+      end
+      sleep
+    end
+    sleep
+  end
+  sleep
+end
+
+sleep
 ```
 
-In this example, there are four fibers, nested one within the other. An
-exception is raised in the inner most fiber, and having no exception handler,
-will bubble up through the different enclosing fibers, until reaching the
+In the above example, four nested fibers are created, and each of them, except
+for the innermost fiber, goes to sleep for an unlimited duration. An exception
+is raised in the innermost fiber, and having no corresponding exception handler,
+will propagate up through the enclosing fibers, until reaching the
 top-most level, that of the root fiber, at which point the exception will cause
-the program to halt and print an error message.
+the program to abort and print an error message.
 
 ## MoveOn and Cancel - Interrupting Fiber Execution
 
@@ -163,8 +169,8 @@ provides two exception classes that used exclusively to interrupt fiber
 execution: `MoveOn` and `Cancel`. Both of these classes are used in various
 fiber-control APIs, and `MoveOn` exceptions in particular are handled in a
 particular manner by Polyphony. The difference between `MoveOn` and `Cancel` is
-that `MoveOn` stops fiber execution without the exception bubbling up. It can
-optionally provide an arbitrary return value for the fiber. `Cancel` will bubble
+that `MoveOn` stops fiber execution without the exception propagating. It can
+optionally provide an arbitrary return value for the fiber. `Cancel` will propagate
 up like all exceptions.
 
 The `MoveOn` and `Cancel` classes are normally used indirectly, through the
@@ -183,22 +189,58 @@ f3 = spin { sleep 100 }
 f3.cancel #=> will raise a Cancel exception
 ```
 
-## Signal Handling and Termination
+In addition to `MoveOn` and `Cancel`, Polyphony employs internally another
+exception class, `Terminate` for terminating a fiber once its parent has
+finished executing.
 
-Polyphony does not normally intercept process signals, though it is possible to
-intercept them using `Gyro::Signal` watchers. It is, however, recommended for
-the time being to not interfere with Ruby's normal signal processing.
+## The Special Problem of Signal Handling
 
-In Ruby there are three core exception classes are related to signal handling
-and process termination: `Interrupt` - raised upon receiving an `INT` signal;
-`SystemExit` - raised upon calling `Kernel#exit`; and `SignalException` - raised
-upon receiving other signals.
+Ruby by default handles process signals by generating exceptions, allowing the
+handling of signals in a structured manner. However, process signals may arrive
+at any moment, and may be trapped while any arbitrary fiber is running, and even
+while an event loop is running.
 
-These exceptions are raised on the main thread and in a multi-fiber environment
-can occur in any fiber, as long as it is the currently running fiber. In
-Polyphony, when these exceptions are raised in a fiber other than the main
-fiber, they will be effectively tranferred to the main fiber for processing.
+Two signals in particular require special care as they involve the stopping of
+the entire process: `TERM` and `INT`. The `TERM` signal should be handled
+gracefully, i.e. with proper cleanup, which also means terminating all fibers.
+The `INT` signal requires halting the process and printing a correct stack
+trace.
 
-This means that any handlers for these three exception classes should be put
-only in the main fiber. This mechanism also helps with showing a correct
-backtrace for these exceptions.
+To ensure correct behaviour for these two signals, polyphony installs signal
+handlers that ensure that the main thread's event loop stops if it's currently
+running, and that the corresponding exceptions (namely `SystemExit` and
+`Interrupt`) are handled correctly by propagating them using Polyphony's normal
+exception handling mechanisms.
+
+Care should be taken when handling other signals. There are two options for
+correctly handling the signals: using Ruby's stock `trap` method, and using
+Polyphony's signal watchers. The stock method involves trapping signals as
+usual, but making sure we're not inside the event loop:
+
+```ruby
+trap('SIGHUP') do
+  Thread.current.break_out_of_ev_loop(nil)
+  handle_hup_signal
+end
+```
+
+The alternative is to use `Polyphony.wait_for_signal`:
+
+```ruby
+hup_handler = spin_loop do
+  Polyphony.wait_for_signal
+  handle_hup_signal
+end
+```
+
+## The Special Problem of Thread Termination
+
+Thread termination using `Thread#kill` or `Thread#raise` also presents the same
+problems as signal handling in a multi-fiber environment. The termination can
+occur while any fiber is running, and even while running the thread's event
+loop.
+
+To ensure proper thread termination, including the termination of all the
+thread's fibers, Polyphony patches the `Thread#kill` and `Thread#raise` methods
+to schedule the thread's main fiber with the corresponding exceptions, thus
+ensuring an orderly termination or exception handling.
