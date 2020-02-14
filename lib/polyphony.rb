@@ -30,12 +30,12 @@ module Polyphony
   auto_import(
     CancelScope:  './polyphony/core/cancel_scope',
     Channel:      './polyphony/core/channel',
-    FS:           './polyphony/fs',
+    FS:           './polyphony/adapters/fs',
     ResourcePool: './polyphony/core/resource_pool',
     Sync:         './polyphony/core/sync',
     ThreadPool:   './polyphony/core/thread_pool',
     Throttler:    './polyphony/core/throttler',
-    Trace:        './polyphony/trace',
+    Trace:        './polyphony/adapters/trace',
     Websocket:    './polyphony/websocket'
   )
 

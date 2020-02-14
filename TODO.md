@@ -8,11 +8,20 @@
   spin_loop(interval: 10) { ... } # once every ten seconds
   ```
 
-- Docs: explain difference between `sleep` and `suspend`
+- Docs
+  - landing page:
+    - links to the interesting stuff
+      - concurrency overview
+      - faq
+      - benchmarks
+  - explain difference between `sleep` and `suspend`
+  - concurrency overview: add explanation about async vs sync
+
+- move all adapters into polyphony/adapters
+
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
-- app with database access (postgresql)
-- benchmarks!
+- sintra app with database access (postgresql)
 
 ## 0.32 Sidekick
 
