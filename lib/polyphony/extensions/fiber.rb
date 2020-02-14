@@ -54,61 +54,77 @@ module FiberControl
   end
 end
 
+# Class methods for controlling fibers (namely await and select)
 module FiberControlClassMethods
   def await(*fibers)
-    return if fibers.empty?
+    return [] if fibers.empty?
 
-    pending = fibers.each_with_object({}) { |f, h| h[f] = true }
-    current = Fiber.current
-    done = nil
-    fibers.each do |f|
-      f.when_done do |r|
-        pending.delete(f)
-        if !done && (r.is_a?(Exception) || pending.empty?)
-          current.schedule(r)
-          done = true
-        end
-      end
-    end
+    state = {
+      awaiter: Fiber.current,
+      pending: fibers.each_with_object({}) { |f, h| h[f] = true }
+    }
+    await_setup_monitoring(fibers, state)
     suspend
     fibers.map(&:result)
   ensure
-    move_on = Exceptions::MoveOn.new
-    pending.each_key do |f|
-      f.when_done do
-        pending.delete(f)
-        current.schedule if pending.empty?
-      end
-      f.schedule(move_on)
-    end
-    suspend until pending.empty?
+    await_select_cleanup(state)
   end
   alias_method :join, :await
 
-  def select(*fibers)
-    pending = fibers.each_with_object({}) { |f, h| h[f] = true }
-    current = Fiber.current
-    done = nil
+  def await_setup_monitoring(fibers, state)
     fibers.each do |f|
-      f.when_done do |r|
-        pending.delete(f)
-        unless done
-          current.schedule([f, r])
-          done = true
-        end
-      end
+      f.when_done { |r| await_fiber_done(f, r, state) }
     end
+  end
+
+  def await_fiber_done(fiber, result, state)
+    state[:pending].delete(fiber)
+
+    if state[:cleanup]
+      state[:awaiter].schedule if state[:pending].empty?
+    elsif !state[:done] && (result.is_a?(Exception) || state[:pending].empty?)
+      state[:awaiter].schedule(result)
+      state[:done] = true
+    end
+  end
+
+  def await_select_cleanup(state)
+    return if state[:pending].empty?
+
+    move_on = Exceptions::MoveOn.new
+    state[:cleanup] = true
+    state[:pending].each_key { |f| f.schedule(move_on) }
+    suspend
+  end
+
+  def select(*fibers)
+    state = {
+      selector: Fiber.current,
+      pending:  fibers.each_with_object({}) { |f, h| h[f] = true }
+    }
+
+    select_setup_monitoring(fibers, state)
     suspend
   ensure
-    move_on = Exceptions::MoveOn.new
-    pending.each_key do |f|
-      f.when_done do
-        pending.delete(f)
-        current.schedule if pending.empty?
-      end
-      f.schedule(move_on)
+    await_select_cleanup(state)
+  end
+
+  def select_setup_monitoring(fibers, state)
+    fibers.each do |f|
+      f.when_done { |r| select_fiber_done(f, r, state) }
     end
-    suspend until pending.empty?
+  end
+
+  def select_fiber_done(fiber, result, state)
+    state[:pending].delete(fiber)
+    if state[:cleanup]
+      # in cleanup mode the selector is resumed if no more pending fibers
+      state[:selector].schedule if state[:pending].empty?
+    elsif !state[:selected]
+      # first fiber to complete, we schedule the result
+      state[:selector].schedule([fiber, result])
+      state[:selected] = true
+    end
   end
 end
 
@@ -123,11 +139,9 @@ module FiberMessaging
   def receive
     @mailbox.shift
   end
-
-  def wait_for_message
-  end
 end
 
+# Methods for controlling child fibers
 module ChildFiberControl
   def children
     (@children ||= {}).keys
@@ -135,7 +149,7 @@ module ChildFiberControl
 
   def spin(tag = nil, orig_caller = caller, &block)
     f = Fiber.new { |v| f.run(v) }
-    f.setup(tag, block, orig_caller)
+    f.prepare(tag, block, orig_caller)
     (@children ||= {})[f] = true
     f
   end
@@ -168,7 +182,7 @@ class ::Fiber
 
   attr_accessor :tag, :thread
 
-  def setup(tag, block, caller)
+  def prepare(tag, block, caller)
     __fiber_trace__(:fiber_create, self)
     @thread = Thread.current
     @tag = tag
@@ -189,36 +203,47 @@ class ::Fiber
   end
 
   def run(first_value)
+    setup(first_value)
+    uncaught = nil
+    result = @block.(first_value)
+  rescue Exceptions::MoveOn, Exceptions::Terminate => e
+    result = e.value
+  rescue Exception => e
+    result = e
+    uncaught = true
+  ensure
+    finalize(result, uncaught)
+  end
+
+  def setup(first_value)
     Kernel.raise first_value if first_value.is_a?(Exception)
 
-    start_execution(first_value)
-  rescue Exceptions::MoveOn, Exceptions::Terminate => e
-    finish_execution(e.value)
-  rescue Exception => e
-    finish_execution(e, true)
-  end
-
-  def start_execution(first_value)
     @running = true
-    result = @block.(first_value)
-    finish_execution(result)
   end
 
-  def finish_execution(result, uncaught_exception = false)
+  def finalize(result, uncaught_exception = false)
     terminate_all_children
     await_all_children
     __fiber_trace__(:fiber_terminate, self, result)
     @result = result
-    @running = false 
+    @running = false
+    inform_dependants(result, uncaught_exception)
+  ensure
+    Thread.current.switch_fiber
+  end
+
+  def inform_dependants(result, uncaught_exception)
     @parent.child_done(self)
     @when_done_procs&.each { |p| p.(result) }
-    @waiting_fibers&.each_key { |f| f.schedule(result) }
-    return unless uncaught_exception && !@waiting_fibers
+    has_waiting_fibers = nil
+    @waiting_fibers&.each_key do |f|
+      has_waiting_fibers = true
+      f.schedule(result)
+    end
+    return unless uncaught_exception && !has_waiting_fibers
 
     # propagate unaught exception to parent
     @parent.schedule(result)
-  ensure
-    Thread.current.switch_fiber
   end
 
   attr_reader :result

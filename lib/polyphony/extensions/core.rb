@@ -14,6 +14,8 @@ class ::Exception
 
   alias_method :orig_initialize, :initialize
 
+  EXIT_EXCEPTION_CLASSES = [::Interrupt, ::SystemExit].freeze
+
   def initialize(*args)
     @__raising_fiber__ = Fiber.current
     orig_initialize(*args)
@@ -21,15 +23,15 @@ class ::Exception
 
   alias_method_once :orig_backtrace, :backtrace
   def backtrace
-    unless @first_backtrace_call
+    unless @first_backtrace_call || EXIT_EXCEPTION_CLASSES.include?(self.class)
       @first_backtrace_call = true
       return orig_backtrace
     end
 
-    if self.class == Interrupt || self.class == SystemExit
-      return orig_backtrace
-    end
+    sanitized_backtrace
+  end
 
+  def sanitized_backtrace
     if @__raising_fiber__
       backtrace = orig_backtrace || []
       sanitize(backtrace + @__raising_fiber__.caller)

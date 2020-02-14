@@ -70,11 +70,9 @@ end
 def install_terminating_signal_handler(signal, exception_class)
   trap(signal) do
     exception = exception_class.new
-    if Fiber.current.main?
-      raise exception
-    else
-      Thread.current.break_out_of_ev_loop(exception)
-    end
+    raise exception if Fiber.current.main?
+
+    Thread.current.break_out_of_ev_loop(exception)
   end
 end
 

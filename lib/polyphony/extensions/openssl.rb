@@ -39,23 +39,6 @@ class ::OpenSSL::SSL::SSLSocket
     # @sync = osync
   end
 
-  # def do_write(s)
-  #   @wbuffer = "" unless defined? @wbuffer
-  #   @wbuffer << s
-  #   @wbuffer.force_encoding(Encoding::BINARY)
-  #   @sync ||= false
-  #   if @sync or @wbuffer.size > BLOCK_SIZE
-  #     until @wbuffer.empty?
-  #       begin
-  #         nwrote = syswrite(@wbuffer)
-  #       rescue Errno::EAGAIN
-  #         retry
-  #       end
-  #       @wbuffer[0, nwrote] = ""
-  #     end
-  #   end
-  # end
-
   def syswrite(buf)
     read_watcher = nil
     write_watcher = nil

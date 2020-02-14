@@ -13,24 +13,35 @@ class ::Thread
   alias_method :orig_initialize, :initialize
   def initialize(*args, &block)
     @join_wait_queue = Gyro::Queue.new
+    @args = args
     @block = block
-    orig_initialize do
-      @main_fiber = Fiber.current
-      @main_fiber.setup_main_fiber
-      setup_fiber_scheduling
-      result = block.(*args)
-    rescue Exceptions::MoveOn, Exceptions::Terminate => e
-      result = e.value
-    rescue Exception => e
-      result = e
-    ensure
-      unless Fiber.current.children.empty?
-        Fiber.current.terminate_all_children
-        Fiber.current.await_all_children
-      end
-      signal_waiters(result)
-      stop_event_selector
+    orig_initialize { execute }
+  end
+
+  def execute
+    setup
+    result = @block.(*@args)
+  rescue Exceptions::MoveOn, Exceptions::Terminate => e
+    result = e.value
+  rescue Exception => e
+    result = e
+  ensure
+    finalize(result)
+  end
+
+  def setup
+    @main_fiber = Fiber.current
+    @main_fiber.setup_main_fiber
+    setup_fiber_scheduling
+  end
+
+  def finalize(result)
+    unless Fiber.current.children.empty?
+      Fiber.current.terminate_all_children
+      Fiber.current.await_all_children
     end
+    signal_waiters(result)
+    stop_event_selector
   end
 
   def signal_waiters(result)
