@@ -3,8 +3,6 @@
 require "bundler/gem_tasks"
 require "rake/clean"
 
-# frozen_string_literal: true
-
 require "rake/extensiontask"
 Rake::ExtensionTask.new("gyro_ext") do |ext|
   ext.ext_dir = "ext/gyro"
@@ -20,7 +18,5 @@ end
 task :docs do
   exec 'RUBYOPT=-W0 jekyll serve -s docs'
 end
-
-task default: %w[compile]
 
 CLEAN.include "**/*.o", "**/*.so", "**/*.bundle", "**/*.jar", "pkg", "tmp"
