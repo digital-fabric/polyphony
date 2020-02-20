@@ -1,9 +1,13 @@
+* Fix signal handling race condition (#13)
+* Move adapter code into polyphony/adapters
+* Fix spin_loop caller, add tag parameter
+
 0.30 2020-14-02
 ---------------
 
 * Add support for awaiting a fiber from multiple monitor fibers at once
 * Implemented child fibers
-* Fix TERM and INT signal handling (close #11)
+* Fix TERM and INT signal handling (#11)
 * Fix compiling on Linux
 * Do not reset runnable value in Gyro_suspend (prevents interrupting timers)
 * Don't snooze when stopping a fiber

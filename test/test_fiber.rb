@@ -608,7 +608,7 @@ class FiberTest < MiniTest::Test
     Process.kill('INT', pid)
     f.await
     klass = i.read
-    o.close
+    i.close
     assert_equal 'Interrupt', klass
   end
 
