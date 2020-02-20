@@ -131,11 +131,12 @@ VALUE Gyro_Timer_await(VALUE self) {
     ev_timer_stop(timer->ev_loop, &timer->ev_timer);
     timer->ev_loop = 0;
   }
-  RB_GC_GUARD(self);
 
   // fiber is resumed, check if resumed value is an exception
   timer->fiber = Qnil;
   timer->selector = Qnil;
+
+  RB_GC_GUARD(self);
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);
   }
