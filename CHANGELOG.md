@@ -1,9 +1,10 @@
+## 0.31 2020-02-20
+
 * Fix signal handling race condition (#13)
 * Move adapter code into polyphony/adapters
 * Fix spin_loop caller, add tag parameter
 
-0.30 2020-14-02
----------------
+## 0.30 2020-02-04
 
 * Add support for awaiting a fiber from multiple monitor fibers at once
 * Implemented child fibers
@@ -16,8 +17,7 @@
 * Prevent signalling of inactive async watcher
 * Better fiber messaging
 
-0.29 2020-02-02
----------------
+## 0.29 2020-02-02
 
 * Pass SignalException to main fiber
 * Add (restore) default thread pool
@@ -28,8 +28,7 @@
 * Improve tracing
 * Fix IRB adapter
 
-0.28 2020-01-27
----------------
+## 0.28 2020-01-27
 
 * Accept block in Supervisor#initialize
 * Refactor `ThreadPool`
@@ -41,37 +40,32 @@
 * Use `:waiting`, `:runnable`, `:running`, `:dead` for fiber states
 * Move docs to https://digital-fabric.github.io/polyphony/
 
-0.27 2020-01-19
----------------
+## 0.27 2020-01-19
 
 * Reimplement `Throttler` using recurring timer
 * Add `Gyro::Selector` for wrapping libev
 * Add `Gyro::Queue`, a fiber-aware thread-safe queue
 * Implement multithreaded fiber scheduling
 
-0.26 2020-01-12
----------------
+## 0.26 2020-01-12
 
 * Optimize `IO#read_watcher`, `IO#write_watcher`
 * Implement `Fiber#raise`
 * Fix `Kernel#gets` with `ARGV`
 * Return `[pid, exit_status]` from `Gyro::Child#await`
 
-0.25 2020-01-10
----------------
+## 0.25 2020-01-10
 
 * Fold `Coprocess` functionality into `Fiber`
 * Add support for indefinite `#sleep`
 
-0.24 2020-01-08
----------------
+## 0.24 2020-01-08
 
 * Extract HTTP code into separate polyphony-http gem
 * Cull core, io examples
 * Remove `SIGINT` handler
 
-0.23 2020-01-07
----------------
+## 0.23 2020-01-07
 
 * Remove `API#pulse`
 * Better repeat timer, reimplement `API#every`
@@ -95,8 +89,7 @@
 * Add Gyro.run
 * Move away from callback-based API for `Gyro::Timer`, `Gyro::Signal`
 
-0.22 2020-01-02
----------------
+## 0.22 2020-01-02
 
 * Redesign Gyro scheduling subsystem, go scheduler-less
 * More docs
@@ -106,8 +99,7 @@
 * Fix socket extensions
 * Fix ALPN setup in Net.secure_socket
 
-0.21 2019-12-12
----------------
+## 0.21 2019-12-12
 
 * Add Coprocess.await (for waiting for multiple coprocesses)
 * Add Coprocess#caller, Coprocess#location methods
@@ -116,8 +108,7 @@
 * Improve error handling in HTTP/2 adapter
 * More documentation
 
-0.20 2019-11-27
----------------
+## 0.20 2019-11-27
 
 * Refactor and improve CancelScope, ResourcePool
 * Reimplement cancel_after, move_on_after using plain timers
@@ -151,8 +142,7 @@
 * Fix HTTP1 adapter
 * Better support for debugging with ruby-debug-ide (WIP)
 
-0.19 2019-06-12
----------------
+## 0.19 2019-06-12
 
 * Rewrite HTTP server for better concurrency, sequential API
 * Support 204 no-content response in HTTP 1
@@ -160,14 +150,12 @@
 * Implement Fiber#safe_transfer in C
 * Optimize Kernel#next_tick implementation using ev_idle instead of ev_timer
 
-0.18 2019-06-08
----------------
+## 0.18 2019-06-08
 
 * Rename Kernel#coproc to Kernel#spin
 * Rewrite Supervisor#spin
 
-0.17 2019-05-24
----------------
+## 0.17 2019-05-24
 
 * Implement IO#read_watcher, IO#write_watcher in C for better performance
 * Implement nonblocking (yielding) versions of Kernel#system, IO.popen,
@@ -177,14 +165,12 @@
 * Fix encoding of strings read with IO#read, IO#readpartial
 * Fix non-blocking behaviour of IO#read, IO#readpartial, IO#write
 
-0.16 2019-05-22
----------------
+## 0.16 2019-05-22
 
 * Reorganize and refactor code
 * Allow opening secure socket without OpenSSL context
 
-0.15 2019-05-20
----------------
+## 0.15 2019-05-20
 
 * Optimize `#next_tick` callback (about 6% faster than before)
 * Fix IO#<< to return self
@@ -192,8 +178,7 @@
 * Fix race condition in `Supervisor#stop!`
 * Add `Kernel#snooze` method (`EV.snooze` will be deprecated eventually)
 
-0.14 2019-05-17
----------------
+## 0.14 2019-05-17
 
 * Use chunked encoding in HTTP 1 response
 * Rewrite `IO#read`, `#readpartial`, `#write` in C (about 30% performance improvement)
@@ -203,13 +188,11 @@
 * Preliminary support for websocket (see `examples/io/http_ws_server.rb`)
 * Rename `Coroutine` to `Coprocess`
 
-0.13 2019-01-05
----------------
+## 0.13 2019-01-05
 
 * Rename Rubato to Polyphony (I know, this is getting silly...)
 
-0.12 2019-01-01
----------------
+## 0.12 2019-01-01
 
 * Add Coroutine#resume
 * Improve startup time
@@ -218,8 +201,7 @@
 * Improve handling of uncaught raised errors
 * Implement HTTP 1.1/2 client agent with connection management
 
-0.11 2018-12-27
----------------
+## 0.11 2018-12-27
 
 * Move reactor loop to secondary fiber, allow blocking operations on main
   fiber.
@@ -229,8 +211,7 @@
   for message passing
 * Add Coroutine.current for getting current coroutine
 
-0.10 2018-11-20
----------------
+## 0.10 2018-11-20
 
 * Rewrite Rubato core for simpler code and better performance
 * Implement EV.snooze (sleep until next tick)
@@ -240,20 +221,17 @@
 * Rate throttling
 * Implement async SSL server
 
-0.9 2018-11-14
---------------
+## 0.9 2018-11-14
 
 * Rename Nuclear to Rubato
 
-0.8 2018-10-04
---------------
+## 0.8 2018-10-04
 
 * Replace nio4r with in-house extension based on libev, with better API,
   better performance, support for IO, timer, signal and async watchers
 * Fix mem leak coming from nio4r (probably related to code in Selector#select)
 
-0.7 2018-09-13
---------------
+## 0.7 2018-09-13
 
 * Implement resource pool
 * transaction method for pg cient
@@ -262,22 +240,19 @@
 * Improve HTTP server performance
 * Proper promise chaining
 
-0.6 2018-09-11
---------------
+## 0.6 2018-09-11
 
 * Add http, redis, pg dependencies
 * Move ALPN code inside net module
 
-0.4 2018-09-10
---------------
+## 0.4 2018-09-10
 
 * Code refactored and reogranized
 * Fix recursion in next_tick
 * HTTP 2 server with support for ALPN protocol negotiation and HTTP upgrade
 * OpenSSL server
 
-0.3 2018-09-06
---------------
+## 0.3 2018-09-06
 
 * Event reactor
 * Timers
