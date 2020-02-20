@@ -230,6 +230,19 @@ class MoveOnAfterTest < MiniTest::Test
     assert_equal [1, 2, 3], buffer
   end
 
+  def test_spin_loop_location
+    location = /^#{__FILE__}:#{__LINE__ + 1}/
+    f = spin_loop {}
+    
+    assert_match location, f.location
+  end
+
+  def test_spin_loop_tag
+    f = spin_loop(:my_loop) {}
+
+    assert_equal :my_loop, f.tag
+  end
+
   def test_throttled_loop
     buffer = []
     counter = 0

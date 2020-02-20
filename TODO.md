@@ -1,5 +1,24 @@
 ## 0.31 Working Sinatra application
 
+- Resolve a race condition relating to signals
+  - An `INT` signal is trapped
+  - The corresponding exception `Interrupt` is scheduled for the fiber
+  - But the runqueue already contains other fibers, which are scheduled before
+    the interrupt fiber, so they will run first
+  - One of the runnable fibers that are ran schedules the interrupted fiber,
+    again, with some other non-exception value
+  - The `Interrupt` exception magically disappears!
+
+  Possible solutions:
+
+  * When scheduling a fiber, check if it's already scheduled with an exception.
+    If it is, don't change the value. The problem with this approach is that we
+    have to reset the resume value stored for the fiber.
+  * Add an API for scheduling a fiber by putting it in *front* of the runqueue.
+    This API would be used execlusively (at least for the time being) by the
+    signal traps. This should eliminate the race condition.
+
+
 - Accept rate/interval in `spin_loop` and `spin_worker_loop`:
 
   ```ruby

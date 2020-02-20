@@ -32,8 +32,8 @@ module API
     Fiber.current.spin(tag, caller, &block)
   end
 
-  def spin_loop(&block)
-    spin { loop(&block) }
+  def spin_loop(tag = nil, &block)
+    Fiber.current.spin(tag, caller) { loop(&block) }
   end
 
   def every(interval)
