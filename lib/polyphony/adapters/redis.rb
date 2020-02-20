@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative '../polyphony'
+require_relative '../../polyphony'
 
 require 'redis'
 require 'hiredis/reader'

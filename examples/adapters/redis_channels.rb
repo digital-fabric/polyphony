@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
-require 'polyphony/redis'
+require 'polyphony/adapters/redis'
 
 class RedisChannel < Polyphony::Channel
   def self.publish_connection

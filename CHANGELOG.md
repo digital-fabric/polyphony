@@ -1,3 +1,5 @@
+* Fix adapter requires (redis and postgres).
+
 ## 0.31 2020-02-20
 
 * Fix signal handling race condition (#13)
