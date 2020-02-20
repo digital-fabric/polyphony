@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony'
-require 'polyphony/redis'
+require 'polyphony/adapters/redis'
 require 'json'
 
 X_SESSIONS = 1000

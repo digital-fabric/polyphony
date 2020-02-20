@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'polyphony/postgres'
+require 'polyphony/adapters/postgres'
 
 DB = PG.connect(
   host:     '/tmp',
