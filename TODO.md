@@ -1,4 +1,42 @@
-## 0.31 Working Sinatra application
+## 0.32 Working Sinatra application
+
+  - Introduce mailbox limiting:
+    - add API for limiting mailbox size:
+
+      ```ruby
+      Fiber.current.mailbox_limit = 1000
+      ```
+
+    - Add the limit for `Gyro::Queue`
+
+      ```ruby
+      Gyro::Queue.new(1000)
+      ```
+
+    - Pushing to a limited queue will block if limit is reached
+
+  - Introduce selective receive:
+
+    ```ruby
+    # returns (or waits for) the first message for which the block returns true
+    (_, item) = receive { |msg| msg.first == ref }
+    ```
+
+    Possible implementation:
+
+    ```ruby
+    def receive
+      return @mailbox.shift unless block_given?
+      
+      loop
+        msg = @mailbox.shift
+        return msg if yield(msg)
+
+        # message didn't match condition, put it back in queue
+        @mailbox.push msg
+      end
+    end
+    ```
 
 - Test hypothetical situation 1:
   - fiber A sends a request to fiber B
@@ -28,7 +66,7 @@
   sleep behaviour in a spawned thread.
 - sintra app with database access (postgresql)
 
-## 0.32 Sidekick
+## 0.33 Sidekick
 
 Plan of action:
 
@@ -36,13 +74,13 @@ Plan of action:
 - test performance
 - proceed from there
 
-## 0.33 Testing && Docs
+## 0.34 Testing && Docs
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.34 Integration
+## 0.35 Integration
 
-## 0.35 Real IO#gets and IO#read
+## 0.36 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -52,7 +90,7 @@ Plan of action:
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.36 Rails
+## 0.37 Rails
 
 - Rails?
 
