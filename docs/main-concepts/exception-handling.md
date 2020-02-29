@@ -209,8 +209,39 @@ trace.
 To ensure correct behaviour for these two signals, polyphony installs signal
 handlers that ensure that the main thread's event loop stops if it's currently
 running, and that the corresponding exceptions (namely `SystemExit` and
-`Interrupt`) are handled correctly by propagating them using Polyphony's normal
-exception handling mechanisms.
+`Interrupt`) are handled correctly by passing them to the main fiber.
+
+### Graceful process termination
+
+In order to ensure your application terminates gracefully upon receiving an
+`INT` or `TERM` signal, you'll need to:
+
+1. Rescue the corresponding exceptions in the main fiber.
+2. Rescue `Polyphony::Terminate` exceptions in each fiber that needs to perform
+   operations such as handling any pending requests, etc.
+
+```ruby
+# In a worker fiber
+def do_work
+  loop do
+    req = receive
+    handle_req(req)
+  end
+rescue Polyphony::Terminate
+  # We still need to handle any pending request
+  receive_pending.each { handle_req(req) }
+end
+
+# on the main fiber
+begin
+  spin_up_lots_fibers
+rescue Interrupt, SystemExit
+  Fiber.current.terminate_all_children
+  Fiber.current.await_all_children
+end
+```
+
+### Handling other signals
 
 Care should be taken when handling other signals. There are two options for
 correctly handling the signals: using Ruby's stock `trap` method, and using
@@ -219,16 +250,30 @@ usual, but making sure we're not inside the event loop:
 
 ```ruby
 trap('SIGHUP') do
-  Thread.current.break_out_of_ev_loop(nil)
+  Thread.current.break_out_of_ev_loop(Thread.current.main_fiber, nil)
   handle_hup_signal
 end
 ```
 
-The alternative is to use `Polyphony.wait_for_signal`:
+A second technique that might be useful is to use a `Gyro::Async` watcher and
+signal it when the process signal is trapped:
+
+```ruby
+sighup_async = Gyro::Async.new
+sighup_handler = spin_loop do
+  sighup_async.await
+  handle_sighup
+end
+
+trap('SIGHUP') { sighup_async.signal }
+```
+
+Another alternative is to use `Polyphony.wait_for_signal`, which uses a
+`Gyro::Signal` watcher under the hood:
 
 ```ruby
 hup_handler = spin_loop do
-  Polyphony.wait_for_signal
+  Polyphony.wait_for_signal('SIGHUP')
   handle_hup_signal
 end
 ```

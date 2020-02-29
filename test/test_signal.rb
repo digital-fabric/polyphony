@@ -38,7 +38,7 @@ class SignalTest < MiniTest::Test
 end
 
 class SignalTrapTest < Minitest::Test
-  def test_signal_exception_propagation
+  def test_signal_exception_handling
     i, o = IO.pipe
     pid = Polyphony.fork do
       i.close
@@ -46,12 +46,10 @@ class SignalTrapTest < Minitest::Test
         spin do
           sleep 1
         rescue ::Interrupt => e
+          # the signal will be trapped in the context of this fiber
           o.puts "1-interrupt"
           raise e
         end.await
-      rescue ::Interrupt => e
-        o.puts "2-interrupt"
-        raise e
       end.await
     rescue ::Interrupt => e
       o.puts "3-interrupt"
@@ -64,7 +62,36 @@ class SignalTrapTest < Minitest::Test
     Process.kill('INT', pid)
     watcher.await
     buffer = i.read
-    assert_equal "1-interrupt\n2-interrupt\n3-interrupt\n", buffer
+    assert_equal "3-interrupt\n", buffer
+  end
+
+  def test_signal_exception_with_cleanup
+    i, o = IO.pipe
+    pid = Polyphony.fork do
+      i.close
+      spin do
+        spin do
+          sleep
+        rescue Polyphony::Terminate
+          o.puts "1 - terminated"
+        end.await
+      rescue Polyphony::Terminate
+        o.puts "2 - terminated"
+      end.await
+    rescue Interrupt
+      o.puts "3 - interrupted"
+      Fiber.current.terminate_all_children
+      Fiber.current.await_all_children
+    ensure
+      o.close
+    end
+    sleep 0.01
+    o.close
+    watcher = Gyro::Child.new(pid)
+    Process.kill('INT', pid)
+    watcher.await
+    buffer = i.read
+    assert_equal "3 - interrupted\n2 - terminated\n1 - terminated\n", buffer
   end
 
   def test_signal_exception_possible_race_condition
@@ -106,6 +133,6 @@ class SignalTrapTest < Minitest::Test
     Process.kill('INT', pid)
     Gyro::Child.new(pid).await
     buffer = i.read
-    assert_equal "1-interrupt\n3-interrupt\n", buffer
+    assert_equal "3-interrupt\n", buffer
   end
 end

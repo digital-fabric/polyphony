@@ -1,5 +1,10 @@
 ## 0.32 Working Sinatra application
 
+  - Work on exceptions:
+    - Remove `Interrupt` base class for exceptions
+    - Move value attribute code to `MoveOn` exception
+    - Rename `MoveOn` to `Interrupt`
+
   - Introduce mailbox limiting:
     - add API for limiting mailbox size:
 
@@ -38,10 +43,44 @@
     end
     ```
 
+- Add option for setting the exception raised on cancelling using `#cancel_after`:
+
+  ```ruby
+  cancel_after(3, with_error: MyErrorClass) do
+    do_my_thing
+  end
+
+  # or a RuntimeError with message
+  cancel_after(3, with_error: 'Cancelling due to timeout') do
+    do_my_thing
+  end
+  ```
+
 - Test hypothetical situation 1:
   - fiber A sends a request to fiber B
+  - fiber A waits for a message from B
   - fiber B terminates on a raised exception
   - What happens to fiber A? (it should get the exception)
+    - The only way to achieve this is for B to
+      - rescue the exception
+      - send an error reply to A
+      - reraise the exception:
+
+      ```ruby
+      def a(req)
+        @b << [req, Fiber.current]
+        receive
+      end
+
+      def b
+        req, peer = receive
+        result = handle_req(p)
+        peer << result
+      rescue Exception => e
+        peer << e if peer
+        raise e
+      end
+      ```
 
 - Accept rate/interval in `spin_loop` and `spin_worker_loop`:
 
@@ -51,6 +90,9 @@
   spin_loop(interval: 10) { ... } # once every ten seconds
   ```
 
+
+
+
 - Docs
   - landing page:
     - links to the interesting stuff
@@ -58,7 +100,8 @@
       - faq
       - benchmarks
   - explain difference between `sleep` and `suspend`
-  - concurrency overview: add explanation about async vs sync
+  - add explanation about async vs sync
+  - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
 
 - move all adapters into polyphony/adapters
 
@@ -112,10 +155,8 @@ Prior art:
 ### DNS server
 
 ```ruby
-Server = import('../../lib/polyphony/dns/server')
-
-server = Server.new do |transaction|
-  puts "got query from #{transaction.info[:client_ip_address]}"
+require 'polyphony/dns'
+server = Polyphony::DNS::Server.new do |transaction|
   transaction.questions.each do |q|
     respond(transaction, q[:domain], q[:resource_class])
   end

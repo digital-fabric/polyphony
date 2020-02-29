@@ -1,3 +1,7 @@
+* Add `#receive_pending` global API.
+* Prevent race condition in `Gyro::Queue`.
+* Improve signal handling - `INT`, `TERM` signals are now always handled in the
+  main fiber.
 * Fix adapter requires (redis and postgres).
 
 ## 0.31 2020-02-20

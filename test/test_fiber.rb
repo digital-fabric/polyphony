@@ -744,6 +744,36 @@ class MailboxTest < MiniTest::Test
     f.await
     assert_equal ['foo'] * 100, messages
   end
+
+  def test_receive_pending
+    assert_equal [], receive_pending
+
+    (1..5).each { |i| Fiber.current << i }
+    assert_equal (1..5).to_a, receive_pending
+    assert_equal [], receive_pending
+  end
+
+  def test_receive_pending_on_termination
+    buffer = []
+    worker = spin do
+      loop { buffer << receive }
+    rescue Polyphony::Terminate
+      receive_pending.each { |r| buffer << r }
+    end
+
+    worker << 1
+    worker << 2
+    10.times { snooze }
+    assert_equal [1, 2], buffer
+
+    worker << 3
+    worker << 4
+    worker << 5
+    worker.terminate
+    worker.await
+
+    assert_equal (1..5).to_a, buffer
+  end
 end
 
 class FiberControlTest < MiniTest::Test
