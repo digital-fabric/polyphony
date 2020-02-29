@@ -63,6 +63,10 @@ module API
     Fiber.current.receive
   end
 
+  def receive_pending
+    Fiber.current.receive_pending
+  end
+
   def sleep(duration = nil)
     return sleep_forever unless duration
 

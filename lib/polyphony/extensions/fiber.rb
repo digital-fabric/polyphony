@@ -139,6 +139,10 @@ module FiberMessaging
   def receive
     @mailbox.shift
   end
+
+  def receive_pending
+    @mailbox.shift_each
+  end
 end
 
 # Methods for controlling child fibers
