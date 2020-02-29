@@ -23,7 +23,7 @@ module FiberControl
   def interrupt(value = nil)
     return if @running == false
 
-    schedule Exceptions::MoveOn.new(nil, value)
+    schedule Exceptions::MoveOn.new(value)
   end
   alias_method :stop, :interrupt
 

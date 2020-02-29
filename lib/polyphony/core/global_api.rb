@@ -50,7 +50,7 @@ module API
     fiber = ::Fiber.current
     canceller = spin do
       sleep interval
-      fiber.schedule Exceptions::MoveOn.new(nil, with_value)
+      fiber.schedule Exceptions::MoveOn.new(with_value)
     end
     block.call
   rescue Exceptions::MoveOn => e
