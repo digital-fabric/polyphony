@@ -28,15 +28,13 @@ module Polyphony
   Net = import './polyphony/net'
 
   auto_import(
-    CancelScope:  './polyphony/core/cancel_scope',
     Channel:      './polyphony/core/channel',
     FS:           './polyphony/adapters/fs',
     ResourcePool: './polyphony/core/resource_pool',
     Sync:         './polyphony/core/sync',
     ThreadPool:   './polyphony/core/thread_pool',
     Throttler:    './polyphony/core/throttler',
-    Trace:        './polyphony/adapters/trace',
-    Websocket:    './polyphony/websocket'
+    Trace:        './polyphony/adapters/trace'
   )
 
   class << self

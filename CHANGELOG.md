@@ -1,3 +1,5 @@
+* Remove CancelScope
+* Allow spinning fibers from a parent fiber other than the current
 * Add `#receive_pending` global API.
 * Prevent race condition in `Gyro::Queue`.
 * Improve signal handling - `INT`, `TERM` signals are now always handled in the
