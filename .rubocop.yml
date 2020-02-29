@@ -7,7 +7,7 @@ AllCops:
     - 'test/**/*.rb'
     - 'examples/**/*.rb'
     - 'Gemfile*'
-    - lib/polyphony/http/agent.rb
+    - lib/polyphony/adapters/irb.rb
 
 Style/LambdaCall:
   Enabled: false

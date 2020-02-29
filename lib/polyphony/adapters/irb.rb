@@ -9,7 +9,7 @@ if Object.constants.include?(:Reline)
       raise if read_ios.size > 1
       raise if write_ios.size > 0
       raise if error_ios.size > 0
-      
+
       fiber = Fiber.current
       timer = spin do
         sleep timeout
@@ -43,6 +43,7 @@ else
     end
   end
 
+  # RubyLex patches
   class ::RubyLex
     class TerminateLineInput2 < RuntimeError
     end
