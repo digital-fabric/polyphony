@@ -13,6 +13,24 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_children_parent
+    assert_nil Fiber.current.parent
+
+    f1 = spin {}
+    f2 = spin {}
+
+    assert_equal [f1, f2], Fiber.current.children
+    assert_equal Fiber.current, f1.parent
+    assert_equal Fiber.current, f2.parent
+  end
+
+  def test_spin_from_different_fiber
+    f1 = spin { sleep }
+    f2 = f1.spin { sleep }
+    assert_equal f1, f2.parent
+    assert_equal [f2], f1.children
+  end
+
   def test_await
     result = nil
     f = Fiber.current.spin do

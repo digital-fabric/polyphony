@@ -153,7 +153,7 @@ module ChildFiberControl
 
   def spin(tag = nil, orig_caller = caller, &block)
     f = Fiber.new { |v| f.run(v) }
-    f.prepare(tag, block, orig_caller)
+    f.prepare(tag, block, orig_caller, self)
     (@children ||= {})[f] = true
     f
   end
@@ -184,13 +184,13 @@ class ::Fiber
 
   extend FiberControlClassMethods
 
-  attr_accessor :tag, :thread
+  attr_accessor :tag, :thread, :parent
 
-  def prepare(tag, block, caller)
+  def prepare(tag, block, caller, parent)
     __fiber_trace__(:fiber_create, self)
     @thread = Thread.current
     @tag = tag
-    @parent = Fiber.current
+    @parent = parent
     @caller = caller
     @block = block
     @mailbox = Gyro::Queue.new
