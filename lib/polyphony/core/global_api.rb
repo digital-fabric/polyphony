@@ -32,8 +32,14 @@ module API
     Fiber.current.spin(tag, caller, &block)
   end
 
-  def spin_loop(tag = nil, &block)
-    Fiber.current.spin(tag, caller) { loop(&block) }
+  def spin_loop(tag = nil, rate: nil, &block)
+    if rate
+      Fiber.current.spin(tag, caller) do
+        throttled_loop(rate, &block)
+      end
+    else
+      Fiber.current.spin(tag, caller) { loop(&block) }
+    end
   end
 
   def every(interval)

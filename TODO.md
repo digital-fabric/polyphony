@@ -1,10 +1,5 @@
 ## 0.32 Working Sinatra application
 
-  - Work on exceptions:
-    - Remove `Interrupt` base class for exceptions
-    - Move value attribute code to `MoveOn` exception
-    - Rename `MoveOn` to `Interrupt`
-
   - Introduce mailbox limiting:
     - add API for limiting mailbox size:
 
@@ -55,43 +50,6 @@
     do_my_thing
   end
   ```
-
-- Test hypothetical situation 1:
-  - fiber A sends a request to fiber B
-  - fiber A waits for a message from B
-  - fiber B terminates on a raised exception
-  - What happens to fiber A? (it should get the exception)
-    - The only way to achieve this is for B to
-      - rescue the exception
-      - send an error reply to A
-      - reraise the exception:
-
-      ```ruby
-      def a(req)
-        @b << [req, Fiber.current]
-        receive
-      end
-
-      def b
-        req, peer = receive
-        result = handle_req(p)
-        peer << result
-      rescue Exception => e
-        peer << e if peer
-        raise e
-      end
-      ```
-
-- Accept rate/interval in `spin_loop` and `spin_worker_loop`:
-
-  ```ruby
-  spin_loop(10) { ... } # 10 times per second
-  spin_loop(rate: 10) { ... } # 10 times per second
-  spin_loop(interval: 10) { ... } # once every ten seconds
-  ```
-
-
-
 
 - Docs
   - landing page:

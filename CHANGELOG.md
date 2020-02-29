@@ -1,3 +1,4 @@
+* Accept optional throttling rate in `#spin_loop`
 * Remove CancelScope
 * Allow spinning fibers from a parent fiber other than the current
 * Add `#receive_pending` global API.

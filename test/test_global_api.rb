@@ -109,7 +109,9 @@ class MoveOnAfterTest < MiniTest::Test
     assert t1 - t0 < 0.02
     assert_equal :bar, v
   end
+end
 
+class SpinTest < MiniTest::Test
   def test_spin_without_tag
     f = spin { }
     assert_kind_of Fiber, f
@@ -121,7 +123,9 @@ class MoveOnAfterTest < MiniTest::Test
     assert_kind_of Fiber, f
     assert_equal :foo, f.tag
   end
+end
 
+class SpinLoopTest < MiniTest::Test
   def test_spin_loop
     buffer = []
     counter = 0
@@ -157,6 +161,17 @@ class MoveOnAfterTest < MiniTest::Test
     assert_equal :my_loop, f.tag
   end
 
+  def test_spin_loop_with_rate
+    buffer = []
+    counter = 0
+    f = spin_loop(rate: 50) { buffer << (counter += 1) }
+    sleep 0.1
+    f.stop
+    assert counter >= 5 && counter <= 6
+  end
+end
+
+class ThrottledLoopTest < MiniTest::Test
   def test_throttled_loop
     buffer = []
     counter = 0
@@ -177,7 +192,9 @@ class MoveOnAfterTest < MiniTest::Test
     f.await
     assert_equal [1, 2, 3, 4, 5], buffer    
   end
+end
 
+class GlobalAPIEtcTest < MiniTest::Test
   def test_every
     buffer = []
     f = spin do
