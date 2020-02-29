@@ -1,56 +1,5 @@
 ## 0.32 Working Sinatra application
 
-  - Introduce mailbox limiting:
-    - add API for limiting mailbox size:
-
-      ```ruby
-      Fiber.current.mailbox_limit = 1000
-      ```
-
-    - Add the limit for `Gyro::Queue`
-
-      ```ruby
-      Gyro::Queue.new(1000)
-      ```
-
-    - Pushing to a limited queue will block if limit is reached
-
-  - Introduce selective receive:
-
-    ```ruby
-    # returns (or waits for) the first message for which the block returns true
-    (_, item) = receive { |msg| msg.first == ref }
-    ```
-
-    Possible implementation:
-
-    ```ruby
-    def receive
-      return @mailbox.shift unless block_given?
-      
-      loop
-        msg = @mailbox.shift
-        return msg if yield(msg)
-
-        # message didn't match condition, put it back in queue
-        @mailbox.push msg
-      end
-    end
-    ```
-
-- Add option for setting the exception raised on cancelling using `#cancel_after`:
-
-  ```ruby
-  cancel_after(3, with_error: MyErrorClass) do
-    do_my_thing
-  end
-
-  # or a RuntimeError with message
-  cancel_after(3, with_error: 'Cancelling due to timeout') do
-    do_my_thing
-  end
-  ```
-
 - Docs
   - landing page:
     - links to the interesting stuff
@@ -61,19 +10,18 @@
   - add explanation about async vs sync
   - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
 
-- move all adapters into polyphony/adapters
-
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
+
+## 0.33 Sinatra / Sidekiq
+
 - sintra app with database access (postgresql)
 
-## 0.33 Sidekick
-
-Plan of action:
-
-- fork sidekiq, make adjustments to Polyphony code
-- test performance
-- proceed from there
+- sidekiq: Plan of action
+  - see if we can get by just writing an adapter
+  - if not, fork sidekiq, make adjustments to Polyphony code
+  - test performance
+  - proceed from there
 
 ## 0.34 Testing && Docs
 
@@ -128,3 +76,55 @@ Prior art:
 
 - https://github.com/socketry/async-dns
 
+### Work on API
+
+  - Introduce mailbox limiting:
+    - add API for limiting mailbox size:
+
+      ```ruby
+      Fiber.current.mailbox_limit = 1000
+      ```
+
+    - Add the limit for `Gyro::Queue`
+
+      ```ruby
+      Gyro::Queue.new(1000)
+      ```
+
+    - Pushing to a limited queue will block if limit is reached
+
+  - Introduce selective receive:
+
+    ```ruby
+    # returns (or waits for) the first message for which the block returns true
+    (_, item) = receive { |msg| msg.first == ref }
+    ```
+
+    Possible implementation:
+
+    ```ruby
+    def receive
+      return @mailbox.shift unless block_given?
+      
+      loop
+        msg = @mailbox.shift
+        return msg if yield(msg)
+
+        # message didn't match condition, put it back in queue
+        @mailbox.push msg
+      end
+    end
+    ```
+
+- Add option for setting the exception raised on cancelling using `#cancel_after`:
+
+  ```ruby
+  cancel_after(3, with_error: MyErrorClass) do
+    do_my_thing
+  end
+
+  # or a RuntimeError with message
+  cancel_after(3, with_error: 'Cancelling due to timeout') do
+    do_my_thing
+  end
+  ```
