@@ -1,3 +1,45 @@
+- Fiber supervision
+  - can a fiber be restarted?
+    - Theoretically, we can take the same block and rerun it under a different
+      fiber
+  - (restart) strategy (taken from Erlang):
+    - `:one_for_one`: if a child terminates, it is restarted
+    - `:one_for_all`: if a child terminates, all other children are terminated,
+      then all are restarted
+    - `:simple_on_for_one`: same as `:one_for_one` except all children are
+      identical (run the same block)
+  - I'm not so sure this kind of supervision is what we need. We can envision
+    an API such as the following:
+
+    ```ruby
+    spin {
+      spin { do_a }
+      spin { do_b }
+      supervise(restart: :none, shutdown: :terminate)
+    }
+    ```
+
+  - The default for `#supervise` should be:
+    - wait for all fibers to terminate
+    - propagate exceptions
+    - no restart
+  
+  - `#supervise` could also take a block:
+
+    ```ruby
+    supervise do |fiber, error|
+      # this block is called when a fiber is terminated, letting the developer
+      # decide how to react.
+
+      # We can propagate the error
+      raise error if error
+
+      # We can restart the fiber (the respun fiber will have the same parent,
+      # the same caller location, the same tag)
+      fiber.respin # TODO: implement Fiber#respin
+    end
+    ```
+
 ## 0.32 Working Sinatra application
 
 - Docs

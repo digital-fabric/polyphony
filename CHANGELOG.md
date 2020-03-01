@@ -1,3 +1,6 @@
+* Add `Exception#source_fiber` - references the fiber in which an uncaught
+  exception occurred
+
 ## 0.32 2020-02-29
 
 * Accept optional throttling rate in `#spin_loop`
@@ -6,8 +9,8 @@
 * Add `#receive_pending` global API.
 * Prevent race condition in `Gyro::Queue`.
 * Improve signal handling - `INT`, `TERM` signals are now always handled in the
-  main fiber.
-* Fix adapter requires (redis and postgres).
+  main fiber
+* Fix adapter requires (redis and postgres)
 
 ## 0.31 2020-02-20
 

@@ -174,6 +174,11 @@ module ChildFiberControl
 
     Fiber.await(*@children.keys)
   end
+
+  def shutdown_all_children
+    terminate_all_children
+    await_all_children
+  end
 end
 
 # Fiber extensions
@@ -207,16 +212,14 @@ class ::Fiber
   end
 
   def run(first_value)
-    setup(first_value)
-    uncaught = nil
+    setup first_value
     result = @block.(first_value)
+    finalize result
   rescue Exceptions::MoveOn, Exceptions::Terminate => e
-    result = e.value
+    finalize e.value
   rescue Exception => e
-    result = e
-    uncaught = true
-  ensure
-    finalize(result, uncaught)
+    e.source_fiber = self
+    finalize e, true
   end
 
   def setup(first_value)
@@ -226,14 +229,29 @@ class ::Fiber
   end
 
   def finalize(result, uncaught_exception = false)
-    terminate_all_children
-    await_all_children
+    result, uncaught_exception = finalize_children(result, uncaught_exception)
     __fiber_trace__(:fiber_terminate, self, result)
     @result = result
     @running = false
     inform_dependants(result, uncaught_exception)
   ensure
     Thread.current.switch_fiber
+  end
+
+  # Shuts down all children of the current fiber. If any exception occurs while
+  # the children are shut down, it is returned along with the uncaught_exception
+  # flag set. Otherwise, it returns the given arguments.
+  def finalize_children(result, uncaught_exception)
+    # "unshadow" the arguments into local vars so Rubocop won't complain...
+    result = result
+    uncaught_exception = uncaught_exception
+    begin
+      shutdown_all_children
+    rescue Exception => e
+      result = e
+      uncaught_exception = true
+    end
+    [result, uncaught_exception]
   end
 
   def inform_dependants(result, uncaught_exception)

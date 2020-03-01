@@ -168,6 +168,7 @@ class FiberTest < MiniTest::Test
     end
     assert_kind_of Hash, result
     assert_kind_of RuntimeError, result[:error]
+    assert_equal f, result[:error].source_fiber
   ensure
     f&.stop
   end
@@ -180,7 +181,7 @@ class FiberTest < MiniTest::Test
       2.times { snooze }
       result << 2
     end
-    spin { f.raise }
+    f2 = spin { f.raise }
     assert_equal 0, result.size
     begin
       f.await
@@ -190,6 +191,7 @@ class FiberTest < MiniTest::Test
     assert_equal 1, result.size
     assert_equal 1, result[0]
     assert_kind_of RuntimeError, error
+    assert_equal f, error.source_fiber
   ensure
     f&.stop
   end
@@ -250,7 +252,7 @@ class FiberTest < MiniTest::Test
       2.times { snooze }
       result << 2
     end
-    spin { f.raise 'foo' }
+    f2 = spin { f.raise 'foo' }
     assert_equal 0, result.size
     begin
       f.await
@@ -261,6 +263,7 @@ class FiberTest < MiniTest::Test
     assert_equal 1, result[0]
     assert_kind_of RuntimeError, error
     assert_equal 'foo', error.message
+    assert_equal f, error.source_fiber
   ensure
     f&.stop
   end
@@ -663,7 +666,6 @@ class FiberTest < MiniTest::Test
         o.close
       end
       snooze
-    ensure
     end
     o.close
     Gyro::Child.new(pid).await
@@ -827,6 +829,7 @@ class FiberControlTest < MiniTest::Test
     end
     assert_kind_of RuntimeError, error
     assert_equal 'foo', error.message
+    assert_equal f1, error.source_fiber
 
     assert_equal :dead, f1.state
     assert_equal :dead, f2.state
@@ -863,6 +866,7 @@ class FiberControlTest < MiniTest::Test
 
     assert_kind_of RuntimeError, result
     assert_equal 'foo', result.message
+    assert_equal f1, result.source_fiber
     assert_equal :dead, f1.state
     assert_equal :dead, f2.state
   end
@@ -873,5 +877,31 @@ class FiberControlTest < MiniTest::Test
     spin { snooze; f2.interrupt(:baz) }
     result = Fiber.select(f1, f2)
     assert_equal [f2, :baz], result
+  end
+end
+
+class SupervisionTest < MiniTest::Test
+  def test_exception_during_termination
+    f2 = nil
+    f = spin do
+      f2 = spin do
+        sleep
+      rescue Polyphony::Terminate
+        raise 'foo'
+      end
+      sleep
+    end
+
+    sleep 0.01
+    e = nil
+    begin
+      f.terminate
+      f.await
+    rescue => e
+    end
+
+    assert_kind_of RuntimeError, e
+    assert_equal 'foo', e.message
+    assert_equal f2, e.source_fiber
   end
 end

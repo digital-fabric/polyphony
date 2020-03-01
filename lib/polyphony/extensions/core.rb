@@ -8,14 +8,15 @@ Exceptions = import('../core/exceptions')
 
 # Exeption overrides
 class ::Exception
+  EXIT_EXCEPTION_CLASSES = [::Interrupt, ::SystemExit].freeze
+
   class << self
     attr_accessor :__disable_sanitized_backtrace__
   end
 
+  attr_accessor :source_fiber
+
   alias_method :orig_initialize, :initialize
-
-  EXIT_EXCEPTION_CLASSES = [::Interrupt, ::SystemExit].freeze
-
   def initialize(*args)
     @__raising_fiber__ = Fiber.current
     orig_initialize(*args)
