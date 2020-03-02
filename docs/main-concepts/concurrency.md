@@ -4,7 +4,7 @@ title: Concurrency the Easy Way
 nav_order: 1
 parent: Main Concepts
 permalink: /main-concepts/concurrency/
-prev_title: A Gentle Introduction to Polyphony
+prev_title: Tutorial
 next_title: How Fibers are Scheduled
 ---
 # Concurrency the Easy Way

@@ -8,45 +8,40 @@ next_title: Installing Polyphony
 
 # Polyphony - fine-grained concurrency for Ruby
 
-> Polyphony \| pəˈlɪf\(ə\)ni \|
-> 1. _Music_ the style of simultaneously combining a number of parts, each
->    forming an individual melody and harmonizing with each other.
-> 2. _Programming_ a Ruby gem for concurrent programming focusing on performance
->    and developer happiness.
-
 Polyphony is a library for building concurrent applications in Ruby. Polyphony
-harnesses the power of [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html)
-to provide a cooperative, sequential coroutine-based concurrency model. Under
-the hood, Polyphony uses [libev](https://github.com/enki/libev) as a
-high-performance event reactor that provides timers, I/O watchers and other
-asynchronous event primitives.
+implements a comprehensive
+[fiber](https://ruby-doc.org/core-2.5.1/Fiber.html)-based concurrency model,
+using [libev](https://github.com/enki/libev) as a high-performance event reactor
+for I/O, timers, and other asynchronous events.
+
+[Take the tutorial](getting-started/tutorial){: .btn .btn-blue .text-gamma }
+{: .mt-6 .h-align-center }
 
 ## Focused on Developer Happiness
 
 Polyphony is designed to make concurrent Ruby programming feel natural and
-fluent. Polyphony reduces the boilerplate usually associated with concurrent
-programming, and introduces concurrency primitives that are easy to use, easy to
-understand, and above all idiomatic.
+fluent. The Polyphony API is easy to use, easy to understand, and above all
+idiomatic.
 
 ## Optimized for High Performance
 
 Polyphony offers high performance for I/O bound Ruby apps. Distributing
-concurrent tasks over fibers, instead of threads or processes, minimizes memory
-consumption and reduces the cost of context-switching.
+concurrent operations over fibers, instead of threads or processes, minimizes
+memory consumption and reduces the cost of context-switching.
 
 ## Designed for Interoperability
 
-Polyphony makes it possible to use normal Ruby built-in classes like `IO`, and
-`Socket` in a concurrent multi-fiber environment. Polyphony takes care of
-context-switching automatically whenever a blocking call like `Socket#accept`,
-`IO#read` or `Kernel#sleep` is issued.
+With Polyphony you can use any of the stock Ruby classes and modules like `IO`,
+`Process`, `Socket` and `OpenSSL` in a concurrent multi-fiber environment. In
+addition, Polyphony provides a structured model for exception handling that
+builds on and enhances Ruby's exception handling system.
 
 ## A Growing Ecosystem
 
 Polyphony includes a full-blown HTTP server implementation with integrated
-support for HTTP 1, HTTP 2 and WebSockets, TLS/SSL termination, automatic
-ALPN protocol selection, and body streaming. Polyphony also includes fiber-aware
-extensions for PostgreSQL and Redis. More databases and services are forthcoming.
+support for HTTP 2, WebSockets, TLS/SSL termination and more. Polyphony also
+provides fiber-aware adapters for connecting to PostgreSQL and Redis. More
+adapters are being developed.
 
 ## Features
 
