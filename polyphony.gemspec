@@ -4,11 +4,11 @@ Gem::Specification.new do |s|
   s.name        = 'polyphony'
   s.version     = Polyphony::VERSION
   s.licenses    = ['MIT']
-  s.summary     = 'Polyphony: Fiber-based Concurrency for Ruby'
+  s.summary     = 'Fine grained concurrency for Ruby'
   s.author      = 'Sharon Rosner'
   s.email       = 'ciconia@gmail.com'
   s.files       = `git ls-files`.split
-  s.homepage    = 'https://dfab.gitbook.io/polyphony/'
+  s.homepage    = 'https://digital-fabric.github.io/polyphony'
   s.metadata    = {
     "source_code_uri" => "https://github.com/digital-fabric/polyphony",
     "documentation_uri" => "https://digital-fabric.github.io/polyphony/",
