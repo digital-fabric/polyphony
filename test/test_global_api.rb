@@ -40,6 +40,18 @@ class SpinTest < MiniTest::Test
     suspend
     assert_nil fiber.result
   end
+
+  def test_spin_without_tag
+    f = spin { }
+    assert_kind_of Fiber, f
+    assert_nil f.tag
+  end
+
+  def test_spin_with_tag
+    f = spin(:foo) { }
+    assert_kind_of Fiber, f
+    assert_equal :foo, f.tag
+  end
 end
 
 class ExceptionTest < MiniTest::Test
@@ -108,20 +120,6 @@ class MoveOnAfterTest < MiniTest::Test
 
     assert t1 - t0 < 0.02
     assert_equal :bar, v
-  end
-end
-
-class SpinTest < MiniTest::Test
-  def test_spin_without_tag
-    f = spin { }
-    assert_kind_of Fiber, f
-    assert_nil f.tag
-  end
-
-  def test_spin_with_tag
-    f = spin(:foo) { }
-    assert_kind_of Fiber, f
-    assert_equal :foo, f.tag
   end
 end
 
@@ -195,6 +193,15 @@ class ThrottledLoopTest < MiniTest::Test
 end
 
 class GlobalAPIEtcTest < MiniTest::Test
+  def test_after
+    buffer = []
+    f = after(0.001) { buffer << 2 }
+    snooze
+    assert_equal [], buffer
+    sleep 0.001
+    assert_equal [2], buffer
+  end
+
   def test_every
     buffer = []
     f = spin do

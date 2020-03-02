@@ -242,9 +242,6 @@ class ::Fiber
   # the children are shut down, it is returned along with the uncaught_exception
   # flag set. Otherwise, it returns the given arguments.
   def finalize_children(result, uncaught_exception)
-    # "unshadow" the arguments into local vars so Rubocop won't complain...
-    result = result
-    uncaught_exception = uncaught_exception
     begin
       shutdown_all_children
     rescue Exception => e

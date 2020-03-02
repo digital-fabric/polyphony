@@ -21,6 +21,29 @@ class KernelTest < MiniTest::Test
     timer&.stop
   end
 
+  def patch_open3
+    class << Open3
+      alias_method :orig_popen2, :popen2
+      def popen2(*args)
+        raise SystemCallError, 'foo'
+      end
+    end
+  end
+
+  def unpatch_open3
+    class << Open3
+      alias_method :popen2, :orig_popen2
+    end
+  end
+
+  def test_system_method_with_system_call_error
+    patch_open3
+    result = system('foo')
+    assert_nil result
+  ensure
+    unpatch_open3
+  end
+
   def test_backtick_method
     counter = 0
     timer = spin { throttled_loop(200) { counter += 1 } }
