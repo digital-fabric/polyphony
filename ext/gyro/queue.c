@@ -94,7 +94,8 @@ VALUE Gyro_Queue_shift_each(VALUE self) {
 
   if (rb_block_given_p()) {
     long len = RARRAY_LEN(old_queue);
-    for (long i = 0; i < len; i++) {
+    long i;
+    for (i = 0; i < len; i++) {
       rb_yield(RARRAY_AREF(old_queue, i));
     }
     RB_GC_GUARD(old_queue);
