@@ -1,7 +1,6 @@
 #include "gyro.h"
 
 struct Gyro_Queue {
-  VALUE self;
   VALUE queue;
   VALUE wait_queue;
 };
@@ -45,7 +44,6 @@ static VALUE Gyro_Queue_initialize(VALUE self) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
-  queue->self       = self;
   queue->queue      = rb_ary_new();
   queue->wait_queue = rb_ary_new();
   

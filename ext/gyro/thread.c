@@ -9,6 +9,7 @@ static ID ID_ivar_event_selector_proc;
 static ID ID_ivar_event_selector;
 static ID ID_ivar_join_wait_queue;
 static ID ID_ivar_main_fiber;
+static ID ID_ivar_result;
 static ID ID_ivar_terminated;
 static ID ID_pop;
 static ID ID_push;
@@ -249,25 +250,6 @@ VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE fiber, VALUE resume_ob
   return self;
 }
 
-VALUE Thread_join_perform(VALUE self) {
-  if (RTEST(rb_ivar_get(self, ID_ivar_terminated))) {
-    return self;
-  }
-
-  VALUE async = rb_funcall(cGyro_Async, ID_new, 0);
-  // The call to Gyro::Async.new may have caused a thread context switch, which
-  // could possibly lead to a race condition. To prevent this we check again if
-  // the thread has already terminated here.
-  if (RTEST(rb_ivar_get(self, ID_ivar_terminated))) {
-    return self;
-  }
-  VALUE wait_queue = rb_ivar_get(self, ID_ivar_join_wait_queue);
-  Gyro_Queue_push(wait_queue, async);
-  VALUE ret = Gyro_Async_await(async);
-  RB_GC_GUARD(async);
-  return ret;
-}
-
 void Init_Thread() {
   cQueue = rb_const_get(rb_cObject, rb_intern("Queue"));
 
@@ -288,8 +270,6 @@ void Init_Thread() {
     Thread_schedule_fiber_with_priority, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
 
-  rb_define_method(rb_cThread, "join_perform", Thread_join_perform, 0);
-
   ID_create_event_selector    = rb_intern("create_event_selector");
   ID_empty                    = rb_intern("empty?");
   ID_fiber_ref_count          = rb_intern("fiber_ref_count");
@@ -297,6 +277,7 @@ void Init_Thread() {
   ID_ivar_event_selector_proc = rb_intern("@event_selector_proc");
   ID_ivar_join_wait_queue     = rb_intern("@join_wait_queue");
   ID_ivar_main_fiber          = rb_intern("@main_fiber");
+  ID_ivar_result              = rb_intern("@result");
   ID_ivar_terminated          = rb_intern("@terminated");
   ID_pop                      = rb_intern("pop");
   ID_push                     = rb_intern("push");

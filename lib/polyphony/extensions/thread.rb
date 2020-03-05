@@ -4,13 +4,14 @@ Exceptions = import '../core/exceptions'
 
 # Thread extensions
 class ::Thread
-  attr_reader :main_fiber
+  attr_reader :main_fiber, :result
 
   alias_method :orig_initialize, :initialize
   def initialize(*args, &block)
     @join_wait_queue = Gyro::Queue.new
     @args = args
     @block = block
+    @finalization_mutex = Mutex.new
     orig_initialize { execute }
   end
 
@@ -38,8 +39,11 @@ class ::Thread
       Fiber.current.terminate_all_children
       Fiber.current.await_all_children
     end
-    @terminated = true
-    signal_waiters(result)
+    @finalization_mutex.synchronize do
+      @terminated = true
+      @result = result
+      signal_waiters(result)
+    end
     stop_event_selector
   end
 
@@ -49,11 +53,15 @@ class ::Thread
 
   alias_method :orig_join, :join
   def join(timeout = nil)
-    if timeout
-      move_on_after(timeout) { join_perform }
-    else
-      join_perform
+    async = Gyro::Async.new
+    @finalization_mutex.synchronize do
+      if @terminated
+        @result.is_a?(Exception) ? (raise @result) : (return @result)
+      else
+        @join_wait_queue.push(async)
+      end
     end
+    timeout ? move_on_after(timeout) { async.await } : async.await
   end
   alias_method :await, :join
 

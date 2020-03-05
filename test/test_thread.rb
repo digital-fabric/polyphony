@@ -50,7 +50,6 @@ class ThreadTest < MiniTest::Test
     buffer = []
     spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new { sleep 0.01; buffer << 4; :foo }
-
     r = t.await
 
     assert_equal [1, 2, 3, 4], buffer
@@ -92,16 +91,18 @@ class ThreadTest < MiniTest::Test
     lineno = __LINE__ + 1
     t = Thread.new { sleep 1 }
     str = format(
-      "#<Thread:%d %s:%d (run)>",
+      "#<Thread:%d %s:%d",
       t.object_id,
       __FILE__,
       lineno,
     )
-    assert_equal str, t.inspect
+    assert t.inspect =~ /#{str}/
   rescue => e
     p e
+    puts e.backtrace.join("\n")
   ensure
     t.kill
+    sleep 0.005
     t.join
   end
 
