@@ -85,9 +85,7 @@ static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
 
   ev_async_init(&selector->async, dummy_async_callback);
   ev_async_start(selector->ev_loop, &selector->async);
-
   ev_run(selector->ev_loop, EVRUN_NOWAIT);
-
   return Qnil;
 }
 
@@ -137,9 +135,9 @@ VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self) {
 
   if (selector->ev_loop_running) {
     // Since the loop will run until at least one event has occurred, we signal
-    // the associated async watcher, which will cause the ev loop to return. In
-    // contrast to using `ev_break` to break out of the loop, which should be
-    // called from the same thread (from within the ev_loop), using an
+    // the selector's associated async watcher, which will cause the ev loop to
+    // return. In contrast to using `ev_break` to break out of the loop, which
+    // should be called from the same thread (from within the ev_loop), using an
     // `ev_async` allows us to interrupt the event loop across threads.
     ev_async_send(selector->ev_loop, &selector->async);
     return Qtrue;

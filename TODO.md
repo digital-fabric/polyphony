@@ -1,3 +1,23 @@
+- Debugging
+  - Needs to work with Pry (can write perhaps an extension for pry)
+  - First impl in Ruby using `TracePoint` API
+  - Mode of operation:
+    - Debugger runs on separate thread
+    - The `TracePoint` handler passes control to the debugger thread, and waits
+      for reply (probably using Fiber messages)
+  - Step over should return on the next line *for the same fiber*
+  - The event loop (all event loops?) should be suspended so timers are adjusted
+    accordingly, so on control passing to debugger we:
+
+    - call `ev_suspend()` for main thread ev_loop
+    - prompt and wait for input from user
+    - call `ev_resume()` for main thread ev_loop
+    - process user input
+
+    (We need to verify than `ev_suspend/resume` works for an ev_loop that's not
+    currently running.)
+  - Allow inspection of fiber tree, thread's run queue, fiber's scheduled values etc.
+
 - Fiber supervision
   - can a fiber be restarted?
     - Theoretically, we can take the same block and rerun it under a different
@@ -37,6 +57,22 @@
       # We can restart the fiber (the respun fiber will have the same parent,
       # the same caller location, the same tag)
       fiber.respin # TODO: implement Fiber#respin
+    end
+    ```
+
+  - Another option is to pass supervision parameters to `#spin`:
+
+    ```ruby
+    spin(supervise: true) do
+
+    end
+    ```
+
+  - Or maybe:
+
+    ```ruby
+    spin_supervisor do
+      
     end
     ```
 

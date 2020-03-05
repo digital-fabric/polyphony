@@ -16,12 +16,14 @@ class ::Thread
 
   def execute
     setup
+    @ready = true
     result = @block.(*@args)
   rescue Exceptions::MoveOn, Exceptions::Terminate => e
     result = e.value
   rescue Exception => e
     result = e
   ensure
+    @ready = true
     finalize(result)
   end
 
@@ -36,6 +38,7 @@ class ::Thread
       Fiber.current.terminate_all_children
       Fiber.current.await_all_children
     end
+    @terminated = true
     signal_waiters(result)
     stop_event_selector
   end
@@ -60,7 +63,9 @@ class ::Thread
     error = RuntimeError.new if error.nil?
     error = RuntimeError.new(error) if error.is_a?(String)
     error = error.new if error.is_a?(Class)
-    @main_fiber.raise(error)
+    
+    sleep 0.0001 until @ready
+    main_fiber&.raise(error)
   end
 
   alias_method :orig_kill, :kill

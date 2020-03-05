@@ -1,3 +1,4 @@
+* Fix race condition in `Thread#join`, `Thread#raise` (#14)
 * Add `Exception#source_fiber` - references the fiber in which an uncaught
   exception occurred
 
