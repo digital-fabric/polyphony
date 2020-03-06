@@ -22,6 +22,7 @@ void Gyro_ref_count_incr();
 void Gyro_ref_count_decr();
 
 VALUE Gyro_Async_await(VALUE async);
+VALUE Gyro_Async_await_no_raise(VALUE async);
 
 VALUE IO_read_watcher(VALUE io);
 VALUE IO_write_watcher(VALUE io);

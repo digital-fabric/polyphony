@@ -74,7 +74,14 @@ VALUE Gyro_Queue_shift(VALUE self) {
     
     VALUE async = rb_funcall(cGyro_Async, ID_new, 0);
     rb_ary_push(queue->wait_queue, async);
-    Gyro_Async_await(async);
+    VALUE ret = Gyro_Async_await_no_raise(async);
+    if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
+      rb_ary_delete(queue->wait_queue, async);
+      return rb_funcall(rb_mKernel, ID_raise, 1, ret);
+    }
+    else {
+      return ret;
+    }
   }
 }
 

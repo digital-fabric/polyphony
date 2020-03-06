@@ -121,6 +121,33 @@ VALUE Gyro_Async_await(VALUE self) {
   }
 }
 
+VALUE Gyro_Async_await_no_raise(VALUE self) {
+  struct Gyro_Async *async;
+  VALUE ret;
+  
+  GetGyro_Async(self, async);
+
+  async->fiber = rb_fiber_current();
+  if (!async->active) {
+    async->active = 1;
+    async->ev_loop = Gyro_Selector_current_thread_ev_loop();
+    ev_async_start(async->ev_loop, &async->ev_async);
+  }
+
+  ret = Fiber_await();
+  RB_GC_GUARD(ret);
+
+  if (async->active) {
+    async->active = 0;
+    async->fiber = Qnil;
+    ev_async_stop(async->ev_loop, &async->ev_async);
+    async->value = Qnil;
+  }
+
+  return ret;
+}
+
+
 void Init_Gyro_Async() {
   cGyro_Async = rb_define_class_under(mGyro, "Async", rb_cData);
   rb_define_alloc_func(cGyro_Async, Gyro_Async_allocate);
