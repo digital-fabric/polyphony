@@ -85,7 +85,7 @@ class SignalTrapTest < Minitest::Test
     ensure
       o.close
     end
-    sleep 0.01
+    sleep 0.02
     o.close
     watcher = Gyro::Child.new(pid)
     Process.kill('INT', pid)

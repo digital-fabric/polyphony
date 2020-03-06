@@ -6,7 +6,7 @@ def run_tests
   @count += 1
   puts "!(#{@count})"
   # output = `ruby test/test_thread.rb -n test_thread_inspect`
-  system('ruby test/test_thread.rb')
+  system('ruby test/run.rb')
   return if $?.exitstatus == 0
 
   exit!

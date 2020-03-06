@@ -65,7 +65,7 @@ class ThreadPoolTest < MiniTest::Test
     end
     elapsed = Time.now - t0
 
-    assert elapsed < 0.005
+    assert elapsed < 0.007
     assert buffer.size < 2
     
     sleep 0.08 # allow time for threads to spawn
