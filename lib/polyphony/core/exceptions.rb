@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :MoveOn, :Cancel, :Terminate
+export :BaseException, :MoveOn, :Cancel, :Terminate, :Restart
 
 # Common exception class for interrupting fibers. These exceptions allow
 # control of fibers. BaseException exceptions can encapsulate a value and thus
@@ -26,3 +26,6 @@ class Cancel < BaseException; end
 
 # Terminate is used to interrupt a fiber once its parent fiber has terminated.
 class Terminate < BaseException; end
+
+# Restart is used to restart a fiber
+class Restart < BaseException; end

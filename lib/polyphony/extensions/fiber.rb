@@ -27,6 +27,15 @@ module FiberControl
   end
   alias_method :stop, :interrupt
 
+  def restart(value = nil)
+    raise 'Can''t restart main fiber' if @main
+    return parent.spin(&@block).tap { |f| f.schedule(value) } unless @running
+    
+    schedule Exceptions::Restart.new(value)
+    return self
+  end
+  alias_method :reset, :restart
+
   def cancel!
     return if @running == false
 
@@ -215,6 +224,8 @@ class ::Fiber
     setup first_value
     result = @block.(first_value)
     finalize result
+  rescue Exceptions::Restart => e
+    run(e.value)
   rescue Exceptions::MoveOn, Exceptions::Terminate => e
     finalize e.value
   rescue Exception => e

@@ -905,3 +905,56 @@ class SupervisionTest < MiniTest::Test
     assert_equal f2, e.source_fiber
   end
 end
+
+class RestartTest < MiniTest::Test
+  def test_restart
+    buffer = []
+    f = spin {
+      buffer << 1
+      receive
+      buffer << 2
+    }
+    snooze
+    assert_equal [1], buffer
+    f2 = f.restart
+    assert_equal f2, f
+    assert_equal [1], buffer
+    snooze
+    assert_equal [1, 1], buffer
+    
+    f << 'foo'
+    sleep 0.1
+    assert_equal [1, 1, 2], buffer
+  end
+
+  def test_restart_after_finalization
+    buffer = []
+    parent = spin {
+      sleep
+    }
+
+    f = parent.spin { |v|
+      buffer << Fiber.current
+      buffer << v
+      buffer << receive
+      buffer << :done
+    }
+    f.schedule('foo')
+    f << 'bar'
+    snooze
+    f.await
+
+    assert_equal [f, 'foo', 'bar', :done], buffer
+    assert_equal parent, f.parent
+
+    f2 = f.restart('baz')
+    assert f2 != f
+    assert_equal parent, f2.parent
+
+    f2 << 42
+    f2.await
+    assert_equal [f, 'foo', 'bar', :done, f2, 'baz', 42, :done], buffer
+
+
+  end
+end
