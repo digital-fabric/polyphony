@@ -28,11 +28,11 @@ module FiberControl
   alias_method :stop, :interrupt
 
   def restart(value = nil)
-    raise 'Can''t restart main fiber' if @main
+    raise "Can''t restart main fiber" if @main
     return parent.spin(&@block).tap { |f| f.schedule(value) } unless @running
-    
+
     schedule Exceptions::Restart.new(value)
-    return self
+    self
   end
   alias_method :reset, :restart
 
@@ -63,19 +63,8 @@ module FiberControl
   end
 
   def supervise(on_error: nil, &block)
-    @on_child_done = method(:supervised_child_done)
+    @on_child_done = proc { schedule }
     loop { supervise_perform(on_error, &block) }
-  end
-
-  def supervised_child_done(fiber)
-    self.schedule
-    # if @children.empty?
-    #   e = Polyphony::MoveOn.new
-    #   e.source_fiber = self
-    #   self.raise(e)
-    # else
-    #   self.schedule
-    # end
   end
 
   def supervise_perform(policy, &block)
@@ -98,7 +87,7 @@ module FiberControl
     when :restart
       fiber.restart
     when :restart_all
-      @children.keys.each { |f| f.restart }
+      @children.keys.each(&:restart)
     end
   end
 end
@@ -266,13 +255,17 @@ class ::Fiber
     result = @block.(first_value)
     finalize result
   rescue Exceptions::Restart => e
-    @mailbox = Gyro::Queue.new
-    run(e.value)
+    restart_self(e.value)
   rescue Exceptions::MoveOn, Exceptions::Terminate => e
     finalize e.value
   rescue Exception => e
     e.source_fiber = self
     finalize e, true
+  end
+
+  def restart_self(first_value)
+    @mailbox = Gyro::Queue.new
+    run(first_value)
   end
 
   def setup(first_value)

@@ -130,3 +130,16 @@ Naming/MethodParameterName:
 Security/MarshalLoad:
   Exclude:
     - examples/**/*.rb
+
+Lint/ShadowedArgument:
+  Exclude:
+    - lib/polyphony/extensions/fiber.rb
+
+Style/HashEachMethods:
+  Enabled: true
+
+Style/HashTransformKeys:
+  Enabled: true
+
+Style/HashTransformValues:
+  Enabled: true

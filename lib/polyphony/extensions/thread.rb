@@ -71,7 +71,7 @@ class ::Thread
     error = RuntimeError.new if error.nil?
     error = RuntimeError.new(error) if error.is_a?(String)
     error = error.new if error.is_a?(Class)
-    
+
     sleep 0.0001 until @ready
     main_fiber&.raise(error)
   end
