@@ -201,13 +201,13 @@ class ::Fiber
   attr_accessor :tag, :thread, :parent
 
   def prepare(tag, block, caller, parent)
-    __fiber_trace__(:fiber_create, self)
     @thread = Thread.current
     @tag = tag
     @parent = parent
     @caller = caller
     @block = block
     @mailbox = Gyro::Queue.new
+    __fiber_trace__(:fiber_create, self)
     schedule
   end
 
