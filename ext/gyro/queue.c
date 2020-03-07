@@ -67,11 +67,7 @@ VALUE Gyro_Queue_shift(VALUE self) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
-  while (1) {
-    if (RARRAY_LEN(queue->queue) > 0) {
-      return rb_ary_shift(queue->queue);
-    }
-    
+  if (RARRAY_LEN(queue->queue) == 0) {
     VALUE async = rb_funcall(cGyro_Async, ID_new, 0);
     rb_ary_push(queue->wait_queue, async);
     VALUE ret = Gyro_Async_await_no_raise(async);
@@ -79,10 +75,9 @@ VALUE Gyro_Queue_shift(VALUE self) {
       rb_ary_delete(queue->wait_queue, async);
       return rb_funcall(rb_mKernel, ID_raise, 1, ret);
     }
-    else {
-      return ret;
-    }
   }
+
+  return rb_ary_shift(queue->queue);
 }
 
 VALUE Gyro_Queue_shift_no_wait(VALUE self) {
