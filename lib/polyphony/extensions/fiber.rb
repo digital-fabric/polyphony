@@ -160,7 +160,7 @@ module ChildFiberControl
     (@children ||= {}).keys
   end
 
-  def spin(tag = nil, orig_caller = caller, &block)
+  def spin(tag = nil, orig_caller = Kernel.caller, &block)
     f = Fiber.new { |v| f.run(v) }
     f.prepare(tag, block, orig_caller, self)
     (@children ||= {})[f] = true
