@@ -23,6 +23,7 @@ module Polyphony
   exceptions = import './polyphony/core/exceptions'
   Cancel    = exceptions::Cancel
   MoveOn    = exceptions::MoveOn
+  Restart   = exceptions::Restart
   Terminate = exceptions::Terminate
 
   Net = import './polyphony/net'

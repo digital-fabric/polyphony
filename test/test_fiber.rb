@@ -954,7 +954,60 @@ class RestartTest < MiniTest::Test
     f2 << 42
     f2.await
     assert_equal [f, 'foo', 'bar', :done, f2, 'baz', 42, :done], buffer
+  end
+end
 
+class SuperviseTest < MiniTest::Test
+  def test_supervise
+    p = spin { supervise }
+    snooze
+    f1 = p.spin { receive }
+    f2 = p.spin { receive }
 
+    snooze
+    assert_equal p.state, :waiting
+    f1 << 'foo'
+    f1.await
+    snooze
+
+    assert_equal :waiting, p.state
+    assert_equal :waiting, f2.state
+
+    f2 << 'bar'
+    f2.await
+    snooze
+
+    assert_equal :waiting, p.state
+  end
+
+  def test_supervise_with_restart
+    parent = spin { supervise(on_error: :restart) }
+    snooze
+
+    buffer = []
+    f1 = parent.spin do
+      buffer << 'f1'
+      buffer << receive
+    end
+
+    snooze
+    assert_equal ['f1'], buffer
+
+    f1.raise 'foo'
+
+    3.times { snooze }
+
+    assert_equal ['f1', 'f1'], buffer
+    assert_equal :dead, f1.state
+
+    # f1 should have been restarted by supervisor
+    f1 = parent.children.first
+    assert_kind_of Fiber, f1
+    f1 << 'foo'
+
+    f1.await
+    3.times { snooze }
+
+    assert_equal ['f1', 'f1', 'foo'], buffer
   end
 end

@@ -61,6 +61,46 @@ module FiberControl
     else RuntimeError.new
     end
   end
+
+  def supervise(on_error: nil, &block)
+    @on_child_done = method(:supervised_child_done)
+    loop { supervise_perform(on_error, &block) }
+  end
+
+  def supervised_child_done(fiber)
+    self.schedule
+    # if @children.empty?
+    #   e = Polyphony::MoveOn.new
+    #   e.source_fiber = self
+    #   self.raise(e)
+    # else
+    #   self.schedule
+    # end
+  end
+
+  def supervise_perform(policy, &block)
+    suspend
+  rescue Polyphony::Restart
+    restart_all_children
+  rescue Exception => e
+    case e.source_fiber
+    when nil, self
+      Kernel.raise e
+    else
+      handle_supervisor_exception(e, e.source_fiber, policy, &block)
+    end
+  end
+
+  def handle_supervisor_exception(error, fiber, policy, &block)
+    return block.call(error, fiber) if block
+
+    case policy
+    when :restart
+      fiber.restart
+    when :restart_all
+      @children.keys.each { |f| f.restart }
+    end
+  end
 end
 
 # Class methods for controlling fibers (namely await and select)
@@ -169,6 +209,7 @@ module ChildFiberControl
 
   def child_done(child_fiber)
     @children.delete(child_fiber)
+    @on_child_done&.(child_fiber)
   end
 
   def terminate_all_children

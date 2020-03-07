@@ -73,6 +73,10 @@ module API
     Fiber.current.receive_pending
   end
 
+  def supervise(*args, &block)
+    Fiber.current.supervise(*args, &block)
+  end
+
   def sleep(duration = nil)
     return sleep_forever unless duration
 

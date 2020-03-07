@@ -35,7 +35,7 @@
     spin {
       spin { do_a }
       spin { do_b }
-      supervise(restart: :none, shutdown: :terminate)
+      supervise(restart: :never, shutdown: :terminate)
     }
     ```
 
@@ -76,7 +76,19 @@
     end
     ```
 
-## 0.32 Working Sinatra application
+## 0.32 Some more API work, more docs
+
+- Allow calling `cancel_after` and `move_on_after` without blocks, just return
+  the cancelling fiber:
+
+  ```ruby
+  def foo
+    f = cancel_after(10)
+    do_something_slow
+  ensure
+    f.stop
+  end
+  ```
 
 - Docs
   - landing page:
