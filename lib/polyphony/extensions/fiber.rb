@@ -225,6 +225,7 @@ class ::Fiber
     result = @block.(first_value)
     finalize result
   rescue Exceptions::Restart => e
+    @mailbox = Gyro::Queue.new
     run(e.value)
   rescue Exceptions::MoveOn, Exceptions::Terminate => e
     finalize e.value
