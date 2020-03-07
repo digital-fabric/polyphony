@@ -81,7 +81,7 @@ module FiberControl
   end
 
   def handle_supervisor_exception(error, fiber, policy, &block)
-    return block.call(error, fiber) if block
+    return block.call(fiber, error) if block
 
     case policy
     when :restart

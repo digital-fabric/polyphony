@@ -1010,4 +1010,22 @@ class SuperviseTest < MiniTest::Test
 
     assert_equal ['f1', 'f1', 'foo'], buffer
   end
+
+  def test_supervise_with_block
+    failed = []
+    p = spin do
+      supervise(on_error: :restart) { |f, e| failed << [f, e] }
+    end
+    snooze
+    f1 = p.spin { receive }
+    snooze
+
+    f1.raise 'foo'
+    3.times { snooze }
+
+    assert_equal 1, failed.size
+    assert_equal f1, failed.first[0]
+    assert_kind_of RuntimeError, failed.first[1]
+    assert_equal 'foo', failed.first[1].message
+  end
 end
