@@ -42,77 +42,7 @@
           - from an expression: `Fiber.current.children`
           - maybe just `select f1` (where f1 is a local var)
 
-- Fiber supervision
-  - can a fiber be restarted?
-    - Theoretically, we can take the same block and rerun it under a different
-      fiber
-  - (restart) strategy (taken from Erlang):
-    - `:one_for_one`: if a child terminates, it is restarted
-    - `:one_for_all`: if a child terminates, all other children are terminated,
-      then all are restarted
-    - `:simple_on_for_one`: same as `:one_for_one` except all children are
-      identical (run the same block)
-  - I'm not so sure this kind of supervision is what we need. We can envision
-    an API such as the following:
-
-    ```ruby
-    spin {
-      spin { do_a }
-      spin { do_b }
-      supervise(restart: :never, shutdown: :terminate)
-    }
-    ```
-
-  - The default for `#supervise` should be:
-    - wait for all fibers to terminate
-    - propagate exceptions
-    - no restart
-  
-  - `#supervise` could also take a block:
-
-    ```ruby
-    supervise do |fiber, error|
-      # this block is called when a fiber is terminated, letting the developer
-      # decide how to react.
-
-      # We can propagate the error
-      raise error if error
-
-      # We can restart the fiber (the respun fiber will have the same parent,
-      # the same caller location, the same tag)
-      fiber.respin # TODO: implement Fiber#respin
-    end
-    ```
-
-  - Another option is to pass supervision parameters to `#spin`:
-
-    ```ruby
-    spin(supervise: true) do
-
-    end
-    ```
-
-  - Or maybe:
-
-    ```ruby
-    spin_supervisor do
-      
-    end
-    ```
-
-## 0.32 Some more API work, more docs
-
-- Allow calling `cancel_after` and `move_on_after` without blocks, just return
-  the cancelling fiber:
-
-  ```ruby
-  def foo
-    f = cancel_after(10)
-    do_something_slow
-  ensure
-    f.stop
-  end
-  ```
+## 0.33 Some more API work, more docs
 
 - Docs
   - landing page:
@@ -127,7 +57,7 @@
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
 
-## 0.33 Sinatra / Sidekiq
+## 0.34 Sinatra / Sidekiq
 
 - sintra app with database access (postgresql)
 
@@ -137,13 +67,13 @@
   - test performance
   - proceed from there
 
-## 0.34 Testing && Docs
+## 0.35 Testing && Docs
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.35 Integration
+## 0.36 Integration
 
-## 0.36 Real IO#gets and IO#read
+## 0.37 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -153,11 +83,11 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.37 Rails
+## 0.38 Rails
 
 - Rails?
 
-## 0.37 DNS
+## 0.39 DNS
 
 ### DNS client
 

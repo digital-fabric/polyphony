@@ -121,7 +121,46 @@ class MoveOnAfterTest < MiniTest::Test
     assert t1 - t0 < 0.02
     assert_equal :bar, v
   end
+
+  def test_move_on_after_without_block
+    t0 = Time.now
+    f = move_on_after(0.01, with_value: 'foo')
+    assert_kind_of Fiber, f
+    assert_equal Fiber.current, f.parent
+    v = sleep 1
+    t1 = Time.now
+    assert t1 - t0 < 0.02
+    assert_equal 'foo', v
+  end
 end
+
+class CancelAfterTest < MiniTest::Test
+  def test_cancel_after
+    t0 = Time.now
+
+    assert_raises Polyphony::Cancel do
+      cancel_after(0.01) do
+        sleep 1
+        :foo
+      end
+    end
+    t1 = Time.now
+    assert t1 - t0 < 0.02
+  end
+
+  def test_cancel_after_without_block
+    t0 = Time.now
+    f = cancel_after(0.01)
+    assert_kind_of Fiber, f
+    assert_equal Fiber.current, f.parent
+    assert_raises Polyphony::Cancel do
+      sleep 1
+    end
+    t1 = Time.now
+    assert t1 - t0 < 0.02
+  end
+end
+
 
 class SpinLoopTest < MiniTest::Test
   def test_spin_loop

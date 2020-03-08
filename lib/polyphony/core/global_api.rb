@@ -23,6 +23,10 @@ module API
       sleep interval
       fiber.schedule Exceptions::Cancel.new
     end
+    block ? cancel_after_wrap_block(canceller, &block) : canceller
+  end
+
+  def cancel_after_wrap_block(canceller, &block)
     block.call
   ensure
     canceller.stop
@@ -54,6 +58,17 @@ module API
 
   def move_on_after(interval, with_value: nil, &block)
     fiber = ::Fiber.current
+    unless block
+      return spin do
+        sleep interval
+        fiber.schedule with_value
+      end
+    end
+
+    move_on_after_with_block(fiber, interval, with_value, &block)
+  end
+
+  def move_on_after_with_block(fiber, interval, with_value, &block)
     canceller = spin do
       sleep interval
       fiber.schedule Exceptions::MoveOn.new(with_value)
