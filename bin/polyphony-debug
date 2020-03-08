@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby
+# encoding: utf-8
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'polyphony'
+
+Gyro.trace(true)
+
+FILE_CACHE = {}
+@ready = nil
+@last_location = nil
+@mode = :step
+@current_fiber = nil
+@stacks = Hash.new([])
+
+def debug_prompt
+  loop do
+    STDOUT << '(debug) '
+    case (cmd = STDIN.gets.chomp)
+    when '.q', '.quit'
+      exit!
+    when 's', 'step'
+      @mode = :step
+      return
+    else
+      begin
+        result = binding.eval(cmd)
+        p result
+      rescue Exception => e
+        p e
+        puts e.backtrace.join("\n")
+      end
+    end
+  end
+end
+
+def get_snippet(path, lineno)
+  lines = FILE_CACHE[path] ||= IO.read(path).lines
+  start_idx = lineno - 5
+  stop_idx = lineno + 3
+  stop_idx = lines.size - 1 if stop_idx >= lines.size
+  start_idx = 0 if start_idx < 0
+  (start_idx..stop_idx).map { |idx| [idx + 1, lines[idx]]}
+end
+
+def print_snippet(snippet, cur_line)
+  snippet.each do |(lineno, line)|
+    is_cur = lineno == cur_line
+    formatted = format("%s%03d %s", is_cur ? '*=> ' : '    ', lineno, line)
+    puts formatted
+  end
+end
+
+tp = Polyphony::Trace.new(*Polyphony::Trace::STOCK_EVENTS, :fiber_all) do |r|
+  unless @ready
+    @ready = true if r[:event] == :return
+    @current_fiber = r[:fiber]
+    next
+  end
+
+  case r[:event]
+  when :call, :b_call, :c_call
+    @stacks[r[:fiber]] << r
+  when :return, :b_return, :c_return
+    @stacks[r[:fiber]].pop
+  when :line
+    case @mode
+    when :step
+      if r[:location] != @last_location && r[:fiber] == @current_fiber
+        @last_location = r[:location]
+        puts "in #{r[:location]}"
+        puts
+        snippet = get_snippet(r[:path], r[:lineno])
+        print_snippet(snippet, r[:lineno])
+        puts
+        debug_prompt
+      end
+    end
+  end
+rescue Exception => e
+  p e
+  exit!
+end
+tp.enable
+
+require File.expand_path(ARGV[0])

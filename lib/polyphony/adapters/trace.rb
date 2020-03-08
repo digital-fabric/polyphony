@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-export :new, :analyze
+export :new, :analyze, :STOCK_EVENTS
 
 require 'polyphony'
 
@@ -14,9 +14,11 @@ end
 
 def trace_record(trp, start_stamp)
   stamp = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC) - start_stamp
-  { stamp: stamp, self: trp.self, binding: trp.binding, event: trp.event,
-    fiber: tp_fiber(trp), lineno: trp.lineno, method_id: trp.method_id,
-    file: trp.path, parameters: tp_params(trp),
+
+  { stamp: stamp, event: trp.event, location: "#{trp.path}:#{trp.lineno}",
+    self: trp.self, binding: trp.binding, fiber: tp_fiber(trp),
+    lineno: trp.lineno, method_id: trp.method_id,
+    path: trp.path, parameters: tp_params(trp),
     return_value: tp_return_value(trp), schedule_value: tp_schedule_value(trp),
     exception: tp_raised_exception(trp) }
 end
