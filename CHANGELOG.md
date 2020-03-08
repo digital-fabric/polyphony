@@ -1,3 +1,6 @@
+## 0.33 2020-03-08
+
+* Implement `Fiber#supervise` (WIP)
 * Add `Fiber#restart` API
 * Fix race condition in `Thread#join`, `Thread#raise` (#14)
 * Add `Exception#source_fiber` - references the fiber in which an uncaught

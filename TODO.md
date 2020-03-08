@@ -1,4 +1,6 @@
 - Debugging
+  - Eat your own dogfood: need a good tool to check what's going on when some
+    test fails
   - Needs to work with Pry (can write perhaps an extension for pry)
   - First impl in Ruby using `TracePoint` API
   - Mode of operation:
@@ -17,6 +19,28 @@
     (We need to verify than `ev_suspend/resume` works for an ev_loop that's not
     currently running.)
   - Allow inspection of fiber tree, thread's run queue, fiber's scheduled values etc.
+
+  - UI
+    - `Kernel#breakpoint` is used to break into the debugger while running code
+
+      ```ruby
+      def test_sleep
+        f = spin { sleep 10 }
+        breakpoint
+        ...
+      end
+      ```
+
+      Hitting the breakpoint will show the current location in the source code
+      (with few lines before and after), and present a prompt for commands.
+    
+    - commands:
+      - `step` / `up` / `skip` / `continue` etc. - step into, step out, step over, run
+      - `switch` - switch fiber
+        - how do we select a fiber?
+          - from a list?
+          - from an expression: `Fiber.current.children`
+          - maybe just `select f1` (where f1 is a local var)
 
 - Fiber supervision
   - can a fiber be restarted?
@@ -218,3 +242,4 @@ Prior art:
     do_my_thing
   end
   ```
+
