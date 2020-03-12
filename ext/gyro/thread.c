@@ -185,6 +185,8 @@ VALUE Thread_switch_fiber(VALUE self) {
     int ref_count = Thread_fiber_ref_count(self);
     if (next_fiber != Qnil) {
       if (ref_count > 0) {
+        // this mechanism prevents event starvation in case the run queue never
+        // empties
         Gyro_Selector_run_no_wait(selector, current_fiber, RARRAY_LEN(queue));
       }
       break;
