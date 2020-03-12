@@ -65,6 +65,8 @@ module FiberControl
   def supervise(on_error: nil, &block)
     @on_child_done = proc { schedule }
     loop { supervise_perform(on_error, &block) }
+  ensure
+    @on_child_done = nil
   end
 
   def supervise_perform(policy, &block)
@@ -72,12 +74,9 @@ module FiberControl
   rescue Polyphony::Restart
     restart_all_children
   rescue Exception => e
-    case e.source_fiber
-    when nil, self
-      Kernel.raise e
-    else
-      handle_supervisor_exception(e, e.source_fiber, policy, &block)
-    end
+    Kernel.raise e if e.source_fiber.nil? || e.source_fiber == self
+
+    handle_supervisor_exception(e, e.source_fiber, policy, &block)
   end
 
   def handle_supervisor_exception(error, fiber, policy, &block)
@@ -196,6 +195,10 @@ module ChildFiberControl
     f
   end
 
+  def add_child(fiber)
+    (@children ||= {})[fiber] = true
+  end
+
   def child_done(child_fiber)
     @children.delete(child_fiber)
     @on_child_done&.(child_fiber)
@@ -239,6 +242,15 @@ class ::Fiber
     @mailbox = Gyro::Queue.new
     __fiber_trace__(:fiber_create, self)
     schedule
+  end
+
+  # setup for fibers created using Fiber.new
+  def setup_raw
+    @thread = Thread.current
+    @parent = @thread.main_fiber
+    @parent.add_child(self)
+    @mailbox = Gyro::Queue.new
+    __fiber_trace__(:fiber_create, self)
   end
 
   def setup_main_fiber

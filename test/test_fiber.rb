@@ -1028,4 +1028,34 @@ class SuperviseTest < MiniTest::Test
     assert_kind_of RuntimeError, failed.first[1]
     assert_equal 'foo', failed.first[1].message
   end
+
+  def test_supervisor_termination
+    f = nil
+    p = spin do
+      f = spin { sleep 1 }
+      supervise
+    end
+    sleep 0.01
+
+    p.terminate
+    p.await
+
+    assert :dead, f.state
+    assert :dead, p.state
+  end
+
+  def test_supervisor_termination_with_restart
+    f = nil
+    p = spin do
+      f = spin { sleep 1 }
+      supervise(on_error: :restart)
+    end
+    sleep 0.01
+
+    p.terminate
+    p.await
+
+    assert :dead, f.state
+    assert :dead, p.state
+  end
 end
