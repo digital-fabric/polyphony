@@ -163,14 +163,14 @@ The `handle_client` method is almost trivial:
 ```ruby
 def handle_client(client)
   while (data = client.gets)
-    client.write('you said: ', data.chomp, "!\n")
+    client << data
   end
 rescue Errno::ECONNRESET
   puts 'Connection reset by client'
 end
 ```
 
-### Adding Concurrency
+## Adding Concurrency
 
 Up until now, we did nothing about concurrency. In fact, our code will not be
 able to handle more than one client at a time, because the accept loop cannot
@@ -212,17 +212,17 @@ Let's consider the advantage of the Polyphony concurrency model:
 
 Now that we have a working concurrent echo server, let's add some bells and
 whistles. First of all, let's get rid of clients that are not active. We'll do
-this by using a Polyphony construct called a cancel scope. Cancel scopes define
-an execution context that can cancel any operation ocurring within its scope:
+this by setting up a timeout fiber that cancels the fiber dealing with the connection
 
 ```ruby
 def handle_client(client)
-  Polyphony::CancelScope.new(timeout: 10) do |scope|
-    while (data = client.gets)
-      scope.reset_timeout
-      client.write('you said: ', data.chomp, "!\n")
-    end
+  timeout = cancel_after(10)
+  while (data = client.gets)
+    timeout.reset
+    client << data
   end
+rescue Polyphony::Cancel
+  client.puts 'Closing connection due to inactivity.'
 rescue Errno::ECONNRESET
   puts 'Connection reset by client'
 ensure
@@ -239,9 +239,60 @@ thus reset the cancel scope timer.
 In addition, we use an `ensure` block to make sure the client connection is
 closed, whether or not it was interrupted by the cancel scope timer. The habit
 of always cleaning up using `ensure` in the face of potential interruptions is a
-fundamental element of using Polyphony correctly. It makes your code robust,
+fundamental element of using Polyphony correctly. This makes your code robust,
 even in a highly chaotic concurrent execution environment where tasks can be
 interrupted at any time.
+
+## Implementing graceful shutdown
+
+Let's now add graceful shutdown to our server. This means that when the server
+is stopped we'll first stop accepting new connections, but we'll let any already
+connected clients keep their sessions.
+
+Polyphony's concurrency model is structured. Fibers are limited to the lifetime
+of their direct parent. When the main fiber terminates (on program exit), it
+will terminate all its child fibers, each of which will in turn terminate its
+own children. The termination of child fibers is implemented by sending each
+child fiber a `Polyphony::Terminate` exception. We can implement custom
+termination logic simply by adding an exception handler for
+`Polyphony::Terminate`:
+
+```ruby
+# We first refactor the echo loop into a method
+def client_loop(client, timeout = nil)
+  while (data = client.gets)
+    timeout&.reset
+    client << data
+  end
+end
+
+def handle_client(client)
+  timeout = cancel_after(10)
+  client_loop(client, timeout)
+rescue Polyphony::Cancel
+  client.puts 'Closing connection due to inactivity.'
+rescue Polyphony::Terminate
+  # We add a handler for the Terminate exception, and give 
+  client.puts 'Server is shutting down. You have 5 more seconds...'
+  move_on_after(5) do
+    client_loop(client)
+  end
+rescue Errno::ECONNRESET
+  puts 'Connection reset by client'
+ensure
+  timeout.stop
+  client.close
+end
+```
+
+## Conclusion
+
+In this tutorial, we have shown how Polyphony can be used to create robust,
+highly concurrent Ruby applications. As we have discussed above, Polyphony
+provides a comprehensive set of tools that make it simple and intuitive to write
+concurrent applications, with features such as structured concurrency (for
+controlling fiber lifetime), timeouts (for handling inactive or slow clients),
+custom termination logic (for implementing graceful shutdown).
 
 Here's the complete source code for our Polyphony-based echo server:
 
@@ -251,179 +302,33 @@ require 'polyphony/auto_run'
 server = TCPServer.open('127.0.0.1', 1234)
 puts 'Echoing on port 1234...'
 
+def client_loop(client, timeout = nil)
+  while (data = client.gets)
+    timeout&.reset
+    client << data
+  end
+end
+
 def handle_client(client)
-  Polyphony::CancelScope.new(timeout: 10) do |scope|
-    while (data = client.gets)
-      scope.reset_timeout
-      client.write('you said: ', data.chomp, "!\n")
-    end
+  timeout = cancel_after(10)
+  client_loop(client, timeout)
+rescue Polyphony::Cancel
+  client.puts 'Closing connection due to inactivity.'
+rescue Polyphony::Terminate
+  client.puts 'Server is shutting down. You have 5 more seconds...'
+  move_on_after(5) do
+    client_loop(client)
   end
 rescue Errno::ECONNRESET
   puts 'Connection reset by client'
 ensure
+  timeout.stop
   client.close
 end
 
 while (client = server.accept)
   spin { handle_client(client) }
 end
-```
-
-## Waiting and Interrupting
-
-Polyphony makes it very easy to run multiple concurrent fibers. You can
-basically start a fiber for any operation that involves talking to the outside
-world - running a database query, making an HTTP request, sending off a webhook
-invocation etc. While it's trivial to spin off thousands of fibers, we'd also
-like a way to control all those fibers.
-
-Polyphony provides a number of tools for controlling fiber execution. Let's
-examine some of these tools and how they work. Suppose we have a fiber that was
-previously spun:
-
-```ruby
-fiber = spin { do_some_work }
-```
-
-We can wait for the fiber to terminate:
-
-```ruby
-fiber.await # alternatively fiber.join
-```
-
-Notice that the await call returns the return value of the fiber block:
-
-```ruby
-fiber = spin { 2 + 2}
-fiber.await #=> 4
-```
-
-We can also stop the fiber at any point:
-
-```ruby
-fiber.stop # or fiber.interrupt
-```
-
-We can inject a return value for the fiber using `stop`:
-
-```ruby
-fiber = spin do
-  sleep 1
-  1 + 1
-end
-
-spin { puts "1 + 1 = #{fiber.await} wha?" }
-
-fiber.stop(3)
-suspend
-```
-
-We can also *cancel* the fiber, which raises a `Polyphony::Cancel` exception:
-
-```ruby
-fiber.cancel!
-```
-
-And finally, we can interrupt the fiber with an exception raised in its current
-context:
-
-```ruby
-fiber.raise 'foo'
-```
-
-For more information on how exceptions are handled in Polyphony, see [exception
-handling](../../main-concepts/exception-handling/).
-
-## Supervising - controlling multiple fibers at once
-
-Here's a simple example that we'll use to demonstrate some of the tools provided
-by Polyphony for controlling fibers. Let's build a script that fetches the local
-time for multiple time zones:
-
-```ruby
-require 'polyphony'
-require 'httparty'
-require 'json'
-
-def get_time(tzone)
-  res = HTTParty.get("http://worldtimeapi.org/api/timezone/#{tzone}")
-  json = JSON.parse(res.body)
-  Time.parse(json['datetime'])
-end
-
-zones = %w{
-  Europe/London Europe/Paris Europe/Bucharest America/New_York Asia/Bangkok
-}
-zones.each do |tzone|
-  spin do
-    time = get_time(tzone)
-    puts "Time in #{tzone}: #{time}"
-  end
-end
-
-suspend
-```
-
-Now that we're familiar with the use of the `#spin` method, we know that all
-those HTTP requests will be processed concurrently, and we can expect those 5
-separate requests to occur within a fraction of a second (depending on our
-machine's location). Also notice how we just used `httparty` with fiber-level
-concurrency, without any boilerplate or employing special wrapper classes.
-
-Just as before, we suspend the main fiber after spinning off the worker fibers,
-in order to wait for everything else to be done. But what if we needed to do
-other work? For example, we might want to collect the different local times into
-a hash to be processed later. In that case, we can use a `Supervisor`:
-
-```ruby
-def get_times(zones)
-  Polyphony::Supervisor.new do |s|
-    zones.each do |tzone|
-      s.spin { [tzone, get_time(tzone)] }
-    end
-  end
-end
-
-get_times(zones).await.each do |tzone, time|
-  puts "Time in #{tzone}: #{time}"
-end
-```
-
-There's quite a bit going on here, so let's break it down. We first construct a
-supervisor and spin our fibers in its context using `Supervisor#spin`.
-
-```ruby
-Polyphony::Supervisor.new do |s|
-  ...
-  s.spin { ... }
-  ...
-end
-```
-
-Once our worker fibers are spun, the supervisor can be used to control them. We
-can wait for all fibers to terminate using `Supervisor#await`, which returns an
-array with the return values of all fibers (in the above example, each fiber
-returns the time zone and the local time).
-
-```ruby
-results = supervisor.await
-```
-
-We can also select the result of the first fiber that has finished executing.
-All the other fibers will be interrupted:
-
-```ruby
-result, fiber = supervisor.select
-```
-
-(Notice how `Supervisor#select` returns both the fiber's return value and the
-fiber itself).
-
-We can also interrupt all the supervised fibers by using `Supervisor#interrupt`
-(or `#stop`) just like with single fibers:
-
-```ruby
-supervisor.interrupt
 ```
 
 ## What Else Can I Do with Polyphony?
