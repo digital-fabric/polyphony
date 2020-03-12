@@ -1,12 +1,44 @@
+## 0.33 Some more API work, more docs
+
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
     test fails
   - Needs to work with Pry (can write perhaps an extension for pry)
   - First impl in Ruby using `TracePoint` API
   - Mode of operation:
-    - Debugger runs on separate thread
-    - The `TracePoint` handler passes control to the debugger thread, and waits
-      for reply (probably using Fiber messages)
+    - Two parts: tracer and controller
+      - The tracer keeps state
+      - The controller interacts with the user and tells the tracer what to do
+      - Tracer and controller interact using fiber message passing
+      - The controller lives on a separate thread
+      - The tracer invokes the controller at the appropriate point in time
+        according to the state. For example, when doing a `next` command, the
+        tracer will wait for a `:line` event to occur within the same stack
+        frame, or for the frame to be popped on a `:return` event, and only then
+        will it invoke the controller.
+      - While invoking the controller and waiting for its reply, the tracer
+        optionally performs a fiber lock in order to prevent other fibers from
+        advancing (the fiber lock is the default mode).
+    - The tracer's state is completely inspectable
+
+      ```ruby
+      PolyTrace.state
+      PolyTrace.current_fiber
+      PolyTrace.call_stack
+      ```
+
+    - Modes can be changed using an API, e.g.
+
+      ```ruby
+      PolyTrace.fiber_lock = false
+      ```
+
+    - Fibers can be interrogated using an API, or perhaps using some kind of
+      Pry command...
+
+    - Normal mode of operation is fiber modal, that is, trace only the currently
+      selected fiber. The currently selected fiber may be changed upon breakpoint
+
   - Step over should return on the next line *for the same fiber*
   - The event loop (all event loops?) should be suspended so timers are adjusted
     accordingly, so on control passing to debugger we:
@@ -42,7 +74,30 @@
           - from an expression: `Fiber.current.children`
           - maybe just `select f1` (where f1 is a local var)
 
-## 0.33 Some more API work, more docs
+- Allow locking the scheduler on to one fiber
+  - Add instance var `@fiber_lock`
+  - API is `Thread#fiber_lock` which sets the fiber_lock instance varwhile
+    running the block:
+
+    ```ruby
+    def debug_prompt
+      Thread.current.fiber_lock do
+        ...
+      end
+    end
+    ```
+  - When `@fiber_lock` is set, it is considered as the only one in the run
+    queue:
+
+    ```c
+    VALUE fiber_lock = rb_ivar_get(self, ID_ivar_fiber_lock);
+    int locked = fiber_lock != Qnil;
+
+    while (1) {
+      next_fiber = locked ? fiber_lock : rb_ary_shift(queue);
+      ...
+    }
+    ```
 
 - Docs
   - landing page:
