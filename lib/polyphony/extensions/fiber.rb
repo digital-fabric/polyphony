@@ -63,6 +63,7 @@ module FiberControl
   end
 end
 
+# Fiber supervision
 module FiberSupervision
   def supervise(on_error: nil, &block)
     @on_child_done = proc { schedule }
@@ -225,17 +226,8 @@ module ChildFiberControl
   end
 end
 
-# Fiber extensions
-class ::Fiber
-  prepend FiberControl
-  include FiberSupervision
-  include FiberMessaging
-  include ChildFiberControl
-
-  extend FiberControlClassMethods
-
-  attr_accessor :tag, :thread, :parent
-
+# Fiber life cycle methods
+module FiberLifeCycle
   def prepare(tag, block, caller, parent)
     @thread = Thread.current
     @tag = tag
@@ -245,6 +237,25 @@ class ::Fiber
     @mailbox = Gyro::Queue.new
     __fiber_trace__(:fiber_create, self)
     schedule
+  end
+
+  def run(first_value)
+    setup first_value
+    result = @block.(first_value)
+    finalize result
+  rescue Exceptions::Restart => e
+    restart_self(e.value)
+  rescue Exceptions::MoveOn, Exceptions::Terminate => e
+    finalize e.value
+  rescue Exception => e
+    e.source_fiber = self
+    finalize e, true
+  end
+
+  def setup(first_value)
+    Kernel.raise first_value if first_value.is_a?(Exception)
+
+    @running = true
   end
 
   # setup for fibers created using Fiber.new
@@ -265,28 +276,9 @@ class ::Fiber
     @mailbox = Gyro::Queue.new
   end
 
-  def run(first_value)
-    setup first_value
-    result = @block.(first_value)
-    finalize result
-  rescue Exceptions::Restart => e
-    restart_self(e.value)
-  rescue Exceptions::MoveOn, Exceptions::Terminate => e
-    finalize e.value
-  rescue Exception => e
-    e.source_fiber = self
-    finalize e, true
-  end
-
   def restart_self(first_value)
     @mailbox = Gyro::Queue.new
     run(first_value)
-  end
-
-  def setup(first_value)
-    Kernel.raise first_value if first_value.is_a?(Exception)
-
-    @running = true
   end
 
   def finalize(result, uncaught_exception = false)
@@ -326,14 +318,27 @@ class ::Fiber
     @parent.schedule(result)
   end
 
+  def when_done(&block)
+    (@when_done_procs ||= []) << block
+  end
+end
+
+# Fiber extensions
+class ::Fiber
+  prepend FiberControl
+  include FiberSupervision
+  include FiberMessaging
+  include ChildFiberControl
+  include FiberLifeCycle
+
+  extend FiberControlClassMethods
+
+  attr_accessor :tag, :thread, :parent
+
   attr_reader :result
 
   def running?
     @running
-  end
-
-  def when_done(&block)
-    (@when_done_procs ||= []) << block
   end
 
   def inspect
