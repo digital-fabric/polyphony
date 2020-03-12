@@ -61,7 +61,9 @@ module FiberControl
     else RuntimeError.new
     end
   end
+end
 
+module FiberSupervision
   def supervise(on_error: nil, &block)
     @on_child_done = proc { schedule }
     loop { supervise_perform(on_error, &block) }
@@ -226,6 +228,7 @@ end
 # Fiber extensions
 class ::Fiber
   prepend FiberControl
+  include FiberSupervision
   include FiberMessaging
   include ChildFiberControl
 
