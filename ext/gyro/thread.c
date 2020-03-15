@@ -107,6 +107,7 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   if (rb_fiber_alive_p(fiber) != Qtrue) {
     return self;
   }
+
   FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
   // if fiber is already scheduled, just set the scheduled value, then return
   rb_ivar_set(fiber, ID_runnable_value, value);
@@ -220,8 +221,9 @@ VALUE Thread_reset_fiber_scheduling(VALUE self) {
 }
 
 VALUE Thread_post_fork(VALUE self) {
-  ev_loop_fork(EV_DEFAULT);
-  Thread_setup_fiber_scheduling(self);
+  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
+  Gyro_Selector_post_fork(selector);
+
   return self;
 }
 
@@ -260,6 +262,8 @@ void Init_Thread() {
 
   rb_define_method(rb_cThread, "fiber_ref", Thread_ref, 0);
   rb_define_method(rb_cThread, "fiber_unref", Thread_unref, 0);
+
+  rb_define_method(rb_cThread, "post_fork", Thread_post_fork, 0);
 
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "stop_event_selector", Thread_stop_event_selector, 0);

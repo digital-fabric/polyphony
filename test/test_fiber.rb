@@ -659,15 +659,20 @@ class FiberTest < MiniTest::Test
     i, o = IO.pipe
     pid = Polyphony.fork do
       i.close
-      f = spin do
+      spin do
         sleep 100
       rescue Exception => e
         o << e.class.to_s
         o.close
+        raise e
       end
-      snooze
+      suspend
     end
     o.close
+    spin do
+      sleep 0.2
+      Process.kill('TERM', pid)
+    end
     Gyro::Child.new(pid).await
     klass = i.read
     i.close

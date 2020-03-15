@@ -129,6 +129,14 @@ VALUE Gyro_Selector_stop(VALUE self) {
   return Qnil;
 }
 
+VALUE Gyro_Selector_post_fork(VALUE self) {
+  struct Gyro_Selector *selector;
+  GetGyro_Selector(self, selector);
+
+  ev_loop_fork(selector->ev_loop);
+  return self;
+}
+
 VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self) {
   struct Gyro_Selector *selector;
   GetGyro_Selector(self, selector);

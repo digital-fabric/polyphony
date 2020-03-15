@@ -51,27 +51,50 @@ module Polyphony
     end
 
     def fork(&block)
-      pid = Kernel.fork do
-        Gyro.post_fork
-        Fiber.current.setup_main_fiber
-        block.()
-      ensure
-        Fiber.current.terminate_all_children
-        Fiber.current.await_all_children
+      Kernel.fork do
+        Fiber.new do
+          trap('SIGTERM', 'DEFAULT')
+          trap('SIGINT', 'DEFAULT')
+
+          Thread.current.post_fork
+          Thread.current.setup
+          Fiber.current.setup_main_fiber
+
+          install_terminating_signal_handlers
+
+          block.()
+        rescue ::SystemExit
+          Fiber.current.shutdown_all_children
+          exit
+        rescue Exception => e
+          e.full_message
+          exit!
+        ensure
+          Fiber.current.shutdown_all_children
+          # Since fork could be called from any fiber, we explicitly call exit
+          # here. Otherwise, the fiber might want to pass execution to another
+          # fiber that previously transferred execution to the forking fiber, but
+          # doesn't exist anymore... The call to exit will invoke the at_exit
+          # handler we use to terminate the (forked) main fiber's child fibers.
+          exit
+        end.transfer
       end
-      pid
+    end
+  
+    def install_terminating_signal_handler(signal, exception_class)
+      trap(signal) do
+        exception = exception_class.new
+        Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, exception)
+      end
+    end
+
+    def install_terminating_signal_handlers
+      install_terminating_signal_handler('SIGTERM', ::SystemExit)
+      install_terminating_signal_handler('SIGINT', ::Interrupt)
     end
   end
+
 end
 
-# install signal handlers
+Polyphony.install_terminating_signal_handlers
 
-def install_terminating_signal_handler(signal, exception_class)
-  trap(signal) do
-    exception = exception_class.new
-    Thread.current.break_out_of_ev_loop(Thread.current.main_fiber, exception)
-  end
-end
-
-install_terminating_signal_handler('SIGTERM', SystemExit)
-install_terminating_signal_handler('SIGINT', Interrupt)

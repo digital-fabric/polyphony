@@ -4,20 +4,18 @@ require_relative 'helper'
 
 class KernelTest < MiniTest::Test
   def test_system_method
+    fn = '/tmp/test_system_method'
+    FileUtils.rm(fn) rescue nil
+
     counter = 0
     timer = spin { throttled_loop(200) { counter += 1 } }
 
     system('sleep 0.01')
     assert(counter >= 2)
 
-    i, o = IO.pipe
-    orig_stdout = $stdout
-    $stdout = o
-    system('echo "hello"')
-    o.close
-    assert_equal "hello\n", i.read
+    system('echo "hello" > ' + fn)
+    assert_equal "hello\n", IO.read(fn)
   ensure
-    $stdout = orig_stdout
     timer&.stop
   end
 

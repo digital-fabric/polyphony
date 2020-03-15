@@ -274,6 +274,15 @@ module FiberLifeCycle
     @running = true
     @children&.clear
     @mailbox = Gyro::Queue.new
+
+    # a echild fiber might be turned into a main fiber when calling
+    # Polyphony.fork. In that case, we need to reset its state and tell it to
+    # behave like one.
+    if @parent
+      @parent = nil
+      @when_done_procs&.clear
+      @waiting_fibers&.clear
+    end
   end
 
   def restart_self(first_value)
@@ -366,7 +375,14 @@ end
 
 Fiber.current.setup_main_fiber
 
+# This at_exit handler is needed only when the original process exits. Due to
+# the behaviour of fibers on fork (and especially on exit from forked
+# processes,) we use a separate mechanism to terminate fibers in forked
+# processes (see Polyphony.fork).
+orig_pid = Process.pid
 at_exit do
+  next unless orig_pid == Process.pid
+
   Fiber.current.terminate_all_children
   Fiber.current.await_all_children
 end

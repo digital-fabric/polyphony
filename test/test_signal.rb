@@ -44,11 +44,10 @@ class SignalTrapTest < Minitest::Test
       i.close
       spin do
         spin do
-          sleep 1
+          sleep 5
         rescue ::Interrupt => e
-          # the signal will be trapped in the context of this fiber
+          # the signal should be raised only in the main fiber
           o.puts "1-interrupt"
-          raise e
         end.await
       end.await
     rescue ::Interrupt => e
