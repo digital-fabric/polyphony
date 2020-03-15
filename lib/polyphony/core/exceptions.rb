@@ -12,7 +12,12 @@ class BaseException < ::Exception
   attr_reader :value
 
   def initialize(value = nil)
+    @caller_backtrace = caller
     @value = value
+  end
+
+  def backtrace
+    sanitize(@caller_backtrace)
   end
 end
 
