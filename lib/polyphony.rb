@@ -29,13 +29,14 @@ module Polyphony
   Net = import './polyphony/net'
 
   auto_import(
-    Channel:      './polyphony/core/channel',
-    FS:           './polyphony/adapters/fs',
-    ResourcePool: './polyphony/core/resource_pool',
-    Sync:         './polyphony/core/sync',
-    ThreadPool:   './polyphony/core/thread_pool',
-    Throttler:    './polyphony/core/throttler',
-    Trace:        './polyphony/adapters/trace'
+    Channel:            './polyphony/core/channel',
+    FS:                 './polyphony/adapters/fs',
+    ProcessSupervisor:  './polyphony/adapters/process_supervisor',
+    ResourcePool:       './polyphony/core/resource_pool',
+    Sync:               './polyphony/core/sync',
+    ThreadPool:         './polyphony/core/thread_pool',
+    Throttler:          './polyphony/core/throttler',
+    Trace:              './polyphony/adapters/trace'
   )
 
   class << self
