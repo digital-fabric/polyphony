@@ -66,7 +66,7 @@ end
 # Fiber supervision
 module FiberSupervision
   def supervise(on_error: nil, &block)
-    @on_child_done = proc { schedule }
+    @on_child_done = proc { |fiber, result| schedule(result) }
     loop { supervise_perform(on_error, &block) }
   ensure
     @on_child_done = nil
@@ -135,9 +135,9 @@ module FiberControlClassMethods
   def await_select_cleanup(state)
     return if state[:pending].empty?
 
-    move_on = Exceptions::MoveOn.new
+    terminate = Exceptions::Terminate.new
     state[:cleanup] = true
-    state[:pending].each_key { |f| f.schedule(move_on) }
+    state[:pending].each_key { |f| f.schedule(terminate) }
     suspend
   end
 
@@ -202,9 +202,9 @@ module ChildFiberControl
     (@children ||= {})[fiber] = true
   end
 
-  def child_done(child_fiber)
+  def child_done(child_fiber, result)
     @children.delete(child_fiber)
-    @on_child_done&.(child_fiber)
+    @on_child_done&.(child_fiber, result)
   end
 
   def terminate_all_children
@@ -314,7 +314,7 @@ module FiberLifeCycle
   end
 
   def inform_dependants(result, uncaught_exception)
-    @parent.child_done(self)
+    @parent&.child_done(self, result)
     @when_done_procs&.each { |p| p.(result) }
     has_waiting_fibers = nil
     @waiting_fibers&.each_key do |f|
@@ -324,7 +324,7 @@ module FiberLifeCycle
     return unless uncaught_exception && !has_waiting_fibers
 
     # propagate unaught exception to parent
-    @parent.schedule(result)
+    @parent&.schedule(result)
   end
 
   def when_done(&block)
