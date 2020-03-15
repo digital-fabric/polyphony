@@ -1,3 +1,7 @@
+* Implement process supervisor (`Polyphony::ProcessSupervisor`)
+* Improve fiber supervision
+* Fix forking behaviour
+* Use correct backtrace for fiber control exceptions
 * Allow calling `move_on_after` and `cancel_after` without block
 
 ## 0.33 2020-03-08

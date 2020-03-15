@@ -29,14 +29,14 @@ module Polyphony
   Net = import './polyphony/net'
 
   auto_import(
-    Channel:            './polyphony/core/channel',
-    FS:                 './polyphony/adapters/fs',
-    ProcessSupervisor:  './polyphony/adapters/process_supervisor',
-    ResourcePool:       './polyphony/core/resource_pool',
-    Sync:               './polyphony/core/sync',
-    ThreadPool:         './polyphony/core/thread_pool',
-    Throttler:          './polyphony/core/throttler',
-    Trace:              './polyphony/adapters/trace'
+    Channel:           './polyphony/core/channel',
+    FS:                './polyphony/adapters/fs',
+    ProcessSupervisor: './polyphony/adapters/process_supervisor',
+    ResourcePool:      './polyphony/core/resource_pool',
+    Sync:              './polyphony/core/sync',
+    ThreadPool:        './polyphony/core/thread_pool',
+    Throttler:         './polyphony/core/throttler',
+    Trace:             './polyphony/adapters/trace'
   )
 
   class << self
@@ -53,35 +53,46 @@ module Polyphony
 
     def fork(&block)
       Kernel.fork do
-        Fiber.new do
-          trap('SIGTERM', 'DEFAULT')
-          trap('SIGINT', 'DEFAULT')
-
-          Thread.current.post_fork
-          Thread.current.setup
-          Fiber.current.setup_main_fiber
-
-          install_terminating_signal_handlers
-
-          block.()
-        rescue ::SystemExit
-          Fiber.current.shutdown_all_children
-          exit
-        rescue Exception => e
-          e.full_message
-          exit!
-        ensure
-          Fiber.current.shutdown_all_children
-          # Since fork could be called from any fiber, we explicitly call exit
-          # here. Otherwise, the fiber might want to pass execution to another
-          # fiber that previously transferred execution to the forking fiber, but
-          # doesn't exist anymore... The call to exit will invoke the at_exit
-          # handler we use to terminate the (forked) main fiber's child fibers.
-          exit
-        end.transfer
+        spin_forked_block(&block).transfer
       end
     end
-  
+
+    def spin_forked_block(&block)
+      Fiber.new do
+        run_forked_block(&block)
+        exit_forked_process
+      rescue ::SystemExit
+        exit_forked_process
+      rescue Exception => e
+        e.full_message
+        exit!
+      end
+    end
+
+    def run_forked_block(&block)
+      trap('SIGTERM', 'DEFAULT')
+      trap('SIGINT', 'DEFAULT')
+
+      Thread.current.post_fork
+      Thread.current.setup
+      Fiber.current.setup_main_fiber
+
+      install_terminating_signal_handlers
+
+      block.()
+    end
+
+    def exit_forked_process
+      Fiber.current.shutdown_all_children
+      # Since fork could be called from any fiber, we explicitly call exit
+      # here. Otherwise, the fiber might want to pass execution to another
+      # fiber that previously transferred execution to the forking fiber,
+      # but doesn't exist anymore... The call to exit will invoke the
+      # at_exit handler we use to terminate the (forked) main fiber's child
+      # fibers.
+      exit
+    end
+
     def install_terminating_signal_handler(signal, exception_class)
       trap(signal) do
         exception = exception_class.new
@@ -94,8 +105,6 @@ module Polyphony
       install_terminating_signal_handler('SIGINT', ::Interrupt)
     end
   end
-
 end
 
 Polyphony.install_terminating_signal_handlers
-

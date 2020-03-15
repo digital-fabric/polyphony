@@ -66,7 +66,7 @@ end
 # Fiber supervision
 module FiberSupervision
   def supervise(on_error: nil, &block)
-    @on_child_done = proc { |fiber, result| schedule(result) }
+    @on_child_done = proc { |_fiber, result| schedule(result) }
     loop { supervise_perform(on_error, &block) }
   ensure
     @on_child_done = nil
@@ -278,11 +278,13 @@ module FiberLifeCycle
     # a echild fiber might be turned into a main fiber when calling
     # Polyphony.fork. In that case, we need to reset its state and tell it to
     # behave like one.
-    if @parent
-      @parent = nil
-      @when_done_procs&.clear
-      @waiting_fibers&.clear
-    end
+    convert_to_main_fiber if @parent
+  end
+
+  def convert_to_main_fiber
+    @parent = nil
+    @when_done_procs&.clear
+    @waiting_fibers&.clear
   end
 
   def restart_self(first_value)

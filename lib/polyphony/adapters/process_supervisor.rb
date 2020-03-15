@@ -2,7 +2,7 @@
 
 export :supervise
 
-def supervise(cmd = nil, opts = {}, &block)
+def supervise(cmd = nil, _opts = {}, &block)
   spin { watch_process(cmd, &block) }
   Kernel.supervise(on_error: :restart)
 end
@@ -13,7 +13,7 @@ def watch_process(cmd = nil, &block)
   terminated = nil
   pid = cmd ? Kernel.spawn(cmd) : Polyphony.fork(&block)
   watcher = Gyro::Child.new(pid)
-  status = watcher.await
+  watcher.await
   terminated = true
   raise ProcessExit
 ensure
@@ -33,4 +33,5 @@ def kill_and_await(sig, pid)
   Gyro::Child.new(pid).await
 rescue SystemCallError
   # ignore
+  puts 'SystemCallError in kill_and_await'
 end
