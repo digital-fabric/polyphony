@@ -138,24 +138,6 @@
 
 
 
-- Add pretty API for trapping signals. Right now Polyphony traps `INT` and
-  `TERM` by doing:
-
-  ```ruby
-  Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, exception)
-  ```
-
-  We can add a pretty API for this, maybe:
-
-  ```ruby
-  Polyphony.emit_signal_exception(exception)
-
-  # where
-  def Polyphony.emit_signal_exception(exception, fiber = Thread.main.main_fiber)
-    Thread.current.break_out_of_ev_loop(fiber, exception)
-  end
-  ```
-
 
 - Process supervisor - life cycle hooks
 
