@@ -139,23 +139,6 @@
 
 
 
-- Process supervisor - life cycle hooks
-
-  ```ruby
-  # general solution for fiber supervision
-  def supervision_event_handler(event, fiber)
-    ...
-  end
-
-  spin do
-    spin { do_stuff }
-    supervise do |event, fiber|
-
-    end
-  end
-
-  ```
-
 - Docs
   - landing page:
     - links to the interesting stuff

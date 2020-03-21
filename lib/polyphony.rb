@@ -56,7 +56,7 @@ module Polyphony
         # Since the fiber doing the fork will become the main fiber of the
         # forked process, we leave it behind by transferring to a new fiber
         # created in the context of the forked process, which rescues *all*
-        # exceptions, including Interrupt and SystemExit, 
+        # exceptions, including Interrupt and SystemExit.
         spin_forked_block(&block).transfer
       end
     end
