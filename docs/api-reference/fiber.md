@@ -56,7 +56,7 @@ fiber, (url, result) = Fiber.select(*fibers)
 
 ## Instance methods
 
-### #<<(object) → fiber<br>#send(object) → fiber
+### #&lt;&lt;(object) → fiber<br>#send(object) → fiber
 
 Adds a message to the fiber's mailbox. The message can be any object. This
 method is complemented by `Fiber#receive`.
