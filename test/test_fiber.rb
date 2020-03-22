@@ -678,6 +678,22 @@ class FiberTest < MiniTest::Test
     i.close
     assert_equal 'Polyphony::Terminate', klass
   end
+
+  def test_setup_raw
+    buffer = []
+    f = Fiber.new { buffer << receive }
+    
+    assert_raises(NoMethodError) { f << 'foo' }
+    snooze
+    f.setup_raw
+    assert_equal Thread.current, f.thread
+    assert_nil f.parent
+
+    f.schedule
+    f << 'bar'
+    snooze
+    assert_equal ['bar'], buffer
+  end
 end
 
 class MailboxTest < MiniTest::Test

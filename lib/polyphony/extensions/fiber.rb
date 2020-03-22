@@ -198,10 +198,6 @@ module ChildFiberControl
     f
   end
 
-  def add_child(fiber)
-    (@children ||= {})[fiber] = true
-  end
-
   def child_done(child_fiber, result)
     @children.delete(child_fiber)
     @on_child_done&.(child_fiber, result)
@@ -258,13 +254,13 @@ module FiberLifeCycle
     @running = true
   end
 
-  # setup for fibers created using Fiber.new
+  # Performs setup for a "raw" Fiber created using Fiber.new. Note that this
+  # fiber is an orphan fiber (has no parent), since we cannot control how the
+  # fiber terminates after it has already been created. Calling #setup_raw
+  # allows the fiber to be scheduled and to receive messages.
   def setup_raw
     @thread = Thread.current
-    @parent = @thread.main_fiber
-    @parent.add_child(self)
     @mailbox = Gyro::Queue.new
-    __fiber_trace__(:fiber_create, self)
   end
 
   def setup_main_fiber
@@ -274,17 +270,6 @@ module FiberLifeCycle
     @running = true
     @children&.clear
     @mailbox = Gyro::Queue.new
-
-    # a echild fiber might be turned into a main fiber when calling
-    # Polyphony.fork. In that case, we need to reset its state and tell it to
-    # behave like one.
-    convert_to_main_fiber if @parent
-  end
-
-  def convert_to_main_fiber
-    @parent = nil
-    @when_done_procs&.clear
-    @waiting_fibers&.clear
   end
 
   def restart_self(first_value)
