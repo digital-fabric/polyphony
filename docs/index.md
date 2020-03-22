@@ -14,7 +14,9 @@ implements a comprehensive
 using [libev](https://github.com/enki/libev) as a high-performance event reactor
 for I/O, timers, and other asynchronous events.
 
+[FAQ](faq){: .btn .btn-green .text-gamma }
 [Take the tutorial](getting-started/tutorial){: .btn .btn-blue .text-gamma }
+[Source code](https://github.com/digital-fabric/polyphony){: .btn .btn-purple .text-gamma target="_blank" }
 {: .mt-6 .h-align-center }
 
 ## Focused on Developer Happiness

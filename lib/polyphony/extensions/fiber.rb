@@ -172,7 +172,6 @@ end
 module FiberMessaging
   def <<(value)
     @mailbox << value
-    snooze
   end
   alias_method :send, :<<
 
@@ -330,7 +329,6 @@ class ::Fiber
   extend FiberControlClassMethods
 
   attr_accessor :tag, :thread, :parent
-
   attr_reader :result
 
   def running?
