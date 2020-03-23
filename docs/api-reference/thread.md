@@ -1,11 +1,9 @@
 ---
 layout: page
 title: Thread
-nav_order: 2
+nav_order: 3
 parent: API Reference
 permalink: /api-reference/thread/
-# prev_title: Tutorial
-# next_title: How Fibers are Scheduled
 ---
 # Thread
 
