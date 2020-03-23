@@ -33,5 +33,4 @@ the following:
 
 ### #watch_process(cmd = nil, { block })
 
-Shortcut for `Polyphony::Process.watch`.
-
+Alternative for [`Polyphony::Process.watch`](../polyphony-process/#watchcmd--nil--block-).
