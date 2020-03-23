@@ -74,6 +74,10 @@ module Polyphony
     end
 
     def run_forked_block(&block)
+      # A race condition can arise if a TERM or INT signal is received before
+      # the forked process has finished initializing. To prevent this we restore
+      # the default signal handlers, and then reinstall the custom Polyphony
+      # handlers just before running the given block.
       trap('SIGTERM', 'DEFAULT')
       trap('SIGINT', 'DEFAULT')
 

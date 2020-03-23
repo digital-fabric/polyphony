@@ -1,11 +1,10 @@
 ---
 layout: page
-title: Thread
-nav_order: 3
+title: ::Thread
 parent: API Reference
 permalink: /api-reference/thread/
 ---
-# Thread
+# ::Thread
 
 [Ruby core Thread documentation](https://ruby-doc.org/core-2.7.0/Thread.html)
 

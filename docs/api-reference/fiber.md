@@ -1,13 +1,12 @@
 ---
 layout: page
-title: Fiber
-nav_order: 1
+title: ::Fiber
 parent: API Reference
 permalink: /api-reference/fiber/
 # prev_title: Tutorial
 # next_title: How Fibers are Scheduled
 ---
-# Fiber
+# ::Fiber
 
 [Ruby core Fiber documentation](https://ruby-doc.org/core-2.7.0/Fiber.html)
 

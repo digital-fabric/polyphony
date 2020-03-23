@@ -1,11 +1,10 @@
 ---
 layout: page
-title: Global API
-nav_order: 2
+title: ::Object (Global API)
 parent: API Reference
-permalink: /api-reference/global/
+permalink: /api-reference/object/
 ---
-# Global API
+# ::Object (Global API)
 
 The global Polyphony API is designed to feel almost like a part of the Ruby
 runtime. The global API contains multiple methods for creating and controlling
