@@ -2,20 +2,12 @@
 
 export :watch
 
-# def supervise(cmd = nil, _opts = {}, &block)
-#   spin { watch_process(cmd, &block) }
-#   Kernel.supervise(on_error: :restart)
-# end
-
-class ProcessExit < ::RuntimeError; end
-
 def watch(cmd = nil, &block)
   terminated = nil
   pid = cmd ? Kernel.spawn(cmd) : Polyphony.fork(&block)
   watcher = Gyro::Child.new(pid)
   watcher.await
   terminated = true
-  # raise ProcessExit
 ensure
   kill_process(pid) unless terminated || pid.nil?
 end

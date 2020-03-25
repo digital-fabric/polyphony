@@ -26,7 +26,23 @@ class SuperviseTest < MiniTest::Test
   end
 
   def test_supervise_with_restart
-    parent = spin { supervise(on_error: :restart) }
+    watcher = spin { receive }
+    parent = spin { supervise(restart: true, watcher: watcher) }
+    snooze
+
+    buffer = []
+    f1 = parent.spin do
+      buffer << 'f1'
+    end
+
+    f1.await
+    assert_equal ['f1'], buffer
+    watcher.await
+    assert_equal ['f1', 'f1'], buffer
+  end
+
+  def test_supervise_with_restart_on_error
+    parent = spin { supervise(restart: true) }
     snooze
 
     buffer = []
@@ -48,30 +64,11 @@ class SuperviseTest < MiniTest::Test
     # f1 should have been restarted by supervisor
     f1 = parent.children.first
     assert_kind_of Fiber, f1
-    f1 << 'foo'
 
+    f1 << 'foo'
     f1.await
-    3.times { snooze }
 
     assert_equal ['f1', 'f1', 'foo'], buffer
-  end
-
-  def test_supervise_with_block
-    failed = []
-    p = spin do
-      supervise(on_error: :restart) { |f, e| failed << [f, e] }
-    end
-    snooze
-    f1 = p.spin { receive }
-    snooze
-
-    f1.raise 'foo'
-    3.times { snooze }
-
-    assert_equal 1, failed.size
-    assert_equal f1, failed.first[0]
-    assert_kind_of RuntimeError, failed.first[1]
-    assert_equal 'foo', failed.first[1].message
   end
 
   def test_supervisor_termination
@@ -93,7 +90,7 @@ class SuperviseTest < MiniTest::Test
     f = nil
     p = spin do
       f = spin { sleep 1 }
-      supervise(on_error: :restart)
+      supervise(restart: true)
     end
     sleep 0.01
 

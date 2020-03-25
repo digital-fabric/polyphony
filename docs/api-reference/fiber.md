@@ -309,6 +309,32 @@ Returns the fiber's current state, which can be any of the following:
 
 Supervises all child fibers, optionally restarting any fiber that terminates.
 
+The given `opts` argument controls the behaviour of the supervision. The
+following options are currently supported: 
+
+- `:restart`: restart options
+  - `nil` - Child fibers are not restarted (default behaviour).
+  - `true` - Any child fiber that terminates is restarted.
+  - `:on_error` - Any child fiber that terminates with an uncaught exception is
+    restarted.
+- `:watcher`: a fiber watching supervision events.
+
+If a watcher fiber is specified, it will receive supervision events to its
+mailbox. The events are of the form `[<event_type>, <fiber>]`, for example
+`[:restart, child_fiber_1]`. Here's an example of using a watcher fiber:
+
+```ruby
+watcher = spin_loop do
+  kind, fiber = receive
+  case kind
+  when :restart
+    puts "fiber #{fiber.inspect} restarted"
+  end
+end
+...
+supervise(restart: true, watcher: watcher)
+```
+
 ### #tag → object
 
 Returns the tag associated with the fiber, normally passed to `Fiber#spin`. The

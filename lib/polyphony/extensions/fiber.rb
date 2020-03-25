@@ -29,10 +29,15 @@ module FiberControl
 
   def restart(value = nil)
     raise "Can''t restart main fiber" if @main
-    return parent.spin(&@block).tap { |f| f.schedule(value) } unless @running
 
-    schedule Exceptions::Restart.new(value)
-    self
+    if @running
+      schedule Exceptions::Restart.new(value)
+      return self
+    end
+
+    parent.spin(@tag, @caller, &@block).tap do |f|
+      f.schedule(value) unless value.nil?
+    end
   end
   alias_method :reset, :restart
 
@@ -65,30 +70,33 @@ end
 
 # Fiber supervision
 module FiberSupervision
-  def supervise(on_error: nil, &block)
-    @on_child_done = proc { |_fiber, result| schedule(result) }
-    loop { supervise_perform(on_error, &block) }
+  def supervise(opts = {})
+    @counter = 0
+    @on_child_done = proc do |fiber, result|
+      self << fiber unless result.is_a?(Exception)
+    end
+    loop { supervise_perform(opts) }
   ensure
     @on_child_done = nil
   end
 
-  def supervise_perform(policy, &block)
-    suspend
-  rescue Polyphony::Restart
+  def supervise_perform(opts)
+    fiber = receive
+    restart_fiber(fiber, opts) if fiber
+  rescue Exceptions::Restart
     restart_all_children
   rescue Exception => e
     Kernel.raise e if e.source_fiber.nil? || e.source_fiber == self
 
-    handle_supervisor_exception(e, e.source_fiber, policy, &block)
+    restart_fiber(e.source_fiber, opts)
   end
 
-  def handle_supervisor_exception(error, fiber, policy, &block)
-    return block.call(fiber, error) if block
-
-    case policy
-    when :restart
+  def restart_fiber(fiber, opts)
+    opts[:watcher]&.send [:restart, fiber]
+    case opts[:restart]
+    when true
       fiber.restart
-    when :restart_all
+    when :one_for_all
       @children.keys.each(&:restart)
     end
   end
@@ -273,6 +281,8 @@ module FiberLifeCycle
 
   def restart_self(first_value)
     @mailbox = Gyro::Queue.new
+    @when_done_procs = nil
+    @waiting_fibers = nil
     run(first_value)
   end
 
@@ -302,19 +312,18 @@ module FiberLifeCycle
   def inform_dependants(result, uncaught_exception)
     @parent&.child_done(self, result)
     @when_done_procs&.each { |p| p.(result) }
-    has_waiting_fibers = nil
     @waiting_fibers&.each_key do |f|
-      has_waiting_fibers = true
       f.schedule(result)
     end
-    return unless uncaught_exception && !has_waiting_fibers
+    return unless uncaught_exception && !@waiting_fibers
 
     # propagate unaught exception to parent
     @parent&.schedule(result)
   end
 
   def when_done(&block)
-    (@when_done_procs ||= []) << block
+    @when_done_procs ||= []
+    @when_done_procs << block
   end
 end
 
