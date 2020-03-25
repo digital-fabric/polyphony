@@ -30,12 +30,15 @@ span.section-title {
 }
 
 a.navigation-list-link {
+  margin-left: 4px;
+  padding-left: 4px;
   color: $nav-child-link-color;
   font-weight: 600;
 }
 
 a.navigation-list-link.active {
-  border-right: 4px #6ae solid;
+  margin-left: 0;
+  border-left: 4px #6ae solid;
 }
 
 a.navigation-list-link:hover {
