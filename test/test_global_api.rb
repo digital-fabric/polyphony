@@ -106,7 +106,7 @@ class MoveOnAfterTest < MiniTest::Test
     end
     t1 = Time.now
 
-    assert t1 - t0 < 0.02
+    assert t1 - t0 < 0.03
     assert_nil v
   end
 

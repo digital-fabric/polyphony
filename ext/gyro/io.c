@@ -12,6 +12,7 @@ struct Gyro_IO {
   int     active;
   int     event_mask;
   VALUE   fiber;
+  VALUE   selector;
 };
 
 VALUE cGyro_IO = Qnil;
@@ -26,14 +27,19 @@ static void Gyro_IO_mark(void *ptr) {
   if (io->fiber != Qnil) {
     rb_gc_mark(io->fiber);
   }
+  if (io->selector != Qnil) {
+    rb_gc_mark(io->selector);
+  }
 }
 
 static void Gyro_IO_free(void *ptr) {
   struct Gyro_IO *io = ptr;
   if (io->active) {
     printf("IO watcher garbage collected while still active!\n");
+    // ev_io_stop(io->ev_loop, &io->ev_io);
+  } else {
+    xfree(io);
   }
-  xfree(io);
 }
 
 static size_t Gyro_IO_size(const void *ptr) {
@@ -101,6 +107,8 @@ static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
   io->event_mask = Gyro_IO_symbol2event_mask(event_mask);
   io->fiber = Qnil;
   io->active = 0;
+  io->selector = Qnil;
+  io->ev_loop = 0;
 
   GetOpenFile(rb_convert_type(io_obj, T_FILE, S_IO, S_to_io), fptr);
   ev_io_init(&io->ev_io, Gyro_IO_callback, FPTR_TO_FD(fptr), io->event_mask);
@@ -116,7 +124,9 @@ VALUE Gyro_IO_await(VALUE self) {
 
   io->fiber = rb_fiber_current();
   io->active = 1;
-  io->ev_loop = Gyro_Selector_current_thread_ev_loop();
+  io->selector = Thread_current_event_selector();
+  io->ev_loop = Gyro_Selector_ev_loop(io->selector);
+
   ev_io_start(io->ev_loop, &io->ev_io);
 
   ret = Fiber_await();
