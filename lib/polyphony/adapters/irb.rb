@@ -13,7 +13,7 @@ if Object.constants.include?(:Reline)
       fiber = Fiber.current
       timer = spin do
         sleep timeout
-        fiber.cancel!
+        fiber.cancel
       end
       read_ios.each do |io|
         io.read_watcher.await

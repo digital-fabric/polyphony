@@ -41,7 +41,7 @@ module FiberControl
   end
   alias_method :reset, :restart
 
-  def cancel!
+  def cancel
     return if @running == false
 
     schedule Exceptions::Cancel.new

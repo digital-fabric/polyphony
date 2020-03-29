@@ -299,7 +299,7 @@ class FiberTest < MiniTest::Test
       2.times { snooze }
       result << 2
     end
-    spin { f.cancel! }
+    spin { f.cancel }
     assert_equal 0, result.size
     begin
       f.await
