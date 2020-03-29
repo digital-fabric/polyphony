@@ -10,6 +10,7 @@ ID ID_fiber_trace;
 ID ID_inspect;
 ID ID_new;
 ID ID_raise;
+ID ID_ivar_auto_async;
 ID ID_ivar_running;
 ID ID_ivar_thread;
 ID ID_runnable;
@@ -101,6 +102,15 @@ static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
     rb_funcall(rb_mKernel, ID_raise, 1, ret) : ret;
 }
 
+inline VALUE Fiber_auto_async(VALUE self) {
+  VALUE async = rb_ivar_get(self, ID_ivar_auto_async);
+  if (async == Qnil) {
+    async = rb_funcall(cGyro_Async, ID_new, 0);
+    rb_ivar_set(self, ID_ivar_auto_async, async);
+  }
+  return async;
+}
+
 static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
   VALUE value = (argc == 0) ? Qnil : argv[0];
   Gyro_schedule_fiber(self, value);
@@ -156,6 +166,7 @@ void Init_Gyro() {
   ID_each           = rb_intern("each");
   ID_empty          = rb_intern("empty?");
   ID_inspect        = rb_intern("inspect");
+  ID_ivar_auto_async = rb_intern("@auto_async");
   ID_ivar_running   = rb_intern("@running");
   ID_ivar_thread    = rb_intern("@thread");
   ID_new            = rb_intern("new");

@@ -50,6 +50,7 @@ VALUE Thread_ref(VALUE thread);
 VALUE Thread_unref(VALUE thread);
 VALUE Thread_switch_fiber(VALUE thread);
 VALUE Fiber_await();
+VALUE Fiber_auto_async(VALUE self);
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_post_fork(VALUE thread);
 VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self);
