@@ -28,7 +28,7 @@ Removes all items currently in the queue.
 
 Returns true if the queue is empty. Otherwise returns false.
 
-### #initialize → queue
+### #initialize
 
 Initializes an empty queue.
 
