@@ -645,7 +645,7 @@ class FiberTest < MiniTest::Test
         o.close
       end
     end
-    sleep 0.1
+    sleep 0.2
     f = spin { Gyro::Child.new(pid).await }
     o.close
     Process.kill('TERM', pid)
