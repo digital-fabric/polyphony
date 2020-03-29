@@ -1,3 +1,8 @@
+## 0.34 2020-03-25
+
+* Add `Fiber#auto_async` mainly for use in places like `Gyro::Queue#shift`
+* Refactor C extension
+* Improved GC'ing for watchers
 * Implement process supervisor (`Polyphony::ProcessSupervisor`)
 * Improve fiber supervision
 * Fix forking behaviour
