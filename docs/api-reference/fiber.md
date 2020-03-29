@@ -71,6 +71,24 @@ f << 2
 result = receive #=> 20
 ```
 
+### #auto_async → async
+
+Returns a reusable `Gyro::Async` watcher instance associated with the fiber.
+This method provides a way to minimize watcher allocation. Instead of allocating
+a new async watcher every time one is needed, the same watcher associated with
+the fiber is reused.
+
+```ruby
+def work(async)
+  do_something
+  async.signal
+end
+
+async = Fiber.current.auto_async
+spin { work(async) }
+async.await
+```
+
 ### #await → object<br>#join → object
 
 Awaits the termination of the fiber. If the fiber terminates with an uncaught
