@@ -1,3 +1,11 @@
+## 0.35 2020-03-29
+
+* Rename `Fiber#cancel!` to `Fiber#cancel`
+* Rename `Gyro::Async#signal!` to `Gyro::Async#signal`
+* Use `Fiber#auto_async` in thread pool, thread extension
+* Implement `Fiber#auto_io` for reusing IO watcher instances
+* Refactor C code
+
 ## 0.34 2020-03-25
 
 * Add `Fiber#auto_async` mainly for use in places like `Gyro::Queue#shift`
