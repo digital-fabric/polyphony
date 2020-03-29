@@ -26,15 +26,10 @@ static void Gyro_Timer_mark(void *ptr) {
 static void Gyro_Timer_free(void *ptr) {
   struct Gyro_Timer *timer = ptr;
   if (timer->active) {
-    printf("Timer watcher garbage collected while still active (%g, %g)!\n", timer->after, timer->repeat);
-    // timer->free_active = 1;
-    // ev_feed_event(timer->ev_loop, &timer->ev_timer, 0);
-    // ev_clear_pending(timer->ev_loop, &timer->ev_timer);
-    // ev_timer_stop(timer->ev_loop, &timer->ev_timer);
-    // xfree(timer);
-  } else {
-    xfree(timer);
+    ev_clear_pending(timer->ev_loop, &timer->ev_timer);
+    ev_timer_stop(timer->ev_loop, &timer->ev_timer);
   }
+  xfree(timer);
 }
 
 static size_t Gyro_Timer_size(const void *ptr) {

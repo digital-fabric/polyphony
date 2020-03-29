@@ -28,7 +28,8 @@ static void Gyro_Async_mark(void *ptr) {
 static void Gyro_Async_free(void *ptr) {
   struct Gyro_Async *async = ptr;
   if (async->active) {
-    printf("Async watcher garbage collected while still active!\n");
+    ev_clear_pending(async->ev_loop, &async->ev_async);
+    ev_async_stop(async->ev_loop, &async->ev_async);
   }
   xfree(async);
 }
