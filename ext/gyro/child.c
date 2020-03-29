@@ -33,12 +33,11 @@ static size_t Gyro_Child_size(const void *ptr) {
 static const rb_data_type_t Gyro_Child_type = {
     "Gyro_Child",
     {Gyro_Child_mark, Gyro_Child_free, Gyro_Child_size,},
-    0, 0,
-    RUBY_TYPED_FREE_IMMEDIATELY,
+    0, 0, 0
 };
 
 static VALUE Gyro_Child_allocate(VALUE klass) {
-  struct Gyro_Child *child = (struct Gyro_Child *)xmalloc(sizeof(struct Gyro_Child));
+  struct Gyro_Child *child = ALLOC(struct Gyro_Child);
   return TypedData_Wrap_Struct(klass, &Gyro_Child_type, child);
 }
 

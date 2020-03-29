@@ -35,12 +35,11 @@ static size_t Gyro_Async_size(const void *ptr) {
 static const rb_data_type_t Gyro_Async_type = {
     "Gyro_Async",
     {Gyro_Async_mark, Gyro_Async_free, Gyro_Async_size,},
-    0, 0,
-    RUBY_TYPED_FREE_IMMEDIATELY,
+    0, 0, 0
 };
 
 static VALUE Gyro_Async_allocate(VALUE klass) {
-  struct Gyro_Async *async = (struct Gyro_Async *)xmalloc(sizeof(struct Gyro_Async));
+  struct Gyro_Async *async = ALLOC(struct Gyro_Async);
   return TypedData_Wrap_Struct(klass, &Gyro_Async_type, async);
 }
 

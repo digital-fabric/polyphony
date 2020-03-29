@@ -30,12 +30,11 @@ static size_t Gyro_Selector_size(const void *ptr) {
 static const rb_data_type_t Gyro_Selector_type = {
     "Gyro_Selector",
     {Gyro_Selector_mark, Gyro_Selector_free, Gyro_Selector_size,},
-    0, 0,
-    RUBY_TYPED_FREE_IMMEDIATELY,
+    0, 0, 0
 };
 
 static VALUE Gyro_Selector_allocate(VALUE klass) {
-  struct Gyro_Selector *selector = (struct Gyro_Selector *)xmalloc(sizeof(struct Gyro_Selector));
+  struct Gyro_Selector *selector = ALLOC(struct Gyro_Selector);
   return TypedData_Wrap_Struct(klass, &Gyro_Selector_type, selector);
 }
 

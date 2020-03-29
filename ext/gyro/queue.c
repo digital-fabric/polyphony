@@ -29,12 +29,11 @@ static size_t Gyro_Queue_size(const void *ptr) {
 static const rb_data_type_t Gyro_Queue_type = {
     "Gyro_Queue",
     {Gyro_Queue_mark, Gyro_Queue_free, Gyro_Queue_size,},
-    0, 0,
-    RUBY_TYPED_FREE_IMMEDIATELY,
+    0, 0, 0
 };
 
 static VALUE Gyro_Queue_allocate(VALUE klass) {
-  struct Gyro_Queue *queue = (struct Gyro_Queue *)xmalloc(sizeof(struct Gyro_Queue));
+  struct Gyro_Queue *queue = ALLOC(struct Gyro_Queue);
   return TypedData_Wrap_Struct(klass, &Gyro_Queue_type, queue);
 }
 #define GetGyro_Queue(obj, queue) \

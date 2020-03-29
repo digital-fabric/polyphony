@@ -45,14 +45,14 @@ static size_t Gyro_Timer_size(const void *ptr) {
 static const rb_data_type_t Gyro_Timer_type = {
     "Gyro_Timer",
     {Gyro_Timer_mark, Gyro_Timer_free, Gyro_Timer_size,},
-    0, 0,
-    RUBY_TYPED_FREE_IMMEDIATELY,
+    0, 0, 0
 };
 
 static VALUE Gyro_Timer_allocate(VALUE klass) {
-  struct Gyro_Timer *timer = (struct Gyro_Timer *)xmalloc(sizeof(struct Gyro_Timer));
+  struct Gyro_Timer *timer = ALLOC(struct Gyro_Timer);
   return TypedData_Wrap_Struct(klass, &Gyro_Timer_type, timer);
 }
+
 #define GetGyro_Timer(obj, timer) \
   TypedData_Get_Struct((obj), struct Gyro_Timer, &Gyro_Timer_type, (timer))
 

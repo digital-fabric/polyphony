@@ -49,12 +49,11 @@ static size_t Gyro_IO_size(const void *ptr) {
 static const rb_data_type_t Gyro_IO_type = {
     "Gyro_IO",
     {Gyro_IO_mark, Gyro_IO_free, Gyro_IO_size,},
-    0, 0,
-    RUBY_TYPED_FREE_IMMEDIATELY,
+    0, 0, 0
 };
 
 static VALUE Gyro_IO_allocate(VALUE klass) {
-  struct Gyro_IO *io = (struct Gyro_IO *)xmalloc(sizeof(struct Gyro_IO));
+  struct Gyro_IO *io = ALLOC(struct Gyro_IO);
 
   return TypedData_Wrap_Struct(klass, &Gyro_IO_type, io);
 }

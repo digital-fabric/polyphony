@@ -33,12 +33,11 @@ static size_t Gyro_Signal_size(const void *ptr) {
 static const rb_data_type_t Gyro_Signal_type = {
     "Gyro_Signal",
     {Gyro_Signal_mark, Gyro_Signal_free, Gyro_Signal_size,},
-    0, 0,
-    RUBY_TYPED_FREE_IMMEDIATELY,
+    0, 0, 0
 };
 
 static VALUE Gyro_Signal_allocate(VALUE klass) {
-  struct Gyro_Signal *signal = (struct Gyro_Signal *)xmalloc(sizeof(struct Gyro_Signal));
+  struct Gyro_Signal *signal = ALLOC(struct Gyro_Signal);
   return TypedData_Wrap_Struct(klass, &Gyro_Signal_type, signal);
 }
 
