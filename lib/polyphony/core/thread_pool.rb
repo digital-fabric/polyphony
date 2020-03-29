@@ -45,8 +45,8 @@ class ThreadPool
   def run_queued_task
     (block, watcher) = @task_queue.pop
     result = block.()
-    watcher&.signal!(result)
+    watcher&.signal(result)
   rescue Exception => e
-    watcher ? watcher.signal!(e) : raise(e)
+    watcher ? watcher.signal(e) : raise(e)
   end
 end

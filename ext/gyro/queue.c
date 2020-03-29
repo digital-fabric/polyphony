@@ -55,7 +55,7 @@ VALUE Gyro_Queue_push(VALUE self, VALUE value) {
 
   if (RARRAY_LEN(queue->wait_queue) > 0) {
     VALUE async = rb_ary_shift(queue->wait_queue);
-    rb_funcall(async, ID_signal_bang, 1, Qnil);
+    rb_funcall(async, ID_signal, 1, Qnil);
   }
   
   rb_ary_push(queue->queue, value);

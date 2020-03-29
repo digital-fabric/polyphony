@@ -17,7 +17,7 @@ ID ID_ivar_thread;
 ID ID_runnable;
 ID ID_runnable_value;
 ID ID_size;
-ID ID_signal_bang;
+ID ID_signal;
 ID ID_switch_fiber;
 ID ID_transfer;
 ID ID_R;
@@ -102,7 +102,7 @@ void Init_Gyro() {
   ID_raise          = rb_intern("raise");
   ID_runnable       = rb_intern("runnable");
   ID_runnable_value = rb_intern("runnable_value");
-  ID_signal_bang    = rb_intern("signal!");
+  ID_signal         = rb_intern("signal");
   ID_size           = rb_intern("size");
   ID_switch_fiber   = rb_intern("switch_fiber");
   ID_transfer       = rb_intern("transfer");

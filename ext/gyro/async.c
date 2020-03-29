@@ -102,7 +102,7 @@ static VALUE Gyro_Async_signal(int argc, VALUE *argv, VALUE self) {
   GetGyro_Async(self, async);
 
   if (!async->active) {
-    // printf("signal! called before await\n");
+    // printf("signal called before await\n");
     return Qnil;
   }
 
@@ -150,6 +150,6 @@ void Init_Gyro_Async() {
   rb_define_alloc_func(cGyro_Async, Gyro_Async_allocate);
 
   rb_define_method(cGyro_Async, "initialize", Gyro_Async_initialize, 0);
-  rb_define_method(cGyro_Async, "signal!", Gyro_Async_signal, -1);
+  rb_define_method(cGyro_Async, "signal", Gyro_Async_signal, -1);
   rb_define_method(cGyro_Async, "await", Gyro_Async_await, 0);
 }

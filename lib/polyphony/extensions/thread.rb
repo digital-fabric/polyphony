@@ -48,7 +48,7 @@ class ::Thread
   end
 
   def signal_waiters(result)
-    @join_wait_queue.shift_each { |w| w.signal!(result) }
+    @join_wait_queue.shift_each { |w| w.signal(result) }
   end
 
   alias_method :orig_join, :join

@@ -113,7 +113,7 @@ class FiberTest < MiniTest::Test
     async = Gyro::Async.new
     worker = Thread.new do
       worker_fiber = Fiber.current
-      async.signal!
+      async.signal
       suspend
       buffer << :foo
     end
@@ -132,7 +132,7 @@ class FiberTest < MiniTest::Test
     t = Thread.new do
       f = spin_loop { snooze }
       sleep 0.001
-      async.signal!(:foo)
+      async.signal(:foo)
     end
 
     result = move_on_after(1) { async.await }

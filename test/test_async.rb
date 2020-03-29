@@ -13,7 +13,7 @@ class AsyncTest < MiniTest::Test
     snooze
     Thread.new do
       orig_sleep 0.001
-      a.signal!
+      a.signal
     end
     suspend
     assert_equal 1, count
@@ -32,7 +32,7 @@ class AsyncTest < MiniTest::Test
     snooze
     Thread.new do
       orig_sleep 0.001
-      3.times { a.signal! }
+      3.times { a.signal }
     end
     coproc.await
     assert_equal 1, count
