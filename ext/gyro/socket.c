@@ -94,9 +94,8 @@ static VALUE BasicSocket_send(int argc, VALUE *argv, VALUE sock) {
   arg.fd = fptr->fd;
   arg.flags = NUM2INT(flags);
   while ((n = (ssize_t)func(&arg)) < 0) {
-    if (write_watcher == Qnil) {
-      write_watcher = IO_write_watcher(sock);
-    }
+    if (NIL_P(write_watcher))
+      write_watcher = Gyro_IO_auto_io(fptr->fd, EV_WRITE);
     Gyro_IO_await(write_watcher);
   }
   return SSIZET2NUM(n);
@@ -132,8 +131,8 @@ static VALUE BasicSocket_recv(int argc, VALUE *argv, VALUE sock) {
     if (n < 0) {
       int e = errno;
       if (e == EWOULDBLOCK || e == EAGAIN) {
-        if (read_watcher == Qnil)
-          read_watcher = IO_read_watcher(sock);
+        if (NIL_P(read_watcher))
+          read_watcher = Gyro_IO_auto_io(fptr->fd, EV_READ);
         Gyro_IO_await(read_watcher);
       }
       else
@@ -169,8 +168,8 @@ static VALUE Socket_accept(VALUE sock) {
     if (fd < 0) {
       int e = errno;
       if (e == EWOULDBLOCK || e == EAGAIN) {
-        if (read_watcher == Qnil)
-          read_watcher = IO_read_watcher(sock);
+        if (NIL_P(read_watcher))
+          read_watcher = Gyro_IO_auto_io(fptr->fd, EV_READ);
         Gyro_IO_await(read_watcher);
       }
       else

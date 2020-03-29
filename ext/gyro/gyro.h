@@ -55,12 +55,15 @@ enum {
 };
 
 VALUE Fiber_auto_async(VALUE self);
+VALUE Fiber_auto_io(VALUE self);
 void Fiber_make_runnable(VALUE fiber, VALUE value);
 
 VALUE Gyro_Async_await(VALUE async);
 VALUE Gyro_Async_await_no_raise(VALUE async);
 
+VALUE Gyro_IO_auto_io(int fd, int events);
 VALUE Gyro_IO_await(VALUE self);
+VALUE Gyro_IO_await_auto_io(VALUE self, int fd, int events);
 
 void Gyro_Selector_add_active_watcher(VALUE self, VALUE watcher);
 VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self);

@@ -2,6 +2,7 @@
 
 ID ID_fiber_trace;
 ID ID_ivar_auto_async;
+ID ID_ivar_auto_io;
 ID ID_trace_ev_loop_enter;
 ID ID_trace_ev_loop_leave;
 ID ID_trace_run;
@@ -38,6 +39,15 @@ inline VALUE Fiber_auto_async(VALUE self) {
     rb_ivar_set(self, ID_ivar_auto_async, async);
   }
   return async;
+}
+
+inline VALUE Fiber_auto_io(VALUE self) {
+  VALUE io = rb_ivar_get(self, ID_ivar_auto_io);
+  if (io == Qnil) {
+    io = rb_funcall(cGyro_IO, ID_new, 2, Qnil, Qnil);
+    rb_ivar_set(self, ID_ivar_auto_io, io);
+  }
+  return io;
 }
 
 static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {

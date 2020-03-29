@@ -10,7 +10,6 @@ struct Gyro_IO {
   struct  ev_io ev_io;
   struct  ev_loop *ev_loop;
   int     active;
-  int     event_mask;
   VALUE   fiber;
   VALUE   selector;
 };
@@ -103,39 +102,50 @@ static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
 
   GetGyro_IO(self, io);
 
-  io->event_mask = Gyro_IO_symbol2event_mask(event_mask);
   io->fiber = Qnil;
   io->active = 0;
   io->selector = Qnil;
   io->ev_loop = 0;
 
-  GetOpenFile(rb_convert_type(io_obj, T_FILE, S_IO, S_to_io), fptr);
-  ev_io_init(&io->ev_io, Gyro_IO_callback, FPTR_TO_FD(fptr), io->event_mask);
+  int fd;
+  if (NIL_P(io_obj)) {
+    fd = 0;
+  }
+  else {
+    GetOpenFile(rb_convert_type(io_obj, T_FILE, S_IO, S_to_io), fptr);
+    fd = FPTR_TO_FD(fptr);
+  }
+  int events = Gyro_IO_symbol2event_mask(event_mask);
+  
+  ev_io_init(&io->ev_io, Gyro_IO_callback, fd, events);
 
   return Qnil;
 }
 
-VALUE Gyro_IO_await(VALUE self) {
-  struct Gyro_IO *io;
-  VALUE ret;
-  
-  GetGyro_IO(self, io);
-
-  io->fiber = rb_fiber_current();
+inline void Gyro_IO_activate(struct Gyro_IO *io) {
   io->active = 1;
+  io->fiber = rb_fiber_current();
   io->selector = Thread_current_event_selector();
   io->ev_loop = Gyro_Selector_ev_loop(io->selector);
 
   ev_io_start(io->ev_loop, &io->ev_io);
+}
 
-  ret = Gyro_switchpoint();
-  RB_GC_GUARD(ret);
+VALUE Gyro_IO_await(VALUE self) {
+  struct Gyro_IO *io;
+  GetGyro_IO(self, io);
+
+  Gyro_IO_activate(io);
+
+  VALUE ret = Gyro_switchpoint();
 
   if (io->active) {
     io->active = 0;
     io->fiber = Qnil;
     ev_io_stop(io->ev_loop, &io->ev_io);
   }
+
+  RB_GC_GUARD(ret);
 
   // fiber is resumed, check if resumed value is an exception
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
@@ -145,6 +155,44 @@ VALUE Gyro_IO_await(VALUE self) {
     return Qnil;
   }
 }
+
+VALUE Gyro_IO_await_auto_io(VALUE self, int fd, int events) {
+  struct Gyro_IO *io;
+  GetGyro_IO(self, io);
+
+  ev_io_set(&io->ev_io, fd, events);
+  Gyro_IO_activate(io);
+
+  VALUE ret = Gyro_switchpoint();
+
+  if (io->active) {
+    io->active = 0;
+    io->fiber = Qnil;
+    ev_io_stop(io->ev_loop, &io->ev_io);
+  }
+
+  RB_GC_GUARD(ret);
+
+  // fiber is resumed, check if resumed value is an exception
+  if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
+    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
+  }
+  else {
+    return Qnil;
+  }
+}
+
+VALUE Gyro_IO_auto_io(int fd, int events) {
+  VALUE watcher = Fiber_auto_io(rb_fiber_current());
+  struct Gyro_IO *io;
+  GetGyro_IO(watcher, io);
+
+  ev_io_set(&io->ev_io, fd, events);
+
+  RB_GC_GUARD(watcher);
+  return watcher;
+}
+
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
@@ -242,8 +290,8 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
     if (n < 0) {
       int e = errno;
       if ((e == EWOULDBLOCK || e == EAGAIN)) {
-        if (read_watcher == Qnil)
-          read_watcher = IO_read_watcher(io);
+        if (NIL_P(read_watcher))
+          read_watcher = Gyro_IO_auto_io(fptr->fd, EV_READ);
         Gyro_IO_await(read_watcher);
       }
       else
@@ -320,8 +368,8 @@ static VALUE IO_readpartial(int argc, VALUE *argv, VALUE io) {
       if (n < 0) {
         int e = errno;
         if (e == EWOULDBLOCK || e == EAGAIN) {
-          if (read_watcher == Qnil)
-            read_watcher = IO_read_watcher(io);
+          if (NIL_P(read_watcher))
+            read_watcher = Gyro_IO_auto_io(fptr->fd, EV_READ);
           Gyro_IO_await(read_watcher);
         }
         else
@@ -376,8 +424,8 @@ static VALUE IO_write(int argc, VALUE *argv, VALUE io) {
       if (n < 0) {
         int e = errno;
         if (e == EWOULDBLOCK || e == EAGAIN) {
-          if (write_watcher == Qnil)
-            write_watcher = IO_write_watcher(io);
+          if (NIL_P(write_watcher))
+            write_watcher = Gyro_IO_auto_io(fptr->fd, EV_WRITE);
           Gyro_IO_await(write_watcher);
         }
         else {
