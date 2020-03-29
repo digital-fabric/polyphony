@@ -9,7 +9,6 @@ struct Gyro_Timer {
   VALUE   self;
   VALUE   fiber;
   VALUE   selector;
-  int     free_active;
 };
 
 VALUE cGyro_Timer = Qnil;
@@ -60,6 +59,7 @@ void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int
   struct Gyro_Timer *timer = (struct Gyro_Timer*)ev_timer;
 
   if (!timer->repeat) {
+    Gyro_Selector_remove_active_watcher(timer->selector, timer->self);
     timer->active = 0;
     timer->selector = Qnil;
   }
@@ -92,10 +92,12 @@ VALUE Gyro_Timer_stop(VALUE self) {
   GetGyro_Timer(self, timer);
 
   if (timer->active) {
+    if (timer->selector != Qnil)
+      Gyro_Selector_remove_active_watcher(timer->selector, self);
+    ev_timer_stop(timer->ev_loop, &timer->ev_timer);
     timer->active = 0;
     timer->fiber = Qnil;
     timer->selector = Qnil;
-    ev_timer_stop(timer->ev_loop, &timer->ev_timer);
     timer->ev_loop = 0;
   }
 
@@ -112,19 +114,18 @@ VALUE Gyro_Timer_await(VALUE self) {
   timer->selector = Thread_current_event_selector();
   timer->ev_loop = Gyro_Selector_ev_loop(timer->selector);
 
-  if (timer->active != 1) {
+  if (!timer->active) {
     timer->active = 1;
     ev_timer_start(timer->ev_loop, &timer->ev_timer);
+    Gyro_Selector_add_active_watcher(timer->selector, self);
   }
 
   ret = Fiber_await();
-  RB_GC_GUARD(ret);
 
   if (timer->active && (timer->repeat == .0)) {
-    timer->active = 0;
-    timer->fiber = Qnil;
-    timer->selector = Qnil;
+    Gyro_Selector_remove_active_watcher(timer->selector, self);
     ev_timer_stop(timer->ev_loop, &timer->ev_timer);
+    timer->active = 0;
     timer->ev_loop = 0;
   }
 
@@ -132,6 +133,7 @@ VALUE Gyro_Timer_await(VALUE self) {
   timer->fiber = Qnil;
   timer->selector = Qnil;
 
+  RB_GC_GUARD(ret);
   RB_GC_GUARD(self);
   if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
     return rb_funcall(rb_mKernel, ID_raise, 1, ret);

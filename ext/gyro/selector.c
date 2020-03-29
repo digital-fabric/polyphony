@@ -5,19 +5,20 @@ struct Gyro_Selector {
   long    run_no_wait_count;
   int     ev_loop_running;
   struct  ev_async async;
+  VALUE   active_watchers;
 };
 
 VALUE cGyro_Selector = Qnil;
 
 static void Gyro_Selector_mark(void *ptr) {
-  // struct Gyro_Selector *selector = ptr;
+  struct Gyro_Selector *selector = ptr;
+  rb_gc_mark(selector->active_watchers);
 }
 
 static void Gyro_Selector_free(void *ptr) {
   struct Gyro_Selector *selector = ptr;
   ev_async_stop(selector->ev_loop, &selector->async);
   if (selector->ev_loop && !ev_is_default_loop(selector->ev_loop)) {
-    // printf("Selector garbage collected before being stopped!\n");
     ev_loop_destroy(selector->ev_loop);
   }
   xfree(selector);
@@ -82,10 +83,26 @@ static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
   selector->ev_loop = use_default_loop ? EV_DEFAULT : ev_loop_new(EVFLAG_NOSIGMASK);
   selector->run_no_wait_count = 0;
 
+  selector->active_watchers = rb_hash_new();
+
   ev_async_init(&selector->async, dummy_async_callback);
   ev_async_start(selector->ev_loop, &selector->async);
   ev_run(selector->ev_loop, EVRUN_NOWAIT);
   return Qnil;
+}
+
+inline void Gyro_Selector_add_active_watcher(VALUE self, VALUE watcher) {
+  struct Gyro_Selector *selector;
+  GetGyro_Selector(self, selector);
+
+  rb_hash_aset(selector->active_watchers, watcher, Qtrue);
+}
+
+inline void Gyro_Selector_remove_active_watcher(VALUE self, VALUE watcher) {
+  struct Gyro_Selector *selector;
+  GetGyro_Selector(self, selector);
+
+  rb_hash_delete(selector->active_watchers, watcher);
 }
 
 inline VALUE Gyro_Selector_run(VALUE self, VALUE current_fiber) {

@@ -42,6 +42,8 @@ ev_tstamp Gyro_Selector_now(VALUE selector);
 struct ev_loop *Gyro_Selector_current_thread_ev_loop();
 long Gyro_Selector_pending_count(VALUE self);
 VALUE Gyro_Selector_post_fork(VALUE self);
+void Gyro_Selector_add_active_watcher(VALUE self, VALUE watcher);
+void Gyro_Selector_remove_active_watcher(VALUE self, VALUE watcher);
 
 VALUE Thread_current_event_selector();
 VALUE Thread_ref(VALUE thread);
