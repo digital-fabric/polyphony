@@ -75,6 +75,12 @@ void dummy_async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, in
   // up the event loop.
 }
 
+inline void Gyro_Selector_run_ev_loop(struct Gyro_Selector *selector, int flags) {
+  selector->ev_loop_running = 1;
+  ev_run(selector->ev_loop, flags);
+  selector->ev_loop_running = 0;
+}
+
 static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
   struct Gyro_Selector *selector;
   GetGyro_Selector(self, selector);
@@ -87,7 +93,7 @@ static VALUE Gyro_Selector_initialize(VALUE self, VALUE thread) {
 
   ev_async_init(&selector->async, dummy_async_callback);
   ev_async_start(selector->ev_loop, &selector->async);
-  ev_run(selector->ev_loop, EVRUN_NOWAIT);
+  Gyro_Selector_run_ev_loop(selector, EVRUN_NOWAIT);
   return Qnil;
 }
 
@@ -111,9 +117,7 @@ inline VALUE Gyro_Selector_run(VALUE self, VALUE current_fiber) {
   if (selector->ev_loop) {
     selector->run_no_wait_count = 0;
     FIBER_TRACE(2, SYM_fiber_ev_loop_enter, current_fiber);
-    selector->ev_loop_running = 1;
-    ev_run(selector->ev_loop, EVRUN_ONCE);
-    selector->ev_loop_running = 0;
+    Gyro_Selector_run_ev_loop(selector, EVRUN_ONCE);
     FIBER_TRACE(2, SYM_fiber_ev_loop_leave, current_fiber);
   }
   return Qnil;
@@ -130,7 +134,7 @@ inline void Gyro_Selector_run_no_wait(VALUE self, VALUE current_fiber, long runn
 
   selector->run_no_wait_count = 0;
   FIBER_TRACE(2, SYM_fiber_ev_loop_enter, current_fiber);
-  ev_run(selector->ev_loop, EVRUN_NOWAIT);
+  Gyro_Selector_run_ev_loop(selector, EVRUN_NOWAIT);
   FIBER_TRACE(2, SYM_fiber_ev_loop_leave, current_fiber);
 }
 
