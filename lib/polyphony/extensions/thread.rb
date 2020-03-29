@@ -53,7 +53,7 @@ class ::Thread
 
   alias_method :orig_join, :join
   def join(timeout = nil)
-    async = Gyro::Async.new
+    async = Fiber.current.auto_async
     @finalization_mutex.synchronize do
       if @terminated
         @result.is_a?(Exception) ? (raise @result) : (return @result)

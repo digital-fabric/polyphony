@@ -22,7 +22,7 @@ class ThreadPool
   def process(&block)
     setup unless @task_queue
 
-    async = Gyro::Async.new
+    async = Fiber.current.auto_async
     @task_queue << [block, async]
     async.await
   end

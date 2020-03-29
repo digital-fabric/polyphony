@@ -77,6 +77,7 @@ void Fiber_make_runnable(VALUE fiber, VALUE value) {
 
 void Init_Fiber() {
   VALUE cFiber = rb_const_get(rb_cObject, rb_intern("Fiber"));
+  rb_define_method(cFiber, "auto_async", Fiber_auto_async, 0);
   rb_define_method(cFiber, "safe_transfer", Fiber_safe_transfer, -1);
   rb_define_method(cFiber, "schedule", Fiber_schedule, -1);
   rb_define_method(cFiber, "state", Fiber_state, 0);
