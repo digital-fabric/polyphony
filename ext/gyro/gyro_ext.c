@@ -1,5 +1,6 @@
 #include "gyro.h"
 
+void Init_Fiber();
 void Init_Gyro();
 void Init_Gyro_Async();
 void Init_Gyro_Child();
@@ -24,6 +25,7 @@ void Init_gyro_ext() {
   Init_Gyro_Signal();
   Init_Gyro_Timer();
 
+  Init_Fiber();
   Init_Socket();
   Init_Thread();
 

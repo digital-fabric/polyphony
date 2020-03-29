@@ -55,7 +55,7 @@ void Gyro_Child_callback(struct ev_loop *ev_loop, struct ev_child *ev_child, int
       2, INT2NUM(ev_child->rpid), INT2NUM(exit_status)
     );
     child->fiber = Qnil;
-    Gyro_schedule_fiber(fiber, resume_value);
+    Fiber_make_runnable(fiber, resume_value);
   }
 }
 
@@ -89,7 +89,7 @@ static VALUE Gyro_Child_await(VALUE self) {
   child->ev_loop = Gyro_Selector_current_thread_ev_loop();
   ev_child_start(child->ev_loop, &child->ev_child);
 
-  ret = Fiber_await();
+  ret = Gyro_switchpoint();
   RB_GC_GUARD(ret);
 
   if (child->active) {

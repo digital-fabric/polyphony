@@ -50,7 +50,7 @@ void Gyro_Signal_callback(struct ev_loop *ev_loop, struct ev_signal *ev_signal, 
     ev_signal_stop(signal->ev_loop, ev_signal);
     signal->active = 0;
     signal->fiber = Qnil;
-    Gyro_schedule_fiber(fiber, INT2NUM(signal->signum));
+    Fiber_make_runnable(fiber, INT2NUM(signal->signum));
   }
 }
 
@@ -80,7 +80,7 @@ static VALUE Gyro_Signal_await(VALUE self) {
   signal->ev_loop = Gyro_Selector_current_thread_ev_loop();
   ev_signal_start(signal->ev_loop, &signal->ev_signal);
 
-  ret = Fiber_await();
+  ret = Gyro_switchpoint();
   RB_GC_GUARD(ret);
 
   if (signal->active) {

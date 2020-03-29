@@ -74,7 +74,7 @@ inline void Gyro_Async_deactivate(struct Gyro_Async *async) {
 void Gyro_Async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
   struct Gyro_Async *async = (struct Gyro_Async*)ev_async;
 
-  Gyro_schedule_fiber(async->fiber, async->value);
+  Fiber_make_runnable(async->fiber, async->value);
   Gyro_Async_deactivate(async);
 }
 
@@ -119,7 +119,7 @@ VALUE Gyro_Async_await(VALUE self) {
 
   async->fiber = rb_fiber_current();
   Gyro_Async_activate(async);
-  ret = Fiber_await();
+  ret = Gyro_switchpoint();
   Gyro_Async_deactivate(async);
 
   RB_GC_GUARD(ret);
@@ -139,7 +139,7 @@ VALUE Gyro_Async_await_no_raise(VALUE self) {
 
   async->fiber = rb_fiber_current();
   Gyro_Async_activate(async);
-  ret = Fiber_await();
+  ret = Gyro_switchpoint();
   Gyro_Async_deactivate(async);
   RB_GC_GUARD(ret);
   return ret;

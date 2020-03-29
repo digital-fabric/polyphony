@@ -60,7 +60,7 @@ void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int
   }
 
   if (timer->fiber != Qnil) {
-    Gyro_schedule_fiber(timer->fiber, DBL2NUM(timer->after));
+    Fiber_make_runnable(timer->fiber, DBL2NUM(timer->after));
   }
 }
 
@@ -115,7 +115,7 @@ VALUE Gyro_Timer_await(VALUE self) {
     Gyro_Selector_add_active_watcher(timer->selector, self);
   }
 
-  ret = Fiber_await();
+  ret = Gyro_switchpoint();
 
   if (timer->active && (timer->repeat == .0)) {
     Gyro_Selector_remove_active_watcher(timer->selector, self);

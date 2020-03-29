@@ -70,7 +70,7 @@ void Gyro_IO_callback(struct ev_loop *ev_loop, struct ev_io *ev_io, int revents)
   if (io->fiber != Qnil) {
     VALUE fiber = io->fiber;
     io->fiber = Qnil;
-    Gyro_schedule_fiber(fiber, Qnil);
+    Fiber_make_runnable(fiber, Qnil);
   }
 }
 
@@ -128,7 +128,7 @@ VALUE Gyro_IO_await(VALUE self) {
 
   ev_io_start(io->ev_loop, &io->ev_io);
 
-  ret = Fiber_await();
+  ret = Gyro_switchpoint();
   RB_GC_GUARD(ret);
 
   if (io->active) {

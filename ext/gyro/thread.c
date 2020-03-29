@@ -227,7 +227,7 @@ VALUE Thread_post_fork(VALUE self) {
   return self;
 }
 
-VALUE Fiber_await() {
+VALUE Gyro_switchpoint() {
   VALUE thread = rb_thread_current();
   Thread_ref(thread);
   VALUE ret = Thread_switch_fiber(thread);
