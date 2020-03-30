@@ -5,10 +5,15 @@
 #include "ruby/io.h"
 #include "libev.h"
 
+// debugging
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
 #define INSPECT(...) (rb_funcall(rb_cObject, rb_intern("p"), __VA_ARGS__))
 #define FIBER_TRACE(...) if (__tracing_enabled__) { \
   rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__); \
+}
+
+#define TEST_RESUME_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { \
+  return rb_funcall(rb_mKernel, ID_raise, 1, ret); \
 }
 
 extern VALUE mGyro;
@@ -63,7 +68,6 @@ VALUE Gyro_Async_await_no_raise(VALUE async);
 
 VALUE Gyro_IO_auto_io(int fd, int events);
 VALUE Gyro_IO_await(VALUE self);
-VALUE Gyro_IO_await_auto_io(VALUE self, int fd, int events);
 
 void Gyro_Selector_add_active_watcher(VALUE self, VALUE watcher);
 VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self);

@@ -26,10 +26,10 @@ VALUE SYM_fiber_terminate;
 static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
   VALUE arg = (argc == 0) ? Qnil : argv[0];
   VALUE ret = rb_funcall(self, ID_transfer, 1, arg);
-
-  // fiber is resumed, check if resumed value is an exception
-  return RTEST(rb_obj_is_kind_of(ret, rb_eException)) ? 
-    rb_funcall(rb_mKernel, ID_raise, 1, ret) : ret;
+  
+  TEST_RESUME_EXCEPTION(ret);
+  RB_GC_GUARD(ret);
+  return ret;
 }
 
 inline VALUE Fiber_auto_async(VALUE self) {

@@ -53,6 +53,7 @@ inline void Gyro_Async_activate(struct Gyro_Async *async) {
   if (async->active) return;
 
   async->active = 1;
+  async->fiber = rb_fiber_current();
   async->selector = Thread_current_event_selector();
   async->ev_loop = Gyro_Selector_ev_loop(async->selector);
   Gyro_Selector_add_active_watcher(async->selector, async->self);
@@ -114,33 +115,25 @@ static VALUE Gyro_Async_signal(int argc, VALUE *argv, VALUE self) {
 
 VALUE Gyro_Async_await(VALUE self) {
   struct Gyro_Async *async;
-  VALUE ret;
   GetGyro_Async(self, async);
 
-  async->fiber = rb_fiber_current();
   Gyro_Async_activate(async);
-  ret = Gyro_switchpoint();
+  VALUE ret = Gyro_switchpoint();
   Gyro_Async_deactivate(async);
 
+  TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
-  // fiber is resumed
-  if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
-  }
-  else {
-    return ret;
-  }
+  return ret;
 }
 
 VALUE Gyro_Async_await_no_raise(VALUE self) {
   struct Gyro_Async *async;
-  VALUE ret;
   GetGyro_Async(self, async);
 
-  async->fiber = rb_fiber_current();
   Gyro_Async_activate(async);
-  ret = Gyro_switchpoint();
+  VALUE ret = Gyro_switchpoint();
   Gyro_Async_deactivate(async);
+  
   RB_GC_GUARD(ret);
   return ret;
 }

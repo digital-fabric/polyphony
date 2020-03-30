@@ -39,10 +39,9 @@ VALUE Gyro_snooze(VALUE self) {
   Fiber_make_runnable(fiber, Qnil);
 
   VALUE ret = Thread_switch_fiber(rb_thread_current());
-  if (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
-    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
-  else
-    return ret;
+  TEST_RESUME_EXCEPTION(ret);
+  RB_GC_GUARD(ret);
+  return ret;
 }
 
 static VALUE Gyro_post_fork(VALUE self) {
@@ -61,12 +60,9 @@ static VALUE Gyro_unref(VALUE self) {
 static VALUE Gyro_suspend(VALUE self) {
   VALUE ret = Thread_switch_fiber(rb_thread_current());
   
-  if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
-  }
-  else {
-    return ret;
-  }
+  TEST_RESUME_EXCEPTION(ret);
+  RB_GC_GUARD(ret);
+  return ret;
 }
 
 VALUE Gyro_trace(VALUE self, VALUE enabled) {

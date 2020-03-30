@@ -186,7 +186,9 @@ inline static VALUE Gyro_Selector_wait_writable(VALUE self, VALUE io) {
 
 inline static VALUE Gyro_Selector_wait_timeout(VALUE self, VALUE duration) {
   VALUE watcher = rb_funcall(cGyro_Timer, ID_new, 2, duration, Qnil);
-  return Gyro_Timer_await(watcher);
+  VALUE ret = Gyro_Timer_await(watcher);
+  RB_GC_GUARD(watcher);
+  return ret;
 }
 
 void Init_Gyro_Selector() {

@@ -10,6 +10,7 @@ struct Gyro_IO {
   struct  ev_io ev_io;
   struct  ev_loop *ev_loop;
   int     active;
+  VALUE   self;
   VALUE   fiber;
   VALUE   selector;
 };
@@ -34,11 +35,10 @@ static void Gyro_IO_mark(void *ptr) {
 static void Gyro_IO_free(void *ptr) {
   struct Gyro_IO *io = ptr;
   if (io->active) {
-    printf("IO watcher garbage collected while still active!\n");
-    // ev_io_stop(io->ev_loop, &io->ev_io);
-  } else {
-    xfree(io);
+    ev_clear_pending(io->ev_loop, &io->ev_io);
+    ev_io_stop(io->ev_loop, &io->ev_io);
   }
+  xfree(io);
 }
 
 static size_t Gyro_IO_size(const void *ptr) {
@@ -57,20 +57,33 @@ static VALUE Gyro_IO_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &Gyro_IO_type, io);
 }
 
-static const char * S_IO = "IO";
-static const char * S_to_io = "to_io";
+inline void Gyro_IO_activate(struct Gyro_IO *io) {
+  if (io->active) return;
+
+  io->active = 1;
+  io->fiber = rb_fiber_current();
+  io->selector = Thread_current_event_selector();
+  io->ev_loop = Gyro_Selector_ev_loop(io->selector);
+  Gyro_Selector_add_active_watcher(io->selector, io->self);
+  ev_io_start(io->ev_loop, &io->ev_io);
+}
+
+inline void Gyro_IO_deactivate(struct Gyro_IO *io) {
+  if (!io->active) return;
+
+  ev_io_stop(io->ev_loop, &io->ev_io);
+  Gyro_Selector_remove_active_watcher(io->selector, io->self);
+  io->active = 0;
+  io->ev_loop = 0;
+  io->selector = Qnil;
+  io->fiber = Qnil;
+}
 
 void Gyro_IO_callback(struct ev_loop *ev_loop, struct ev_io *ev_io, int revents) {
   struct Gyro_IO *io = (struct Gyro_IO*)ev_io;
 
-  ev_io_stop(io->ev_loop, ev_io);
-  io->active = 0;
-
-  if (io->fiber != Qnil) {
-    VALUE fiber = io->fiber;
-    io->fiber = Qnil;
-    Fiber_make_runnable(fiber, Qnil);
-  }
+  Fiber_make_runnable(io->fiber, Qnil);
+  Gyro_IO_deactivate(io);
 }
 
 static int Gyro_IO_symbol2event_mask(VALUE sym) {
@@ -96,15 +109,19 @@ static int Gyro_IO_symbol2event_mask(VALUE sym) {
 
 #define GetGyro_IO(obj, io) TypedData_Get_Struct((obj), struct Gyro_IO, &Gyro_IO_type, (io))
 
+static const char * S_IO = "IO";
+static const char * S_to_io = "to_io";
+
 static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
   struct Gyro_IO *io;
   rb_io_t *fptr;
 
   GetGyro_IO(self, io);
 
+  io->self = self;
   io->fiber = Qnil;
-  io->active = 0;
   io->selector = Qnil;
+  io->active = 0;
   io->ev_loop = 0;
 
   int fd;
@@ -122,64 +139,17 @@ static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
   return Qnil;
 }
 
-inline void Gyro_IO_activate(struct Gyro_IO *io) {
-  io->active = 1;
-  io->fiber = rb_fiber_current();
-  io->selector = Thread_current_event_selector();
-  io->ev_loop = Gyro_Selector_ev_loop(io->selector);
-
-  ev_io_start(io->ev_loop, &io->ev_io);
-}
-
 VALUE Gyro_IO_await(VALUE self) {
   struct Gyro_IO *io;
   GetGyro_IO(self, io);
 
   Gyro_IO_activate(io);
-
   VALUE ret = Gyro_switchpoint();
+  Gyro_IO_deactivate(io);
 
-  if (io->active) {
-    io->active = 0;
-    io->fiber = Qnil;
-    ev_io_stop(io->ev_loop, &io->ev_io);
-  }
-
+  TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
-
-  // fiber is resumed, check if resumed value is an exception
-  if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
-  }
-  else {
-    return Qnil;
-  }
-}
-
-VALUE Gyro_IO_await_auto_io(VALUE self, int fd, int events) {
-  struct Gyro_IO *io;
-  GetGyro_IO(self, io);
-
-  ev_io_set(&io->ev_io, fd, events);
-  Gyro_IO_activate(io);
-
-  VALUE ret = Gyro_switchpoint();
-
-  if (io->active) {
-    io->active = 0;
-    io->fiber = Qnil;
-    ev_io_stop(io->ev_loop, &io->ev_io);
-  }
-
-  RB_GC_GUARD(ret);
-
-  // fiber is resumed, check if resumed value is an exception
-  if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
-  }
-  else {
-    return Qnil;
-  }
+  return ret;
 }
 
 VALUE Gyro_IO_auto_io(int fd, int events) {

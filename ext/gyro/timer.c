@@ -50,18 +50,39 @@ static VALUE Gyro_Timer_allocate(VALUE klass) {
 #define GetGyro_Timer(obj, timer) \
   TypedData_Get_Struct((obj), struct Gyro_Timer, &Gyro_Timer_type, (timer))
 
+inline void Gyro_Timer_activate(struct Gyro_Timer *timer) {
+  timer->fiber = rb_fiber_current();
+  timer->selector = Thread_current_event_selector();
+  timer->ev_loop = Gyro_Selector_ev_loop(timer->selector);
+
+  if (timer->active) return;
+
+  timer->active = 1;
+  Gyro_Selector_add_active_watcher(timer->selector, timer->self);
+  ev_timer_start(timer->ev_loop, &timer->ev_timer);
+}
+
+inline void Gyro_Timer_deactivate(struct Gyro_Timer *timer, int non_recurring_only) {
+  if (!timer->active) return;
+
+  if (!timer->repeat || !non_recurring_only) {
+    ev_timer_stop(timer->ev_loop, &timer->ev_timer);
+    if (RTEST(timer->selector)) {
+      Gyro_Selector_remove_active_watcher(timer->selector, timer->self);
+      timer->selector = Qnil;
+    }
+    timer->ev_loop = 0;
+    timer->active = 0;
+  }
+
+  timer->fiber = Qnil;
+}
+
 void Gyro_Timer_callback(struct ev_loop *ev_loop, struct ev_timer *ev_timer, int revents) {
   struct Gyro_Timer *timer = (struct Gyro_Timer*)ev_timer;
 
-  if (!timer->repeat) {
-    Gyro_Selector_remove_active_watcher(timer->selector, timer->self);
-    timer->active = 0;
-    timer->selector = Qnil;
-  }
-
-  if (timer->fiber != Qnil) {
-    Fiber_make_runnable(timer->fiber, DBL2NUM(timer->after));
-  }
+  Fiber_make_runnable(timer->fiber, DBL2NUM(timer->after));
+  Gyro_Timer_deactivate(timer, 1);
 }
 
 static VALUE Gyro_Timer_initialize(VALUE self, VALUE after, VALUE repeat) {
@@ -71,11 +92,11 @@ static VALUE Gyro_Timer_initialize(VALUE self, VALUE after, VALUE repeat) {
 
   timer->self     = self;
   timer->fiber    = Qnil;
+  timer->selector = Qnil;
   timer->after    = NUM2DBL(after);
   timer->repeat   = NUM2DBL(repeat);
   timer->active   = 0;
   timer->ev_loop  = 0;
-  timer->selector = Qnil;
 
   ev_timer_init(&timer->ev_timer, Gyro_Timer_callback, timer->after, timer->repeat);
 
@@ -86,55 +107,21 @@ VALUE Gyro_Timer_stop(VALUE self) {
   struct Gyro_Timer *timer;
   GetGyro_Timer(self, timer);
 
-  if (timer->active) {
-    if (timer->selector != Qnil)
-      Gyro_Selector_remove_active_watcher(timer->selector, self);
-    ev_timer_stop(timer->ev_loop, &timer->ev_timer);
-    timer->active = 0;
-    timer->fiber = Qnil;
-    timer->selector = Qnil;
-    timer->ev_loop = 0;
-  }
-
+  Gyro_Timer_deactivate(timer, 0);
   return self;
 }
 
 VALUE Gyro_Timer_await(VALUE self) {
   struct Gyro_Timer *timer;
-  VALUE ret;
-  
   GetGyro_Timer(self, timer);
 
-  timer->fiber = rb_fiber_current();
-  timer->selector = Thread_current_event_selector();
-  timer->ev_loop = Gyro_Selector_ev_loop(timer->selector);
+  Gyro_Timer_activate(timer);
+  VALUE ret = Gyro_switchpoint();
+  Gyro_Timer_deactivate(timer, 1);
 
-  if (!timer->active) {
-    timer->active = 1;
-    ev_timer_start(timer->ev_loop, &timer->ev_timer);
-    Gyro_Selector_add_active_watcher(timer->selector, self);
-  }
-
-  ret = Gyro_switchpoint();
-
-  if (timer->active && (timer->repeat == .0)) {
-    Gyro_Selector_remove_active_watcher(timer->selector, self);
-    ev_timer_stop(timer->ev_loop, &timer->ev_timer);
-    timer->active = 0;
-    timer->ev_loop = 0;
-  }
-
-  // fiber is resumed, check if resumed value is an exception
-  timer->fiber = Qnil;
-  timer->selector = Qnil;
-
+  TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
-  RB_GC_GUARD(self);
-  if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-    return rb_funcall(rb_mKernel, ID_raise, 1, ret);
-  }
-  else
-    return ret;
+  return ret;
 }
 
 void Init_Gyro_Timer() {
