@@ -25,8 +25,8 @@ static void Gyro_Signal_mark(void *ptr) {
 static void Gyro_Signal_free(void *ptr) {
   struct Gyro_Signal *signal = ptr;
   if (signal->active) {
-    printf("Signal watcher garbage collected while still active!\n");
-    // ev_signal_stop(signal->ev_loop, &signal->ev_signal);
+    ev_clear_pending(signal->ev_loop, &signal->ev_signal);
+    ev_signal_stop(signal->ev_loop, &signal->ev_signal);
   }
   xfree(signal);
 }

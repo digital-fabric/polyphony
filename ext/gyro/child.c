@@ -25,7 +25,8 @@ static void Gyro_Child_mark(void *ptr) {
 static void Gyro_Child_free(void *ptr) {
   struct Gyro_Child *child = ptr;
   if (child->active) {
-    printf("Child watcher garbage collected while still active!\n");
+    ev_clear_pending(child->ev_loop, &child->ev_child);
+    ev_child_stop(child->ev_loop, &child->ev_child);
   }
   xfree(child);
 }
