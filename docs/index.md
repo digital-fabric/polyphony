@@ -64,8 +64,8 @@ adapters are being developed.
 Polyphony draws inspiration from the following, in no particular order:
 
 * [nio4r](https://github.com/socketry/nio4r/) and
-  [async](https://github.com/socketry/async) (Polyphony's C-extension code is
-  largely a spinoff of
+  [async](https://github.com/socketry/async) (Polyphony's C-extension code
+  started as a spinoff of
   [nio4r's](https://github.com/socketry/nio4r/tree/master/ext))
 * The [go scheduler](https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html)
 * [EventMachine](https://github.com/eventmachine/eventmachine)
@@ -73,11 +73,13 @@ Polyphony draws inspiration from the following, in no particular order:
 * [Erlang supervisors](http://erlang.org/doc/man/supervisor.html) (and actually,
   Erlang in general)
 
-## Going further
+## Developer Resources
 
-To learn more about using Polyphony to build concurrent applications, continue reading, or look at the [bundled
-examples](https://github.com/digital-fabric/polyphony/tree/9e0f3b09213156bdf376ef33684ef267517f06e8/examples/README.md).
-A thorough API reference is forthcoming.
+* [Tutorial](getting-started/tutorial)
+* [Main Concepts](main-concepts/concurrency/)
+* [User Guide](user-guide/all-about-timers/)
+* [API Reference](api-reference/exception/)
+* [Examples](https://github.com/digital-fabric/polyphony/tree/9e0f3b09213156bdf376ef33684ef267517f06e8/examples/README.md)
 
 ## Contributing to Polyphony
 
