@@ -32,7 +32,7 @@
   Fiber.current.add_child_fiber(t.main_fiber)
   ```
 
-## 0.35 Some more API work, more docs
+## 0.36 Some more API work, more docs
 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
@@ -152,7 +152,7 @@
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
 
-## 0.36 Sinatra / Sidekiq
+## 0.37 Sinatra / Sidekiq
 
 - sintra app with database access (postgresql)
 
@@ -162,13 +162,13 @@
   - test performance
   - proceed from there
 
-## 0.37 Testing && Docs
+## 0.38 Testing && Docs
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.38 Integration
+## 0.39 Integration
 
-## 0.39 Real IO#gets and IO#read
+## 0.40 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -178,11 +178,11 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.40 Rails
+## 0.41 Rails
 
 - Rails?
 
-## 0.41 DNS
+## 0.42 DNS
 
 ### DNS client
 

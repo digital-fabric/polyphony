@@ -1,3 +1,9 @@
+## 0.36 2020-03-31
+
+* More docs
+* More C code refactoring
+* Fix freeing for active child, signal watchers
+
 ## 0.35 2020-03-29
 
 * Rename `Fiber#cancel!` to `Fiber#cancel`
