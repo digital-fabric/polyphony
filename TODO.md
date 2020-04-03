@@ -32,7 +32,17 @@
   Fiber.current.add_child_fiber(t.main_fiber)
   ```
 
-## 0.36 Some more API work, more docs
+
+
+
+
+## 0.37 - Remove Modulation dep
+
+- Remove modulation dependency
+- Organize code as a regular gem
+- Namespace everything under `Polyphony` and `Gyro`
+
+## 0.40 Some more API work, more docs
 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
@@ -142,17 +152,15 @@
 - Docs
   - landing page:
     - links to the interesting stuff
-      - concurrency overview
-      - faq
       - benchmarks
   - explain difference between `sleep` and `suspend`
-  - add explanation about async vs sync
+  - add explanation about async vs sync, blocking vs non-blocking
   - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
 
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
 
-## 0.37 Sinatra / Sidekiq
+## 0.41 Sinatra / Sidekiq
 
 - sintra app with database access (postgresql)
 
@@ -162,13 +170,13 @@
   - test performance
   - proceed from there
 
-## 0.38 Testing && Docs
+## 0.42 Testing && Docs
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.39 Integration
+## 0.43 Integration
 
-## 0.40 Real IO#gets and IO#read
+## 0.44 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -178,11 +186,11 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.41 Rails
+## 0.45 Rails
 
 - Rails?
 
-## 0.42 DNS
+## 0.46 DNS
 
 ### DNS client
 
