@@ -71,7 +71,9 @@ void Fiber_make_runnable(VALUE fiber, VALUE value) {
     Thread_schedule_fiber(thread, fiber, value);
   }
   else {
-    rb_warn("No thread set for fiber");
+    rb_warn("No thread set for fiber (fiber, value, caller):");
+    VALUE caller = rb_funcall(rb_cObject, rb_intern("caller"), 0);
+    INSPECT(3, fiber, value, caller);
   }
 }
 
