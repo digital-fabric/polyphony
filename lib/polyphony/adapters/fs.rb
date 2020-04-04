@@ -1,11 +1,8 @@
 # frozen_string_literal: true
 
-export  :stat,
-        :read
-
 require 'fileutils'
 
-ThreadPool = import('./core/thread_pool')
+require_relative './core/thread_pool'
 
 ::File.singleton_class.instance_eval do
   alias_method :orig_stat, :stat

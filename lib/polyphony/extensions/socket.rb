@@ -2,7 +2,8 @@
 
 require 'socket'
 
-import('./io')
+require_relative './io'
+require_relative '../core/thread_pool'
 
 # Socket overrides (eventually rewritten in C)
 class ::Socket

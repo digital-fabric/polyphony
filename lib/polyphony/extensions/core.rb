@@ -4,7 +4,7 @@ require 'fiber'
 require 'timeout'
 require 'open3'
 
-Exceptions = import('../core/exceptions')
+require_relative '../core/exceptions'
 
 # Exeption overrides
 class ::Exception
@@ -22,7 +22,7 @@ class ::Exception
     orig_initialize(*args)
   end
 
-  alias_method_once :orig_backtrace, :backtrace
+  alias_method :orig_backtrace, :backtrace
   def backtrace
     unless @first_backtrace_call || EXIT_EXCEPTION_CLASSES.include?(self.class)
       @first_backtrace_call = true
@@ -118,7 +118,7 @@ end
 module ::Timeout
   def self.timeout(sec, klass = nil, message = nil, &block)
     cancel_after(sec, &block)
-  rescue Exceptions::Cancel => e
+  rescue Polyphony::Cancel => e
     error = klass ? klass.new(message) : ::Timeout::Error.new
     error.set_backtrace(e.backtrace)
     raise error
