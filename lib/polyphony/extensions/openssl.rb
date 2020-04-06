@@ -2,7 +2,7 @@
 
 require 'openssl'
 
-import('./socket')
+require_relative './socket'
 
 # Open ssl socket helper methods (to make it compatible with Socket API)
 class ::OpenSSL::SSL::SSLSocket

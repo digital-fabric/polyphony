@@ -21,8 +21,6 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.required_ruby_version = '>= 2.6'
 
-  s.add_runtime_dependency      'modulation',           '~>1.0'
-  
   s.add_development_dependency  'httparty',             '0.17.0'
   s.add_development_dependency  'localhost',            '1.1.4'
   s.add_development_dependency  'minitest',             '5.13.0'

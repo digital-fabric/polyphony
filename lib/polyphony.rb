@@ -1,44 +1,24 @@
 # frozen_string_literal: true
 
-require 'modulation/gem'
-
-export_default :Polyphony
-
 require 'fiber'
 require_relative './gyro_ext'
 
 Thread.event_selector = Gyro::Selector
 Thread.current.setup_fiber_scheduling
 
-import './polyphony/extensions/core'
-import './polyphony/extensions/thread'
-import './polyphony/extensions/fiber'
-import './polyphony/extensions/io'
+require_relative './polyphony/extensions/core'
+require_relative './polyphony/extensions/thread'
+require_relative './polyphony/extensions/fiber'
+require_relative './polyphony/extensions/io'
+
+require_relative './polyphony/core/global_api'
+require_relative './polyphony/core/resource_pool'
+require_relative './polyphony/net'
+
+require_relative './polyphony/adapters/process'
 
 # Main Polyphony API
 module Polyphony
-  GlobalAPI = import './polyphony/core/global_api'
-  ::Object.include GlobalAPI
-
-  exceptions = import './polyphony/core/exceptions'
-  Cancel    = exceptions::Cancel
-  MoveOn    = exceptions::MoveOn
-  Restart   = exceptions::Restart
-  Terminate = exceptions::Terminate
-
-  Net = import './polyphony/net'
-
-  auto_import(
-    Channel:      './polyphony/core/channel',
-    FS:           './polyphony/adapters/fs',
-    Process:      './polyphony/adapters/process',
-    ResourcePool: './polyphony/core/resource_pool',
-    Sync:         './polyphony/core/sync',
-    ThreadPool:   './polyphony/core/thread_pool',
-    Throttler:    './polyphony/core/throttler',
-    Trace:        './polyphony/adapters/trace'
-  )
-
   class << self
     def wait_for_signal(sig)
       fiber = Fiber.current

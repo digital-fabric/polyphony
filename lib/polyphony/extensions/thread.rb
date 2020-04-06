@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-Exceptions = import '../core/exceptions'
+require_relative '../core/exceptions'
 
 # Thread extensions
 class ::Thread
@@ -19,7 +19,7 @@ class ::Thread
     setup
     @ready = true
     result = @block.(*@args)
-  rescue Exceptions::MoveOn, Exceptions::Terminate => e
+  rescue Polyphony::MoveOn, Polyphony::Terminate => e
     result = e.value
   rescue Exception => e
     result = e
@@ -78,7 +78,7 @@ class ::Thread
 
   alias_method :orig_kill, :kill
   def kill
-    raise Exceptions::Terminate
+    raise Polyphony::Terminate
   end
 
   alias_method :orig_inspect, :inspect

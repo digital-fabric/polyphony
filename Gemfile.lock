@@ -2,7 +2,6 @@ PATH
   remote: .
   specs:
     polyphony (0.36)
-      modulation (~> 1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -73,7 +72,6 @@ GEM
       builder
       minitest (>= 5.0)
       ruby-progressbar
-    modulation (1.0)
     multi_xml (0.6.0)
     parallel (1.19.1)
     parser (2.7.0.2)

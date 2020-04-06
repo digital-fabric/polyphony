@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'helper'
+require 'polyphony/adapters/trace'
 
 class ThreadTest < MiniTest::Test
   def test_thread_spin
