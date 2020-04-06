@@ -377,6 +377,6 @@ orig_pid = Process.pid
 at_exit do
   next unless orig_pid == Process.pid
 
-  Fiber.current.terminate_all_children
-  Fiber.current.await_all_children
+  Polyphony.terminate_threads
+  Fiber.current.shutdown_all_children
 end

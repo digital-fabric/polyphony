@@ -91,6 +91,7 @@ module Polyphony
     end
 
     def exit_forked_process
+      terminate_threads
       Fiber.current.shutdown_all_children
       # Since fork could be called from any fiber, we explicitly call exit here.
       # Otherwise, the fiber might want to pass execution to another fiber that
@@ -117,6 +118,12 @@ module Polyphony
     def install_terminating_signal_handlers
       install_terminating_signal_handler('SIGTERM', ::SystemExit)
       install_terminating_signal_handler('SIGINT', ::Interrupt)
+    end
+
+    def terminate_threads
+      threads = Thread.list - [Thread.current]
+      threads.each(&:kill)
+      threads.each(&:join)
     end
   end
 end
