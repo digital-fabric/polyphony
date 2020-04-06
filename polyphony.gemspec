@@ -39,5 +39,4 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'jekyll-remote-theme',  '~>0.4.1'
   s.add_development_dependency  'jekyll-seo-tag',       '~>2.6.1'
   s.add_development_dependency  'just-the-docs',        '~>0.2.7'
-
 end
