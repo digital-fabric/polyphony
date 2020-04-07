@@ -1,3 +1,8 @@
+## 0.37 2020-04-07
+
+* Explicitly kill threads on exit to prevent possible segfault
+* Remove Modulation dependency
+
 ## 0.36 2020-03-31
 
 * More docs

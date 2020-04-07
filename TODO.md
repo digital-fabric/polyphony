@@ -36,12 +36,6 @@
 
 
 
-## 0.37 - Remove Modulation dep
-
-- Remove modulation dependency
-- Organize code as a regular gem
-- Namespace everything under `Polyphony` and `Gyro`
-
 ## 0.40 Some more API work, more docs
 
 - Debugging
