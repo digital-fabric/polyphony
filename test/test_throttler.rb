@@ -24,7 +24,6 @@ class ThrottlerTest < MiniTest::Test
     end
     sleep 0.25
     f.stop
-    puts "count: #{buffer.size}"
     assert (2..6).include?(buffer.size)
   ensure
     t.stop
