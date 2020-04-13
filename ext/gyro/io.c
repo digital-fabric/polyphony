@@ -10,7 +10,6 @@ struct Gyro_IO {
   struct  ev_io ev_io;
   struct  ev_loop *ev_loop;
   int     active;
-  int     post_fork;
   VALUE   self;
   VALUE   fiber;
   VALUE   selector;
@@ -35,14 +34,15 @@ static void Gyro_IO_mark(void *ptr) {
 
 static void Gyro_IO_free(void *ptr) {
   struct Gyro_IO *io = ptr;
-  printf("IO_free %lx active = %d post_fork = %d\n", (unsigned long)io, io->active, io->post_fork);
-  if (io->post_fork) return;
-
-  if (io->active) {
-    ev_clear_pending(io->ev_loop, &io->ev_io);
-    ev_io_stop(io->ev_loop, &io->ev_io);
+  switch (io->active) {
+    case GYRO_WATCHER_POST_FORK:
+      return;
+    case 1:
+      ev_clear_pending(io->ev_loop, &io->ev_io);
+      ev_io_stop(io->ev_loop, &io->ev_io);
+    default:
+      xfree(io);
   }
-  xfree(io);
 }
 
 static size_t Gyro_IO_size(const void *ptr) {
@@ -127,7 +127,6 @@ static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
   io->selector = Qnil;
   io->active = 0;
   io->ev_loop = 0;
-  io->post_fork = 0;
 
   int fd;
   if (NIL_P(io_obj)) {
@@ -161,7 +160,8 @@ VALUE Gyro_IO_deactivate_post_fork(VALUE self) {
   struct Gyro_IO *io;
   GetGyro_IO(self, io);
 
-  io->post_fork = 1;
+  if (io->active)
+    io->active = GYRO_WATCHER_POST_FORK;
 
   return self;
 }

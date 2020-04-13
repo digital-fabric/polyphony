@@ -59,6 +59,12 @@ enum {
   FIBER_STATE_SCHEDULED     = 2
 };
 
+// watcher flags
+enum {
+  // a watcher's active field will be set to this after fork
+  GYRO_WATCHER_POST_FORK = 0xFF
+};
+
 VALUE Fiber_auto_async(VALUE self);
 VALUE Fiber_auto_io(VALUE self);
 void Fiber_make_runnable(VALUE fiber, VALUE value);

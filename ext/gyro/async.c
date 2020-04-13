@@ -4,7 +4,6 @@ struct Gyro_Async {
   struct  ev_async ev_async;
   struct  ev_loop *ev_loop;
   int     active;
-  int     post_fork;
   VALUE   self;
   VALUE   fiber;
   VALUE   value;
@@ -28,15 +27,15 @@ static void Gyro_Async_mark(void *ptr) {
 
 static void Gyro_Async_free(void *ptr) {
   struct Gyro_Async *async = ptr;
-  
-  printf("Async_free %lx active = %d post_fork = %d\n", (unsigned long)async, async->active, async->post_fork);
-  if (async->post_fork) return;
-
-  if (async->active) {
-    ev_clear_pending(async->ev_loop, &async->ev_async);
-    ev_async_stop(async->ev_loop, &async->ev_async);
+  switch (async->active) {
+    case GYRO_WATCHER_POST_FORK:
+      return;
+    case 1:
+      ev_clear_pending(async->ev_loop, &async->ev_async);
+      ev_async_stop(async->ev_loop, &async->ev_async);
+    default:
+      xfree(async);
   }
-  xfree(async);
 }
 
 static size_t Gyro_Async_size(const void *ptr) {
@@ -97,7 +96,6 @@ static VALUE Gyro_Async_initialize(VALUE self) {
   async->selector = Qnil;
   async->active = 0;
   async->ev_loop = 0;
-  async->post_fork = 0;
 
   ev_async_init(&async->ev_async, Gyro_Async_callback);
 
@@ -136,7 +134,8 @@ VALUE Gyro_Async_deactivate_post_fork(VALUE self) {
   struct Gyro_Async *async;
   GetGyro_Async(self, async);
 
-  async->post_fork = 1;
+  if (async->active)
+    async->active = GYRO_WATCHER_POST_FORK;
   return self;
 }
 

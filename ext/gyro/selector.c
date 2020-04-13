@@ -16,8 +16,6 @@ static void Gyro_Selector_mark(void *ptr) {
 }
 
 static void Gyro_Selector_free(void *ptr) {
-  printf("Selector_free %lx\n", (unsigned long)ptr);
-
   struct Gyro_Selector *selector = ptr;
   ev_async_stop(selector->ev_loop, &selector->async);
   if (selector->ev_loop && !ev_is_default_loop(selector->ev_loop)) {

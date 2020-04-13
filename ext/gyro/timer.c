@@ -4,7 +4,6 @@ struct Gyro_Timer {
   struct  ev_timer ev_timer;
   struct  ev_loop *ev_loop;
   int     active;
-  int     post_fork;
   double  after;
   double  repeat;
   VALUE   self;
@@ -26,14 +25,15 @@ static void Gyro_Timer_mark(void *ptr) {
 
 static void Gyro_Timer_free(void *ptr) {
   struct Gyro_Timer *timer = ptr;
-  printf("Timer_free %lx active = %d post_fork = %d\n", (unsigned long)timer, timer->active, timer->post_fork);
-  if (timer->post_fork) return;
-
-  if (timer->active) {
-    ev_clear_pending(timer->ev_loop, &timer->ev_timer);
-    ev_timer_stop(timer->ev_loop, &timer->ev_timer);
+  switch (timer->active) {
+    case GYRO_WATCHER_POST_FORK:
+      return;
+    case 1:
+      ev_clear_pending(timer->ev_loop, &timer->ev_timer);
+      ev_timer_stop(timer->ev_loop, &timer->ev_timer);
+    default:
+      xfree(timer);
   }
-  xfree(timer);
 }
 
 static size_t Gyro_Timer_size(const void *ptr) {
@@ -101,7 +101,6 @@ static VALUE Gyro_Timer_initialize(VALUE self, VALUE after, VALUE repeat) {
   timer->repeat     = NUM2DBL(repeat);
   timer->active     = 0;
   timer->ev_loop    = 0;
-  timer->post_fork  = 0;
 
   ev_timer_init(&timer->ev_timer, Gyro_Timer_callback, timer->after, timer->repeat);
 
@@ -133,7 +132,9 @@ VALUE Gyro_Timer_deactivate_post_fork(VALUE self) {
   struct Gyro_Timer *timer;
   GetGyro_Timer(self, timer);
 
-  timer->post_fork = 1;
+  if (timer->active)
+    timer->active = GYRO_WATCHER_POST_FORK;
+
   return self;
 }
 

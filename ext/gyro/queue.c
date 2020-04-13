@@ -45,9 +45,6 @@ static VALUE Gyro_Queue_initialize(VALUE self) {
 
   queue->items = rb_ary_new();
   queue->shift_waiters = rb_ary_new();
-
-  // RB_GC_GUARD(queue->items);
-  // RB_GC_GUARD(queue->shift_waiters);
   
   return self;
 }

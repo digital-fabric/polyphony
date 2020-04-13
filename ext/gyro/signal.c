@@ -4,7 +4,6 @@ struct Gyro_Signal {
   struct  ev_signal ev_signal;
   struct  ev_loop *ev_loop;
   int     active;
-  int     post_fork;
   int     signum;
   VALUE   self;
   VALUE   fiber;
@@ -25,14 +24,15 @@ static void Gyro_Signal_mark(void *ptr) {
 
 static void Gyro_Signal_free(void *ptr) {
   struct Gyro_Signal *signal = ptr;
-  printf("Signal_free %lx active = %d post_fork = %d\n", (unsigned long)signal, signal->active, signal->post_fork);
-  if (signal->post_fork) return;
-
-  if (signal->active) {
-    ev_clear_pending(signal->ev_loop, &signal->ev_signal);
-    ev_signal_stop(signal->ev_loop, &signal->ev_signal);
+  switch (signal->active) {
+    case GYRO_WATCHER_POST_FORK:
+      return;
+    case 1:
+      ev_clear_pending(signal->ev_loop, &signal->ev_signal);
+      ev_signal_stop(signal->ev_loop, &signal->ev_signal);
+    default:
+      xfree(signal);
   }
-  xfree(signal);
 }
 
 static size_t Gyro_Signal_size(const void *ptr) {
@@ -94,7 +94,6 @@ static VALUE Gyro_Signal_initialize(VALUE self, VALUE sig) {
   signal->signum = NUM2INT(signum);
   signal->active = 0;
   signal->ev_loop = 0;
-  signal->post_fork = 0;
 
   ev_signal_init(&signal->ev_signal, Gyro_Signal_callback, signal->signum);
 
@@ -118,7 +117,8 @@ VALUE Gyro_Signal_deactivate_post_fork(VALUE self) {
   struct Gyro_Signal *signal;
   GetGyro_Signal(self, signal);
 
-  signal->post_fork = 1;
+  if (signal->active)
+    signal->active = GYRO_WATCHER_POST_FORK;
 
   return self;
 }

@@ -4,7 +4,6 @@ struct Gyro_Child {
   struct  ev_child ev_child;
   struct  ev_loop *ev_loop;
   int     active;
-  int     post_fork;
   int     pid;
   VALUE   self;
   VALUE   fiber;
@@ -25,14 +24,15 @@ static void Gyro_Child_mark(void *ptr) {
 
 static void Gyro_Child_free(void *ptr) {
   struct Gyro_Child *child = ptr;
-  printf("Child_free %lx active = %d post_fork = %d\n", (unsigned long)child, child->active, child->post_fork);
-  if (child->post_fork) return;
-
-  if (child->active) {
-    ev_clear_pending(child->ev_loop, &child->ev_child);
-    ev_child_stop(child->ev_loop, &child->ev_child);
+  switch (child->active) {
+    case GYRO_WATCHER_POST_FORK:
+      return;
+    case 1:
+      ev_clear_pending(child->ev_loop, &child->ev_child);
+      ev_child_stop(child->ev_loop, &child->ev_child);
+    default:
+      xfree(child);
   }
-  xfree(child);
 }
 
 static size_t Gyro_Child_size(const void *ptr) {
@@ -103,7 +103,6 @@ static VALUE Gyro_Child_initialize(VALUE self, VALUE pid) {
   child->pid        = NUM2INT(pid);
   child->active     = 0;
   child->ev_loop    = 0;
-  child->post_fork  = 0;
   
   ev_child_init(&child->ev_child, Gyro_Child_callback, child->pid, 0);
 
@@ -127,7 +126,8 @@ VALUE Gyro_Child_deactivate_post_fork(VALUE self) {
   struct Gyro_Child *child;
   GetGyro_Child(self, child);
 
-  child->post_fork = 1;
+  if (child->active)
+    child->active = GYRO_WATCHER_POST_FORK;
   return self;
 }
 

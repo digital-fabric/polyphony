@@ -8,7 +8,6 @@ module Polyphony
     attr_reader :size
 
     def self.process(&block)
-      puts "ThreadPool default"
       @default_pool ||= self.new
       @default_pool.process(&block)
     end
