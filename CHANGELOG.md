@@ -1,3 +1,7 @@
+## 0.38 2020-04-13
+
+* Fix post-fork segfault if parent process has multiple threads with active watchers
+
 ## 0.37 2020-04-07
 
 * Explicitly kill threads on exit to prevent possible segfault
