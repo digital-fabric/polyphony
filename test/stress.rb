@@ -14,5 +14,12 @@ def run_test(count)
 end
 
 trap('INT') { exit! }
+t0 = Time.now
 count.times { |i| run_test(i + 1) }
-puts "Successfully ran #{count} tests"
+elapsed = Time.now - t0
+puts format(
+  "Successfully ran %d tests in %f seconds (%f per test)",
+  count,
+  elapsed,
+  elapsed / count
+)
