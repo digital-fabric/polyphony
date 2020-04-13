@@ -15,6 +15,10 @@ task :test do
   exec 'ruby test/run.rb'
 end
 
+task :stress_test do
+  exec 'ruby test/stress.rb'
+end
+
 task :docs do
   exec 'RUBYOPT=-W0 jekyll serve -s docs'
 end

@@ -44,11 +44,6 @@ VALUE Gyro_snooze(VALUE self) {
   return ret;
 }
 
-static VALUE Gyro_post_fork(VALUE self) {
-  Thread_post_fork(rb_thread_current());
-  return Qnil;
-}
-
 static VALUE Gyro_ref(VALUE self) {
   return Thread_ref(rb_thread_current());
 }
@@ -73,7 +68,6 @@ VALUE Gyro_trace(VALUE self, VALUE enabled) {
 void Init_Gyro() {
   mGyro = rb_define_module("Gyro");
 
-  rb_define_singleton_method(mGyro, "post_fork", Gyro_post_fork, 0);
   rb_define_singleton_method(mGyro, "ref", Gyro_ref, 0);
   rb_define_singleton_method(mGyro, "unref", Gyro_unref, 0);
   rb_define_singleton_method(mGyro, "trace", Gyro_trace, 1);

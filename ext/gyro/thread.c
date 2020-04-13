@@ -3,6 +3,7 @@
 static VALUE cQueue;
 
 static ID ID_create_event_selector;
+static ID ID_deactivate_all_watchers_post_fork;
 static ID ID_empty;
 static ID ID_fiber_ref_count;
 static ID ID_ivar_event_selector_proc;
@@ -14,8 +15,6 @@ static ID ID_ivar_terminated;
 static ID ID_pop;
 static ID ID_push;
 static ID ID_run_queue;
-// static ID ID_run_queue_head;
-// static ID ID_run_queue_tail;
 static ID ID_runnable_next;
 static ID ID_stop;
 
@@ -59,6 +58,15 @@ static VALUE Thread_stop_event_selector(VALUE self) {
   // Nullify the selector in order to prevent running the
   // selector after the thread is done running.
   rb_ivar_set(self, ID_ivar_event_selector, Qnil);
+
+  return self;
+}
+
+static VALUE Thread_deactivate_all_watchers_post_fork(VALUE self) {
+  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
+  if (selector != Qnil) {
+    rb_funcall(selector, ID_deactivate_all_watchers_post_fork, 0);
+  }
 
   return self;
 }
@@ -267,6 +275,7 @@ void Init_Thread() {
 
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "stop_event_selector", Thread_stop_event_selector, 0);
+  rb_define_method(rb_cThread, "deactivate_all_watchers_post_fork", Thread_deactivate_all_watchers_post_fork, 0);
   rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
   rb_define_method(rb_cThread, "break_out_of_ev_loop", Thread_fiber_break_out_of_ev_loop, 2);
@@ -277,6 +286,7 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
 
   ID_create_event_selector    = rb_intern("create_event_selector");
+  ID_deactivate_all_watchers_post_fork = rb_intern("deactivate_all_watchers_post_fork");
   ID_empty                    = rb_intern("empty?");
   ID_fiber_ref_count          = rb_intern("fiber_ref_count");
   ID_ivar_event_selector      = rb_intern("@event_selector");

@@ -8,8 +8,16 @@ module Polyphony
     attr_reader :size
 
     def self.process(&block)
+      puts "ThreadPool default"
       @default_pool ||= self.new
       @default_pool.process(&block)
+    end
+
+    def self.reset
+      return unless @default_pool
+      
+      @default_pool.stop
+      @default_pool = nil
     end
 
     def initialize(size = Etc.nprocessors)
@@ -47,6 +55,11 @@ module Polyphony
       watcher&.signal(result)
     rescue Exception => e
       watcher ? watcher.signal(e) : raise(e)
+    end
+
+    def stop
+      @threads.each(&:kill)
+      @threads.each(&:join)
     end
   end
 end

@@ -4,6 +4,7 @@ struct Gyro_Child {
   struct  ev_child ev_child;
   struct  ev_loop *ev_loop;
   int     active;
+  int     post_fork;
   int     pid;
   VALUE   self;
   VALUE   fiber;
@@ -24,6 +25,9 @@ static void Gyro_Child_mark(void *ptr) {
 
 static void Gyro_Child_free(void *ptr) {
   struct Gyro_Child *child = ptr;
+  printf("Child_free %lx active = %d post_fork = %d\n", (unsigned long)child, child->active, child->post_fork);
+  if (child->post_fork) return;
+
   if (child->active) {
     ev_clear_pending(child->ev_loop, &child->ev_child);
     ev_child_stop(child->ev_loop, &child->ev_child);
@@ -46,7 +50,7 @@ static VALUE Gyro_Child_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &Gyro_Child_type, child);
 }
 
-inline void Gyro_Child_activate(struct Gyro_Child *child) {
+inline void child_activate(struct Gyro_Child *child) {
   if (child->active) return;
 
   child->active = 1;
@@ -57,7 +61,7 @@ inline void Gyro_Child_activate(struct Gyro_Child *child) {
   ev_child_start(child->ev_loop, &child->ev_child);
 }
 
-inline void Gyro_Child_deactivate(struct Gyro_Child *child) {
+inline void child_deactivate(struct Gyro_Child *child) {
   if (!child->active) return;
 
   ev_child_stop(child->ev_loop, &child->ev_child);
@@ -82,7 +86,7 @@ void Gyro_Child_callback(struct ev_loop *ev_loop, struct ev_child *ev_child, int
   VALUE resume_value = Gyro_Child_resume_value(ev_child);
   Fiber_make_runnable(child->fiber, resume_value);
 
-  Gyro_Child_deactivate(child);
+  child_deactivate(child);
 }
 
 #define GetGyro_Child(obj, child) \
@@ -93,12 +97,13 @@ static VALUE Gyro_Child_initialize(VALUE self, VALUE pid) {
 
   GetGyro_Child(self, child);
 
-  child->self     = self;
-  child->fiber    = Qnil;
-  child->selector = Qnil;
-  child->pid      = NUM2INT(pid);
-  child->active   = 0;
-  child->ev_loop  = 0;
+  child->self       = self;
+  child->fiber      = Qnil;
+  child->selector   = Qnil;
+  child->pid        = NUM2INT(pid);
+  child->active     = 0;
+  child->ev_loop    = 0;
+  child->post_fork  = 0;
   
   ev_child_init(&child->ev_child, Gyro_Child_callback, child->pid, 0);
 
@@ -109,13 +114,21 @@ static VALUE Gyro_Child_await(VALUE self) {
   struct Gyro_Child *child;
   GetGyro_Child(self, child);
 
-  Gyro_Child_activate(child);
+  child_activate(child);
   VALUE ret = Gyro_switchpoint();
-  Gyro_Child_deactivate(child);
+  child_deactivate(child);
 
   TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
+}
+
+VALUE Gyro_Child_deactivate_post_fork(VALUE self) {
+  struct Gyro_Child *child;
+  GetGyro_Child(self, child);
+
+  child->post_fork = 1;
+  return self;
 }
 
 void Init_Gyro_Child() {
@@ -124,4 +137,5 @@ void Init_Gyro_Child() {
 
   rb_define_method(cGyro_Child, "initialize", Gyro_Child_initialize, 1);
   rb_define_method(cGyro_Child, "await", Gyro_Child_await, 0);
+  rb_define_method(cGyro_Child, "deactivate_post_fork", Gyro_Child_deactivate_post_fork, 0);
 }

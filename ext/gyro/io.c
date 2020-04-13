@@ -10,6 +10,7 @@ struct Gyro_IO {
   struct  ev_io ev_io;
   struct  ev_loop *ev_loop;
   int     active;
+  int     post_fork;
   VALUE   self;
   VALUE   fiber;
   VALUE   selector;
@@ -34,6 +35,9 @@ static void Gyro_IO_mark(void *ptr) {
 
 static void Gyro_IO_free(void *ptr) {
   struct Gyro_IO *io = ptr;
+  printf("IO_free %lx active = %d post_fork = %d\n", (unsigned long)io, io->active, io->post_fork);
+  if (io->post_fork) return;
+
   if (io->active) {
     ev_clear_pending(io->ev_loop, &io->ev_io);
     ev_io_stop(io->ev_loop, &io->ev_io);
@@ -57,7 +61,7 @@ static VALUE Gyro_IO_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &Gyro_IO_type, io);
 }
 
-inline void Gyro_IO_activate(struct Gyro_IO *io) {
+inline void io_activate(struct Gyro_IO *io) {
   if (io->active) return;
 
   io->active = 1;
@@ -68,7 +72,7 @@ inline void Gyro_IO_activate(struct Gyro_IO *io) {
   ev_io_start(io->ev_loop, &io->ev_io);
 }
 
-inline void Gyro_IO_deactivate(struct Gyro_IO *io) {
+inline void io_deactivate(struct Gyro_IO *io) {
   if (!io->active) return;
 
   ev_io_stop(io->ev_loop, &io->ev_io);
@@ -83,7 +87,7 @@ void Gyro_IO_callback(struct ev_loop *ev_loop, struct ev_io *ev_io, int revents)
   struct Gyro_IO *io = (struct Gyro_IO*)ev_io;
 
   Fiber_make_runnable(io->fiber, Qnil);
-  Gyro_IO_deactivate(io);
+  io_deactivate(io);
 }
 
 static int Gyro_IO_symbol2event_mask(VALUE sym) {
@@ -123,6 +127,7 @@ static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
   io->selector = Qnil;
   io->active = 0;
   io->ev_loop = 0;
+  io->post_fork = 0;
 
   int fd;
   if (NIL_P(io_obj)) {
@@ -143,13 +148,22 @@ VALUE Gyro_IO_await(VALUE self) {
   struct Gyro_IO *io;
   GetGyro_IO(self, io);
 
-  Gyro_IO_activate(io);
+  io_activate(io);
   VALUE ret = Gyro_switchpoint();
-  Gyro_IO_deactivate(io);
+  io_deactivate(io);
 
   TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
+}
+
+VALUE Gyro_IO_deactivate_post_fork(VALUE self) {
+  struct Gyro_IO *io;
+  GetGyro_IO(self, io);
+
+  io->post_fork = 1;
+
+  return self;
 }
 
 VALUE Gyro_IO_auto_io(int fd, int events) {
@@ -453,6 +467,7 @@ void Init_Gyro_IO() {
 
   rb_define_method(cGyro_IO, "initialize", Gyro_IO_initialize, 2);
   rb_define_method(cGyro_IO, "await", Gyro_IO_await, 0);
+  rb_define_method(cGyro_IO, "deactivate_post_fork", Gyro_IO_deactivate_post_fork, 0);
 
   VALUE cIO = rb_const_get(rb_cObject, rb_intern("IO"));
   // rb_define_method(cIO, "gets", IO_gets, -1);

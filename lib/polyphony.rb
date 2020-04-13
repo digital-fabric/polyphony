@@ -32,7 +32,10 @@ module Polyphony
     end
 
     def fork(&block)
+      old_threads = Thread.list - [Thread.current]
       Kernel.fork do
+        old_threads.each(&:deactivate_all_watchers_post_fork)
+
         # Since the fiber doing the fork will become the main fiber of the
         # forked process, we leave it behind by transferring to a new fiber
         # created in the context of the forked process, which rescues *all*
@@ -44,12 +47,13 @@ module Polyphony
     def spin_forked_block(&block)
       Fiber.new do
         run_forked_block(&block)
-        exit_forked_process
-      rescue ::SystemExit
-        exit_forked_process
+      rescue SystemExit
+        # fall through to ensure
       rescue Exception => e
         e.full_message
         exit!
+      ensure
+        exit_forked_process
       end
     end
 
@@ -73,13 +77,11 @@ module Polyphony
     def exit_forked_process
       terminate_threads
       Fiber.current.shutdown_all_children
+
       # Since fork could be called from any fiber, we explicitly call exit here.
       # Otherwise, the fiber might want to pass execution to another fiber that
       # previously transferred execution to the forking fiber, but doesn't exist
       # anymore...
-      #
-      # The call to exit will invoke the at_exit handler we use to terminate the
-      # (forked) main fiber's child fibers.
       exit
     end
 
@@ -102,6 +104,8 @@ module Polyphony
 
     def terminate_threads
       threads = Thread.list - [Thread.current]
+      return if threads.empty?
+
       threads.each(&:kill)
       threads.each(&:join)
     end

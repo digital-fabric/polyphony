@@ -1,20 +1,16 @@
 # frozen_string_literal: true
 
-@count = 0
+count = ARGV[0] ? ARGV[0].to_i : 100
 
-def run_tests
-  @count += 1
-  puts "!(#{@count})"
-  # output = `ruby test/test_thread.rb -n test_thread_inspect`
-  system('ruby test/run.rb')
+TEST_CMD = 'ruby test/run.rb'
+
+def run_test(count)
+  puts "#{count}: running tests..."
+  system(TEST_CMD)
   return if $?.exitstatus == 0
 
   exit!
-  # puts
-  # puts output
-  # exit!
 end
 
-loop {
-  run_tests
-}
+trap('INT') { exit! }
+count.times { |i| run_test(i + 1) }

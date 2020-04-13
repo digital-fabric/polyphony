@@ -16,6 +16,8 @@ static void Gyro_Selector_mark(void *ptr) {
 }
 
 static void Gyro_Selector_free(void *ptr) {
+  printf("Selector_free %lx\n", (unsigned long)ptr);
+
   struct Gyro_Selector *selector = ptr;
   ev_async_stop(selector->ev_loop, &selector->async);
   if (selector->ev_loop && !ev_is_default_loop(selector->ev_loop)) {
@@ -174,6 +176,26 @@ VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self) {
   return Qnil;
 }
 
+ID ID_deactivate_post_fork;
+
+static int deactivate_watcher(VALUE key, VALUE value, VALUE _) {
+    rb_funcall(key, ID_deactivate_post_fork, 0);
+    return ST_CONTINUE;
+}
+
+VALUE Gyro_Selector_deactivate_all_watchers_post_fork(VALUE self) {
+  struct Gyro_Selector *selector;
+  GetGyro_Selector(self, selector);
+
+  VALUE old_active_watchers = selector->active_watchers;
+  selector->active_watchers = rb_hash_new();
+  
+  rb_hash_foreach(old_active_watchers, deactivate_watcher, Qnil);
+  
+  RB_GC_GUARD(old_active_watchers);
+  return self;
+}
+
 inline static VALUE Gyro_Selector_wait_readable(VALUE self, VALUE io) {
   VALUE watcher = IO_read_watcher(io);
   return Gyro_IO_await(watcher);
@@ -202,4 +224,7 @@ void Init_Gyro_Selector() {
   rb_define_method(cGyro_Selector, "wait_writable", Gyro_Selector_wait_writable, 1);
   rb_define_method(cGyro_Selector, "wait_timeout", Gyro_Selector_wait_timeout, 1);
   rb_define_method(cGyro_Selector, "break_out_of_ev_loop", Gyro_Selector_break_out_of_ev_loop, 0);
+  rb_define_method(cGyro_Selector, "deactivate_all_watchers_post_fork", Gyro_Selector_deactivate_all_watchers_post_fork, 0);
+
+  ID_deactivate_post_fork = rb_intern("deactivate_post_fork");
 }

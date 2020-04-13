@@ -1,19 +1,19 @@
 #include "gyro.h"
 
 struct Gyro_Queue {
-  VALUE queue;
-  VALUE wait_queue;
+  VALUE items;
+  VALUE shift_waiters;
 };
 
 VALUE cGyro_Queue = Qnil;
 
 static void Gyro_Queue_mark(void *ptr) {
   struct Gyro_Queue *queue = ptr;
-  if (queue->queue != Qnil) {
-    rb_gc_mark(queue->queue);
+  if (queue->items != Qnil) {
+    rb_gc_mark(queue->items);
   }
-  if (queue->wait_queue != Qnil) {
-    rb_gc_mark(queue->wait_queue);
+  if (queue->shift_waiters != Qnil) {
+    rb_gc_mark(queue->shift_waiters);
   }
 }
 
@@ -43,22 +43,25 @@ static VALUE Gyro_Queue_initialize(VALUE self) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
-  queue->queue      = rb_ary_new();
-  queue->wait_queue = rb_ary_new();
+  queue->items = rb_ary_new();
+  queue->shift_waiters = rb_ary_new();
+
+  // RB_GC_GUARD(queue->items);
+  // RB_GC_GUARD(queue->shift_waiters);
   
-  return Qnil;
+  return self;
 }
 
 VALUE Gyro_Queue_push(VALUE self, VALUE value) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
-  if (RARRAY_LEN(queue->wait_queue) > 0) {
-    VALUE async = rb_ary_shift(queue->wait_queue);
+  if (RARRAY_LEN(queue->shift_waiters) > 0) {
+    VALUE async = rb_ary_shift(queue->shift_waiters);
     rb_funcall(async, ID_signal, 1, Qnil);
   }
   
-  rb_ary_push(queue->queue, value);
+  rb_ary_push(queue->items, value);
   return self;
 }
 
@@ -66,33 +69,33 @@ VALUE Gyro_Queue_shift(VALUE self) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
-  if (RARRAY_LEN(queue->queue) == 0) {
+  if (RARRAY_LEN(queue->items) == 0) {
     VALUE async = Fiber_auto_async(rb_fiber_current());
-    rb_ary_push(queue->wait_queue, async);
+    rb_ary_push(queue->shift_waiters, async);
     VALUE ret = Gyro_Async_await_no_raise(async);
     if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-      rb_ary_delete(queue->wait_queue, async);
+      rb_ary_delete(queue->shift_waiters, async);
       return rb_funcall(rb_mKernel, ID_raise, 1, ret);
     }
     RB_GC_GUARD(ret);
   }
 
-  return rb_ary_shift(queue->queue);
+  return rb_ary_shift(queue->items);
 }
 
 VALUE Gyro_Queue_shift_no_wait(VALUE self) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
-  return rb_ary_shift(queue->queue);
+  return rb_ary_shift(queue->items);
 }
 
 VALUE Gyro_Queue_shift_each(VALUE self) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
-  VALUE old_queue = queue->queue;
-  queue->queue = rb_ary_new();
+  VALUE old_queue = queue->items;
+  queue->items = rb_ary_new();
 
   if (rb_block_given_p()) {
     long len = RARRAY_LEN(old_queue);
@@ -112,7 +115,7 @@ VALUE Gyro_Queue_clear(VALUE self) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
-  rb_ary_clear(queue->queue);
+  rb_ary_clear(queue->items);
   return self;
 }
 
@@ -120,7 +123,7 @@ VALUE Gyro_Queue_empty_p(VALUE self) {
   struct Gyro_Queue *queue;
   GetGyro_Queue(self, queue);
 
-  return (RARRAY_LEN(queue->queue) == 0) ? Qtrue : Qfalse;
+  return (RARRAY_LEN(queue->items) == 0) ? Qtrue : Qfalse;
 }
 
 void Init_Gyro_Queue() {
