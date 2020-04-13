@@ -9,8 +9,10 @@ def run_test(count)
   system(TEST_CMD)
   return if $?.exitstatus == 0
 
+  puts "Failure after #{count} tests"
   exit!
 end
 
 trap('INT') { exit! }
 count.times { |i| run_test(i + 1) }
+puts "Successfully ran #{count} tests"
