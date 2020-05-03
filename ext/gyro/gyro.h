@@ -16,6 +16,53 @@
   return rb_funcall(rb_mKernel, ID_raise, 1, ret); \
 }
 
+typedef struct Gyro_watcher {
+  int active;
+  int generation;
+
+  struct  ev_loop *ev_loop;
+
+  VALUE   self;
+  VALUE   fiber;
+  VALUE   selector;
+} Gyro_watcher_t;
+
+
+#define GYRO_WATCHER_DECL(type) \
+  struct type type; \
+  int active; \
+  int generation; \
+  struct ev_loop *ev_loop; \
+  VALUE self; \
+  VALUE fiber; \
+  VALUE selector;
+
+#define GYRO_WATCHER_INITIALIZE(o, self) \
+  o->active     = 0; \
+  o->generation = __gyro_current_generation__; \
+  o->ev_loop    = 0; \
+  o->self       = self; \
+  o->fiber      = Qnil; \
+  o->selector   = Qnil;
+
+#define GYRO_WATCHER_MARK(o) \
+  if (o->fiber != Qnil) rb_gc_mark(o->fiber); \
+  if (o->selector != Qnil) rb_gc_mark(o->selector);
+
+#define GYRO_WATCHER_STOP_EXPAND(o) ev_ ## o ## _stop
+#define GYRO_WATCHER_STOP(o) GYRO_WATCHER_STOP_EXPAND(o)
+
+#define GYRO_WATCHER_FIELD_EXPAND(o) ev_ ## o
+#define GYRO_WATCHER_FIELD(o) GYRO_WATCHER_FIELD_EXPAND(o)
+
+#define GYRO_WATCHER_FREE(o) \
+  if (o->generation < __gyro_current_generation__) return; \
+  if (o->active) { \
+    ev_clear_pending(o->ev_loop, &o->GYRO_WATCHER_FIELD(o)); \
+    GYRO_WATCHER_STOP(o)(o->ev_loop, &o->GYRO_WATCHER_FIELD(o)); \
+  } \
+  xfree(o);
+
 extern VALUE mGyro;
 extern VALUE cGyro_Async;
 extern VALUE cGyro_IO;
@@ -52,6 +99,7 @@ extern VALUE SYM_fiber_switchpoint;
 extern VALUE SYM_fiber_terminate;
 
 extern int __tracing_enabled__;
+extern int __gyro_current_generation__;
 
 enum {
   FIBER_STATE_NOT_SCHEDULED = 0,

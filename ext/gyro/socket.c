@@ -72,7 +72,7 @@ static VALUE BasicSocket_send(int argc, VALUE *argv, VALUE sock) {
   rb_blocking_function_t *func;
   const char *funcname;
   VALUE write_watcher = Qnil;
-  
+
   rb_scan_args(argc, argv, "21", &arg.mesg, &flags, &to);
 
   StringValue(arg.mesg);
@@ -196,14 +196,17 @@ static VALUE Socket_accept(VALUE sock) {
 }
 
 void Init_Socket() {
+  VALUE cBasicSocket;
+  VALUE cSocket;
+  
   rb_require("socket");
-  VALUE cBasicSocket = rb_const_get(rb_cObject, rb_intern("BasicSocket"));
+  cBasicSocket = rb_const_get(rb_cObject, rb_intern("BasicSocket"));
 
   rb_define_method(cBasicSocket, "send", BasicSocket_send, -1);
   rb_define_method(cBasicSocket, "recv", BasicSocket_recv, -1);
 
-  VALUE cSocket = rb_const_get(rb_cObject, rb_intern("Socket"));
-  
+  cSocket = rb_const_get(rb_cObject, rb_intern("Socket"));
+
   rb_define_method(cSocket, "accept", Socket_accept, 0);
 
   cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));

@@ -1,41 +1,23 @@
 #include "gyro.h"
 
 struct Gyro_Async {
-  struct  ev_async ev_async;
-  struct  ev_loop *ev_loop;
-  int     active;
-  VALUE   self;
-  VALUE   fiber;
-  VALUE   value;
-  VALUE   selector;
+  GYRO_WATCHER_DECL(ev_async);
+  VALUE value;
 };
 
 VALUE cGyro_Async = Qnil;
 
 static void Gyro_Async_mark(void *ptr) {
   struct Gyro_Async *async = ptr;
-  if (async->fiber != Qnil) {
-    rb_gc_mark(async->fiber);
-  }
-  if (async->value != Qnil) {
-    rb_gc_mark(async->value);
-  }
-  if (async->selector != Qnil) {
-    rb_gc_mark(async->selector);
-  }
+  
+  GYRO_WATCHER_MARK(async);
+  if (async->value != Qnil) rb_gc_mark(async->value);
 }
 
 static void Gyro_Async_free(void *ptr) {
   struct Gyro_Async *async = ptr;
-  switch (async->active) {
-    case GYRO_WATCHER_POST_FORK:
-      return;
-    case 1:
-      ev_clear_pending(async->ev_loop, &async->ev_async);
-      ev_async_stop(async->ev_loop, &async->ev_async);
-    default:
-      xfree(async);
-  }
+  
+  GYRO_WATCHER_FREE(async);
 }
 
 static size_t Gyro_Async_size(const void *ptr) {
@@ -50,6 +32,7 @@ static const rb_data_type_t Gyro_Async_type = {
 
 static VALUE Gyro_Async_allocate(VALUE klass) {
   struct Gyro_Async *async = ALLOC(struct Gyro_Async);
+  
   return TypedData_Wrap_Struct(klass, &Gyro_Async_type, async);
 }
 
@@ -90,13 +73,8 @@ static VALUE Gyro_Async_initialize(VALUE self) {
   struct Gyro_Async *async;
   GetGyro_Async(self, async);
 
-  async->self = self;
-  async->fiber = Qnil;
+  GYRO_WATCHER_INITIALIZE(async, self);
   async->value = Qnil;
-  async->selector = Qnil;
-  async->active = 0;
-  async->ev_loop = 0;
-
   ev_async_init(&async->ev_async, Gyro_Async_callback);
 
   return Qnil;
@@ -119,10 +97,11 @@ static VALUE Gyro_Async_signal(int argc, VALUE *argv, VALUE self) {
 
 VALUE Gyro_Async_await(VALUE self) {
   struct Gyro_Async *async;
+  VALUE ret;
   GetGyro_Async(self, async);
 
   async_activate(async);
-  VALUE ret = Gyro_switchpoint();
+  ret = Gyro_switchpoint();
   async_deactivate(async);
 
   TEST_RESUME_EXCEPTION(ret);
@@ -130,23 +109,15 @@ VALUE Gyro_Async_await(VALUE self) {
   return ret;
 }
 
-VALUE Gyro_Async_deactivate_post_fork(VALUE self) {
-  struct Gyro_Async *async;
-  GetGyro_Async(self, async);
-
-  if (async->active)
-    async->active = GYRO_WATCHER_POST_FORK;
-  return self;
-}
-
 VALUE Gyro_Async_await_no_raise(VALUE self) {
   struct Gyro_Async *async;
+  VALUE ret;
   GetGyro_Async(self, async);
 
   async_activate(async);
-  VALUE ret = Gyro_switchpoint();
+  ret = Gyro_switchpoint();
   async_deactivate(async);
-  
+
   RB_GC_GUARD(ret);
   return ret;
 }
@@ -157,6 +128,5 @@ void Init_Gyro_Async() {
 
   rb_define_method(cGyro_Async, "initialize", Gyro_Async_initialize, 0);
   rb_define_method(cGyro_Async, "await", Gyro_Async_await, 0);
-  rb_define_method(cGyro_Async, "deactivate_post_fork", Gyro_Async_deactivate_post_fork, 0);
   rb_define_method(cGyro_Async, "signal", Gyro_Async_signal, -1);
 }

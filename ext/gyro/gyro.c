@@ -1,6 +1,7 @@
 #include "gyro.h"
 
 VALUE mGyro;
+int __gyro_current_generation__ = 0;
 
 ID ID_call;
 ID ID_caller;
@@ -24,21 +25,12 @@ ID ID_R;
 ID ID_W;
 ID ID_RW;
 
-static VALUE Gyro_break_set(VALUE self) {
-  // break_flag = 1;
-  ev_break(Gyro_Selector_current_thread_ev_loop(), EVBREAK_ALL);
-  return Qnil;
-}
-
-// static VALUE Gyro_break_get(VALUE self) {
-//   return (break_flag == 0) ? Qfalse : Qtrue;
-// }
-
 VALUE Gyro_snooze(VALUE self) {
+  VALUE ret;
   VALUE fiber = rb_fiber_current();
-  Fiber_make_runnable(fiber, Qnil);
 
-  VALUE ret = Thread_switch_fiber(rb_thread_current());
+  Fiber_make_runnable(fiber, Qnil);
+  ret = Thread_switch_fiber(rb_thread_current());
   TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
@@ -54,7 +46,7 @@ static VALUE Gyro_unref(VALUE self) {
 
 static VALUE Gyro_suspend(VALUE self) {
   VALUE ret = Thread_switch_fiber(rb_thread_current());
-  
+
   TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
@@ -65,15 +57,18 @@ VALUE Gyro_trace(VALUE self, VALUE enabled) {
   return Qnil;
 }
 
+VALUE Gyro_incr_generation(VALUE self) {
+  __gyro_current_generation__++;
+  return Qnil;
+}
+
 void Init_Gyro() {
   mGyro = rb_define_module("Gyro");
 
+  rb_define_singleton_method(mGyro, "incr_generation", Gyro_incr_generation, 0);
   rb_define_singleton_method(mGyro, "ref", Gyro_ref, 0);
-  rb_define_singleton_method(mGyro, "unref", Gyro_unref, 0);
   rb_define_singleton_method(mGyro, "trace", Gyro_trace, 1);
-
-  rb_define_singleton_method(mGyro, "break!", Gyro_break_set, 0);
-  // rb_define_singleton_method(mGyro, "break?", Gyro_break_get, 0);
+  rb_define_singleton_method(mGyro, "unref", Gyro_unref, 0);
 
   rb_define_global_function("snooze", Gyro_snooze, 0);
   rb_define_global_function("suspend", Gyro_suspend, 0);

@@ -1,39 +1,21 @@
 #include "gyro.h"
 
 struct Gyro_Timer {
-  struct  ev_timer ev_timer;
-  struct  ev_loop *ev_loop;
-  int     active;
+  GYRO_WATCHER_DECL(ev_timer);
   double  after;
   double  repeat;
-  VALUE   self;
-  VALUE   fiber;
-  VALUE   selector;
 };
 
 VALUE cGyro_Timer = Qnil;
 
 static void Gyro_Timer_mark(void *ptr) {
   struct Gyro_Timer *timer = ptr;
-  if (timer->fiber != Qnil) {
-    rb_gc_mark(timer->fiber);
-  }
-  if (timer->selector != Qnil) {
-    rb_gc_mark(timer->selector);
-  }
+  GYRO_WATCHER_MARK(timer);
 }
 
 static void Gyro_Timer_free(void *ptr) {
   struct Gyro_Timer *timer = ptr;
-  switch (timer->active) {
-    case GYRO_WATCHER_POST_FORK:
-      return;
-    case 1:
-      ev_clear_pending(timer->ev_loop, &timer->ev_timer);
-      ev_timer_stop(timer->ev_loop, &timer->ev_timer);
-    default:
-      xfree(timer);
-  }
+  GYRO_WATCHER_FREE(timer);
 }
 
 static size_t Gyro_Timer_size(const void *ptr) {
@@ -93,15 +75,9 @@ static VALUE Gyro_Timer_initialize(VALUE self, VALUE after, VALUE repeat) {
   struct Gyro_Timer *timer;
 
   GetGyro_Timer(self, timer);
-
-  timer->self       = self;
-  timer->fiber      = Qnil;
-  timer->selector   = Qnil;
+  GYRO_WATCHER_INITIALIZE(timer, self);
   timer->after      = NUM2DBL(after);
   timer->repeat     = NUM2DBL(repeat);
-  timer->active     = 0;
-  timer->ev_loop    = 0;
-
   ev_timer_init(&timer->ev_timer, Gyro_Timer_callback, timer->after, timer->repeat);
 
   return Qnil;
@@ -117,25 +93,16 @@ VALUE Gyro_Timer_stop(VALUE self) {
 
 VALUE Gyro_Timer_await(VALUE self) {
   struct Gyro_Timer *timer;
+  VALUE ret;
   GetGyro_Timer(self, timer);
 
   timer_activate(timer);
-  VALUE ret = Gyro_switchpoint();
+  ret = Gyro_switchpoint();
   timer_deactivate(timer, 1);
 
   TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
-}
-
-VALUE Gyro_Timer_deactivate_post_fork(VALUE self) {
-  struct Gyro_Timer *timer;
-  GetGyro_Timer(self, timer);
-
-  if (timer->active)
-    timer->active = GYRO_WATCHER_POST_FORK;
-
-  return self;
 }
 
 void Init_Gyro_Timer() {
@@ -144,6 +111,5 @@ void Init_Gyro_Timer() {
 
   rb_define_method(cGyro_Timer, "initialize", Gyro_Timer_initialize, 2);
   rb_define_method(cGyro_Timer, "await", Gyro_Timer_await, 0);
-  rb_define_method(cGyro_Timer, "deactivate_post_fork", Gyro_Timer_deactivate_post_fork, 0);
   rb_define_method(cGyro_Timer, "stop", Gyro_Timer_stop, 0);
 }

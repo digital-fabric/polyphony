@@ -14,7 +14,6 @@ require_relative './polyphony/extensions/io'
 require_relative './polyphony/core/global_api'
 require_relative './polyphony/core/resource_pool'
 require_relative './polyphony/net'
-
 require_relative './polyphony/adapters/process'
 
 # Main Polyphony API
@@ -32,9 +31,8 @@ module Polyphony
     end
 
     def fork(&block)
-      old_threads = Thread.list - [Thread.current]
       Kernel.fork do
-        old_threads.each(&:deactivate_all_watchers_post_fork)
+        Gyro.incr_generation
 
         # Since the fiber doing the fork will become the main fiber of the
         # forked process, we leave it behind by transferring to a new fiber

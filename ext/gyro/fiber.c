@@ -26,7 +26,7 @@ VALUE SYM_fiber_terminate;
 static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
   VALUE arg = (argc == 0) ? Qnil : argv[0];
   VALUE ret = rb_funcall(self, ID_transfer, 1, arg);
-  
+
   TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
@@ -61,7 +61,7 @@ static VALUE Fiber_state(VALUE self) {
     return SYM_dead;
   if (rb_fiber_current() == self) return SYM_running;
   if (rb_ivar_get(self, ID_runnable) != Qnil) return SYM_runnable;
-  
+
   return SYM_waiting;
 }
 
@@ -71,8 +71,9 @@ void Fiber_make_runnable(VALUE fiber, VALUE value) {
     Thread_schedule_fiber(thread, fiber, value);
   }
   else {
+    VALUE caller;
     rb_warn("No thread set for fiber (fiber, value, caller):");
-    VALUE caller = rb_funcall(rb_cObject, rb_intern("caller"), 0);
+    caller = rb_funcall(rb_cObject, rb_intern("caller"), 0);
     INSPECT(3, fiber, value, caller);
   }
 }

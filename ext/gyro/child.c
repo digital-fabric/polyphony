@@ -1,38 +1,20 @@
 #include "gyro.h"
 
 struct Gyro_Child {
-  struct  ev_child ev_child;
-  struct  ev_loop *ev_loop;
-  int     active;
-  int     pid;
-  VALUE   self;
-  VALUE   fiber;
-  VALUE   selector;
+  GYRO_WATCHER_DECL(ev_child);
+  int pid;
 };
 
 static VALUE cGyro_Child = Qnil;
 
 static void Gyro_Child_mark(void *ptr) {
   struct Gyro_Child *child = ptr;
-  if (child->fiber != Qnil) {
-    rb_gc_mark(child->fiber);
-  }
-  if (child->selector != Qnil) {
-    rb_gc_mark(child->selector);
-  }
+  GYRO_WATCHER_MARK(child);
 }
 
 static void Gyro_Child_free(void *ptr) {
   struct Gyro_Child *child = ptr;
-  switch (child->active) {
-    case GYRO_WATCHER_POST_FORK:
-      return;
-    case 1:
-      ev_clear_pending(child->ev_loop, &child->ev_child);
-      ev_child_stop(child->ev_loop, &child->ev_child);
-    default:
-      xfree(child);
-  }
+  GYRO_WATCHER_FREE(child);
 }
 
 static size_t Gyro_Child_size(const void *ptr) {
@@ -96,14 +78,8 @@ static VALUE Gyro_Child_initialize(VALUE self, VALUE pid) {
   struct Gyro_Child *child;
 
   GetGyro_Child(self, child);
-
-  child->self       = self;
-  child->fiber      = Qnil;
-  child->selector   = Qnil;
-  child->pid        = NUM2INT(pid);
-  child->active     = 0;
-  child->ev_loop    = 0;
-  
+  GYRO_WATCHER_INITIALIZE(child, self);
+  child->pid = NUM2INT(pid);
   ev_child_init(&child->ev_child, Gyro_Child_callback, child->pid, 0);
 
   return Qnil;
@@ -111,24 +87,16 @@ static VALUE Gyro_Child_initialize(VALUE self, VALUE pid) {
 
 static VALUE Gyro_Child_await(VALUE self) {
   struct Gyro_Child *child;
+  VALUE ret;
   GetGyro_Child(self, child);
 
   child_activate(child);
-  VALUE ret = Gyro_switchpoint();
+  ret = Gyro_switchpoint();
   child_deactivate(child);
 
   TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
-}
-
-VALUE Gyro_Child_deactivate_post_fork(VALUE self) {
-  struct Gyro_Child *child;
-  GetGyro_Child(self, child);
-
-  if (child->active)
-    child->active = GYRO_WATCHER_POST_FORK;
-  return self;
 }
 
 void Init_Gyro_Child() {
@@ -137,5 +105,4 @@ void Init_Gyro_Child() {
 
   rb_define_method(cGyro_Child, "initialize", Gyro_Child_initialize, 1);
   rb_define_method(cGyro_Child, "await", Gyro_Child_await, 0);
-  rb_define_method(cGyro_Child, "deactivate_post_fork", Gyro_Child_deactivate_post_fork, 0);
 }

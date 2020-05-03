@@ -22,6 +22,7 @@ class AsyncTest < MiniTest::Test
   def test_that_async_watcher_coalesces_signals
     count = 0
     a = Gyro::Async.new
+   
     coproc = spin {
       loop {
         a.await
@@ -34,6 +35,7 @@ class AsyncTest < MiniTest::Test
       orig_sleep 0.001
       3.times { a.signal }
     end
+
     coproc.await
     assert_equal 1, count
   end

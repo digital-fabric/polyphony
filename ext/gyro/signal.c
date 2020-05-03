@@ -1,38 +1,20 @@
 #include "gyro.h"
 
 struct Gyro_Signal {
-  struct  ev_signal ev_signal;
-  struct  ev_loop *ev_loop;
-  int     active;
-  int     signum;
-  VALUE   self;
-  VALUE   fiber;
-  VALUE   selector;
+  GYRO_WATCHER_DECL(ev_signal);
+  int signum;
 };
 
 static VALUE cGyro_Signal = Qnil;
 
 static void Gyro_Signal_mark(void *ptr) {
   struct Gyro_Signal *signal = ptr;
-  if (signal->fiber != Qnil) {
-    rb_gc_mark(signal->fiber);
-  }
-  if (signal->selector != Qnil) {
-    rb_gc_mark(signal->selector);
-  }
+  GYRO_WATCHER_MARK(signal);
 }
 
 static void Gyro_Signal_free(void *ptr) {
   struct Gyro_Signal *signal = ptr;
-  switch (signal->active) {
-    case GYRO_WATCHER_POST_FORK:
-      return;
-    case 1:
-      ev_clear_pending(signal->ev_loop, &signal->ev_signal);
-      ev_signal_stop(signal->ev_loop, &signal->ev_signal);
-    default:
-      xfree(signal);
-  }
+  GYRO_WATCHER_FREE(signal);
 }
 
 static size_t Gyro_Signal_size(const void *ptr) {
@@ -85,16 +67,10 @@ void Gyro_Signal_callback(struct ev_loop *ev_loop, struct ev_signal *ev_signal, 
 static VALUE Gyro_Signal_initialize(VALUE self, VALUE sig) {
   struct Gyro_Signal *signal;
   VALUE signum = sig;
- 
-  GetGyro_Signal(self, signal);
-  
-  signal->self = self;
-  signal->fiber = Qnil;
-  signal->selector = Qnil;
-  signal->signum = NUM2INT(signum);
-  signal->active = 0;
-  signal->ev_loop = 0;
 
+  GetGyro_Signal(self, signal);
+  GYRO_WATCHER_INITIALIZE(signal, self);
+  signal->signum = NUM2INT(signum);
   ev_signal_init(&signal->ev_signal, Gyro_Signal_callback, signal->signum);
 
   return Qnil;
@@ -102,25 +78,16 @@ static VALUE Gyro_Signal_initialize(VALUE self, VALUE sig) {
 
 static VALUE Gyro_Signal_await(VALUE self) {
   struct Gyro_Signal *signal;
+  VALUE ret;
   GetGyro_Signal(self, signal);
 
   signal_activate(signal);
-  VALUE ret = Gyro_switchpoint();
+  ret = Gyro_switchpoint();
   signal_deactivate(signal);
 
   TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
-}
-
-VALUE Gyro_Signal_deactivate_post_fork(VALUE self) {
-  struct Gyro_Signal *signal;
-  GetGyro_Signal(self, signal);
-
-  if (signal->active)
-    signal->active = GYRO_WATCHER_POST_FORK;
-
-  return self;
 }
 
 void Init_Gyro_Signal() {
@@ -129,5 +96,4 @@ void Init_Gyro_Signal() {
 
   rb_define_method(cGyro_Signal, "initialize", Gyro_Signal_initialize, 1);
   rb_define_method(cGyro_Signal, "await", Gyro_Signal_await, 0);
-  rb_define_method(cGyro_Signal, "deactivate_post_fork", Gyro_Signal_deactivate_post_fork, 0);
 }

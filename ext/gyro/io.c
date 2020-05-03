@@ -7,12 +7,7 @@
 #endif /* GetReadFile */
 
 struct Gyro_IO {
-  struct  ev_io ev_io;
-  struct  ev_loop *ev_loop;
-  int     active;
-  VALUE   self;
-  VALUE   fiber;
-  VALUE   selector;
+  GYRO_WATCHER_DECL(ev_io);
 };
 
 VALUE cGyro_IO = Qnil;
@@ -24,25 +19,12 @@ VALUE SYM_w;
 
 static void Gyro_IO_mark(void *ptr) {
   struct Gyro_IO *io = ptr;
-  if (io->fiber != Qnil) {
-    rb_gc_mark(io->fiber);
-  }
-  if (io->selector != Qnil) {
-    rb_gc_mark(io->selector);
-  }
+  GYRO_WATCHER_MARK(io);
 }
 
 static void Gyro_IO_free(void *ptr) {
   struct Gyro_IO *io = ptr;
-  switch (io->active) {
-    case GYRO_WATCHER_POST_FORK:
-      return;
-    case 1:
-      ev_clear_pending(io->ev_loop, &io->ev_io);
-      ev_io_stop(io->ev_loop, &io->ev_io);
-    default:
-      xfree(io);
-  }
+  GYRO_WATCHER_FREE(io);
 }
 
 static size_t Gyro_IO_size(const void *ptr) {
@@ -119,16 +101,11 @@ static const char * S_to_io = "to_io";
 static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
   struct Gyro_IO *io;
   rb_io_t *fptr;
+  int fd;
+  int events;
 
   GetGyro_IO(self, io);
-
-  io->self = self;
-  io->fiber = Qnil;
-  io->selector = Qnil;
-  io->active = 0;
-  io->ev_loop = 0;
-
-  int fd;
+  GYRO_WATCHER_INITIALIZE(io, self);
   if (NIL_P(io_obj)) {
     fd = 0;
   }
@@ -136,8 +113,7 @@ static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
     GetOpenFile(rb_convert_type(io_obj, T_FILE, S_IO, S_to_io), fptr);
     fd = FPTR_TO_FD(fptr);
   }
-  int events = Gyro_IO_symbol2event_mask(event_mask);
-  
+  events = Gyro_IO_symbol2event_mask(event_mask);
   ev_io_init(&io->ev_io, Gyro_IO_callback, fd, events);
 
   return Qnil;
@@ -145,25 +121,16 @@ static VALUE Gyro_IO_initialize(VALUE self, VALUE io_obj, VALUE event_mask) {
 
 VALUE Gyro_IO_await(VALUE self) {
   struct Gyro_IO *io;
+  VALUE ret;
   GetGyro_IO(self, io);
 
   io_activate(io);
-  VALUE ret = Gyro_switchpoint();
+  ret = Gyro_switchpoint();
   io_deactivate(io);
 
   TEST_RESUME_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
-}
-
-VALUE Gyro_IO_deactivate_post_fork(VALUE self) {
-  struct Gyro_IO *io;
-  GetGyro_IO(self, io);
-
-  if (io->active)
-    io->active = GYRO_WATCHER_POST_FORK;
-
-  return self;
 }
 
 VALUE Gyro_IO_auto_io(int fd, int events) {
@@ -265,7 +232,7 @@ static VALUE IO_read(int argc, VALUE *argv, VALUE io) {
 
   if (len == 0)
   	return str;
-  
+
   char *buf = RSTRING_PTR(str);
   long total = 0;
 
@@ -462,14 +429,15 @@ VALUE IO_write_watcher(VALUE self) {
 }
 
 void Init_Gyro_IO() {
+  VALUE cIO;
+  
   cGyro_IO = rb_define_class_under(mGyro, "IO", rb_cData);
   rb_define_alloc_func(cGyro_IO, Gyro_IO_allocate);
 
   rb_define_method(cGyro_IO, "initialize", Gyro_IO_initialize, 2);
   rb_define_method(cGyro_IO, "await", Gyro_IO_await, 0);
-  rb_define_method(cGyro_IO, "deactivate_post_fork", Gyro_IO_deactivate_post_fork, 0);
 
-  VALUE cIO = rb_const_get(rb_cObject, rb_intern("IO"));
+  cIO = rb_const_get(rb_cObject, rb_intern("IO"));
   // rb_define_method(cIO, "gets", IO_gets, -1);
   rb_define_method(cIO, "read", IO_read, -1);
   rb_define_method(cIO, "readpartial", IO_readpartial, -1);
