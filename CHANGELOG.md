@@ -1,3 +1,7 @@
+## 0.40 2020-05-04
+
+* More improvements to stability after fork
+
 ## 0.38 2020-04-13
 
 * Fix post-fork segfault if parent process has multiple threads with active watchers
