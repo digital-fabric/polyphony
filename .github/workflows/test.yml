@@ -4,12 +4,21 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-16.04, ubuntu-18.04, macos]
+        ruby: [2.6, 2.7]
+
+    name: >-
+      ${{matrix.os}}, ${{matrix.ruby}}
+
+    runs-on: ${{matrix.os}}
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-ruby@v1
       with:
-        ruby-version: 2.6.5
+        ruby-version: ${{matrix.ruby}}
     - name: Install dependencies
       run: |
         gem install bundler
