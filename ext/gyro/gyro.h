@@ -12,6 +12,8 @@
   rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__); \
 }
 
+#define TEST_EXCEPTION(ret) (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
+
 #define TEST_RESUME_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { \
   return rb_funcall(rb_mKernel, ID_raise, 1, ret); \
 }
@@ -64,11 +66,9 @@ typedef struct Gyro_watcher {
   xfree(o);
 
 extern VALUE mGyro;
-extern VALUE cGyro_Async;
-extern VALUE cGyro_IO;
 extern VALUE cGyro_Queue;
-extern VALUE cGyro_Selector;
-extern VALUE cGyro_Timer;
+extern VALUE cEvent;
+extern VALUE mLibev;
 
 extern ID ID_call;
 extern ID ID_caller;
@@ -113,38 +113,18 @@ enum {
   GYRO_WATCHER_POST_FORK = 0xFF
 };
 
-VALUE Fiber_auto_async(VALUE self);
-VALUE Fiber_auto_io(VALUE self);
+VALUE Fiber_auto_watcher(VALUE self);
 void Fiber_make_runnable(VALUE fiber, VALUE value);
 
-VALUE Gyro_Async_await(VALUE async);
-VALUE Gyro_Async_await_no_raise(VALUE async);
-
-VALUE Gyro_IO_auto_io(int fd, int events);
-VALUE Gyro_IO_await(VALUE self);
-
-void Gyro_Selector_add_active_watcher(VALUE self, VALUE watcher);
-VALUE Gyro_Selector_break_out_of_ev_loop(VALUE self);
-struct ev_loop *Gyro_Selector_current_thread_ev_loop();
-struct ev_loop *Gyro_Selector_ev_loop(VALUE selector);
-ev_tstamp Gyro_Selector_now(VALUE selector);
-long Gyro_Selector_pending_count(VALUE self);
-VALUE Gyro_Selector_post_fork(VALUE self);
-void Gyro_Selector_remove_active_watcher(VALUE self, VALUE watcher);
-VALUE Gyro_Selector_run(VALUE self, VALUE current_fiber);
-void Gyro_Selector_run_no_wait(VALUE self, VALUE current_fiber, long runnable_count);
 VALUE Gyro_switchpoint();
 
+VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue);
+VALUE LibevAgent_break(VALUE self);
 
 VALUE Gyro_snooze(VALUE self);
-VALUE Gyro_Timer_await(VALUE self);
-
-VALUE IO_read_watcher(VALUE io);
-VALUE IO_write_watcher(VALUE io);
 
 VALUE Gyro_Queue_push(VALUE self, VALUE value);
 
-VALUE Thread_current_event_selector();
 VALUE Thread_post_fork(VALUE thread);
 VALUE Thread_ref(VALUE thread);
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);

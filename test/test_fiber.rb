@@ -110,7 +110,7 @@ class FiberTest < MiniTest::Test
   def test_cross_thread_schedule
     buffer = []
     worker_fiber = nil
-    async = Gyro::Async.new
+    async = Polyphony::Event.new
     worker = Thread.new do
       worker_fiber = Fiber.current
       async.signal
@@ -125,10 +125,11 @@ class FiberTest < MiniTest::Test
     assert_equal [:foo], buffer
   ensure
     worker&.kill
+    worker&.join
   end
 
   def test_ev_loop_anti_starve_mechanism
-    async = Gyro::Async.new
+    async = Polyphony::Event.new
     t = Thread.new do
       f = spin_loop { snooze }
       sleep 0.001
@@ -139,7 +140,8 @@ class FiberTest < MiniTest::Test
 
     assert_equal :foo, result
   ensure
-    t.kill if t.alive?
+    t&.kill
+    t&.join
   end
 
   def test_tag
@@ -350,8 +352,7 @@ class FiberTest < MiniTest::Test
     result = []
     f = Fiber.current.spin do
       result << :start
-      t = Gyro::Timer.new(1, 0)
-      result << t.await
+      result << Thread.current.agent.sleep(1)
     end
     snooze
     f.interrupt
@@ -624,7 +625,7 @@ class FiberTest < MiniTest::Test
       end
     end
     sleep 0.1
-    f = spin { Gyro::Child.new(pid).await }
+    f = spin { Thread.current.agent.waitpid(pid) }
     o.close
     Process.kill('INT', pid)
     f.await
@@ -646,7 +647,7 @@ class FiberTest < MiniTest::Test
       end
     end
     sleep 0.2
-    f = spin { Gyro::Child.new(pid).await }
+    f = spin { Thread.current.agent.waitpid(pid) }
     o.close
     Process.kill('TERM', pid)
     f.await
@@ -673,7 +674,7 @@ class FiberTest < MiniTest::Test
       sleep 0.2
       Process.kill('TERM', pid)
     end
-    Gyro::Child.new(pid).await
+    Thread.current.agent.waitpid(pid)
     klass = i.read
     i.close
     assert_equal 'Polyphony::Terminate', klass
@@ -707,6 +708,7 @@ class MailboxTest < MiniTest::Test
       f << i
       sleep 0
     end
+    sleep 0
 
     assert_equal [0, 1, 2], msgs
   ensure
@@ -721,7 +723,7 @@ class MailboxTest < MiniTest::Test
 
     3.times { |i| f << i }
 
-    sleep 0
+    sleep 0.01
 
     assert_equal [0, 1, 2], msgs
   ensure
@@ -766,6 +768,11 @@ class MailboxTest < MiniTest::Test
 
     assert_equal %w{pong pong pong}, ping_receive_buffer
     assert_equal %w{ping ping ping}, pong_receive_buffer
+  ensure
+    pong&.kill
+    ping&.kill
+    pong&.join
+    ping&.join
   end
 
   def test_message_queueing

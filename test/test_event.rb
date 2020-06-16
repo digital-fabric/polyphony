@@ -2,26 +2,29 @@
 
 require_relative 'helper'
 
-class AsyncTest < MiniTest::Test
-  def test_that_async_watcher_receives_signal_across_threads
+class EventTest < MiniTest::Test
+  def test_that_event_receives_signal_across_threads
     count = 0
-    a = Gyro::Async.new
+    a = Polyphony::Event.new
     spin {
       a.await
       count += 1
     }
     snooze
-    Thread.new do
+    t = Thread.new do
       orig_sleep 0.001
       a.signal
     end
     suspend
     assert_equal 1, count
+  ensure
+    t&.kill
+    t&.join
   end
 
-  def test_that_async_watcher_coalesces_signals
+  def test_that_event_doesnt_coalesces_signals
     count = 0
-    a = Gyro::Async.new
+    a = Polyphony::Event.new
    
     coproc = spin {
       loop {
@@ -31,12 +34,15 @@ class AsyncTest < MiniTest::Test
       }
     }
     snooze
-    Thread.new do
+    t = Thread.new do
       orig_sleep 0.001
       3.times { a.signal }
     end
 
     coproc.await
-    assert_equal 1, count
+    assert_equal 3, count
+  ensure
+    t&.kill
+    t&.join
   end
 end

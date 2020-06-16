@@ -32,11 +32,16 @@
   Fiber.current.add_child_fiber(t.main_fiber)
   ```
 
+## 0.41 Agent replaces Selector
 
+- An agent is an interface that performs actual talking to the outside world,
+  namely I/O, sleeping, waiting on a child process (and eventually networking,
+  fstat etc...)
+- Removal of Selector, as well as all watcher classes encapsulating libev event
+  watchers.
+- Alternative implementation of async using pipes. 
 
-
-
-## 0.40 Some more API work, more docs
+## 0.42 Some more API work, more docs
 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
@@ -154,7 +159,7 @@
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
 
-## 0.41 Sinatra / Sidekiq
+## 0.43 Sinatra / Sidekiq
 
 - sintra app with database access (postgresql)
 
@@ -164,13 +169,11 @@
   - test performance
   - proceed from there
 
-## 0.42 Testing && Docs
+## 0.44 Testing && Docs
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.43 Integration
-
-## 0.44 Real IO#gets and IO#read
+## 0.45 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -180,11 +183,11 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.45 Rails
+## 0.46 Rails
 
 - Rails?
 
-## 0.46 DNS
+## 0.47 DNS
 
 ### DNS client
 

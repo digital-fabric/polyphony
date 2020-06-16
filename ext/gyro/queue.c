@@ -54,8 +54,8 @@ VALUE Gyro_Queue_push(VALUE self, VALUE value) {
   GetGyro_Queue(self, queue);
 
   if (RARRAY_LEN(queue->shift_waiters) > 0) {
-    VALUE async = rb_ary_shift(queue->shift_waiters);
-    rb_funcall(async, ID_signal, 1, Qnil);
+    VALUE watcher = rb_ary_shift(queue->shift_waiters);
+    rb_funcall(watcher, ID_signal, 1, Qnil);
   }
 
   rb_ary_push(queue->items, value);
@@ -68,11 +68,12 @@ VALUE Gyro_Queue_shift(VALUE self) {
 
   if (RARRAY_LEN(queue->items) == 0) {
     VALUE ret;
-    VALUE async = Fiber_auto_async(rb_fiber_current());
-    rb_ary_push(queue->shift_waiters, async);
-    ret = Gyro_Async_await_no_raise(async);
+    VALUE watcher = Fiber_auto_watcher(rb_fiber_current());
+    rb_ary_push(queue->shift_waiters, watcher);
+    ret = rb_funcall(watcher, rb_intern("await_no_raise"), 0);
+    // ret = Gyro_Async_await_no_raise(watcher);
     if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) {
-      rb_ary_delete(queue->shift_waiters, async);
+      rb_ary_delete(queue->shift_waiters, watcher);
       return rb_funcall(rb_mKernel, ID_raise, 1, ret);
     }
     RB_GC_GUARD(ret);

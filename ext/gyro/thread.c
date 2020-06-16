@@ -2,12 +2,10 @@
 
 static VALUE cQueue;
 
-static ID ID_create_event_selector;
 static ID ID_deactivate_all_watchers_post_fork;
 static ID ID_empty;
 static ID ID_fiber_ref_count;
-static ID ID_ivar_event_selector_proc;
-static ID ID_ivar_event_selector;
+static ID ID_ivar_agent;
 static ID ID_ivar_join_wait_queue;
 static ID ID_ivar_main_fiber;
 static ID ID_ivar_result;
@@ -18,58 +16,13 @@ static ID ID_run_queue;
 static ID ID_runnable_next;
 static ID ID_stop;
 
-VALUE event_selector_factory_proc(RB_BLOCK_CALL_FUNC_ARGLIST(args, klass)) {
-  return rb_funcall(klass, ID_new, 1, rb_ary_entry(args, 0));
-}
-
-static VALUE Thread_event_selector_set_proc(VALUE self, VALUE proc) {
-  if (!rb_obj_is_proc(proc)) {
-    proc = rb_proc_new(event_selector_factory_proc, proc);
-  }
-  rb_ivar_set(self, ID_ivar_event_selector_proc, proc);
-  return self;
-}
-
-static VALUE Thread_create_event_selector(VALUE self, VALUE thread) {
-  VALUE selector_proc = rb_ivar_get(self, ID_ivar_event_selector_proc);
-  if (selector_proc == Qnil) {
-    rb_raise(rb_eRuntimeError, "No event_selector_proc defined");
-  }
-
-  return rb_funcall(selector_proc, ID_call, 1, thread);
-}
-
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
   VALUE queue;
-  VALUE selector;
   
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
   rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(0));
   queue = rb_ary_new();
   rb_ivar_set(self, ID_run_queue, queue);
-  selector = rb_funcall(rb_cThread, ID_create_event_selector, 1, self);
-  rb_ivar_set(self, ID_ivar_event_selector, selector);
-
-  return self;
-}
-
-static VALUE Thread_stop_event_selector(VALUE self) {
-  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
-  if (selector != Qnil) {
-    rb_funcall(selector, ID_stop, 0);
-  }
-  // Nullify the selector in order to prevent running the
-  // selector after the thread is done running.
-  rb_ivar_set(self, ID_ivar_event_selector, Qnil);
-
-  return self;
-}
-
-static VALUE Thread_deactivate_all_watchers_post_fork(VALUE self) {
-  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
-  if (selector != Qnil) {
-    rb_funcall(selector, ID_deactivate_all_watchers_post_fork, 0);
-  }
 
   return self;
 }
@@ -103,13 +56,12 @@ static VALUE SYM_pending_watchers;
 static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   VALUE stats = rb_hash_new();
   VALUE queue = rb_ivar_get(self, ID_run_queue);
-  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
   long pending_count;
 
   long scheduled_count = RARRAY_LEN(queue);
   rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(scheduled_count));
 
-  pending_count = Gyro_Selector_pending_count(selector);
+  pending_count = 0; // should be set to number of pending libev watchers
   rb_hash_aset(stats, SYM_pending_watchers, INT2NUM(pending_count));
 
   return stats;
@@ -137,10 +89,8 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
     // event selector. Otherwise it's gonna be stuck waiting for an event to
     // happen, not knowing that it there's already a fiber ready to run in its
     // run queue.
-    VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
-    if (selector != Qnil) {
-      Gyro_Selector_break_out_of_ev_loop(selector);
-    }
+    VALUE agent = rb_ivar_get(self,ID_ivar_agent);
+    LibevAgent_break(agent);
   }
   return self;
 }
@@ -168,13 +118,11 @@ VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) 
   if (rb_thread_current() != self) {
     // if the fiber scheduling is done across threads, we need to make sure the
     // target thread is woken up in case it is in the middle of running its
-    // event selector. Otherwise it's gonna be stuck waiting for an event to
+    // event loop. Otherwise it's gonna be stuck waiting for an event to
     // happen, not knowing that it there's already a fiber ready to run in its
     // run queue.
-    VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
-    if (selector != Qnil) {
-      Gyro_Selector_break_out_of_ev_loop(selector);
-    }
+    VALUE agent = rb_ivar_get(self, ID_ivar_agent);
+    LibevAgent_break(agent);
   }
   return self;
 }
@@ -182,9 +130,9 @@ VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) 
 VALUE Thread_switch_fiber(VALUE self) {
   VALUE current_fiber = rb_fiber_current();
   VALUE queue = rb_ivar_get(self, ID_run_queue);
-  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
   VALUE next_fiber;
   VALUE value;
+  VALUE agent = rb_ivar_get(self, ID_ivar_agent);
   int ref_count;
 
   if (__tracing_enabled__) {
@@ -193,31 +141,23 @@ VALUE Thread_switch_fiber(VALUE self) {
     }
   }
 
-
   while (1) {
-    next_fiber = rb_ary_shift(queue);
-    // if (break_flag != 0) {
-    //   return Qnil;
-    // }
     ref_count = Thread_fiber_ref_count(self);
+    next_fiber = rb_ary_shift(queue);
     if (next_fiber != Qnil) {
       if (ref_count > 0) {
         // this mechanism prevents event starvation in case the run queue never
         // empties
-        Gyro_Selector_run_no_wait(selector, current_fiber, RARRAY_LEN(queue));
+        LibevAgent_poll(agent, Qtrue, current_fiber, queue);
       }
       break;
     }
-    if (ref_count == 0) {
-      break;
-    }
+    if (ref_count == 0) break;
 
-    Gyro_Selector_run(selector, current_fiber);
+    LibevAgent_poll(agent, Qnil, current_fiber, queue);
   }
 
-  if (next_fiber == Qnil) {
-    return Qnil;
-  }
+  if (next_fiber == Qnil) return Qnil;
 
   // run next fiber
   value = rb_ivar_get(next_fiber, ID_runnable_value);
@@ -236,13 +176,6 @@ VALUE Thread_reset_fiber_scheduling(VALUE self) {
   return self;
 }
 
-VALUE Thread_post_fork(VALUE self) {
-  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
-  Gyro_Selector_post_fork(selector);
-
-  return self;
-}
-
 VALUE Gyro_switchpoint() {
   VALUE ret;
   VALUE thread = rb_thread_current();
@@ -253,17 +186,13 @@ VALUE Gyro_switchpoint() {
   return ret;
 }
 
-VALUE Thread_current_event_selector() {
-  return rb_ivar_get(rb_thread_current(), ID_ivar_event_selector);
-}
-
 VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE fiber, VALUE resume_obj) {
-  VALUE selector = rb_ivar_get(self, ID_ivar_event_selector);
+  VALUE agent = rb_ivar_get(self, ID_ivar_agent);
   if (fiber != Qnil) {
     Thread_schedule_fiber_with_priority(self, fiber, resume_obj);
   }
 
-  if (Gyro_Selector_break_out_of_ev_loop(selector) == Qnil) {
+  if (LibevAgent_break(agent) == Qnil) {
     // we're not inside the ev_loop, so we just do a switchpoint
     Thread_switch_fiber(self);
   }
@@ -274,17 +203,10 @@ VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE fiber, VALUE resume_ob
 void Init_Thread() {
   cQueue = rb_const_get(rb_cObject, rb_intern("Queue"));
 
-  rb_define_singleton_method(rb_cThread, "event_selector=", Thread_event_selector_set_proc, 1);
-  rb_define_singleton_method(rb_cThread, "create_event_selector", Thread_create_event_selector, 1);
-
   rb_define_method(rb_cThread, "fiber_ref", Thread_ref, 0);
   rb_define_method(rb_cThread, "fiber_unref", Thread_unref, 0);
 
-  rb_define_method(rb_cThread, "post_fork", Thread_post_fork, 0);
-
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
-  rb_define_method(rb_cThread, "stop_event_selector", Thread_stop_event_selector, 0);
-  rb_define_method(rb_cThread, "deactivate_all_watchers_post_fork", Thread_deactivate_all_watchers_post_fork, 0);
   rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
   rb_define_method(rb_cThread, "break_out_of_ev_loop", Thread_fiber_break_out_of_ev_loop, 2);
@@ -294,12 +216,10 @@ void Init_Thread() {
     Thread_schedule_fiber_with_priority, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
 
-  ID_create_event_selector    = rb_intern("create_event_selector");
   ID_deactivate_all_watchers_post_fork = rb_intern("deactivate_all_watchers_post_fork");
   ID_empty                    = rb_intern("empty?");
   ID_fiber_ref_count          = rb_intern("fiber_ref_count");
-  ID_ivar_event_selector      = rb_intern("@event_selector");
-  ID_ivar_event_selector_proc = rb_intern("@event_selector_proc");
+  ID_ivar_agent               = rb_intern("@agent");
   ID_ivar_join_wait_queue     = rb_intern("@join_wait_queue");
   ID_ivar_main_fiber          = rb_intern("@main_fiber");
   ID_ivar_result              = rb_intern("@result");

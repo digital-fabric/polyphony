@@ -202,9 +202,9 @@ class SpinLoopTest < MiniTest::Test
     buffer = []
     counter = 0
     f = spin_loop(rate: 50) { buffer << (counter += 1) }
-    sleep 0.1
+    sleep 0.2
     f.stop
-    assert counter >= 5 && counter <= 6
+    assert counter >= 9 && counter <= 11
   end
 end
 
@@ -215,9 +215,9 @@ class ThrottledLoopTest < MiniTest::Test
     f = spin do
       throttled_loop(50) { buffer << (counter += 1) }
     end
-    sleep 0.1
+    sleep 0.2
     f.stop
-    assert counter >= 5 && counter <= 6
+    assert counter >= 9 && counter <= 11
   end
 
   def test_throttled_loop_with_count

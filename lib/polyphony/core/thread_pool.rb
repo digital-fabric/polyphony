@@ -28,9 +28,9 @@ module Polyphony
     def process(&block)
       setup unless @task_queue
 
-      async = Fiber.current.auto_async
-      @task_queue << [block, async]
-      async.await
+      watcher = Fiber.current.auto_watcher
+      @task_queue << [block, watcher]
+      watcher.await
     end
 
     def cast(&block)

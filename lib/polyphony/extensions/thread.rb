@@ -28,10 +28,13 @@ class ::Thread
     finalize(result)
   end
 
+  attr_accessor :agent
+
   def setup
     @main_fiber = Fiber.current
     @main_fiber.setup_main_fiber
     setup_fiber_scheduling
+    @agent = Gyro::LibevAgent.new
   end
 
   def finalize(result)
@@ -44,7 +47,7 @@ class ::Thread
       @result = result
       signal_waiters(result)
     end
-    stop_event_selector
+    @agent.finalize
   end
 
   def signal_waiters(result)
@@ -53,15 +56,15 @@ class ::Thread
 
   alias_method :orig_join, :join
   def join(timeout = nil)
-    async = Fiber.current.auto_async
+    watcher = Fiber.current.auto_watcher
     @finalization_mutex.synchronize do
       if @terminated
         @result.is_a?(Exception) ? (raise @result) : (return @result)
       else
-        @join_wait_queue.push(async)
+        @join_wait_queue.push(watcher)
       end
     end
-    timeout ? move_on_after(timeout) { async.await } : async.await
+    timeout ? move_on_after(timeout) { watcher.await } : watcher.await
   end
   alias_method :await, :join
 
@@ -78,6 +81,8 @@ class ::Thread
 
   alias_method :orig_kill, :kill
   def kill
+    return if @terminated
+  
     raise Polyphony::Terminate
   end
 

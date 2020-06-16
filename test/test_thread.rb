@@ -8,14 +8,19 @@ class ThreadTest < MiniTest::Test
     buffer = []
     f = spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new do
+      sleep 0.01
       s1 = spin { (11..13).each { |i| snooze; buffer << i } }
       s2 = spin { (21..23).each { |i| snooze; buffer << i } }
+      sleep 0.02
       Fiber.current.await_all_children
     end
     f.join
     t.join
 
     assert_equal [1, 2, 3, 11, 12, 13, 21, 22, 23], buffer.sort
+  ensure
+    t&.kill
+    t&.join
   end
 
   def test_thread_join
@@ -28,7 +33,8 @@ class ThreadTest < MiniTest::Test
     assert_equal [1, 2, 3, 4], buffer
     assert_equal :foo, r
   ensure
-    t.kill
+    t&.kill
+    t&.join
   end
 
   def test_thread_join_with_timeout
@@ -44,7 +50,8 @@ class ThreadTest < MiniTest::Test
   ensure
     # killing the thread will prevent stopping the sleep timer, as well as the
     # thread's event selector, leading to a memory leak.
-    t&.kill if t&.alive?
+    t&.kill
+    t&.join
   end
 
   def test_thread_await_alias_method
@@ -66,26 +73,31 @@ class ThreadTest < MiniTest::Test
     end
     r = t.join
     assert_equal :foo, r
+  ensure
+    t&.kill
+    t&.join
   end
 
   def test_thread_uncaught_exception_propagation
-    t = Thread.new do
-      sleep 1
-    end
-    snooze
-    t.kill
-    t.await
+    ready = Polyphony::Event.new
 
     t = Thread.new do
+      ready.signal
+      sleep 0.01
       raise 'foo'
     end
     e = nil
     begin
-      t.await
+      ready.await
+      r = t.await
     rescue Exception => e
     end
+    t = nil
     assert_kind_of RuntimeError, e
     assert_equal 'foo', e.message
+  ensure
+    t&.kill
+    t&.join
   end
 
   def test_thread_inspect
@@ -143,7 +155,11 @@ class ThreadTest < MiniTest::Test
     assert_equal 2, t.main_fiber.children.size
     t.kill
     t.join
+    t = nil
 
     assert_equal [:foo, :bar], buffer
+  ensure
+    t&.kill
+    t&.join
   end
 end

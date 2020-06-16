@@ -26,6 +26,8 @@ class MiniTest::Test
       exit!
     end
     Fiber.current.setup_main_fiber
+    Fiber.current.instance_variable_set(:@auto_watcher, nil)
+    Thread.current.agent = Gyro::LibevAgent.new
     sleep 0
   end
 

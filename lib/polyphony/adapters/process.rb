@@ -6,8 +6,7 @@ module Polyphony
       def watch(cmd = nil, &block)
         terminated = nil
         pid = cmd ? Kernel.spawn(cmd) : Polyphony.fork(&block)
-        watcher = Gyro::Child.new(pid)
-        watcher.await
+        Thread.current.agent.waitpid(pid)
         terminated = true
       ensure
         kill_process(pid) unless terminated || pid.nil?
@@ -23,7 +22,7 @@ module Polyphony
       
       def kill_and_await(sig, pid)
         ::Process.kill(sig, pid)
-        Gyro::Child.new(pid).await
+        Thread.current.agent.waitpid(pid)
       rescue SystemCallError
         # ignore
         puts 'SystemCallError in kill_and_await'

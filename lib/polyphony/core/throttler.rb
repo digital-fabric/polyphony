@@ -6,17 +6,24 @@ module Polyphony
     def initialize(rate)
       @rate = rate_from_argument(rate)
       @min_dt = 1.0 / @rate
+      @next_time = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
     end
 
-    def call(&block)
-      @timer ||= Gyro::Timer.new(0, @min_dt)
-      @timer.await
-      block.call(self)
+    def call
+      now = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
+      delta = @next_time - now
+      Thread.current.agent.sleep(delta) if delta > 0
+      yield self
+
+      loop do
+        @next_time += @min_dt
+        break if @next_time > now
+      end
     end
     alias_method :process, :call
 
     def stop
-      @timer&.stop
+      @stop = true
     end
 
     private

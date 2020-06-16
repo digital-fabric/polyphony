@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'helper'
+require 'polyphony/adapters/trace'
 
 class TraceTest < MiniTest::Test
   def test_tracing_disabled

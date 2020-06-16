@@ -3,8 +3,6 @@
 require 'fiber'
 require_relative './gyro_ext'
 
-Thread.event_selector = Gyro::Selector
-Thread.current.setup_fiber_scheduling
 
 require_relative './polyphony/extensions/core'
 require_relative './polyphony/extensions/thread'
@@ -15,6 +13,10 @@ require_relative './polyphony/core/global_api'
 require_relative './polyphony/core/resource_pool'
 require_relative './polyphony/net'
 require_relative './polyphony/adapters/process'
+require_relative './polyphony/event'
+
+Thread.current.setup_fiber_scheduling
+Thread.current.agent = Gyro::LibevAgent.new
 
 # Main Polyphony API
 module Polyphony
@@ -32,12 +34,10 @@ module Polyphony
 
     def fork(&block)
       Kernel.fork do
-        Gyro.incr_generation
-
-        # Since the fiber doing the fork will become the main fiber of the
-        # forked process, we leave it behind by transferring to a new fiber
-        # created in the context of the forked process, which rescues *all*
-        # exceptions, including Interrupt and SystemExit.
+        # # Since the fiber doing the fork will become the main fiber of the
+        # # forked process, we leave it behind by transferring to a new fiber
+        # # created in the context of the forked process, which rescues *all*
+        # # exceptions, including Interrupt and SystemExit.
         spin_forked_block(&block).transfer
       end
     end
@@ -63,9 +63,9 @@ module Polyphony
       trap('SIGTERM', 'DEFAULT')
       trap('SIGINT', 'DEFAULT')
 
-      Thread.current.post_fork
       Thread.current.setup
       Fiber.current.setup_main_fiber
+      Thread.current.agent.post_fork
 
       install_terminating_signal_handlers
 

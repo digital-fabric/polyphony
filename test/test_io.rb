@@ -2,30 +2,6 @@
 
 require_relative 'helper'
 
-class GyroIOTest < MiniTest::Test
-  def test_that_reading_works
-    i, o = IO.pipe
-    data = +''
-    sequence = []
-    watcher = Gyro::IO.new(i, :r)
-    spin {
-      sequence << 1
-      watcher.await
-      sequence << 2
-      i.read_nonblock(8192, data)
-    }
-    snooze
-    sequence << 3
-    spin do
-      o << 'hello'
-      sequence << 4
-    end
-    suspend
-    assert_equal 'hello', data
-    assert_equal [1, 3, 4, 2], sequence
-  end
-end
-
 class IOTest < MiniTest::Test
   def setup
     super

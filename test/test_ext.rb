@@ -74,7 +74,7 @@ class KernelTest < MiniTest::Test
     $stderr.rewind
     $stderr = prev_stderr
     
-    assert_nil data
+    assert_equal '', data
     assert_equal "error\n", err_io.read
   ensure
     $stderr = prev_stderr
@@ -93,6 +93,28 @@ class KernelTest < MiniTest::Test
     $stdin = prev_stdin
   end
 
+  def test_multiline_gets
+    prev_stdin = $stdin
+    i, o = IO.pipe
+    $stdin = i
+
+    spin do
+      o << "hello\n"
+      o << "world\n"
+      o << "nice\n"
+      o << "to\n"
+      o << "meet\n"
+      o << "you\n"
+    end
+
+    s = +''
+    6.times { s << gets }
+
+    assert_equal "hello\nworld\nnice\nto\nmeet\nyou\n", s
+  ensure
+    $stdin = prev_stdin
+  end
+
   def test_gets_from_argv
     prev_stdin = $stdin
 
@@ -103,8 +125,7 @@ class KernelTest < MiniTest::Test
     count = contents.size
 
     buffer = []
-
-    (count * 2).times { buffer << gets }
+    (count * 2).times { |i| s = gets; buffer << s }
     assert_equal contents * 2, buffer
 
     i, o = IO.pipe

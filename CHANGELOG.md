@@ -21,13 +21,13 @@
 
 * Rename `Fiber#cancel!` to `Fiber#cancel`
 * Rename `Gyro::Async#signal!` to `Gyro::Async#signal`
-* Use `Fiber#auto_async` in thread pool, thread extension
+* Use `Fiber#auto_watcher` in thread pool, thread extension
 * Implement `Fiber#auto_io` for reusing IO watcher instances
 * Refactor C code
 
 ## 0.34 2020-03-25
 
-* Add `Fiber#auto_async` mainly for use in places like `Gyro::Queue#shift`
+* Add `Fiber#auto_watcher` mainly for use in places like `Gyro::Queue#shift`
 * Refactor C extension
 * Improved GC'ing for watchers
 * Implement process supervisor (`Polyphony::ProcessSupervisor`)

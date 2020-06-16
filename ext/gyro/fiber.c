@@ -1,14 +1,15 @@
 #include "gyro.h"
 
 ID ID_fiber_trace;
-ID ID_ivar_auto_async;
-ID ID_ivar_auto_io;
+ID ID_ivar_auto_watcher;
 ID ID_trace_ev_loop_enter;
 ID ID_trace_ev_loop_leave;
 ID ID_trace_run;
 ID ID_trace_runnable;
 ID ID_trace_terminate;
 ID ID_trace_wait;
+
+VALUE cEvent = Qnil;
 
 VALUE SYM_dead;
 VALUE SYM_running;
@@ -32,22 +33,18 @@ static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
   return ret;
 }
 
-inline VALUE Fiber_auto_async(VALUE self) {
-  VALUE async = rb_ivar_get(self, ID_ivar_auto_async);
-  if (async == Qnil) {
-    async = rb_funcall(cGyro_Async, ID_new, 0);
-    rb_ivar_set(self, ID_ivar_auto_async, async);
+inline VALUE Fiber_auto_watcher(VALUE self) {
+  if (cEvent == Qnil) {
+    VALUE cPolyphony = rb_const_get(rb_cObject, rb_intern("Polyphony"));
+    cEvent = rb_const_get(cPolyphony, rb_intern("Event"));
   }
-  return async;
-}
 
-inline VALUE Fiber_auto_io(VALUE self) {
-  VALUE io = rb_ivar_get(self, ID_ivar_auto_io);
-  if (io == Qnil) {
-    io = rb_funcall(cGyro_IO, ID_new, 2, Qnil, Qnil);
-    rb_ivar_set(self, ID_ivar_auto_io, io);
+  VALUE watcher = rb_ivar_get(self, ID_ivar_auto_watcher);
+  if (watcher == Qnil) {
+    watcher = rb_funcall(cEvent, ID_new, 0);
+    rb_ivar_set(self, ID_ivar_auto_watcher, watcher);
   }
-  return io;
+  return watcher;
 }
 
 static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
@@ -80,12 +77,12 @@ void Fiber_make_runnable(VALUE fiber, VALUE value) {
 
 void Init_Fiber() {
   VALUE cFiber = rb_const_get(rb_cObject, rb_intern("Fiber"));
-  rb_define_method(cFiber, "auto_async", Fiber_auto_async, 0);
+  rb_define_method(cFiber, "auto_watcher", Fiber_auto_watcher, 0);
   rb_define_method(cFiber, "safe_transfer", Fiber_safe_transfer, -1);
   rb_define_method(cFiber, "schedule", Fiber_schedule, -1);
   rb_define_method(cFiber, "state", Fiber_state, 0);
 
-  ID_ivar_auto_async = rb_intern("@auto_async");
+  ID_ivar_auto_watcher = rb_intern("@auto_watcher");
 
   SYM_dead = ID2SYM(rb_intern("dead"));
   SYM_running = ID2SYM(rb_intern("running"));

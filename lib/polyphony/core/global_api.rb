@@ -45,13 +45,16 @@ module Polyphony
     end
 
     def every(interval)
-      timer = Gyro::Timer.new(interval, interval)
+      next_time = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC) + interval
       loop do
-        timer.await
+        now = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
+        Thread.current.agent.sleep(next_time - now)
         yield
+        loop do
+          next_time += interval
+          break if next_time > now
+        end
       end
-    ensure
-      timer.stop
     end
 
     def move_on_after(interval, with_value: nil, &block)
@@ -93,8 +96,7 @@ module Polyphony
     def sleep(duration = nil)
       return sleep_forever unless duration
 
-      timer = Gyro::Timer.new(duration, 0)
-      timer.await
+      Thread.current.agent.sleep duration
     end
 
     def sleep_forever
@@ -107,12 +109,12 @@ module Polyphony
     def throttled_loop(rate, count: nil, &block)
       throttler = Polyphony::Throttler.new(rate)
       if count
-        count.times { throttler.(&block) }
+        count.times { |i| throttler.(&block) }
       else
         loop { throttler.(&block) }
       end
     ensure
-      throttler.stop
+      throttler&.stop
     end
   end
 end
