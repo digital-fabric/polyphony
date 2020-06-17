@@ -71,7 +71,7 @@ static VALUE BasicSocket_send(int argc, VALUE *argv, VALUE sock) {
   ssize_t n;
   rb_blocking_function_t *func;
   const char *funcname;
-  VALUE write_watcher = Qnil;
+  VALUE agent = Qnil;
 
   rb_scan_args(argc, argv, "21", &arg.mesg, &flags, &to);
 
@@ -94,9 +94,9 @@ static VALUE BasicSocket_send(int argc, VALUE *argv, VALUE sock) {
   arg.fd = fptr->fd;
   arg.flags = NUM2INT(flags);
   while ((n = (ssize_t)func(&arg)) < 0) {
-    if (NIL_P(write_watcher))
-      write_watcher = Gyro_IO_auto_io(fptr->fd, EV_WRITE);
-    Gyro_IO_await(write_watcher);
+    if (NIL_P(agent))
+      agent = rb_ivar_get(rb_thread_current(), ID_ivar_agent);
+    LibevAgent_wait_io(agent, sock, Qtrue);
   }
   return SSIZET2NUM(n);
 }
@@ -112,7 +112,7 @@ static VALUE BasicSocket_recv(int argc, VALUE *argv, VALUE sock) {
   rb_io_t *fptr;
   long n;
   int shrinkable;
-  VALUE read_watcher = Qnil;
+  VALUE agent = Qnil;
 
 
   VALUE str = argc >= 3 ? argv[2] : Qnil;
@@ -131,9 +131,9 @@ static VALUE BasicSocket_recv(int argc, VALUE *argv, VALUE sock) {
     if (n < 0) {
       int e = errno;
       if (e == EWOULDBLOCK || e == EAGAIN) {
-        if (NIL_P(read_watcher))
-          read_watcher = Gyro_IO_auto_io(fptr->fd, EV_READ);
-        Gyro_IO_await(read_watcher);
+        if (NIL_P(agent))
+          agent = rb_ivar_get(rb_thread_current(), ID_ivar_agent);
+        LibevAgent_wait_io(agent, sock, Qnil);
       }
       else
         rb_syserr_fail(e, strerror(e));
@@ -157,7 +157,7 @@ static VALUE Socket_accept(VALUE sock) {
   int fd;
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
-  VALUE read_watcher = Qnil;
+  VALUE agent = Qnil;
 
   GetOpenFile(sock, fptr);
   rb_io_set_nonblock(fptr);
@@ -168,9 +168,9 @@ static VALUE Socket_accept(VALUE sock) {
     if (fd < 0) {
       int e = errno;
       if (e == EWOULDBLOCK || e == EAGAIN) {
-        if (NIL_P(read_watcher))
-          read_watcher = Gyro_IO_auto_io(fptr->fd, EV_READ);
-        Gyro_IO_await(read_watcher);
+        if (NIL_P(agent))
+          agent = rb_ivar_get(rb_thread_current(), ID_ivar_agent);
+        LibevAgent_wait_io(agent, sock, Qnil);
       }
       else
         rb_syserr_fail(e, strerror(e));

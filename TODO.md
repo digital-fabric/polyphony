@@ -34,12 +34,34 @@
 
 ## 0.41 Agent replaces Selector
 
-- An agent is an interface that performs actual talking to the outside world,
-  namely I/O, sleeping, waiting on a child process (and eventually networking,
-  fstat etc...)
-- Removal of Selector, as well as all watcher classes encapsulating libev event
-  watchers.
-- Alternative implementation of async using pipes. 
+- [.] An agent is an interface that performs actual talking to the outside
+      world, namely I/O, sleeping, waiting on a child process (and eventually
+      networking, fstat etc...)
+  - [v] read/write
+  - [v] sleep
+  - [v] waitpid
+  - [ ] send/recv
+  - [ ] connect/accept
+- [v] Removal of Selector, as well as all watcher classes encapsulating libev
+      event watchers.
+- [v] Alternative implementation of async using pipes.
+- [v] OpenSSL
+  - [ ] Add a `wait_io` API to the agent interface:
+
+    ```ruby
+    def read_from_socket(socket)
+      loop do
+        result = socket.read_nonblock(8192, exception: false)
+        case result
+        when :wait_readable
+          Thread.current.agent.wait_io(socket, false)
+        else
+          return result
+        end
+      end
+    end
+    ```
+
 
 ## 0.42 Some more API work, more docs
 

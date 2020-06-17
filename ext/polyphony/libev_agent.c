@@ -80,9 +80,9 @@ VALUE LibevAgent_post_fork(VALUE self) {
 }
 
 VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue) {
+  int is_nowait = nowait == Qtrue;
   struct LibevAgent_t *agent;
   GetLibevAgent(self, agent);
-  int is_nowait = nowait == Qtrue;
 
   if (is_nowait) {
     int runnable_count = RARRAY_LEN(queue);
@@ -305,6 +305,30 @@ error:
   return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
 }
 
+VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write) {
+  struct LibevAgent_t *agent;
+  struct libev_io watcher;
+  rb_io_t *fptr;
+  VALUE switchpoint_result = Qnil;
+  int events = RTEST(write) ? EV_WRITE : EV_READ;
+
+  VALUE underlying_io = rb_iv_get(io, "@io");
+  GetLibevAgent(self, agent);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetOpenFile(io, fptr);
+  
+  watcher.fiber = rb_fiber_current();
+  ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, events);
+  ev_io_start(agent->ev_loop, &watcher.io);
+  switchpoint_result = Polyphony_switchpoint();
+  ev_io_stop(agent->ev_loop, &watcher.io);
+  
+  TEST_RESUME_EXCEPTION(switchpoint_result);
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+  return switchpoint_result;
+}
+
 struct libev_timer {
   struct ev_timer timer;
   VALUE fiber;
@@ -383,6 +407,7 @@ void Init_LibevAgent() {
 
   rb_define_method(cLibevAgent, "read", LibevAgent_read, 4);
   rb_define_method(cLibevAgent, "write", LibevAgent_write, 2);
+  rb_define_method(cLibevAgent, "wait_io", LibevAgent_wait_io, 2);
   rb_define_method(cLibevAgent, "sleep", LibevAgent_sleep, 1);
   rb_define_method(cLibevAgent, "waitpid", LibevAgent_waitpid, 1);
 }

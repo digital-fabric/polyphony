@@ -37,6 +37,32 @@ class IOTest < MiniTest::Test
     @o.close
     assert_equal 'foobarbaz', @i.read
   end
+
+  def test_wait_io
+    results = []
+    i, o = IO.pipe
+    f = spin do
+      loop do
+        result = i.orig_read_nonblock(8192, exception: false)
+        results << result
+        case result
+        when :wait_readable
+          Thread.current.agent.wait_io(i, false)
+        else
+          break result
+        end
+      end
+    end
+
+    snooze
+    o.write('foo')
+    o.close
+
+    result = f.await
+
+    assert_equal 'foo', f.await
+    assert_equal [:wait_readable, 'foo'], results
+  end
 end
 
 class IOClassMethodsTest < MiniTest::Test

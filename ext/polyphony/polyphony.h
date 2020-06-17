@@ -29,6 +29,7 @@ extern ID ID_clear;
 extern ID ID_each;
 extern ID ID_fiber_trace;
 extern ID ID_inspect;
+extern ID ID_ivar_agent;
 extern ID ID_ivar_running;
 extern ID ID_ivar_thread;
 extern ID ID_new;
@@ -69,6 +70,7 @@ VALUE Polyphony_switchpoint();
 
 VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue);
 VALUE LibevAgent_break(VALUE self);
+VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write);
 
 VALUE Polyphony_snooze(VALUE self);
 

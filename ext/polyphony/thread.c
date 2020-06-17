@@ -1,18 +1,18 @@
 #include "polyphony.h"
 
-static ID ID_deactivate_all_watchers_post_fork;
-static ID ID_empty;
-static ID ID_fiber_ref_count;
-static ID ID_ivar_agent;
-static ID ID_ivar_join_wait_queue;
-static ID ID_ivar_main_fiber;
-static ID ID_ivar_result;
-static ID ID_ivar_terminated;
-static ID ID_pop;
-static ID ID_push;
-static ID ID_run_queue;
-static ID ID_runnable_next;
-static ID ID_stop;
+ID ID_deactivate_all_watchers_post_fork;
+ID ID_empty;
+ID ID_fiber_ref_count;
+ID ID_ivar_agent;
+ID ID_ivar_join_wait_queue;
+ID ID_ivar_main_fiber;
+ID ID_ivar_result;
+ID ID_ivar_terminated;
+ID ID_pop;
+ID ID_push;
+ID ID_run_queue;
+ID ID_runnable_next;
+ID ID_stop;
 
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
   VALUE queue;
