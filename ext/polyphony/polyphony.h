@@ -18,58 +18,11 @@
   return rb_funcall(rb_mKernel, ID_raise, 1, ret); \
 }
 
-typedef struct Gyro_watcher {
-  int active;
-  int generation;
-
-  struct  ev_loop *ev_loop;
-
-  VALUE   self;
-  VALUE   fiber;
-  VALUE   selector;
-} Gyro_watcher_t;
-
-
-#define GYRO_WATCHER_DECL(type) \
-  struct type type; \
-  int active; \
-  int generation; \
-  struct ev_loop *ev_loop; \
-  VALUE self; \
-  VALUE fiber; \
-  VALUE selector;
-
-#define GYRO_WATCHER_INITIALIZE(o, self) \
-  o->active     = 0; \
-  o->generation = __gyro_current_generation__; \
-  o->ev_loop    = 0; \
-  o->self       = self; \
-  o->fiber      = Qnil; \
-  o->selector   = Qnil;
-
-#define GYRO_WATCHER_MARK(o) \
-  if (o->fiber != Qnil) rb_gc_mark(o->fiber); \
-  if (o->selector != Qnil) rb_gc_mark(o->selector);
-
-#define GYRO_WATCHER_STOP_EXPAND(o) ev_ ## o ## _stop
-#define GYRO_WATCHER_STOP(o) GYRO_WATCHER_STOP_EXPAND(o)
-
-#define GYRO_WATCHER_FIELD_EXPAND(o) ev_ ## o
-#define GYRO_WATCHER_FIELD(o) GYRO_WATCHER_FIELD_EXPAND(o)
-
-#define GYRO_WATCHER_FREE(o) \
-  if (o->generation < __gyro_current_generation__) return; \
-  if (o->active) { \
-    ev_clear_pending(o->ev_loop, &o->GYRO_WATCHER_FIELD(o)); \
-    GYRO_WATCHER_STOP(o)(o->ev_loop, &o->GYRO_WATCHER_FIELD(o)); \
-  } \
-  xfree(o);
-
-extern VALUE mGyro;
-extern VALUE cGyro_Queue;
+extern VALUE mPolyphony;
+extern VALUE cQueue;
 extern VALUE cEvent;
-extern VALUE mLibev;
 
+extern ID ID_await_no_raise;
 extern ID ID_call;
 extern ID ID_caller;
 extern ID ID_clear;
@@ -86,9 +39,6 @@ extern ID ID_signal;
 extern ID ID_size;
 extern ID ID_switch_fiber;
 extern ID ID_transfer;
-extern ID ID_R;
-extern ID ID_W;
-extern ID ID_RW;
 
 extern VALUE SYM_fiber_create;
 extern VALUE SYM_fiber_ev_loop_enter;
@@ -99,7 +49,6 @@ extern VALUE SYM_fiber_switchpoint;
 extern VALUE SYM_fiber_terminate;
 
 extern int __tracing_enabled__;
-extern int __gyro_current_generation__;
 
 enum {
   FIBER_STATE_NOT_SCHEDULED = 0,
@@ -116,14 +65,14 @@ enum {
 VALUE Fiber_auto_watcher(VALUE self);
 void Fiber_make_runnable(VALUE fiber, VALUE value);
 
-VALUE Gyro_switchpoint();
+VALUE Polyphony_switchpoint();
 
 VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue);
 VALUE LibevAgent_break(VALUE self);
 
-VALUE Gyro_snooze(VALUE self);
+VALUE Polyphony_snooze(VALUE self);
 
-VALUE Gyro_Queue_push(VALUE self, VALUE value);
+VALUE Polyphony_Queue_push(VALUE self, VALUE value);
 
 VALUE Thread_post_fork(VALUE thread);
 VALUE Thread_ref(VALUE thread);

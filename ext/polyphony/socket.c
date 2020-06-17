@@ -1,4 +1,4 @@
-#include "gyro.h"
+#include "polyphony.h"
 #include <sys/socket.h>
 
 static VALUE cTCPSocket;

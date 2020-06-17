@@ -4,7 +4,7 @@ module Polyphony
   # Implements mutex lock for synchronizing access to a shared resource
   class Mutex
     def initialize
-      @waiting_fibers = Gyro::Queue.new
+      @waiting_fibers = Polyphony::Queue.new
     end
 
     def synchronize

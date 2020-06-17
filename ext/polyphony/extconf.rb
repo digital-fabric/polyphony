@@ -16,5 +16,5 @@ $defs << "-DHAVE_SYS_RESOURCE_H" if have_header("sys/resource.h")
 
 CONFIG["optflags"] << " -fno-strict-aliasing" unless RUBY_PLATFORM =~ /mswin/
 
-dir_config "gyro_ext"
-create_makefile "gyro_ext"
+dir_config "polyphony_ext"
+create_makefile "polyphony_ext"

@@ -5,7 +5,7 @@ require_relative 'helper'
 class AgentTest < MiniTest::Test
   def setup
     super
-    @agent = Gyro::LibevAgent.new
+    @agent = Polyphony::LibevAgent.new
   end
 
   def teardown

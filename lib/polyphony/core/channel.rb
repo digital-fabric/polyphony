@@ -26,7 +26,7 @@ module Polyphony
     end
 
     def receive
-      Gyro.ref
+      Polyphony.ref
       if @payload_queue.empty?
         @waiting_queue << Fiber.current
         suspend
@@ -34,7 +34,7 @@ module Polyphony
         receive_from_queue
       end
     ensure
-      Gyro.unref
+      Polyphony.unref
     end
 
     def receive_from_queue

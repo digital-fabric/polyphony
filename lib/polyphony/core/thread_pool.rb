@@ -21,7 +21,7 @@ module Polyphony
 
     def initialize(size = Etc.nprocessors)
       @size = size
-      @task_queue = Gyro::Queue.new
+      @task_queue = Polyphony::Queue.new
       @threads = (1..@size).map { Thread.new { thread_loop } }
     end
 

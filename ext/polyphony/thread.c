@@ -1,6 +1,4 @@
-#include "gyro.h"
-
-static VALUE cQueue;
+#include "polyphony.h"
 
 static ID ID_deactivate_all_watchers_post_fork;
 static ID ID_empty;
@@ -176,7 +174,7 @@ VALUE Thread_reset_fiber_scheduling(VALUE self) {
   return self;
 }
 
-VALUE Gyro_switchpoint() {
+VALUE Polyphony_switchpoint() {
   VALUE ret;
   VALUE thread = rb_thread_current();
   Thread_ref(thread);
@@ -201,8 +199,6 @@ VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE fiber, VALUE resume_ob
 }
 
 void Init_Thread() {
-  cQueue = rb_const_get(rb_cObject, rb_intern("Queue"));
-
   rb_define_method(rb_cThread, "fiber_ref", Thread_ref, 0);
   rb_define_method(rb_cThread, "fiber_unref", Thread_unref, 0);
 

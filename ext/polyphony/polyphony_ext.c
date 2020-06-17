@@ -1,19 +1,19 @@
-#include "gyro.h"
+#include "polyphony.h"
 
 void Init_Fiber();
-void Init_Gyro();
+void Init_Polyphony();
 void Init_LibevAgent();
-void Init_Gyro_Queue();
+void Init_Queue();
 void Init_Socket();
 void Init_Thread();
 void Init_Tracing();
 
-void Init_gyro_ext() {
+void Init_polyphony_ext() {
   ev_set_allocator(xrealloc);
 
-  Init_Gyro();
+  Init_Polyphony();
   Init_LibevAgent();
-  Init_Gyro_Queue();
+  Init_Queue();
 
   Init_Fiber();
   Init_Socket();

@@ -1,4 +1,4 @@
-#include "gyro.h"
+#include "polyphony.h"
 #include "../libev/ev.h"
 
 VALUE cLibevAgent = Qnil;
@@ -119,7 +119,7 @@ VALUE LibevAgent_break(VALUE self) {
   return Qnil;
 }
 
-#include "gyro.h"
+#include "polyphony.h"
 #include "../libev/ev.h"
 
 //////////////////////////////////////////////////////////////////////
@@ -226,7 +226,7 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
           ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
         }
         ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = Gyro_switchpoint();
+        switchpoint_result = Polyphony_switchpoint();
         ev_io_stop(agent->ev_loop, &watcher.io);
         if (TEST_EXCEPTION(switchpoint_result))
           goto error;
@@ -281,7 +281,7 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
           ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_WRITE);
         }
         ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = Gyro_switchpoint();
+        switchpoint_result = Polyphony_switchpoint();
         ev_io_stop(agent->ev_loop, &watcher.io);
         if (TEST_EXCEPTION(switchpoint_result))
           goto error;
@@ -327,7 +327,7 @@ VALUE LibevAgent_sleep(VALUE self, VALUE duration) {
   ev_timer_init(&watcher.timer, LibevAgent_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(agent->ev_loop, &watcher.timer);
 
-  switchpoint_result = Gyro_switchpoint();
+  switchpoint_result = Polyphony_switchpoint();
   ev_timer_stop(agent->ev_loop, &watcher.timer);
 
   TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -361,7 +361,7 @@ VALUE LibevAgent_waitpid(VALUE self, VALUE pid) {
   ev_child_init(&watcher.child, LibevAgent_child_callback, NUM2INT(pid), 0);
   ev_child_start(agent->ev_loop, &watcher.child);
   
-  switchpoint_result = Gyro_switchpoint();
+  switchpoint_result = Polyphony_switchpoint();
   ev_child_stop(agent->ev_loop, &watcher.child);
 
   TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -371,7 +371,7 @@ VALUE LibevAgent_waitpid(VALUE self, VALUE pid) {
 }
 
 void Init_LibevAgent() {
-  cLibevAgent = rb_define_class_under(mGyro, "LibevAgent", rb_cData);
+  cLibevAgent = rb_define_class_under(mPolyphony, "LibevAgent", rb_cData);
   rb_define_alloc_func(cLibevAgent, LibevAgent_allocate);
 
   rb_define_method(cLibevAgent, "initialize", LibevAgent_initialize, 0);

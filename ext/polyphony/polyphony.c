@@ -1,8 +1,8 @@
-#include "gyro.h"
+#include "polyphony.h"
 
-VALUE mGyro;
-int __gyro_current_generation__ = 0;
+VALUE mPolyphony;
 
+ID ID_await_no_raise;
 ID ID_call;
 ID ID_caller;
 ID ID_clear;
@@ -25,7 +25,7 @@ ID ID_R;
 ID ID_W;
 ID ID_RW;
 
-VALUE Gyro_snooze(VALUE self) {
+VALUE Polyphony_snooze(VALUE self) {
   VALUE ret;
   VALUE fiber = rb_fiber_current();
 
@@ -36,15 +36,15 @@ VALUE Gyro_snooze(VALUE self) {
   return ret;
 }
 
-static VALUE Gyro_ref(VALUE self) {
+static VALUE Polyphony_ref(VALUE self) {
   return Thread_ref(rb_thread_current());
 }
 
-static VALUE Gyro_unref(VALUE self) {
+static VALUE Polyphony_unref(VALUE self) {
   return Thread_unref(rb_thread_current());
 }
 
-static VALUE Gyro_suspend(VALUE self) {
+static VALUE Polyphony_suspend(VALUE self) {
   VALUE ret = Thread_switch_fiber(rb_thread_current());
 
   TEST_RESUME_EXCEPTION(ret);
@@ -52,27 +52,22 @@ static VALUE Gyro_suspend(VALUE self) {
   return ret;
 }
 
-VALUE Gyro_trace(VALUE self, VALUE enabled) {
+VALUE Polyphony_trace(VALUE self, VALUE enabled) {
   __tracing_enabled__ = RTEST(enabled) ? 1 : 0;
   return Qnil;
 }
 
-VALUE Gyro_incr_generation(VALUE self) {
-  __gyro_current_generation__++;
-  return Qnil;
-}
+void Init_Polyphony() {
+  mPolyphony = rb_define_module("Polyphony");
 
-void Init_Gyro() {
-  mGyro = rb_define_module("Gyro");
+  rb_define_singleton_method(mPolyphony, "ref", Polyphony_ref, 0);
+  rb_define_singleton_method(mPolyphony, "trace", Polyphony_trace, 1);
+  rb_define_singleton_method(mPolyphony, "unref", Polyphony_unref, 0);
 
-  rb_define_singleton_method(mGyro, "incr_generation", Gyro_incr_generation, 0);
-  rb_define_singleton_method(mGyro, "ref", Gyro_ref, 0);
-  rb_define_singleton_method(mGyro, "trace", Gyro_trace, 1);
-  rb_define_singleton_method(mGyro, "unref", Gyro_unref, 0);
+  rb_define_global_function("snooze", Polyphony_snooze, 0);
+  rb_define_global_function("suspend", Polyphony_suspend, 0);
 
-  rb_define_global_function("snooze", Gyro_snooze, 0);
-  rb_define_global_function("suspend", Gyro_suspend, 0);
-
+  ID_await_no_raise = rb_intern("await_no_raise");
   ID_call           = rb_intern("call");
   ID_caller         = rb_intern("caller");
   ID_clear          = rb_intern("clear");
@@ -91,8 +86,4 @@ void Init_Gyro() {
   ID_size           = rb_intern("size");
   ID_switch_fiber   = rb_intern("switch_fiber");
   ID_transfer       = rb_intern("transfer");
-
-  ID_R              = rb_intern("r");
-  ID_RW             = rb_intern("rw");
-  ID_W              = rb_intern("w");
 }

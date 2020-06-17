@@ -8,7 +8,7 @@ class ::Thread
 
   alias_method :orig_initialize, :initialize
   def initialize(*args, &block)
-    @join_wait_queue = Gyro::Queue.new
+    @join_wait_queue = Polyphony::Queue.new
     @args = args
     @block = block
     @finalization_mutex = Mutex.new
@@ -34,7 +34,7 @@ class ::Thread
     @main_fiber = Fiber.current
     @main_fiber.setup_main_fiber
     setup_fiber_scheduling
-    @agent = Gyro::LibevAgent.new
+    @agent = Polyphony::LibevAgent.new
   end
 
   def finalize(result)

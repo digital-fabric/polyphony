@@ -1,4 +1,4 @@
-#include "gyro.h"
+#include "polyphony.h"
 
 ID ID_fiber_trace;
 ID ID_ivar_auto_watcher;
@@ -35,8 +35,7 @@ static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
 
 inline VALUE Fiber_auto_watcher(VALUE self) {
   if (cEvent == Qnil) {
-    VALUE cPolyphony = rb_const_get(rb_cObject, rb_intern("Polyphony"));
-    cEvent = rb_const_get(cPolyphony, rb_intern("Event"));
+    cEvent = rb_const_get(mPolyphony, rb_intern("Event"));
   }
 
   VALUE watcher = rb_ivar_get(self, ID_ivar_auto_watcher);

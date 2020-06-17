@@ -125,14 +125,14 @@ class ThreadTest < MiniTest::Test
       records << r if r[:event] =~ /^fiber_/
     end
     t.enable
-    Gyro.trace(true)
+    Polyphony.trace(true)
 
     suspend
     t.disable
     assert_equal [:fiber_switchpoint], records.map { |r| r[:event] }
   ensure
     t&.disable
-    Gyro.trace(false)
+    Polyphony.trace(false)
   end
 
   def test_thread_child_fiber_termination

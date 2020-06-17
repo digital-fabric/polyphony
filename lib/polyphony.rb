@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'fiber'
-require_relative './gyro_ext'
+require_relative './polyphony_ext'
 
 require_relative './polyphony/extensions/core'
 require_relative './polyphony/extensions/thread'
@@ -15,16 +15,16 @@ require_relative './polyphony/adapters/process'
 require_relative './polyphony/event'
 
 Thread.current.setup_fiber_scheduling
-Thread.current.agent = Gyro::LibevAgent.new
+Thread.current.agent = Polyphony::LibevAgent.new
 
 # Main Polyphony API
 module Polyphony
   class << self
     def wait_for_signal(sig)
       fiber = Fiber.current
-      Gyro.ref
+      Polyphony.ref
       old_trap = trap(sig) do
-        Gyro.unref
+        Polyphony.unref
         fiber.schedule(sig)
         trap(sig, old_trap)
       end
