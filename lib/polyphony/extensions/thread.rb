@@ -82,7 +82,7 @@ class ::Thread
   alias_method :orig_kill, :kill
   def kill
     return if @terminated
-  
+
     raise Polyphony::Terminate
   end
 

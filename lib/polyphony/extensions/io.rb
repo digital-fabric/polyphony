@@ -2,7 +2,7 @@
 
 require 'open3'
 
-# IO overrides
+# IO class method patches
 class ::IO
   class << self
     alias_method :orig_binread, :binread
@@ -72,7 +72,10 @@ class ::IO
       Open3.popen2(cmd) { |_i, o, _t| yield o }
     end
   end
+end
 
+# IO instance method patches
+class ::IO
   # def each(sep = $/, limit = nil, chomp: nil)
   #   sep, limit = $/, sep if sep.is_a?(Integer)
   # end

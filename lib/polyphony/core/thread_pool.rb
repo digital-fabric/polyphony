@@ -8,13 +8,13 @@ module Polyphony
     attr_reader :size
 
     def self.process(&block)
-      @default_pool ||= self.new
+      @default_pool ||= new
       @default_pool.process(&block)
     end
 
     def self.reset
       return unless @default_pool
-      
+
       @default_pool.stop
       @default_pool = nil
     end

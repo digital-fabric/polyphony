@@ -109,7 +109,7 @@ module Polyphony
     def throttled_loop(rate, count: nil, &block)
       throttler = Polyphony::Throttler.new(rate)
       if count
-        count.times { |i| throttler.(&block) }
+        count.times { |_i| throttler.(&block) }
       else
         loop { throttler.(&block) }
       end

@@ -3,7 +3,6 @@
 require 'fiber'
 require_relative './gyro_ext'
 
-
 require_relative './polyphony/extensions/core'
 require_relative './polyphony/extensions/thread'
 require_relative './polyphony/extensions/fiber'

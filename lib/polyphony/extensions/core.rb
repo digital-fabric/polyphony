@@ -101,15 +101,20 @@ module ::Kernel
     $stdin.gets
   end
 
+  def pipe_to_eof(src, dest)
+    loop do
+      data = src.readpartial(8192)
+      break if data.empty?
+
+      dest << data
+    end
+  end
+
   alias_method :orig_system, :system
   def system(*args)
     Open3.popen2(*args) do |i, o, _t|
       i.close
-      loop do
-        l = o.readpartial(8192)
-        break if l.empty?
-        $stdout << l
-      end
+      pipe_to_eof(o, $stdout)
     end
     true
   rescue SystemCallError
