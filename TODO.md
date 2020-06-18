@@ -40,28 +40,13 @@
   - [v] read/write
   - [v] sleep
   - [v] waitpid
-  - [ ] send/recv
-  - [ ] connect/accept
+  - [ ] send/recv - to be done later
+  - [ ] connect/accept - to be done later
 - [v] Removal of Selector, as well as all watcher classes encapsulating libev
       event watchers.
 - [v] Alternative implementation of async using pipes.
 - [v] OpenSSL
-  - [ ] Add a `wait_io` API to the agent interface:
-
-    ```ruby
-    def read_from_socket(socket)
-      loop do
-        result = socket.read_nonblock(8192, exception: false)
-        case result
-        when :wait_readable
-          Thread.current.agent.wait_io(socket, false)
-        else
-          return result
-        end
-      end
-    end
-    ```
-
+  - [v] Add a `wait_io` API to the agent interface:
 
 ## 0.42 Some more API work, more docs
 

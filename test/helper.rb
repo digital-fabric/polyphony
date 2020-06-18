@@ -32,7 +32,7 @@ class MiniTest::Test
   end
 
   def teardown
-    #puts "* teardown #{self.name}"
+    # puts "* teardown #{self.name}"
     Fiber.current.terminate_all_children
     Fiber.current.await_all_children
   end
