@@ -47,7 +47,7 @@ def handle_request(client, parser)
 end
 
 spin do
-  server = TCPServer.open('0.0.0.0', 1234)
+  server = TCPServer.open('0.0.0.0', 2345)
   puts "listening on port 1234"
 
   loop do
@@ -57,12 +57,12 @@ spin do
   end
 end
 
-spin do
-  loop do
-    sleep 1
-    puts "#{Time.now} #{Thread.current.fiber_scheduling_stats}"
-  end
-end
+# spin do
+#   loop do
+#     sleep 1
+#     puts "#{Time.now} #{Thread.current.fiber_scheduling_stats}"
+#   end
+# end
 
 puts "pid #{Process.pid}"
 suspend

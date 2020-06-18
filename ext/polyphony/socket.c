@@ -207,7 +207,7 @@ void Init_Socket() {
 
   cSocket = rb_const_get(rb_cObject, rb_intern("Socket"));
 
-  rb_define_method(cSocket, "accept", Socket_accept, 0);
+  // rb_define_method(cSocket, "accept", Socket_accept, 0);
 
   cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
 }

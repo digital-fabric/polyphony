@@ -52,8 +52,8 @@ build-iPhoneSimulator/
 test.rb
 .vscode
 
-lib/gyro_ext.bundle
-lib/gyro_ext.so
+lib/*.bundle
+lib/*.so
 
 _site
 .sass-cache

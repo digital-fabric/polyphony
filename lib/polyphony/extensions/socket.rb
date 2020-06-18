@@ -7,6 +7,10 @@ require_relative '../core/thread_pool'
 
 # Socket overrides (eventually rewritten in C)
 class ::Socket
+  def accept
+    Thread.current.agent.accept(self)
+  end
+
   NO_EXCEPTION = { exception: false }.freeze
 
   def connect(remotesockaddr)

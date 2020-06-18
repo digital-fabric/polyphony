@@ -8,14 +8,14 @@ require_relative './polyphony/extensions/thread'
 require_relative './polyphony/extensions/fiber'
 require_relative './polyphony/extensions/io'
 
+Thread.current.setup_fiber_scheduling
+Thread.current.agent = Polyphony::LibevAgent.new
+
 require_relative './polyphony/core/global_api'
 require_relative './polyphony/core/resource_pool'
 require_relative './polyphony/net'
 require_relative './polyphony/adapters/process'
 require_relative './polyphony/event'
-
-Thread.current.setup_fiber_scheduling
-Thread.current.agent = Polyphony::LibevAgent.new
 
 # Main Polyphony API
 module Polyphony

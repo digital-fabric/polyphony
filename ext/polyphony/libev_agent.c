@@ -1,7 +1,9 @@
 #include "polyphony.h"
 #include "../libev/ev.h"
+#include <sys/socket.h>
 
 VALUE cLibevAgent = Qnil;
+VALUE cTCPSocket;
 
 struct LibevAgent_t {
   struct ev_loop *ev_loop;
@@ -305,6 +307,73 @@ error:
   return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
 }
 
+///////////////////////////////////////////////////////////////////////////
+
+struct rsock_send_arg {
+    int fd, flags;
+    VALUE mesg;
+    struct sockaddr *to;
+    socklen_t tolen;
+};
+
+#define StringValue(v) rb_string_value(&(v))
+#define IS_ADDRINFO(obj) rb_typeddata_is_kind_of((obj), &addrinfo_type)
+
+VALUE LibevAgent_accept(VALUE self, VALUE sock) {
+  struct LibevAgent_t *agent;
+  struct libev_io watcher;
+  rb_io_t *fptr;
+  int fd;
+  struct sockaddr addr;
+  socklen_t len = (socklen_t)sizeof addr;
+  VALUE switchpoint_result = Qnil;
+
+  GetLibevAgent(self, agent);
+  GetOpenFile(sock, fptr);
+  rb_io_set_nonblock(fptr);
+  watcher.fiber = Qnil;
+  while (1) {
+    fd = accept(fptr->fd, &addr, &len);
+
+    if (fd < 0) {
+      int e = errno;
+      if (e == EWOULDBLOCK || e == EAGAIN) {
+        if (watcher.fiber == Qnil) {
+          watcher.fiber = rb_fiber_current();
+          ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
+        }
+        ev_io_start(agent->ev_loop, &watcher.io);
+        switchpoint_result = Polyphony_switchpoint();
+        ev_io_stop(agent->ev_loop, &watcher.io);
+
+        TEST_RESUME_EXCEPTION(switchpoint_result);
+        RB_GC_GUARD(watcher.fiber);
+        RB_GC_GUARD(switchpoint_result);
+      }
+      else
+        rb_syserr_fail(e, strerror(e));
+        // rb_syserr_fail_path(e, fptr->pathv);
+    }
+    else {
+      VALUE connection = rb_obj_alloc(cTCPSocket);
+      rb_io_t *fp;
+      MakeOpenFile(connection, fp);
+      rb_update_max_fd(fd);
+      fp->fd = fd;
+      fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
+      rb_io_ascii8bit_binmode(connection);
+      rb_io_set_nonblock(fp);
+      rb_io_synchronized(fp);
+      // if (rsock_do_not_reverse_lookup) {
+	    //   fp->mode |= FMODE_NOREVLOOKUP;
+      // }
+
+      return connection;
+    }
+  }
+  return Qnil;
+}
+
 VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write) {
   struct LibevAgent_t *agent;
   struct libev_io watcher;
@@ -395,6 +464,9 @@ VALUE LibevAgent_waitpid(VALUE self, VALUE pid) {
 }
 
 void Init_LibevAgent() {
+  rb_require("socket");
+  cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
+
   cLibevAgent = rb_define_class_under(mPolyphony, "LibevAgent", rb_cData);
   rb_define_alloc_func(cLibevAgent, LibevAgent_allocate);
 
@@ -407,6 +479,7 @@ void Init_LibevAgent() {
 
   rb_define_method(cLibevAgent, "read", LibevAgent_read, 4);
   rb_define_method(cLibevAgent, "write", LibevAgent_write, 2);
+  rb_define_method(cLibevAgent, "accept", LibevAgent_accept, 1);
   rb_define_method(cLibevAgent, "wait_io", LibevAgent_wait_io, 2);
   rb_define_method(cLibevAgent, "sleep", LibevAgent_sleep, 1);
   rb_define_method(cLibevAgent, "waitpid", LibevAgent_waitpid, 1);
