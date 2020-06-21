@@ -16,6 +16,7 @@ class ThreadTest < MiniTest::Test
     end
     f.join
     t.join
+    t = nil
 
     assert_equal [1, 2, 3, 11, 12, 13, 21, 22, 23], buffer.sort
   ensure
@@ -29,9 +30,10 @@ class ThreadTest < MiniTest::Test
     t = Thread.new { sleep 0.01; buffer << 4; :foo }
 
     r = t.join
+    t = nil
 
-    assert_equal [1, 2, 3, 4], buffer
     assert_equal :foo, r
+    assert_equal [1, 2, 3, 4], buffer
   ensure
     t&.kill
     t&.join
@@ -43,6 +45,7 @@ class ThreadTest < MiniTest::Test
     t = Thread.new { sleep 1; buffer << 4 }
     t0 = Time.now
     r = t.join(0.01)
+    t = nil
 
     assert Time.now - t0 < 0.2
     assert_equal [1, 2, 3], buffer
@@ -59,11 +62,13 @@ class ThreadTest < MiniTest::Test
     spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new { sleep 0.01; buffer << 4; :foo }
     r = t.await
+    t = nil
 
     assert_equal [1, 2, 3, 4], buffer
     assert_equal :foo, r
   ensure
-    t.kill
+    t&.kill
+    t&.join
   end
 
   def test_join_race_condition_on_thread_spawning
@@ -72,6 +77,7 @@ class ThreadTest < MiniTest::Test
       :foo
     end
     r = t.join
+    t = nil
     assert_equal :foo, r
   ensure
     t&.kill
@@ -114,9 +120,8 @@ class ThreadTest < MiniTest::Test
     p e
     puts e.backtrace.join("\n")
   ensure
-    t.kill
-    sleep 0.005
-    t.join
+    t&.kill
+    t&.join
   end
 
   def test_that_suspend_returns_immediately_if_no_watchers

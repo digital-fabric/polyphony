@@ -70,8 +70,9 @@ module ::Kernel
   def `(cmd)
     Open3.popen3(cmd) do |i, o, e, _t|
       i.close
-      $stderr << e.read
-      o.read
+      err = e.read
+      $stderr << err if err
+      o.read || ''
     end
   end
 

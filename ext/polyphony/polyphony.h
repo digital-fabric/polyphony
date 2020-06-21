@@ -19,7 +19,7 @@
 }
 
 extern VALUE mPolyphony;
-extern VALUE cQueue;
+extern VALUE cLibevQueue;
 extern VALUE cEvent;
 
 extern ID ID_await_no_raise;
@@ -70,6 +70,7 @@ VALUE Polyphony_switchpoint();
 
 VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue);
 VALUE LibevAgent_break(VALUE self);
+VALUE LibevAgent_pending_count(VALUE self);
 VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write);
 
 VALUE Polyphony_snooze(VALUE self);

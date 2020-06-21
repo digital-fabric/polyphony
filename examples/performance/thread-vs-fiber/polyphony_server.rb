@@ -4,21 +4,10 @@ require 'bundler/setup'
 require 'polyphony'
 require 'http/parser'
 
-class Http::Parser
-  def setup_async
-    self.on_message_complete = proc { @request_complete = true }
-  end
-
-  def parse(data)
-    self << data
-    return nil unless @request_complete
-
-    @request_complete = nil
-    self
-  end
-end
+$connection_count = 0
 
 def handle_client(socket)
+  $connection_count += 1
   parser = Http::Parser.new
   reqs = []
   parser.on_message_complete = proc do |env|
@@ -35,8 +24,8 @@ def handle_client(socket)
 rescue IOError, SystemCallError => e
   # do nothing
 ensure
-  socket.close rescue nil
-  parser.reset!
+  $connection_count -= 1
+  socket&.close
 end
 
 def handle_request(client, parser)
@@ -47,22 +36,22 @@ def handle_request(client, parser)
 end
 
 spin do
-  server = TCPServer.open('0.0.0.0', 2345)
+  server = TCPServer.open('0.0.0.0', 1234)
   puts "listening on port 1234"
 
   loop do
     client = server.accept
     spin { handle_client(client) }
-    # snooze
   end
+ensure
+  server&.close
 end
 
-# spin do
-#   loop do
-#     sleep 1
-#     puts "#{Time.now} #{Thread.current.fiber_scheduling_stats}"
-#   end
-# end
+every(1) {
+  stats = Thread.current.fiber_scheduling_stats
+  stats[:connection_count] = $connection_count
+  puts "#{Time.now} #{stats}"
+}
 
 puts "pid #{Process.pid}"
 suspend

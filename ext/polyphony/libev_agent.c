@@ -46,6 +46,7 @@ static VALUE LibevAgent_initialize(VALUE self) {
 
   ev_async_init(&agent->break_async, break_async_callback);
   ev_async_start(agent->ev_loop, &agent->break_async);
+  ev_unref(agent->ev_loop); // don't count the break_async watcher
 
   agent->running = 0;
   agent->run_no_wait_count = 0;
@@ -79,6 +80,14 @@ VALUE LibevAgent_post_fork(VALUE self) {
   ev_loop_fork(agent->ev_loop);
 
   return self;
+}
+
+VALUE LibevAgent_pending_count(VALUE self) {
+  int count;
+  struct LibevAgent_t *agent;
+  GetLibevAgent(self, agent);
+  count = ev_pending_count(agent->ev_loop);
+  return INT2NUM(count);
 }
 
 VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue) {
@@ -207,8 +216,8 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
   long total = 0;
   VALUE switchpoint_result = Qnil;
   int read_to_eof = RTEST(to_eof);
-
   VALUE underlying_io = rb_iv_get(io, "@io");
+
   GetLibevAgent(self, agent);
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
@@ -220,7 +229,15 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
 
   while (len > 0) {
     int n = read(fptr->fd, buf, len);
-    if (n < 0) {
+    if (n == 0)
+      break;
+    if (n > 0) {
+      total = total + n;
+      buf += n;
+      len -= n;
+      if (!read_to_eof || (len == 0)) break;
+    }
+    else {
       int e = errno;
       if ((e == EWOULDBLOCK || e == EAGAIN)) {
         if (watcher.fiber == Qnil) {
@@ -237,14 +254,9 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
         rb_syserr_fail(e, strerror(e));
         // rb_syserr_fail_path(e, fptr->pathv);
     }
-    else if (n == 0) break;
-    else {
-      total = total + n;
-      buf += n;
-      len -= n;
-      if (!read_to_eof) break;
-    }
   }
+
+  if (read_to_eof && total == 0) return Qnil;
 
   io_set_read_length(str, total, shrinkable);
   io_enc_str(str, fptr);
@@ -334,7 +346,6 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
   watcher.fiber = Qnil;
   while (1) {
     fd = accept(fptr->fd, &addr, &len);
-
     if (fd < 0) {
       int e = errno;
       if (e == EWOULDBLOCK || e == EAGAIN) {
@@ -415,7 +426,6 @@ VALUE LibevAgent_sleep(VALUE self, VALUE duration) {
   VALUE switchpoint_result = Qnil;
 
   GetLibevAgent(self, agent);
-
   watcher.fiber = rb_fiber_current();
   ev_timer_init(&watcher.timer, LibevAgent_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(agent->ev_loop, &watcher.timer);
@@ -463,6 +473,12 @@ VALUE LibevAgent_waitpid(VALUE self, VALUE pid) {
   return switchpoint_result;
 }
 
+struct ev_loop *LibevAgent_ev_loop(VALUE self) {
+  struct LibevAgent_t *agent;
+  GetLibevAgent(self, agent);
+  return agent->ev_loop;
+}
+
 void Init_LibevAgent() {
   rb_require("socket");
   cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
@@ -473,6 +489,7 @@ void Init_LibevAgent() {
   rb_define_method(cLibevAgent, "initialize", LibevAgent_initialize, 0);
   rb_define_method(cLibevAgent, "finalize", LibevAgent_finalize, 0);
   rb_define_method(cLibevAgent, "post_fork", LibevAgent_post_fork, 0);
+  rb_define_method(cLibevAgent, "pending_count", LibevAgent_pending_count, 0);
 
   rb_define_method(cLibevAgent, "poll", LibevAgent_poll, 3);
   rb_define_method(cLibevAgent, "break", LibevAgent_break, 0);

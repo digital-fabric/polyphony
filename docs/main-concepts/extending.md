@@ -5,7 +5,7 @@ nav_order: 4
 parent: Main Concepts
 permalink: /main-concepts/extending/
 prev_title: Exception Handling
-next_title: Design Principles
+next_title: The Design of Polyphony
 ---
 # Extending Polyphony
 

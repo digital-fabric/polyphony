@@ -99,7 +99,9 @@ class ::IO
   alias_method :orig_read, :read
   def read(len = 1 << 30)
     @read_buffer ||= +''
-    Thread.current.agent.read(self, @read_buffer, len, true)
+    result = Thread.current.agent.read(self, @read_buffer, len, true)
+    return nil unless result
+
     already_read = @read_buffer
     @read_buffer = +''
     already_read
@@ -108,7 +110,9 @@ class ::IO
   alias_method :orig_readpartial, :read
   def readpartial(len)
     @read_buffer ||= +''
-    Thread.current.agent.read(self, @read_buffer, len, false)
+    result = Thread.current.agent.read(self, @read_buffer, len, false)
+    raise EOFError unless result
+
     already_read = @read_buffer
     @read_buffer = +''
     already_read

@@ -40,8 +40,8 @@
   - [v] read/write
   - [v] sleep
   - [v] waitpid
-  - [ ] send/recv - to be done later
-  - [ ] connect/accept - to be done later
+  - [v] send/recv - to be done later
+  - [v] connect/~~accept~~ - to be done later
 - [v] Removal of Selector, as well as all watcher classes encapsulating libev
       event watchers.
 - [v] Alternative implementation of async using pipes.

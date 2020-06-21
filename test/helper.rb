@@ -18,6 +18,10 @@ Minitest::Reporters.use! [
   Minitest::Reporters::SpecReporter.new
 ]
 
+class ::Fiber
+  attr_writer :auto_watcher
+end
+
 class MiniTest::Test
   def setup
     # puts "* setup #{self.name}"
@@ -32,9 +36,14 @@ class MiniTest::Test
   end
 
   def teardown
-    # puts "* teardown #{self.name}"
+    # puts "* teardown #{self.name.inspect} Fiber.current: #{Fiber.current.inspect}"
     Fiber.current.terminate_all_children
     Fiber.current.await_all_children
+    Fiber.current.auto_watcher = nil
+  rescue => e
+    puts e
+    puts e.backtrace.join("\n")
+    exit!
   end
 end
 

@@ -719,7 +719,7 @@ class MailboxTest < MiniTest::Test
     msgs = []
     f = spin { loop { msgs << receive } }
 
-    snooze # allow coproc to start
+    snooze # allow f to start
 
     3.times { |i| f << i }
 
@@ -745,6 +745,7 @@ class MailboxTest < MiniTest::Test
   def test_cross_thread_send_receive
     ping_receive_buffer = []
     pong_receive_buffer = []
+
     pong = Thread.new do
       sleep 0.05
       loop do
@@ -765,6 +766,7 @@ class MailboxTest < MiniTest::Test
 
     ping.join
     pong.kill
+    ping = pong = nil
 
     assert_equal %w{pong pong pong}, ping_receive_buffer
     assert_equal %w{ping ping ping}, pong_receive_buffer

@@ -52,6 +52,7 @@ static VALUE SYM_scheduled_fibers;
 static VALUE SYM_pending_watchers;
 
 static VALUE Thread_fiber_scheduling_stats(VALUE self) {
+  VALUE agent = rb_ivar_get(self,ID_ivar_agent);
   VALUE stats = rb_hash_new();
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   long pending_count;
@@ -59,7 +60,7 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   long scheduled_count = RARRAY_LEN(queue);
   rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(scheduled_count));
 
-  pending_count = 0; // should be set to number of pending libev watchers
+  pending_count = LibevAgent_pending_count(agent);
   rb_hash_aset(stats, SYM_pending_watchers, INT2NUM(pending_count));
 
   return stats;

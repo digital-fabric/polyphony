@@ -34,11 +34,12 @@ static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
 }
 
 inline VALUE Fiber_auto_watcher(VALUE self) {
+  VALUE watcher;
   if (cEvent == Qnil) {
     cEvent = rb_const_get(mPolyphony, rb_intern("Event"));
   }
 
-  VALUE watcher = rb_ivar_get(self, ID_ivar_auto_watcher);
+  watcher = rb_ivar_get(self, ID_ivar_auto_watcher);
   if (watcher == Qnil) {
     watcher = rb_funcall(cEvent, ID_new, 0);
     rb_ivar_set(self, ID_ivar_auto_watcher, watcher);
@@ -76,12 +77,10 @@ void Fiber_make_runnable(VALUE fiber, VALUE value) {
 
 void Init_Fiber() {
   VALUE cFiber = rb_const_get(rb_cObject, rb_intern("Fiber"));
-  rb_define_method(cFiber, "auto_watcher", Fiber_auto_watcher, 0);
   rb_define_method(cFiber, "safe_transfer", Fiber_safe_transfer, -1);
   rb_define_method(cFiber, "schedule", Fiber_schedule, -1);
   rb_define_method(cFiber, "state", Fiber_state, 0);
-
-  ID_ivar_auto_watcher = rb_intern("@auto_watcher");
+  rb_define_method(cFiber, "auto_watcher", Fiber_auto_watcher, 0);
 
   SYM_dead = ID2SYM(rb_intern("dead"));
   SYM_running = ID2SYM(rb_intern("running"));
@@ -93,6 +92,7 @@ void Init_Fiber() {
   rb_global_variable(&SYM_waiting);
 
   ID_fiber_trace          = rb_intern("__fiber_trace__");
+  ID_ivar_auto_watcher    = rb_intern("@auto_watcher");
 
   SYM_fiber_create        = ID2SYM(rb_intern("fiber_create"));
   SYM_fiber_ev_loop_enter = ID2SYM(rb_intern("fiber_ev_loop_enter"));

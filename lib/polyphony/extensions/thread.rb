@@ -8,14 +8,15 @@ class ::Thread
 
   alias_method :orig_initialize, :initialize
   def initialize(*args, &block)
-    @join_wait_queue = Polyphony::Queue.new
+    @join_wait_queue = []
+    @finalization_mutex = Mutex.new
     @args = args
     @block = block
-    @finalization_mutex = Mutex.new
     orig_initialize { execute }
   end
 
   def execute
+    @agent = Polyphony::LibevAgent.new
     setup
     @ready = true
     result = @block.(*@args)
@@ -34,7 +35,6 @@ class ::Thread
     @main_fiber = Fiber.current
     @main_fiber.setup_main_fiber
     setup_fiber_scheduling
-    @agent = Polyphony::LibevAgent.new
   end
 
   def finalize(result)
@@ -51,17 +51,18 @@ class ::Thread
   end
 
   def signal_waiters(result)
-    @join_wait_queue.shift_each { |w| w.signal(result) }
+    @join_wait_queue.each { |w| w.signal(result) }
   end
 
   alias_method :orig_join, :join
   def join(timeout = nil)
     watcher = Fiber.current.auto_watcher
+
     @finalization_mutex.synchronize do
       if @terminated
         @result.is_a?(Exception) ? (raise @result) : (return @result)
       else
-        @join_wait_queue.push(watcher)
+        @join_wait_queue << watcher
       end
     end
     timeout ? move_on_after(timeout) { watcher.await } : watcher.await

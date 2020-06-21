@@ -3,6 +3,11 @@
 require 'fiber'
 require_relative './polyphony_ext'
 
+module Polyphony
+  # Map Queue to Libev queue implementation
+  Queue = LibevQueue
+end
+
 require_relative './polyphony/extensions/core'
 require_relative './polyphony/extensions/thread'
 require_relative './polyphony/extensions/fiber'

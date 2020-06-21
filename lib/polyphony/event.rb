@@ -8,14 +8,14 @@ module Polyphony
     end
 
     def await
-      Thread.current.agent.read(@i, +'', 1, false)
+      Thread.current.agent.read(@i, +'', 8192, false)
       raise @value if @value.is_a?(Exception)
 
       @value
     end
 
     def await_no_raise
-      Thread.current.agent.read(@i, +'', 1, false)
+      Thread.current.agent.read(@i, +'', 8192, false)
       @value
     end
 

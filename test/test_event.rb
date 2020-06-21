@@ -22,7 +22,7 @@ class EventTest < MiniTest::Test
     t&.join
   end
 
-  def test_that_event_doesnt_coalesces_signals
+  def test_that_event_coalesces_signals
     count = 0
     a = Polyphony::Event.new
    
@@ -40,7 +40,7 @@ class EventTest < MiniTest::Test
     end
 
     coproc.await
-    assert_equal 3, count
+    assert_equal 1, count
   ensure
     t&.kill
     t&.join
