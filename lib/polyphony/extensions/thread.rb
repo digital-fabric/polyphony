@@ -16,14 +16,15 @@ class ::Thread
   end
 
   def execute
+    # agent must be created in the context of the new thread, therefore it
+    # cannot be created in Thread#initialize
     @agent = Polyphony::LibevAgent.new
     setup
     @ready = true
     result = @block.(*@args)
   rescue Polyphony::MoveOn, Polyphony::Terminate => e
     result = e.value
-  rescue Exception => e
-    result = e
+  rescue Exception => result
   ensure
     @ready = true
     finalize(result)
