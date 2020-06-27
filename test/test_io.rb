@@ -63,6 +63,26 @@ class IOTest < MiniTest::Test
     assert_equal 'foo', f.await
     assert_equal [:wait_readable, 'foo'], results
   end
+
+  def test_readpartial
+    i, o = IO.pipe
+
+    o << 'hi'
+    assert_equal 'hi', i.readpartial(3)
+
+    o << 'hi'
+    assert_equal 'h', i.readpartial(1)
+    assert_equal 'i', i.readpartial(1)
+
+    spin {
+      sleep 0.01
+      o << 'hi'
+    }
+    assert_equal 'hi', i.readpartial(2) 
+    o.close
+
+    assert_raises(EOFError) { i.readpartial(1) }    
+  end
 end
 
 class IOClassMethodsTest < MiniTest::Test

@@ -256,7 +256,7 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
     }
   }
 
-  if (read_to_eof && total == 0) return Qnil;
+  if (total == 0) return Qnil;
 
   io_set_read_length(str, total, shrinkable);
   io_enc_str(str, fptr);

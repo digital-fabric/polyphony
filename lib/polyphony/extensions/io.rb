@@ -143,15 +143,10 @@ class ::IO
       idx = @read_buffer.index(sep)
       return @read_buffer.slice!(0, idx + sep_size) if idx
 
-      if !(data = readpartial(8192)).empty?
-        @read_buffer << data
-      else
-        return nil if @read_buffer.empty?
-
-        line = @read_buffer.freeze
-        @read_buffer = +''
-        return line
-      end
+      data = readpartial(8192)
+      @read_buffer << data
+    rescue EOFError
+      return nil
     end
   end
 

@@ -18,7 +18,7 @@ def handle_client(socket)
     while (req = reqs.shift)
       handle_request(socket, req)
       req = nil
-      # snooze
+      snooze
     end
   end
 rescue IOError, SystemCallError => e
@@ -29,9 +29,9 @@ ensure
 end
 
 def handle_request(client, parser)
-  status_code = 200
+  status_code = "200 OK"
   data = "Hello world!\n"
-  headers = "Content-Length: #{data.bytesize}\r\n"
+  headers = "Content-Type: text/plain\r\nContent-Length: #{data.bytesize}\r\n"
   client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
 end
 
@@ -47,11 +47,11 @@ ensure
   server&.close
 end
 
-every(1) {
-  stats = Thread.current.fiber_scheduling_stats
-  stats[:connection_count] = $connection_count
-  puts "#{Time.now} #{stats}"
-}
+# every(1) {
+#   stats = Thread.current.fiber_scheduling_stats
+#   stats[:connection_count] = $connection_count
+#   puts "#{Time.now} #{stats}"
+# }
 
 puts "pid #{Process.pid}"
 suspend
