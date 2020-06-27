@@ -48,14 +48,14 @@ struct async_watcher *async_queue_pop(struct async_queue *queue) {
 }
 
 void async_queue_remove_at_idx(struct async_queue *queue, unsigned int remove_idx) {
-  unsigned int before_last_idx;
-
   queue->count--;
-  if (remove_idx + 1 == queue->push_idx) return;
-  before_last_idx = queue->push_idx - 1;
-  for (unsigned int idx = remove_idx; idx < before_last_idx; idx++) {
-    queue->queue[idx] = queue->queue[idx + 1];    
-  }
+  queue->push_idx--;
+  if (remove_idx < queue->push_idx)
+    memmove(
+      queue->queue + remove_idx,
+      queue->queue + remove_idx + 1,
+      (queue->push_idx - remove_idx) * sizeof(struct async_watcher *)
+    );
 }
 
 void async_queue_remove_by_fiber(struct async_queue *queue, VALUE fiber) {
