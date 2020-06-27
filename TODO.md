@@ -1,4 +1,8 @@
-## 0.42 Some more API work, more docs
+## 0.42 Update docs
+
+- 
+
+## 0.43 Some more API work, more docs
 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
@@ -110,13 +114,9 @@
     - links to the interesting stuff
       - benchmarks
   - explain difference between `sleep` and `suspend`
-  - add explanation about async vs sync, blocking vs non-blocking
   - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
 
-- Check why first call to `#sleep` returns too early in tests. Check the
-  sleep behaviour in a spawned thread.
-
-## 0.43 Sinatra / Sidekiq
+## 0.44 Sinatra / Sidekiq
 
 - sintra app with database access (postgresql)
 
@@ -126,11 +126,11 @@
   - test performance
   - proceed from there
 
-## 0.44 Testing && Docs
+## 0.45 Testing && Docs
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.45 Real IO#gets and IO#read
+## 0.46 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -140,11 +140,11 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.46 Rails
+## 0.47 Rails
 
 - Rails?
 
-## 0.47 DNS
+## 0.48 DNS
 
 ### DNS client
 
@@ -177,56 +177,17 @@ Prior art:
 
 - https://github.com/socketry/async-dns
 
-### Work on API
-
-  - Introduce mailbox limiting:
-    - add API for limiting mailbox size:
-
-      ```ruby
-      Fiber.current.mailbox_limit = 1000
-      ```
-
-    - Add the limit for `Polyphony::Queue`
-
-      ```ruby
-      Polyphony::Queue.new(1000)
-      ```
-
-    - Pushing to a limited queue will block if limit is reached
-
-  - Introduce selective receive:
-
-    ```ruby
-    # returns (or waits for) the first message for which the block returns true
-    (_, item) = receive { |msg| msg.first == ref }
-    ```
-
-    Possible implementation:
-
-    ```ruby
-    def receive
-      return @mailbox.shift unless block_given?
-      
-      loop
-        msg = @mailbox.shift
-        return msg if yield(msg)
-
-        # message didn't match condition, put it back in queue
-        @mailbox.push msg
-      end
-    end
-    ```
+## Work on API
 
 - Add option for setting the exception raised on cancelling using `#cancel_after`:
 
-  ```ruby
-  cancel_after(3, with_error: MyErrorClass) do
-    do_my_thing
-  end
-
-  # or a RuntimeError with message
-  cancel_after(3, with_error: 'Cancelling due to timeout') do
-    do_my_thing
-  end
-  ```
+```ruby
+cancel_after(3, with_error: MyErrorClass) do
+  do_my_thing
+end
+# or a RuntimeError with message
+cancel_after(3, with_error: 'Cancelled due to timeout') do
+  do_my_thing
+end
+```
 
