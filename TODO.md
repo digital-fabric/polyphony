@@ -1,42 +1,4 @@
-- Would it be possible to spin up a fiber on another thread?
-  
-  The use case is being able to supervise fibers that run on separate threads.
-  This might be useful for distributing jobs (such as handling HTTP connections)
-  over multiple threads.
-
-  For this we need:
-
-  - A way to communicate to a thread that it needs to spin up a fiber, the
-    simplest solution is to start a fiber accepting spin requests for each
-    thread (in `Thread#initialize`).
-  - An API:
-
-    ```ruby
-    spin(on_thread: thread) { do_something_important }
-    ```
-
-  An alternative is to turn the main fiber of spawned threads into a child of
-  the spawning fiber. But since a lot of people might start threads without any
-  regard to fibers, it might be better to implement this in a new API. An
-  example of the top of my head for threads that shouldn't be children of the
-  spawning fiber is our own test helper, which kills all child fibers after each
-  test. MiniTest has some threads it spawns for running tests in parallel, and
-  we don't want to stop them after each test!
-
-  So, a good solution would be:
-
-  ```ruby
-  t = Thread.new { do_stuff }
-  t.parent_fiber = Fiber.current
-  # or otherwise:
-  Fiber.current.add_child_fiber(t.main_fiber)
-  ```
-
-
-
-
-
-## 0.40 Some more API work, more docs
+## 0.42 Some more API work, more docs
 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
@@ -154,7 +116,7 @@
 - Check why first call to `#sleep` returns too early in tests. Check the
   sleep behaviour in a spawned thread.
 
-## 0.41 Sinatra / Sidekiq
+## 0.43 Sinatra / Sidekiq
 
 - sintra app with database access (postgresql)
 
@@ -164,13 +126,11 @@
   - test performance
   - proceed from there
 
-## 0.42 Testing && Docs
+## 0.44 Testing && Docs
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.43 Integration
-
-## 0.44 Real IO#gets and IO#read
+## 0.45 Real IO#gets and IO#read
 
 - More tests
 - Implement some basic stuff missing:
@@ -180,11 +140,11 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.45 Rails
+## 0.46 Rails
 
 - Rails?
 
-## 0.46 DNS
+## 0.47 DNS
 
 ### DNS client
 
@@ -226,10 +186,10 @@ Prior art:
       Fiber.current.mailbox_limit = 1000
       ```
 
-    - Add the limit for `Gyro::Queue`
+    - Add the limit for `Polyphony::Queue`
 
       ```ruby
-      Gyro::Queue.new(1000)
+      Polyphony::Queue.new(1000)
       ```
 
     - Pushing to a limited queue will block if limit is reached

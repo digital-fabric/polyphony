@@ -52,10 +52,13 @@ end
 
 # Overrides for Process
 module ::Process
-  def self.detach(pid)
-    fiber = spin { Gyro::Child.new(pid).await }
-    fiber.define_singleton_method(:pid) { pid }
-    fiber
+  class << self
+    alias_method :orig_detach, :detach
+    def detach(pid)
+      fiber = spin { Thread.current.agent.waitpid(pid) }
+      fiber.define_singleton_method(:pid) { pid }
+      fiber
+    end
   end
 end
 
@@ -67,10 +70,9 @@ module ::Kernel
   def `(cmd)
     Open3.popen3(cmd) do |i, o, e, _t|
       i.close
-      while (l = e.readpartial(8192))
-        $stderr << l
-      end
-      o.read
+      err = e.read
+      $stderr << err if err
+      o.read || ''
     end
   end
 
@@ -104,13 +106,20 @@ module ::Kernel
   def system(*args)
     Open3.popen2(*args) do |i, o, _t|
       i.close
-      while (l = o.readpartial(8192))
-        $stdout << l
-      end
+      pipe_to_eof(o, $stdout)
     end
     true
   rescue SystemCallError
     nil
+  end
+
+  def pipe_to_eof(src, dest)
+    loop do
+      data = src.readpartial(8192)
+      dest << data
+    rescue EOFError
+      break
+    end
   end
 end
 

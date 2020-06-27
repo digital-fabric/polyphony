@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'helper'
+require 'polyphony/adapters/trace'
 
 class TraceTest < MiniTest::Test
   def test_tracing_disabled
@@ -11,13 +12,13 @@ class TraceTest < MiniTest::Test
     assert_equal 0, records.size
   ensure
     t&.disable
-    Gyro.trace(nil)
+    Polyphony.trace(nil)
   end
 
   def test_tracing_enabled
     records = []
     t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
-    Gyro.trace(true)
+    Polyphony.trace(true)
     t.enable
     snooze
     t.disable
@@ -28,14 +29,14 @@ class TraceTest < MiniTest::Test
     assert_equal [Fiber.current], records.map { |r| r[:fiber] }.uniq
   ensure
     t&.disable
-    Gyro.trace(nil)
+    Polyphony.trace(nil)
   end
 
   def test_2_fiber_trace
     records = []
     t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
     t.enable
-    Gyro.trace(true)
+    Polyphony.trace(true)
 
     f = spin { sleep 0 }
     suspend
@@ -61,6 +62,6 @@ class TraceTest < MiniTest::Test
     ], events
   ensure
     t&.disable
-    Gyro.trace(nil)
+    Polyphony.trace(nil)
   end
 end

@@ -8,29 +8,29 @@ module Polyphony
     attr_reader :size
 
     def self.process(&block)
-      @default_pool ||= self.new
+      @default_pool ||= new
       @default_pool.process(&block)
     end
 
     def self.reset
       return unless @default_pool
-      
+
       @default_pool.stop
       @default_pool = nil
     end
 
     def initialize(size = Etc.nprocessors)
       @size = size
-      @task_queue = Gyro::Queue.new
+      @task_queue = Polyphony::Queue.new
       @threads = (1..@size).map { Thread.new { thread_loop } }
     end
 
     def process(&block)
       setup unless @task_queue
 
-      async = Fiber.current.auto_async
-      @task_queue << [block, async]
-      async.await
+      watcher = Fiber.current.auto_watcher
+      @task_queue << [block, watcher]
+      watcher.await
     end
 
     def cast(&block)

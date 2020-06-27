@@ -10,12 +10,13 @@ module ::PG
   end
 
   def self.connect_async(conn)
+    socket_io = conn.socket_io
     loop do
       res = conn.connect_poll
       case res
       when PGRES_POLLING_FAILED   then raise Error, conn.error_message
-      when PGRES_POLLING_READING  then conn.socket_io.read_watcher.await
-      when PGRES_POLLING_WRITING  then conn.socket_io.write_watcher.await
+      when PGRES_POLLING_READING  then Thread.current.agent.wait_io(socket_io, false)
+      when PGRES_POLLING_WRITING  then Thread.current.agent.wait_io(socket_io, true)
       when PGRES_POLLING_OK       then return conn.setnonblocking(true)
       end
     end
@@ -41,7 +42,7 @@ class ::PG::Connection
 
   def get_result(&block)
     while is_busy
-      socket_io.read_watcher.await
+      Thread.current.agent.wait_io(socket_io, false)
       consume_input
     end
     orig_get_result(&block)
@@ -58,7 +59,7 @@ class ::PG::Connection
 
   def block(_timeout = 0)
     while is_busy
-      socket_io.read_watcher.await
+      Thread.current.agent.wait_io(socket_io, false)
       consume_input
     end
   end
@@ -96,7 +97,7 @@ class ::PG::Connection
     return move_on_after(timeout) { wait_for_notify(&block) } if timeout
 
     loop do
-      socket_io.read_watcher.await
+      Thread.current.agent.wait_io(socket_io, false)
       consume_input
       notice = notifies
       next unless notice

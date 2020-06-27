@@ -7,14 +7,21 @@ require_relative '../core/thread_pool'
 
 # Socket overrides (eventually rewritten in C)
 class ::Socket
+  def accept
+    Thread.current.agent.accept(self)
+  end
+
   NO_EXCEPTION = { exception: false }.freeze
 
   def connect(remotesockaddr)
     loop do
       result = connect_nonblock(remotesockaddr, **NO_EXCEPTION)
-      return if result == 0
-
-      result == :wait_writable ? write_watcher.await : (raise IOError)
+      case result
+      when 0 then return
+      when :wait_writable then Thread.current.agent.wait_io(self, true)
+      else
+        raise IOError
+      end
     end
   end
 
@@ -22,9 +29,12 @@ class ::Socket
     outbuf ||= +''
     loop do
       result = recv_nonblock(maxlen, flags, outbuf, **NO_EXCEPTION)
-      raise IOError unless result
-
-      result == :wait_readable ? read_watcher.await : (return result)
+      case result
+      when nil then raise IOError
+      when :wait_readable then Thread.current.agent.wait_io(self, false)
+      else
+        return result
+      end
     end
   end
 
@@ -32,9 +42,12 @@ class ::Socket
     @read_buffer ||= +''
     loop do
       result = recvfrom_nonblock(maxlen, flags, @read_buffer, **NO_EXCEPTION)
-      raise IOError unless result
-
-      result == :wait_readable ? read_watcher.await : (return result)
+      case result
+      when nil then raise IOError
+      when :wait_readable then Thread.current.agent.wait_io(self, false)
+      else
+        return result
+      end
     end
   end
 
@@ -116,5 +129,10 @@ class ::TCPServer
   alias_method :orig_accept, :accept
   def accept
     @io ? @io.accept : orig_accept
+  end
+
+  alias_method :orig_close, :close
+  def close
+    @io ? @io.close : orig_close
   end
 end

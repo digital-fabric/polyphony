@@ -2,30 +2,6 @@
 
 require_relative 'helper'
 
-class GyroIOTest < MiniTest::Test
-  def test_that_reading_works
-    i, o = IO.pipe
-    data = +''
-    sequence = []
-    watcher = Gyro::IO.new(i, :r)
-    spin {
-      sequence << 1
-      watcher.await
-      sequence << 2
-      i.read_nonblock(8192, data)
-    }
-    snooze
-    sequence << 3
-    spin do
-      o << 'hello'
-      sequence << 4
-    end
-    suspend
-    assert_equal 'hello', data
-    assert_equal [1, 3, 4, 2], sequence
-  end
-end
-
 class IOTest < MiniTest::Test
   def setup
     super
@@ -60,6 +36,52 @@ class IOTest < MiniTest::Test
     @o << 'bar' << 'baz'
     @o.close
     assert_equal 'foobarbaz', @i.read
+  end
+
+  def test_wait_io
+    results = []
+    i, o = IO.pipe
+    f = spin do
+      loop do
+        result = i.orig_read_nonblock(8192, exception: false)
+        results << result
+        case result
+        when :wait_readable
+          Thread.current.agent.wait_io(i, false)
+        else
+          break result
+        end
+      end
+    end
+
+    snooze
+    o.write('foo')
+    o.close
+
+    result = f.await
+
+    assert_equal 'foo', f.await
+    assert_equal [:wait_readable, 'foo'], results
+  end
+
+  def test_readpartial
+    i, o = IO.pipe
+
+    o << 'hi'
+    assert_equal 'hi', i.readpartial(3)
+
+    o << 'hi'
+    assert_equal 'h', i.readpartial(1)
+    assert_equal 'i', i.readpartial(1)
+
+    spin {
+      sleep 0.01
+      o << 'hi'
+    }
+    assert_equal 'hi', i.readpartial(2) 
+    o.close
+
+    assert_raises(EOFError) { i.readpartial(1) }    
   end
 end
 

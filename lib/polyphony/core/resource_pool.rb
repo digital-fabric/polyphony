@@ -23,13 +23,13 @@ module Polyphony
     end
 
     def acquire
-      Gyro.ref
+      Polyphony.ref
       resource = wait_for_resource
       return unless resource
 
       yield resource
     ensure
-      Gyro.unref
+      Polyphony.unref
       release(resource) if resource
     end
 

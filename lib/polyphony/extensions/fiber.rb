@@ -238,7 +238,7 @@ module Polyphony
       @parent = parent
       @caller = caller
       @block = block
-      @mailbox = Gyro::Queue.new
+      @mailbox = Polyphony::Queue.new
       __fiber_trace__(:fiber_create, self)
       schedule
     end
@@ -268,7 +268,7 @@ module Polyphony
     # allows the fiber to be scheduled and to receive messages.
     def setup_raw
       @thread = Thread.current
-      @mailbox = Gyro::Queue.new
+      @mailbox = Polyphony::Queue.new
     end
 
     def setup_main_fiber
@@ -277,11 +277,11 @@ module Polyphony
       @thread = Thread.current
       @running = true
       @children&.clear
-      @mailbox = Gyro::Queue.new
+      @mailbox = Polyphony::Queue.new
     end
 
     def restart_self(first_value)
-      @mailbox = Gyro::Queue.new
+      @mailbox = Polyphony::Queue.new
       @when_done_procs = nil
       @waiting_fibers = nil
       run(first_value)

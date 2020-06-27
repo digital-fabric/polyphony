@@ -20,22 +20,22 @@ end
 
 def handle_client(socket)
   parser = Http::Parser.new
-  req = nil
+  reqs = []
   parser.on_message_complete = proc do |env|
-    req = parser
+    reqs << Object.new # parser
   end
   while (data = socket.readpartial(8192)) do
     parser << data
-    if req
+    while (req = reqs.shift)
       handle_request(socket, req)
       req = nil
-      snooze
+      # snooze
     end
   end
 rescue IOError, SystemCallError => e
   # do nothing
 ensure
-  socket.close rescue nil
+  socket&.close
   parser.reset!
 end
 
@@ -46,13 +46,14 @@ def handle_request(client, parser)
   client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
 end
 
-$incoming = Gyro::Queue.new
+$incoming = Polyphony::Queue.new
 
 $threads = (1..4).map {
   Thread.new {
     Thread.current.setup_fiber_scheduling
     loop {
       conn = $incoming.pop
+      puts "#{Thread.current.inspect} pop #{conn.inspect}"
       spin { handle_client(conn) }
     }
   }

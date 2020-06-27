@@ -2,7 +2,7 @@
 
 require 'bundler/setup'
 require 'irb'
-require 'polyphony/irb'
+require 'polyphony/adapters/irb'
 
 $counter = 0
 timer = spin do

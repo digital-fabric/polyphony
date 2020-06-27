@@ -2,41 +2,6 @@
 
 require_relative 'helper'
 
-class SignalTest < MiniTest::Test
-  def test_Gyro_Signal_constructor
-    sig = Signal.list['USR1']
-    count = 0
-    w = Gyro::Signal.new(sig)
-
-    spin {
-      loop {
-        w.await
-        count += 1
-        break
-      }
-    }
-    Thread.new do
-      orig_sleep 0.001
-      Process.kill(:USR1, Process.pid)
-    end
-    suspend
-    assert_equal 1, count
-  end
-
-  def test_wait_for_signal_api
-    count = 0
-    spin do
-      Polyphony.wait_for_signal 'SIGHUP'
-      count += 1
-    end
-
-    snooze
-    Process.kill(:HUP, Process.pid)
-    snooze
-    assert_equal 1, count
-  end
-end
-
 class SignalTrapTest < Minitest::Test
   def test_signal_exception_handling
     i, o = IO.pipe
@@ -57,9 +22,8 @@ class SignalTrapTest < Minitest::Test
     end
     sleep 0.01
     o.close
-    watcher = Gyro::Child.new(pid)
     Process.kill('INT', pid)
-    watcher.await
+    Thread.current.agent.waitpid(pid)
     buffer = i.read
     assert_equal "3-interrupt\n", buffer
   end
@@ -86,9 +50,8 @@ class SignalTrapTest < Minitest::Test
     end
     sleep 0.02
     o.close
-    watcher = Gyro::Child.new(pid)
     Process.kill('INT', pid)
-    watcher.await
+    Thread.current.agent.waitpid(pid)
     buffer = i.read
     assert_equal "3 - interrupted\n2 - terminated\n1 - terminated\n", buffer
   end
@@ -130,7 +93,7 @@ class SignalTrapTest < Minitest::Test
     o.close
     sleep 0.1
     Process.kill('INT', pid)
-    Gyro::Child.new(pid).await
+    Thread.current.agent.waitpid(pid)
     buffer = i.read
     assert_equal "3-interrupt\n", buffer
   end

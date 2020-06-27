@@ -2,7 +2,7 @@
 
 require 'open3'
 
-# IO overrides
+# IO class method patches
 class ::IO
   class << self
     alias_method :orig_binread, :binread
@@ -72,7 +72,10 @@ class ::IO
       Open3.popen2(cmd) { |_i, o, _t| yield o }
     end
   end
+end
 
+# IO instance method patches
+class ::IO
   # def each(sep = $/, limit = nil, chomp: nil)
   #   sep, limit = $/, sep if sep.is_a?(Integer)
   # end
@@ -93,6 +96,39 @@ class ::IO
   # def getc
   # end
 
+  alias_method :orig_read, :read
+  def read(len = 1 << 30)
+    @read_buffer ||= +''
+    result = Thread.current.agent.read(self, @read_buffer, len, true)
+    return nil unless result
+
+    already_read = @read_buffer
+    @read_buffer = +''
+    already_read
+  end
+
+  alias_method :orig_readpartial, :read
+  def readpartial(len)
+    @read_buffer ||= +''
+    result = Thread.current.agent.read(self, @read_buffer, len, false)
+    raise EOFError unless result
+
+    already_read = @read_buffer
+    @read_buffer = +''
+    already_read
+  end
+
+  alias_method :orig_write, :write
+  def write(str)
+    Thread.current.agent.write(self, str)
+  end
+
+  alias_method :orig_write_chevron, :<<
+  def <<(str)
+    Thread.current.agent.write(self, str)
+    self
+  end
+
   alias_method :orig_gets, :gets
   def gets(sep = $/, _limit = nil, _chomp: nil)
     if sep.is_a?(Integer)
@@ -101,23 +137,17 @@ class ::IO
     end
     sep_size = sep.bytesize
 
-    @gets_buffer ||= +''
+    @read_buffer ||= +''
 
     loop do
-      idx = @gets_buffer.index(sep)
-      return @gets_buffer.slice!(0, idx + sep_size) if idx
+      idx = @read_buffer.index(sep)
+      return @read_buffer.slice!(0, idx + sep_size) if idx
 
-      if (data = readpartial(8192))
-        @gets_buffer << data
-      else
-        return nil if @gets_buffer.empty?
-
-        line = @gets_buffer.freeze
-        @gets_buffer = +''
-        return line
-      end
+      data = readpartial(8192)
+      @read_buffer << data
+    rescue EOFError
+      return nil
     end
-    # orig_gets(sep, limit, chomp: chomp)
   end
 
   # def print(*args)
@@ -171,16 +201,16 @@ class ::IO
     buf ? readpartial(maxlen, buf) : readpartial(maxlen)
   end
 
-  alias_method :orig_read, :read
-  def read(length = nil, outbuf = nil)
-    if length
-      return outbuf ? readpartial(length) : readpartial(length, outbuf)
-    end
+  # alias_method :orig_read, :read
+  # def read(length = nil, outbuf = nil)
+  #   if length
+  #     return outbuf ? readpartial(length) : readpartial(length, outbuf)
+  #   end
 
-    until eof?
-      outbuf ||= +''
-      outbuf << readpartial(8192)
-    end
-    outbuf
-  end
+  #   until eof?
+  #     outbuf ||= +''
+  #     outbuf << readpartial(8192)
+  #   end
+  #   outbuf
+  # end
 end

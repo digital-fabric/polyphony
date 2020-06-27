@@ -8,14 +8,20 @@ class ThreadTest < MiniTest::Test
     buffer = []
     f = spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new do
+      sleep 0.01
       s1 = spin { (11..13).each { |i| snooze; buffer << i } }
       s2 = spin { (21..23).each { |i| snooze; buffer << i } }
+      sleep 0.02
       Fiber.current.await_all_children
     end
     f.join
     t.join
+    t = nil
 
     assert_equal [1, 2, 3, 11, 12, 13, 21, 22, 23], buffer.sort
+  ensure
+    t&.kill
+    t&.join
   end
 
   def test_thread_join
@@ -24,11 +30,13 @@ class ThreadTest < MiniTest::Test
     t = Thread.new { sleep 0.01; buffer << 4; :foo }
 
     r = t.join
+    t = nil
 
-    assert_equal [1, 2, 3, 4], buffer
     assert_equal :foo, r
+    assert_equal [1, 2, 3, 4], buffer
   ensure
-    t.kill
+    t&.kill
+    t&.join
   end
 
   def test_thread_join_with_timeout
@@ -37,6 +45,7 @@ class ThreadTest < MiniTest::Test
     t = Thread.new { sleep 1; buffer << 4 }
     t0 = Time.now
     r = t.join(0.01)
+    t = nil
 
     assert Time.now - t0 < 0.2
     assert_equal [1, 2, 3], buffer
@@ -44,7 +53,8 @@ class ThreadTest < MiniTest::Test
   ensure
     # killing the thread will prevent stopping the sleep timer, as well as the
     # thread's event selector, leading to a memory leak.
-    t&.kill if t&.alive?
+    t&.kill
+    t&.join
   end
 
   def test_thread_await_alias_method
@@ -52,11 +62,13 @@ class ThreadTest < MiniTest::Test
     spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new { sleep 0.01; buffer << 4; :foo }
     r = t.await
+    t = nil
 
     assert_equal [1, 2, 3, 4], buffer
     assert_equal :foo, r
   ensure
-    t.kill
+    t&.kill
+    t&.join
   end
 
   def test_join_race_condition_on_thread_spawning
@@ -65,27 +77,33 @@ class ThreadTest < MiniTest::Test
       :foo
     end
     r = t.join
+    t = nil
     assert_equal :foo, r
+  ensure
+    t&.kill
+    t&.join
   end
 
   def test_thread_uncaught_exception_propagation
-    t = Thread.new do
-      sleep 1
-    end
-    snooze
-    t.kill
-    t.await
+    ready = Polyphony::Event.new
 
     t = Thread.new do
+      ready.signal
+      sleep 0.01
       raise 'foo'
     end
     e = nil
     begin
-      t.await
+      ready.await
+      r = t.await
     rescue Exception => e
     end
+    t = nil
     assert_kind_of RuntimeError, e
     assert_equal 'foo', e.message
+  ensure
+    t&.kill
+    t&.join
   end
 
   def test_thread_inspect
@@ -102,9 +120,8 @@ class ThreadTest < MiniTest::Test
     p e
     puts e.backtrace.join("\n")
   ensure
-    t.kill
-    sleep 0.005
-    t.join
+    t&.kill
+    t&.join
   end
 
   def test_that_suspend_returns_immediately_if_no_watchers
@@ -113,14 +130,14 @@ class ThreadTest < MiniTest::Test
       records << r if r[:event] =~ /^fiber_/
     end
     t.enable
-    Gyro.trace(true)
+    Polyphony.trace(true)
 
     suspend
     t.disable
     assert_equal [:fiber_switchpoint], records.map { |r| r[:event] }
   ensure
     t&.disable
-    Gyro.trace(false)
+    Polyphony.trace(false)
   end
 
   def test_thread_child_fiber_termination
@@ -143,7 +160,11 @@ class ThreadTest < MiniTest::Test
     assert_equal 2, t.main_fiber.children.size
     t.kill
     t.join
+    t = nil
 
     assert_equal [:foo, :bar], buffer
+  ensure
+    t&.kill
+    t&.join
   end
 end
