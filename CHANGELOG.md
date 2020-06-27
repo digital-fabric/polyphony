@@ -1,3 +1,7 @@
+## 0.41 2020-06-27
+
+* Introduce System Agent design, remove all `Gyro` classes
+
 ## 0.40 2020-05-04
 
 * More improvements to stability after fork
