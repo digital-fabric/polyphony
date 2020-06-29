@@ -165,7 +165,8 @@ VALUE Thread_switch_fiber(VALUE self) {
   rb_ivar_set(next_fiber, ID_runnable, Qnil);
   RB_GC_GUARD(next_fiber);
   RB_GC_GUARD(value);
-  return rb_funcall(next_fiber, ID_transfer, 1, value);
+  return (next_fiber == current_fiber) ? 
+    value : rb_funcall(next_fiber, ID_transfer, 1, value);
 }
 
 VALUE Thread_reset_fiber_scheduling(VALUE self) {
