@@ -175,6 +175,8 @@ struct io_internal_read_struct {
     size_t capa;
 };
 
+#define StringValue(v) rb_string_value(&(v))
+
 int io_setstrbuf(VALUE *str, long len) {
   #ifdef _WIN32
     len = (len + 1) & ~1L;	/* round up for wide char */
@@ -325,6 +327,86 @@ error:
   return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
 }
 
+VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
+
+  #define PREPARE_STR() { \
+    str = Qnil; \
+    shrinkable = io_setstrbuf(&str, len); \
+    buf = RSTRING_PTR(str); \
+    total = 0; \
+  }
+
+  #define YIELD_STR() { \
+    io_set_read_length(str, total, shrinkable); \
+    io_enc_str(str, fptr); \
+    rb_yield(str); \
+    PREPARE_STR(); \
+  }
+
+  struct LibevAgent_t *agent;
+  struct libev_io watcher;
+  rb_io_t *fptr;
+  VALUE str;
+  int total;
+  int len = 8192;
+  int shrinkable;
+  char *buf;
+  VALUE switchpoint_result = Qnil;
+  VALUE underlying_io = rb_iv_get(io, "@io");
+
+  PREPARE_STR();
+
+  GetLibevAgent(self, agent);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetOpenFile(io, fptr);
+  rb_io_check_byte_readable(fptr);
+  rb_io_set_nonblock(fptr);
+  watcher.fiber = Qnil;
+
+  OBJ_TAINT(str);
+
+  while (1) {
+    int n = read(fptr->fd, buf, len);
+    if (n == 0)
+      break;
+    if (n > 0) {
+      total = n;
+      YIELD_STR();
+      Fiber_make_runnable(rb_fiber_current(), Qnil);
+      switchpoint_result = Thread_switch_fiber(rb_thread_current());
+      if (TEST_EXCEPTION(switchpoint_result)) {
+        goto error;
+      }
+    }
+    else {
+      int e = errno;
+      if ((e == EWOULDBLOCK || e == EAGAIN)) {
+        if (watcher.fiber == Qnil) {
+          watcher.fiber = rb_fiber_current();
+          ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
+        }
+        ev_io_start(agent->ev_loop, &watcher.io);
+        switchpoint_result = libev_await(agent);
+        ev_io_stop(agent->ev_loop, &watcher.io);
+        if (TEST_EXCEPTION(switchpoint_result)) {
+          goto error;
+        }
+      }
+      else
+        rb_syserr_fail(e, strerror(e));
+        // rb_syserr_fail_path(e, fptr->pathv);
+    }
+  }
+
+  RB_GC_GUARD(str);
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return io;
+error:
+  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+}
+
 VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
   struct LibevAgent_t *agent;
   struct libev_io watcher;
@@ -387,16 +469,6 @@ error:
 
 ///////////////////////////////////////////////////////////////////////////
 
-struct rsock_send_arg {
-    int fd, flags;
-    VALUE mesg;
-    struct sockaddr *to;
-    socklen_t tolen;
-};
-
-#define StringValue(v) rb_string_value(&(v))
-#define IS_ADDRINFO(obj) rb_typeddata_is_kind_of((obj), &addrinfo_type)
-
 VALUE LibevAgent_accept(VALUE self, VALUE sock) {
   struct LibevAgent_t *agent;
   struct libev_io watcher;
@@ -405,6 +477,8 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
+  VALUE underlying_sock = rb_iv_get(sock, "@io");
+  if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetLibevAgent(self, agent);
   GetOpenFile(sock, fptr);
@@ -458,6 +532,67 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
     }
   }
   return Qnil;
+}
+
+VALUE LibevAgent_accept_loop(VALUE self, VALUE sock) {
+  struct LibevAgent_t *agent;
+  struct libev_io watcher;
+  rb_io_t *fptr;
+  int fd;
+  struct sockaddr addr;
+  socklen_t len = (socklen_t)sizeof addr;
+  VALUE switchpoint_result = Qnil;
+  VALUE connection = Qnil;
+  VALUE underlying_sock = rb_iv_get(sock, "@io");
+  if (underlying_sock != Qnil) sock = underlying_sock;
+
+  GetLibevAgent(self, agent);
+  GetOpenFile(sock, fptr);
+  rb_io_set_nonblock(fptr);
+  watcher.fiber = Qnil;
+
+  while (1) {
+    fd = accept(fptr->fd, &addr, &len);
+    if (fd < 0) {
+      int e = errno;
+      if (e == EWOULDBLOCK || e == EAGAIN) {
+        if (watcher.fiber == Qnil) {
+          watcher.fiber = rb_fiber_current();
+          ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
+        }
+        ev_io_start(agent->ev_loop, &watcher.io);
+        switchpoint_result = libev_await(agent);
+        ev_io_stop(agent->ev_loop, &watcher.io);
+
+        TEST_RESUME_EXCEPTION(switchpoint_result);
+      }
+      else
+        rb_syserr_fail(e, strerror(e));
+        // rb_syserr_fail_path(e, fptr->pathv);
+    }
+    else {
+      rb_io_t *fp;
+      connection = rb_obj_alloc(cTCPSocket);
+      MakeOpenFile(connection, fp);
+      rb_update_max_fd(fd);
+      fp->fd = fd;
+      fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
+      rb_io_ascii8bit_binmode(connection);
+      rb_io_set_nonblock(fp);
+      rb_io_synchronized(fp);
+
+      rb_yield(connection);
+      connection = Qnil;
+      
+      Fiber_make_runnable(rb_fiber_current(), Qnil);
+      switchpoint_result = Thread_switch_fiber(rb_thread_current());
+      TEST_RESUME_EXCEPTION(switchpoint_result);
+    }
+  }
+
+  RB_GC_GUARD(connection);
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
 }
 
 VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write) {
@@ -573,8 +708,10 @@ void Init_LibevAgent() {
   rb_define_method(cLibevAgent, "break", LibevAgent_break, 0);
 
   rb_define_method(cLibevAgent, "read", LibevAgent_read, 4);
+  rb_define_method(cLibevAgent, "read_loop", LibevAgent_read_loop, 1);
   rb_define_method(cLibevAgent, "write", LibevAgent_write, 2);
   rb_define_method(cLibevAgent, "accept", LibevAgent_accept, 1);
+  rb_define_method(cLibevAgent, "accept_loop", LibevAgent_accept_loop, 1);
   rb_define_method(cLibevAgent, "wait_io", LibevAgent_wait_io, 2);
   rb_define_method(cLibevAgent, "sleep", LibevAgent_sleep, 1);
   rb_define_method(cLibevAgent, "waitpid", LibevAgent_waitpid, 1);
