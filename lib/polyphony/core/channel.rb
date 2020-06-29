@@ -26,7 +26,7 @@ module Polyphony
     end
 
     def receive
-      Polyphony.ref
+      Thread.current.agent.ref
       if @payload_queue.empty?
         @waiting_queue << Fiber.current
         suspend
@@ -34,7 +34,7 @@ module Polyphony
         receive_from_queue
       end
     ensure
-      Polyphony.unref
+      Thread.current.agent.unref
     end
 
     def receive_from_queue

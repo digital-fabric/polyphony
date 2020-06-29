@@ -5,11 +5,14 @@ require_relative 'helper'
 class AgentTest < MiniTest::Test
   def setup
     super
+    @prev_agent = Thread.current.agent
     @agent = Polyphony::LibevAgent.new
+    Thread.current.agent = @agent
   end
 
   def teardown
     @agent.finalize
+    Thread.current.agent = @prev_agent
   end
 
   def test_sleep
@@ -67,11 +70,11 @@ class AgentTest < MiniTest::Test
 
   def test_waitpid
     pid = fork do
-      Thread.current.agent.post_fork
+      @agent.post_fork
       exit(42)
     end
     
-    result = Thread.current.agent.waitpid(pid)
+    result = @agent.waitpid(pid)
     assert_equal [pid, 42], result
   end
 end

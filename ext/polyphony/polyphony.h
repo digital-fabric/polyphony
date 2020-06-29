@@ -7,7 +7,7 @@
 
 // debugging
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
-#define INSPECT(...) (rb_funcall(rb_cObject, rb_intern("p"), __VA_ARGS__))
+#define INSPECT(obj) { VALUE s = rb_funcall(obj, rb_intern("inspect"), 0); printf("%s\n", StringValueCStr(s));}
 #define FIBER_TRACE(...) if (__tracing_enabled__) { \
   rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__); \
 }
@@ -66,22 +66,22 @@ enum {
 VALUE Fiber_auto_watcher(VALUE self);
 void Fiber_make_runnable(VALUE fiber, VALUE value);
 
-VALUE Polyphony_switchpoint();
-
 VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue);
 VALUE LibevAgent_break(VALUE self);
 VALUE LibevAgent_pending_count(VALUE self);
 VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write);
 
+VALUE LibevAgent_ref(VALUE self);
+VALUE LibevAgent_unref(VALUE self);
+int LibevAgent_ref_count(VALUE self);
+void LibevAgent_reset_ref_count(VALUE self);
+
 VALUE Polyphony_snooze(VALUE self);
 
 VALUE Polyphony_Queue_push(VALUE self, VALUE value);
 
-VALUE Thread_post_fork(VALUE thread);
-VALUE Thread_ref(VALUE thread);
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_switch_fiber(VALUE thread);
-VALUE Thread_unref(VALUE thread);
 
 int io_setstrbuf(VALUE *str, long len);
 void io_set_read_length(VALUE str, long n, int shrinkable);

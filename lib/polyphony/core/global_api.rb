@@ -100,10 +100,10 @@ module Polyphony
     end
 
     def sleep_forever
-      Thread.current.fiber_ref
+      Thread.current.agent.ref
       suspend
     ensure
-      Thread.current.fiber_unref
+      Thread.current.agent.unref
     end
 
     def throttled_loop(rate, count: nil, &block)

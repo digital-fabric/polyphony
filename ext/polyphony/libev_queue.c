@@ -137,6 +137,8 @@ void async_queue_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, in
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
 
+VALUE libev_agent_await(VALUE self);
+
 VALUE LibevQueue_shift(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
@@ -152,7 +154,7 @@ VALUE LibevQueue_shift(VALUE self) {
     ev_async_init(&watcher.async, async_queue_callback);
     ev_async_start(watcher.ev_loop, &watcher.async);
     
-    switchpoint_result = Polyphony_switchpoint();
+    switchpoint_result = libev_agent_await(agent);
     ev_async_stop(watcher.ev_loop, &watcher.async);
 
     if (RTEST(rb_obj_is_kind_of(switchpoint_result, rb_eException))) {

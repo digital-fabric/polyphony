@@ -2,7 +2,6 @@
 
 ID ID_deactivate_all_watchers_post_fork;
 ID ID_empty;
-ID ID_fiber_ref_count;
 ID ID_ivar_agent;
 ID ID_ivar_join_wait_queue;
 ID ID_ivar_main_fiber;
@@ -18,34 +17,20 @@ static VALUE Thread_setup_fiber_scheduling(VALUE self) {
   VALUE queue;
   
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
-  rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(0));
   queue = rb_ary_new();
   rb_ivar_set(self, ID_run_queue, queue);
 
   return self;
 }
 
-VALUE Thread_ref(VALUE self) {
-  VALUE count = rb_ivar_get(self, ID_fiber_ref_count);
-  int new_count = NUM2INT(count) + 1;
-  rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(new_count));
-  return self;
-}
-
-VALUE Thread_unref(VALUE self) {
-  VALUE count = rb_ivar_get(self, ID_fiber_ref_count);
-  int new_count = NUM2INT(count) - 1;
-  rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(new_count));
-  return self;
-}
-
 int Thread_fiber_ref_count(VALUE self) {
-  VALUE count = rb_ivar_get(self, ID_fiber_ref_count);
-  return NUM2INT(count);
+  VALUE agent = rb_ivar_get(self, ID_ivar_agent);
+  return NUM2INT(LibevAgent_ref_count(agent));
 }
 
-void Thread_fiber_reset_ref_count(VALUE self) {
-  rb_ivar_set(self, ID_fiber_ref_count, INT2NUM(0));
+inline void Thread_fiber_reset_ref_count(VALUE self) {
+  VALUE agent = rb_ivar_get(self, ID_ivar_agent);
+  LibevAgent_reset_ref_count(agent);
 }
 
 static VALUE SYM_scheduled_fibers;
@@ -140,8 +125,8 @@ VALUE Thread_switch_fiber(VALUE self) {
     }
   }
 
+  ref_count = LibevAgent_ref_count(agent);
   while (1) {
-    ref_count = Thread_fiber_ref_count(self);
     next_fiber = rb_ary_shift(queue);
     if (next_fiber != Qnil) {
       if (ref_count > 0) {
@@ -176,16 +161,6 @@ VALUE Thread_reset_fiber_scheduling(VALUE self) {
   return self;
 }
 
-VALUE Polyphony_switchpoint() {
-  VALUE ret;
-  VALUE thread = rb_thread_current();
-  Thread_ref(thread);
-  ret = Thread_switch_fiber(thread);
-  Thread_unref(thread);
-  RB_GC_GUARD(ret);
-  return ret;
-}
-
 VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE fiber, VALUE resume_obj) {
   VALUE agent = rb_ivar_get(self, ID_ivar_agent);
   if (fiber != Qnil) {
@@ -201,9 +176,6 @@ VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE fiber, VALUE resume_ob
 }
 
 void Init_Thread() {
-  rb_define_method(rb_cThread, "fiber_ref", Thread_ref, 0);
-  rb_define_method(rb_cThread, "fiber_unref", Thread_unref, 0);
-
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
@@ -216,7 +188,6 @@ void Init_Thread() {
 
   ID_deactivate_all_watchers_post_fork = rb_intern("deactivate_all_watchers_post_fork");
   ID_empty                    = rb_intern("empty?");
-  ID_fiber_ref_count          = rb_intern("fiber_ref_count");
   ID_ivar_agent               = rb_intern("@agent");
   ID_ivar_join_wait_queue     = rb_intern("@join_wait_queue");
   ID_ivar_main_fiber          = rb_intern("@main_fiber");

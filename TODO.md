@@ -1,6 +1,10 @@
-## 0.42 Update docs
+## 0.42 More work on agent design
 
-- 
+- Implement agent interface is virtual function table
+- Implement proxy agent for plugging in a user-provided agent class
+- Reimplement ResourcePool, Channel, Mutex using LibevQueue
+
+
 
 ## 0.43 Some more API work, more docs
 

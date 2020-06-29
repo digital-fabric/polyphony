@@ -36,14 +36,6 @@ VALUE Polyphony_snooze(VALUE self) {
   return ret;
 }
 
-static VALUE Polyphony_ref(VALUE self) {
-  return Thread_ref(rb_thread_current());
-}
-
-static VALUE Polyphony_unref(VALUE self) {
-  return Thread_unref(rb_thread_current());
-}
-
 static VALUE Polyphony_suspend(VALUE self) {
   VALUE ret = Thread_switch_fiber(rb_thread_current());
 
@@ -60,9 +52,7 @@ VALUE Polyphony_trace(VALUE self, VALUE enabled) {
 void Init_Polyphony() {
   mPolyphony = rb_define_module("Polyphony");
 
-  rb_define_singleton_method(mPolyphony, "ref", Polyphony_ref, 0);
   rb_define_singleton_method(mPolyphony, "trace", Polyphony_trace, 1);
-  rb_define_singleton_method(mPolyphony, "unref", Polyphony_unref, 0);
 
   rb_define_global_function("snooze", Polyphony_snooze, 0);
   rb_define_global_function("suspend", Polyphony_suspend, 0);

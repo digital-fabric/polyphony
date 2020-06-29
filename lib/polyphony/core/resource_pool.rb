@@ -23,13 +23,13 @@ module Polyphony
     end
 
     def acquire
-      Polyphony.ref
+      Thread.current.agent.ref
       resource = wait_for_resource
       return unless resource
 
       yield resource
     ensure
-      Polyphony.unref
+      Thread.current.agent.unref
       release(resource) if resource
     end
 

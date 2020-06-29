@@ -9,6 +9,7 @@ struct LibevAgent_t {
   struct ev_loop *ev_loop;
   struct ev_async break_async;
   int running;
+  int ref_count;
   int run_no_wait_count;
 };
 
@@ -49,6 +50,7 @@ static VALUE LibevAgent_initialize(VALUE self) {
   ev_unref(agent->ev_loop); // don't count the break_async watcher
 
   agent->running = 0;
+  agent->ref_count = 0;
   agent->run_no_wait_count = 0;
 
   return Qnil;
@@ -80,6 +82,36 @@ VALUE LibevAgent_post_fork(VALUE self) {
   ev_loop_fork(agent->ev_loop);
 
   return self;
+}
+
+VALUE LibevAgent_ref(VALUE self) {
+  struct LibevAgent_t *agent;
+  GetLibevAgent(self, agent);
+
+  agent->ref_count++;
+  return self;  
+}
+
+VALUE LibevAgent_unref(VALUE self) {
+  struct LibevAgent_t *agent;
+  GetLibevAgent(self, agent);
+
+  agent->ref_count--;
+  return self;  
+}
+
+int LibevAgent_ref_count(VALUE self) {
+  struct LibevAgent_t *agent;
+  GetLibevAgent(self, agent);
+
+  return agent->ref_count;
+}
+
+void LibevAgent_reset_ref_count(VALUE self) {
+  struct LibevAgent_t *agent;
+  GetLibevAgent(self, agent);
+
+  agent->ref_count = 0;
 }
 
 VALUE LibevAgent_pending_count(VALUE self) {
@@ -206,7 +238,7 @@ static void LibevAgent_io_callback(EV_P_ ev_io *w, int revents)
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
 
-inline VALUE libev_switchpoint(struct LibevAgent_t *agent) {
+inline VALUE libev_await(struct LibevAgent_t *agent) {
   VALUE ret;
   agent->ref_count++;
   ret = Thread_switch_fiber(rb_thread_current());
@@ -215,6 +247,11 @@ inline VALUE libev_switchpoint(struct LibevAgent_t *agent) {
   return ret;
 }
 
+VALUE libev_agent_await(VALUE self) {
+  struct LibevAgent_t *agent;
+  GetLibevAgent(self, agent);
+  return libev_await(agent);
+}
 
 VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
   struct LibevAgent_t *agent;
@@ -255,7 +292,7 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
           ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
         }
         ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = libev_switchpoint(agent);
+        switchpoint_result = libev_await(agent);
         ev_io_stop(agent->ev_loop, &watcher.io);
         if (TEST_EXCEPTION(switchpoint_result)) {
           goto error;
@@ -315,7 +352,7 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
           ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_WRITE);
         }
         ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = libev_switchpoint(agent);
+        switchpoint_result = libev_await(agent);
         ev_io_stop(agent->ev_loop, &watcher.io);
         if (TEST_EXCEPTION(switchpoint_result))
           goto error;
@@ -383,7 +420,7 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
           ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
         }
         ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = libev_switchpoint(agent);
+        switchpoint_result = libev_await(agent);
         ev_io_stop(agent->ev_loop, &watcher.io);
 
         TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -438,7 +475,7 @@ VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write) {
   watcher.fiber = rb_fiber_current();
   ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, events);
   ev_io_start(agent->ev_loop, &watcher.io);
-  switchpoint_result = libev_switchpoint(agent);
+  switchpoint_result = libev_await(agent);
   ev_io_stop(agent->ev_loop, &watcher.io);
   
   TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -468,7 +505,7 @@ VALUE LibevAgent_sleep(VALUE self, VALUE duration) {
   ev_timer_init(&watcher.timer, LibevAgent_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(agent->ev_loop, &watcher.timer);
 
-  switchpoint_result = libev_switchpoint(agent);
+  switchpoint_result = libev_await(agent);
   ev_timer_stop(agent->ev_loop, &watcher.timer);
 
   TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -502,7 +539,7 @@ VALUE LibevAgent_waitpid(VALUE self, VALUE pid) {
   ev_child_init(&watcher.child, LibevAgent_child_callback, NUM2INT(pid), 0);
   ev_child_start(agent->ev_loop, &watcher.child);
   
-  switchpoint_result = libev_switchpoint(agent);
+  switchpoint_result = libev_await(agent);
   ev_child_stop(agent->ev_loop, &watcher.child);
 
   TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -528,6 +565,9 @@ void Init_LibevAgent() {
   rb_define_method(cLibevAgent, "finalize", LibevAgent_finalize, 0);
   rb_define_method(cLibevAgent, "post_fork", LibevAgent_post_fork, 0);
   rb_define_method(cLibevAgent, "pending_count", LibevAgent_pending_count, 0);
+
+  rb_define_method(cLibevAgent, "ref", LibevAgent_ref, 0);
+  rb_define_method(cLibevAgent, "unref", LibevAgent_unref, 0);
 
   rb_define_method(cLibevAgent, "poll", LibevAgent_poll, 3);
   rb_define_method(cLibevAgent, "break", LibevAgent_break, 0);

@@ -26,14 +26,17 @@ require_relative './polyphony/event'
 module Polyphony
   class << self
     def wait_for_signal(sig)
+      raise "should be reimplemented"
+
       fiber = Fiber.current
-      Polyphony.ref
+      # Polyphony.ref
       old_trap = trap(sig) do
-        Polyphony.unref
+        # Polyphony.unref
         fiber.schedule(sig)
         trap(sig, old_trap)
       end
       suspend
+
     end
 
     def fork(&block)
