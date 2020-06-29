@@ -206,6 +206,16 @@ static void LibevAgent_io_callback(EV_P_ ev_io *w, int revents)
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
 
+inline VALUE libev_switchpoint(struct LibevAgent_t *agent) {
+  VALUE ret;
+  agent->ref_count++;
+  ret = Thread_switch_fiber(rb_thread_current());
+  agent->ref_count--;
+  RB_GC_GUARD(ret);
+  return ret;
+}
+
+
 VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
   struct LibevAgent_t *agent;
   struct libev_io watcher;
@@ -245,14 +255,23 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
           ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
         }
         ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = Polyphony_switchpoint();
+        switchpoint_result = libev_switchpoint(agent);
         ev_io_stop(agent->ev_loop, &watcher.io);
-        if (TEST_EXCEPTION(switchpoint_result))
+        if (TEST_EXCEPTION(switchpoint_result)) {
           goto error;
+        }
       }
       else
         rb_syserr_fail(e, strerror(e));
         // rb_syserr_fail_path(e, fptr->pathv);
+    }
+  }
+
+  if (watcher.fiber == Qnil) {
+    Fiber_make_runnable(rb_fiber_current(), Qnil);
+    switchpoint_result = Thread_switch_fiber(rb_thread_current());
+    if (TEST_EXCEPTION(switchpoint_result)) {
+      goto error;
     }
   }
 
@@ -289,25 +308,35 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
   while (left > 0) {
     int result = write(fptr->fd, buf, left);
     if (result < 0) {
-      if (errno == EAGAIN) {
+      int e = errno;
+      if (e == EAGAIN) {
         if (watcher.fiber == Qnil) {
           watcher.fiber = rb_fiber_current();
           ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_WRITE);
         }
         ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = Polyphony_switchpoint();
+        switchpoint_result = libev_switchpoint(agent);
         ev_io_stop(agent->ev_loop, &watcher.io);
         if (TEST_EXCEPTION(switchpoint_result))
           goto error;
       }
       else {
-        // report error
+        rb_syserr_fail(e, strerror(e));
+        // rb_syserr_fail_path(e, fptr->pathv);
         
       }
     }
     else {
       buf += result;
       left -= result;
+    }
+  }
+
+  if (watcher.fiber == Qnil) {
+    Fiber_make_runnable(rb_fiber_current(), Qnil);
+    switchpoint_result = Thread_switch_fiber(rb_thread_current());
+    if (TEST_EXCEPTION(switchpoint_result)) {
+      goto error;
     }
   }
 
@@ -354,7 +383,7 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
           ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
         }
         ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = Polyphony_switchpoint();
+        switchpoint_result = libev_switchpoint(agent);
         ev_io_stop(agent->ev_loop, &watcher.io);
 
         TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -375,9 +404,18 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
       rb_io_ascii8bit_binmode(connection);
       rb_io_set_nonblock(fp);
       rb_io_synchronized(fp);
+      
       // if (rsock_do_not_reverse_lookup) {
 	    //   fp->mode |= FMODE_NOREVLOOKUP;
       // }
+
+      if (watcher.fiber == Qnil) {
+        Fiber_make_runnable(rb_fiber_current(), Qnil);
+        switchpoint_result = Thread_switch_fiber(rb_thread_current());
+        if (TEST_EXCEPTION(switchpoint_result)) {
+          return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+        }
+      }
 
       return connection;
     }
@@ -400,7 +438,7 @@ VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write) {
   watcher.fiber = rb_fiber_current();
   ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, events);
   ev_io_start(agent->ev_loop, &watcher.io);
-  switchpoint_result = Polyphony_switchpoint();
+  switchpoint_result = libev_switchpoint(agent);
   ev_io_stop(agent->ev_loop, &watcher.io);
   
   TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -430,7 +468,7 @@ VALUE LibevAgent_sleep(VALUE self, VALUE duration) {
   ev_timer_init(&watcher.timer, LibevAgent_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(agent->ev_loop, &watcher.timer);
 
-  switchpoint_result = Polyphony_switchpoint();
+  switchpoint_result = libev_switchpoint(agent);
   ev_timer_stop(agent->ev_loop, &watcher.timer);
 
   TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -464,7 +502,7 @@ VALUE LibevAgent_waitpid(VALUE self, VALUE pid) {
   ev_child_init(&watcher.child, LibevAgent_child_callback, NUM2INT(pid), 0);
   ev_child_start(agent->ev_loop, &watcher.child);
   
-  switchpoint_result = Polyphony_switchpoint();
+  switchpoint_result = libev_switchpoint(agent);
   ev_child_stop(agent->ev_loop, &watcher.child);
 
   TEST_RESUME_EXCEPTION(switchpoint_result);
