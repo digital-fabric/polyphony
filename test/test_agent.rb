@@ -77,4 +77,48 @@ class AgentTest < MiniTest::Test
     result = @agent.waitpid(pid)
     assert_equal [pid, 42], result
   end
+
+  def test_read_loop
+    i, o = IO.pipe
+
+    buf = []
+    spin do
+      buf << :ready
+      @agent.read_loop(i) { |d| buf << d }
+      buf << :done
+    end
+
+    o << 'foo'
+    o << 'bar'
+    o.close
+    snooze
+
+    assert_equal [:ready, 'foo', 'bar', :done], buf
+  end
+
+  def test_accept_loop
+    server = TCPServer.new('127.0.0.1', 1234)
+
+    clients = []
+    server_fiber = spin do
+      @agent.accept_loop(server) { |c| clients << c }
+    end
+
+    c1 = TCPSocket.new('127.0.0.1', 1234)
+    snooze
+
+    assert_equal 1, clients.size
+
+    c2 = TCPSocket.new('127.0.0.1', 1234)
+    snooze
+
+    assert_equal 2, clients.size
+
+  ensure
+    c1&.close
+    c2&.close
+    server_fiber.stop
+    snooze
+    server&.close
+  end
 end

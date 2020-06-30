@@ -3,8 +3,7 @@
 - Implement agent interface is virtual function table
 - Implement proxy agent for plugging in a user-provided agent class
 - Reimplement ResourcePool, Channel, Mutex using LibevQueue
-
-
+- Docs!
 
 ## 0.43 Some more API work, more docs
 
