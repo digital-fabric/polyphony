@@ -1,3 +1,8 @@
+* Implement LibevAgent#accept_loop, #read_loop
+* Move ref counting from thread to agent
+* Short circuit switchpoint if continuing with the same fiber
+* Always do a switchpoint in #read, #write, #accept
+
 ## 0.41 2020-06-27
 
 * Introduce System Agent design, remove all `Gyro` classes
