@@ -35,23 +35,11 @@ def handle_request(client, parser)
   client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
 end
 
-spin do
-  server = TCPServer.open('0.0.0.0', 1234)
-  puts "listening on port 1234"
-
-  loop do
-    client = server.accept
-    spin { handle_client(client) }
-  end
-ensure
-  server&.close
-end
-
-# every(1) {
-#   stats = Thread.current.fiber_scheduling_stats
-#   stats[:connection_count] = $connection_count
-#   puts "#{Time.now} #{stats}"
-# }
-
+server = TCPServer.open('0.0.0.0', 1234)
 puts "pid #{Process.pid}"
-suspend
+puts "listening on port 1234"
+
+loop do
+  client = server.accept
+  spin { handle_client(client) }
+end

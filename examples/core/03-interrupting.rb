@@ -18,7 +18,8 @@ ensure
 end
 
 # The Kernel#cancel_after interrupts a blocking operation by raising a
-# Polyphony::Cancel exception after the given timeout
+# Polyphony::Cancel exception after the given timeout. If not rescued, the
+# exception is propagated up the fiber hierarchy
 spin do
   # cancel after 1 second
   cancel_after(1) { nap(:cancel, 2) }
@@ -26,6 +27,8 @@ rescue Polyphony::Cancel => e
   puts "got exception: #{e}"
 end
 
+# The Kernel#move_on_after interrupts a blocking operation by raising a
+# Polyphony::MoveOn exception, which is silently swallowed by the fiber
 spin do
   # move on after 1 second
   move_on_after(1) do

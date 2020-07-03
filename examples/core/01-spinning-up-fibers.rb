@@ -14,4 +14,5 @@ end
 spin { nap(:a, 1) }
 spin { nap(:b, 2) }
 
+# Calling suspend will block until all child fibers have terminated
 suspend
