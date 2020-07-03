@@ -1,11 +1,11 @@
+## 0.42
+
+- Reimplement ResourcePool, Channel, Mutex using LibevQueue
 -- Add `Fiber#schedule_with_priority` method, aliased by `Fiber#wakeup`
 - Implement agent interface is virtual function table
 - Implement proxy agent for plugging in a user-provided agent class
-- Reimplement ResourcePool, Channel, Mutex using LibevQueue
-- Docs!
 
-## 0.42 More work on agent design
-
+## 0.43 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
     test fails
@@ -119,7 +119,9 @@
   - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
 
 
-## 0.43 Some more API work, more docs
+## 0.44
+
+### Some more API work, more docs
 
 - sintra app with database access (postgresql)
 
@@ -130,11 +132,15 @@
   - proceed from there
 
 
-## 0.44 Sinatra / Sidekiq
+## 0.45
+
+### Sinatra / Sidekiq
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.45 Testing && Docs
+## 0.46
+
+### Testing && Docs
 
 - More tests
 - Implement some basic stuff missing:
@@ -144,7 +150,9 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.46 Real IO#gets and IO#read
+## 0.47
+
+### Real IO#gets and IO#read
 
 ## 0.48 DNS
 
