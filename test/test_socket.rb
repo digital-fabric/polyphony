@@ -26,8 +26,8 @@ class SocketTest < MiniTest::Test
     assert_equal "1234\n", client.readpartial(8192)
     client.close
   ensure
-    server_fiber.stop
-    snooze
+    server_fiber&.stop
+    server_fiber&.await
     server&.close
   end
 end
