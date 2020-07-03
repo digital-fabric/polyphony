@@ -1,3 +1,7 @@
+## 0.42 2020-07-03
+
+* Improve documentation
+* Fix backtrace on SIGINT
 * Implement LibevAgent#accept_loop, #read_loop
 * Move ref counting from thread to agent
 * Short circuit switchpoint if continuing with the same fiber
