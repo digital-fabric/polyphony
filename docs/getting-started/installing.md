@@ -2,6 +2,7 @@
 layout: page
 title: Installing Polyphony
 parent: Getting Started
+nav_order: 1
 ---
 # Installing Polyphony
 
@@ -9,8 +10,7 @@ parent: Getting Started
 
 In order to use Polyphony you need to have:
 
-- Linux or MacOS (sorry, there are no plans to support Windows for the time
-  being)
+- Linux or MacOS (support for Windows will come at a later stage)
 - Ruby (MRI) 2.6 or newer
 
 ## Installing the Polyphony Gem

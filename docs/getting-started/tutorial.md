@@ -1,13 +1,20 @@
 ---
 layout: page
 title: Tutorial
-nav_order: 2
 parent: Getting Started
-permalink: /getting-started/tutorial/
-prev_title: Installing Polyphony
-next_title: Concurrency the Easy Way
+nav_order: 2
 ---
-# Polyphony: a Tutorial
+
+# Tutorial
+{: .no_toc }
+
+## Table of contents
+{: .no_toc .text-delta }
+
+- TOC
+{:toc}
+
+---
 
 Polyphony is a new Ruby library aimed at making writing concurrent Ruby apps
 easy and fun. In this article, we'll introduce Polyphony's fiber-based
