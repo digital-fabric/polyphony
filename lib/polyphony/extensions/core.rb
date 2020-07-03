@@ -8,8 +8,6 @@ require_relative '../core/exceptions'
 
 # Exeption overrides
 class ::Exception
-  EXIT_EXCEPTION_CLASSES = [::Interrupt, ::SystemExit].freeze
-
   class << self
     attr_accessor :__disable_sanitized_backtrace__
   end
@@ -24,7 +22,7 @@ class ::Exception
 
   alias_method :orig_backtrace, :backtrace
   def backtrace
-    unless @first_backtrace_call || EXIT_EXCEPTION_CLASSES.include?(self.class)
+    unless @first_backtrace_call
       @first_backtrace_call = true
       return orig_backtrace
     end
