@@ -8,7 +8,8 @@ class SocketTest < MiniTest::Test
   end
 
   def test_tcp
-    server = TCPServer.new('127.0.0.1', 1234)
+    port = rand(1234..5678)
+    server = TCPServer.new('127.0.0.1', port)
 
     server_fiber = spin do
       while (socket = server.accept)
@@ -21,7 +22,7 @@ class SocketTest < MiniTest::Test
     end
 
     snooze
-    client = TCPSocket.new('127.0.0.1', 1234)
+    client = TCPSocket.new('127.0.0.1', port)
     client.write("1234\n")
     assert_equal "1234\n", client.readpartial(8192)
     client.close
