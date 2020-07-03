@@ -12,7 +12,7 @@ Polyphony enhances the core `Thread` class with APIs for switching and
 scheduling fibers, and reimplements some of its APIs such as `Thread#raise`
 using fibers which, incidentally, make it safe.
 
-Each thread has its own run queue and its own event selector. While running
+Each thread has its own run queue and its own system agent. While running
 multiple threads does not result in true parallelism in MRI Ruby, sometimes
 multithreading is inevitable, for instance when using third-party gems that
 spawn threads, or when calling blocking APIs that are not fiber-aware.

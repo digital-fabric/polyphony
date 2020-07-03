@@ -23,6 +23,6 @@ shell command. If a block is given, the child process is started using
 [`Polyphony#fork`](../polyphony/#fork-block---pid).
 
 ```ruby
-Polyphony::Process.watch('echo "Hello World"; sleep 1')
+spin { Polyphony::Process.watch('echo "Hello World"; sleep 1') }
 supervise(restart: :always)
 ```

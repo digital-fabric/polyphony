@@ -123,7 +123,7 @@ suspend # The main fiber suspends, waiting for all other work to finish
   sleep 1 # The sleeper fiber goes to sleep
     Gyro::Timer.new(1, 0).await # A timer event watcher is setup and yields
       Thread.current.switch_fiber # Polyphony looks for other runnable fibers
-        Thread.current.selector.run # With no work left, the event loop is ran
+        Thread.current.agent.poll # With no work left, the event loop is ran
           fiber.schedule # The timer event fires, scheduling the sleeper fiber
   # <= The sleep method returns
   puts "Woke up"
@@ -225,7 +225,7 @@ this by setting up a timeout fiber that cancels the fiber dealing with the conne
 def handle_client(client)
   timeout = cancel_after(10)
   while (data = client.gets)
-    timeout.reset
+    timeout.restart
     client << data
   end
 rescue Polyphony::Cancel
@@ -237,18 +237,19 @@ ensure
 end
 ```
 
-The cancel scope is initialized with a timeout of 10 seconds. Any blocking
-operation ocurring within the cancel scope will be interrupted once 10 seconds
-have elapsed. In order to keep the connection alive while the client is active,
-we call `scope.reset_timeout` each time data is received from the client, and
-thus reset the cancel scope timer.
+The call to `#cancel_after` spins up a new fiber that will sleep for 10 seconds,
+then cancel its parent. The call to `client.gets` blocks until new data is
+available. If no new data is available, the `timeout` fiber will finish
+sleeping, and then cancel the client handling fiber by raising a
+`Polyphony::Cancel` exception. However, if new data is received, the `timeout`
+fiber is restarted, causing to begin sleeping again for 10 seconds. If the
+client has closed the connection, or some other exception occurs, the `timeout`
+fiber is automatically stopped as it is a child of the client handling fiber.
 
-In addition, we use an `ensure` block to make sure the client connection is
-closed, whether or not it was interrupted by the cancel scope timer. The habit
-of always cleaning up using `ensure` in the face of potential interruptions is a
-fundamental element of using Polyphony correctly. This makes your code robust,
-even in a highly chaotic concurrent execution environment where tasks can be
-interrupted at any time.
+The habit of always cleaning up using `ensure` in the face of potential
+interruptions is a fundamental element of using Polyphony correctly. This makes
+your code robust, even in a highly chaotic concurrent execution environment
+where tasks can be started, restarted and interrupted at any time.
 
 ## Implementing graceful shutdown
 

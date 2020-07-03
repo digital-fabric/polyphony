@@ -143,18 +143,8 @@ library. Polyphony's design is based on the following principles:
   end
   ```
 
-- Concurrency primitives should allow creating higher-order concurrent 
-  constructs through composition. This is done primarily through supervisors and
-  cancel scopes:
-
-  ```ruby
-  # wait for multiple fibers
-  supervise { |s|
-    clients.each { |client|
-      s.spin { client.puts 'Elvis has left the chatroom' }
-    }
-  }
-  ```
+- Concurrency primitives should allow creating higher-order concurrent
+  constructs through composition.
 
 - The entire design should embrace fibers. There should be no callback-based
   asynchronous APIs.

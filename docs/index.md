@@ -53,7 +53,7 @@ adapters are being developed.
 * Natural, sequential programming style that makes it easy to reason about
   concurrent code.
 * Abstractions and constructs for controlling the execution of concurrent code:
-  supervisors, cancel scopes, throttling, resource pools etc.
+  supervisors, throttling, resource pools etc.
 * Code can use native networking classes and libraries, growing support for
   third-party gems such as `pg` and `redis`.
 * Use stdlib classes such as `TCPServer` and `TCPSocket` and `Net::HTTP`.
