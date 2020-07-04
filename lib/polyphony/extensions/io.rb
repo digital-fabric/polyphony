@@ -201,6 +201,10 @@ class ::IO
     buf ? readpartial(maxlen, buf) : readpartial(maxlen)
   end
 
+  def read_loop(&block)
+    Thread.current.agent.read_loop(self, &block)
+  end
+
   # alias_method :orig_read, :read
   # def read(length = nil, outbuf = nil)
   #   if length

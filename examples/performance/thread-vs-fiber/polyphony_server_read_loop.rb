@@ -13,7 +13,7 @@ def handle_client(socket)
   parser.on_message_complete = proc do |env|
     reqs << Object.new # parser
   end
-  Thread.current.agent.read_loop(socket) do |data|
+  socket.read_loop do |data|
     parser << data
     while (req = reqs.shift)
       handle_request(socket, req)
