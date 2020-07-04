@@ -1,3 +1,9 @@
+## 0.43 2020-07-05
+
+* Add IO#read_loop
+* Fix OpenSSL extension
+* More work on docs
+
 ## 0.42 2020-07-03
 
 * Improve documentation

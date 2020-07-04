@@ -1,11 +1,10 @@
-## 0.42
+## 0.43 
 
 - Reimplement ResourcePool, Channel, Mutex using LibevQueue
 -- Add `Fiber#schedule_with_priority` method, aliased by `Fiber#wakeup`
 - Implement agent interface is virtual function table
 - Implement proxy agent for plugging in a user-provided agent class
 
-## 0.43 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
     test fails
