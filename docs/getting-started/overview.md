@@ -416,28 +416,7 @@ request handler after all request headers have been received. This allows the
 application to better deal with slow client attacks, big file uploads, and also
 to minimize costly memory allocation and GC'ing.
 
-Preliminary benchmarks show the Polyphony web server to be about 3X as fast as
-Puma and 20X as fast as Unicorn. With SSL termination and using HTTP 2, the
-Polyphony web server is about 2X as fast as Falcon.
-
-### HTTP/1
-
-|Server|requests/sec|average latency|max latency|
-|------|-----------:|--------------:|----------:|
-|Puma|
-|Unicorn|
-|Agoo|
-|Polyphony|
-
-### HTTP/2 with SSL Termination
-
-|Server|requests/sec|average latency|max latency|
-|------|-----------:|--------------:|----------:|
-|Falcon|
-|Polyphony|
-
-(*Non-official benchmark with a basic "Hello world" Rack application. The usual
-caveats regarding benchmarks should be applied here.*)
+Benchmarks will be included here at a later time.
 
 ## Integrating Polyphony with other Gems
 
