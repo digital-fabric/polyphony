@@ -1,7 +1,6 @@
-# ![Polyphony Logo](/docs/polyphony-logo.png) Polyphony
+![Polyphony Logo](/docs/polyphony-logo.png)
 
-## Fine-Grained Concurrency for Ruby
-
+# Polyphony - Fine-Grained Concurrency for Ruby
 
 [![Gem Version](https://badge.fury.io/rb/polyphony.svg)](http://rubygems.org/gems/polyphony)
 [![Modulation Test](https://github.com/digital-fabric/polyphony/workflows/Tests/badge.svg)](https://github.com/digital-fabric/polyphony/actions?query=workflow%3ATests)
