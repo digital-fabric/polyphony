@@ -128,7 +128,7 @@ VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue
   GetLibevAgent(self, agent);
 
   if (is_nowait) {
-    int runnable_count = RARRAY_LEN(queue);
+    long runnable_count = RARRAY_LEN(queue);
     agent->run_no_wait_count++;
     if (agent->run_no_wait_count < runnable_count || agent->run_no_wait_count < 10)
       return self;
@@ -255,7 +255,7 @@ VALUE libev_agent_await(VALUE self) {
   return libev_await(agent);
 }
 
-inline VALUE libev_io_wait(struct LibevAgent_t *agent, struct libev_io *watcher, rb_io_t *fptr, int flags) {
+VALUE libev_io_wait(struct LibevAgent_t *agent, struct libev_io *watcher, rb_io_t *fptr, int flags) {
   VALUE switchpoint_result;
 
   if (watcher->fiber == Qnil) {
@@ -270,7 +270,7 @@ inline VALUE libev_io_wait(struct LibevAgent_t *agent, struct libev_io *watcher,
   return switchpoint_result;  
 }
 
-inline VALUE libev_snooze() {
+VALUE libev_snooze() {
   Fiber_make_runnable(rb_fiber_current(), Qnil);
   return Thread_switch_fiber(rb_thread_current());
 }
@@ -279,7 +279,7 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
   struct LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
-  int len = NUM2INT(length);
+  long len = NUM2INT(length);
   int shrinkable = io_setstrbuf(&str, len);
   char *buf = RSTRING_PTR(str);
   long total = 0;
@@ -297,7 +297,7 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
   OBJ_TAINT(str);
 
   while (len > 0) {
-    int n = read(fptr->fd, buf, len);
+    ssize_t n = read(fptr->fd, buf, len);
     if (n < 0) {
       int e = errno;
       if (e != EWOULDBLOCK && e != EAGAIN) rb_syserr_fail(e, strerror(e));
@@ -351,8 +351,8 @@ VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
   struct libev_io watcher;
   rb_io_t *fptr;
   VALUE str;
-  int total;
-  int len = 8192;
+  long total;
+  long len = 8192;
   int shrinkable;
   char *buf;
   VALUE switchpoint_result = Qnil;
@@ -370,7 +370,7 @@ VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
   OBJ_TAINT(str);
 
   while (1) {
-    int n = read(fptr->fd, buf, len);
+    ssize_t n = read(fptr->fd, buf, len);
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -410,8 +410,8 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
   VALUE switchpoint_result = Qnil;
 
   char *buf = StringValuePtr(str);
-  int len = RSTRING_LEN(str);
-  int left = len;
+  long len = RSTRING_LEN(str);
+  long left = len;
 
   VALUE underlying_io = rb_iv_get(io, "@io");
   if (underlying_io != Qnil) io = underlying_io;
@@ -421,7 +421,7 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
   watcher.fiber = Qnil;
 
   while (left > 0) {
-    int n = write(fptr->fd, buf, left);
+    ssize_t n = write(fptr->fd, buf, left);
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));

@@ -145,7 +145,7 @@ class CancelAfterTest < MiniTest::Test
       end
     end
     t1 = Time.now
-    assert t1 - t0 < 0.02
+    assert t1 - t0 < 0.1
   end
 
   def test_cancel_after_without_block
@@ -157,7 +157,7 @@ class CancelAfterTest < MiniTest::Test
       sleep 1
     end
     t1 = Time.now
-    assert t1 - t0 < 0.02
+    assert t1 - t0 < 0.1
   end
 end
 
