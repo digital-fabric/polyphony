@@ -21,10 +21,13 @@ class AgentTest < MiniTest::Test
     spin {
       @agent.sleep 0.01
       count += 1
-    }
-    suspend
-    assert Time.now - t0 >= 0.01
-    assert_equal 1, count
+      @agent.sleep 0.01
+      count += 1
+      @agent.sleep 0.01
+      count += 1
+    }.await
+    assert Time.now - t0 >= 0.03
+    assert_equal 3, count
   end
 
   def test_write_read_partial
