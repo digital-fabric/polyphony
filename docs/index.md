@@ -6,7 +6,11 @@ permalink: /
 next_title: Installing Polyphony
 ---
 
-# Polyphony - fine-grained concurrency for Ruby
+# Polyphony
+{:.text-center .logo-title}
+
+## Fine-grained concurrency for Ruby
+{:.text-center .logo-title}
 
 Polyphony is a library for building concurrent applications in Ruby. Polyphony
 implements a comprehensive
