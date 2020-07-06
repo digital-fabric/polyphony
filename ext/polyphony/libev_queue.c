@@ -120,11 +120,12 @@ static VALUE LibevQueue_initialize(VALUE self) {
 
 VALUE LibevQueue_push(VALUE self, VALUE value) {
   LibevQueue_t *queue;
-  struct async_watcher *watcher;
   GetQueue(self, queue);
-  watcher = async_queue_pop(&queue->shift_queue);
-  if (watcher) {
-    ev_async_send(watcher->ev_loop, &watcher->async);
+  if (queue->shift_queue.count > 0) {
+    struct async_watcher *watcher = async_queue_pop(&queue->shift_queue);
+    if (watcher) {
+      ev_async_send(watcher->ev_loop, &watcher->async);
+    }
   }
   rb_ary_push(queue->items, value);
   return self;
