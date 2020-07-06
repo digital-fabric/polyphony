@@ -1,14 +1,11 @@
 #include "polyphony.h"
 
 ID ID_deactivate_all_watchers_post_fork;
-ID ID_empty;
 ID ID_ivar_agent;
 ID ID_ivar_join_wait_queue;
 ID ID_ivar_main_fiber;
 ID ID_ivar_result;
 ID ID_ivar_terminated;
-ID ID_pop;
-ID ID_push;
 ID ID_run_queue;
 ID ID_runnable_next;
 ID ID_stop;
@@ -187,14 +184,11 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
 
   ID_deactivate_all_watchers_post_fork = rb_intern("deactivate_all_watchers_post_fork");
-  ID_empty                    = rb_intern("empty?");
   ID_ivar_agent               = rb_intern("@agent");
   ID_ivar_join_wait_queue     = rb_intern("@join_wait_queue");
   ID_ivar_main_fiber          = rb_intern("@main_fiber");
   ID_ivar_result              = rb_intern("@result");
   ID_ivar_terminated          = rb_intern("@terminated");
-  ID_pop                      = rb_intern("pop");
-  ID_push                     = rb_intern("push");
   ID_run_queue                = rb_intern("run_queue");
   ID_runnable_next            = rb_intern("runnable_next");
   ID_stop                     = rb_intern("stop");

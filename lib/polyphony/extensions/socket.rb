@@ -128,11 +128,11 @@ class ::TCPServer
 
   alias_method :orig_accept, :accept
   def accept
-    @io ? @io.accept : orig_accept
+    @io.accept
   end
 
   alias_method :orig_close, :close
   def close
-    @io ? @io.close : orig_close
+    @io.close
   end
 end
