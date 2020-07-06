@@ -1,4 +1,6 @@
-# Polyphony - Fine-Grained Concurrency for Ruby
+# ![Polyphony Logo](/docs/polyphony-logo.png) Polyphony
+
+## Fine-Grained Concurrency for Ruby
 
 
 [![Gem Version](https://badge.fury.io/rb/polyphony.svg)](http://rubygems.org/gems/polyphony)
