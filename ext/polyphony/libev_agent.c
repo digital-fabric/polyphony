@@ -467,50 +467,39 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
     fd = accept(fptr->fd, &addr, &len);
     if (fd < 0) {
       int e = errno;
-      if (e == EWOULDBLOCK || e == EAGAIN) {
-        if (watcher.fiber == Qnil) {
-          watcher.fiber = rb_fiber_current();
-          ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
-        }
-        ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = libev_await(agent);
-        ev_io_stop(agent->ev_loop, &watcher.io);
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-        TEST_RESUME_EXCEPTION(switchpoint_result);
-        RB_GC_GUARD(watcher.fiber);
-        RB_GC_GUARD(switchpoint_result);
-      }
-      else
-        rb_syserr_fail(e, strerror(e));
-        // rb_syserr_fail_path(e, fptr->pathv);
+      switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_READ);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      VALUE connection = rb_obj_alloc(cTCPSocket);
+      VALUE socket;
       rb_io_t *fp;
-      MakeOpenFile(connection, fp);
+      switchpoint_result = libev_snooze();
+      if (TEST_EXCEPTION(switchpoint_result)) {
+        close(fd); // close fd since we're raising an exception
+        goto error;
+      }
+
+      socket = rb_obj_alloc(cTCPSocket);
+      MakeOpenFile(socket, fp);
       rb_update_max_fd(fd);
       fp->fd = fd;
       fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
-      rb_io_ascii8bit_binmode(connection);
+      rb_io_ascii8bit_binmode(socket);
       rb_io_set_nonblock(fp);
       rb_io_synchronized(fp);
       
       // if (rsock_do_not_reverse_lookup) {
 	    //   fp->mode |= FMODE_NOREVLOOKUP;
       // }
-
-      if (watcher.fiber == Qnil) {
-        Fiber_make_runnable(rb_fiber_current(), Qnil);
-        switchpoint_result = Thread_switch_fiber(rb_thread_current());
-        if (TEST_EXCEPTION(switchpoint_result)) {
-          return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
-        }
-      }
-
-      return connection;
+      return socket;
     }
   }
+  RB_GC_GUARD(switchpoint_result);
   return Qnil;
+error:
+  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
 }
 
 VALUE LibevAgent_accept_loop(VALUE self, VALUE sock) {
@@ -521,7 +510,7 @@ VALUE LibevAgent_accept_loop(VALUE self, VALUE sock) {
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
-  VALUE connection = Qnil;
+  VALUE socket = Qnil;
   VALUE underlying_sock = rb_iv_get(sock, "@io");
   if (underlying_sock != Qnil) sock = underlying_sock;
 
@@ -534,44 +523,39 @@ VALUE LibevAgent_accept_loop(VALUE self, VALUE sock) {
     fd = accept(fptr->fd, &addr, &len);
     if (fd < 0) {
       int e = errno;
-      if (e == EWOULDBLOCK || e == EAGAIN) {
-        if (watcher.fiber == Qnil) {
-          watcher.fiber = rb_fiber_current();
-          ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
-        }
-        ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = libev_await(agent);
-        ev_io_stop(agent->ev_loop, &watcher.io);
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-        TEST_RESUME_EXCEPTION(switchpoint_result);
-      }
-      else
-        rb_syserr_fail(e, strerror(e));
-        // rb_syserr_fail_path(e, fptr->pathv);
+      switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_READ);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       rb_io_t *fp;
-      connection = rb_obj_alloc(cTCPSocket);
-      MakeOpenFile(connection, fp);
+      switchpoint_result = libev_snooze();
+      if (TEST_EXCEPTION(switchpoint_result)) {
+        close(fd); // close fd since we're raising an exception
+        goto error;
+      }
+    
+      socket = rb_obj_alloc(cTCPSocket);
+      MakeOpenFile(socket, fp);
       rb_update_max_fd(fd);
       fp->fd = fd;
       fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
-      rb_io_ascii8bit_binmode(connection);
+      rb_io_ascii8bit_binmode(socket);
       rb_io_set_nonblock(fp);
       rb_io_synchronized(fp);
 
-      rb_yield(connection);
-      connection = Qnil;
-      
-      Fiber_make_runnable(rb_fiber_current(), Qnil);
-      switchpoint_result = Thread_switch_fiber(rb_thread_current());
-      TEST_RESUME_EXCEPTION(switchpoint_result);
+      rb_yield(socket);
+      socket = Qnil;
     }
   }
 
-  RB_GC_GUARD(connection);
+  RB_GC_GUARD(socket);
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
+  return Qnil;
+error:
+  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
 }
 
 VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write) {
