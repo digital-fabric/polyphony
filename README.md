@@ -1,4 +1,6 @@
-![Polyphony Logo](/docs/polyphony-logo.png)
+<p>
+  <img src="/digital-fabric/polyphony/raw/master/docs/polyphony-logo.png" style="max-height: 3em">
+</p>
 
 # Polyphony - Fine-Grained Concurrency for Ruby
 
