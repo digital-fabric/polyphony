@@ -1,8 +1,4 @@
-<p>
-  <img src="/docs/polyphony-logo.png" style="max-height: 3em">
-</p>
-
-# Polyphony - Fine-Grained Concurrency for Ruby
+# <img src="/docs/polyphony-logo.png" style="height: 3em"> Polyphony - Fine-Grained Concurrency for Ruby
 
 [![Gem Version](https://badge.fury.io/rb/polyphony.svg)](http://rubygems.org/gems/polyphony)
 [![Modulation Test](https://github.com/digital-fabric/polyphony/workflows/Tests/badge.svg)](https://github.com/digital-fabric/polyphony/actions?query=workflow%3ATests)
