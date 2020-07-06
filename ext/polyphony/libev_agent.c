@@ -234,7 +234,7 @@ struct libev_io {
   VALUE fiber;
 };
 
-static void LibevAgent_io_callback(EV_P_ ev_io *w, int revents)
+void LibevAgent_io_callback(EV_P_ ev_io *w, int revents)
 {
   struct libev_io *watcher = (struct libev_io *)w;
   Fiber_make_runnable(watcher->fiber, Qnil);
@@ -253,6 +253,26 @@ VALUE libev_agent_await(VALUE self) {
   struct LibevAgent_t *agent;
   GetLibevAgent(self, agent);
   return libev_await(agent);
+}
+
+inline VALUE libev_io_wait(struct LibevAgent_t *agent, struct libev_io *watcher, rb_io_t *fptr, int flags) {
+  VALUE switchpoint_result;
+
+  if (watcher->fiber == Qnil) {
+    watcher->fiber = rb_fiber_current();
+    ev_io_init(&watcher->io, LibevAgent_io_callback, fptr->fd, EV_READ);
+  }
+  ev_io_start(agent->ev_loop, &watcher->io);
+  switchpoint_result = libev_await(agent);
+  ev_io_stop(agent->ev_loop, &watcher->io);
+
+  RB_GC_GUARD(switchpoint_result);
+  return switchpoint_result;  
+}
+
+inline VALUE libev_snooze() {
+  Fiber_make_runnable(rb_fiber_current(), Qnil);
+  return Thread_switch_fiber(rb_thread_current());
 }
 
 VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
@@ -278,39 +298,23 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
 
   while (len > 0) {
     int n = read(fptr->fd, buf, len);
-    if (n == 0)
-      break;
-    if (n > 0) {
+    if (n < 0) {
+      int e = errno;
+      if (e != EWOULDBLOCK && e != EAGAIN) rb_syserr_fail(e, strerror(e));
+      
+      switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_READ);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      switchpoint_result = libev_snooze();
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+
+      if (n == 0) break; // EOF
+
       total = total + n;
       buf += n;
       len -= n;
       if (!read_to_eof || (len == 0)) break;
-    }
-    else {
-      int e = errno;
-      if ((e == EWOULDBLOCK || e == EAGAIN)) {
-        if (watcher.fiber == Qnil) {
-          watcher.fiber = rb_fiber_current();
-          ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
-        }
-        ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = libev_await(agent);
-        ev_io_stop(agent->ev_loop, &watcher.io);
-        if (TEST_EXCEPTION(switchpoint_result)) {
-          goto error;
-        }
-      }
-      else
-        rb_syserr_fail(e, strerror(e));
-        // rb_syserr_fail_path(e, fptr->pathv);
-    }
-  }
-
-  if (watcher.fiber == Qnil) {
-    Fiber_make_runnable(rb_fiber_current(), Qnil);
-    switchpoint_result = Thread_switch_fiber(rb_thread_current());
-    if (TEST_EXCEPTION(switchpoint_result)) {
-      goto error;
     }
   }
 
@@ -367,9 +371,19 @@ VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
 
   while (1) {
     int n = read(fptr->fd, buf, len);
-    if (n == 0)
-      break;
-    if (n > 0) {
+    if (n < 0) {
+      int e = errno;
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_READ);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      switchpoint_result = libev_snooze();
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+
+      if (n == 0) break; // EOF      
+
       total = n;
       YIELD_STR();
       Fiber_make_runnable(rb_fiber_current(), Qnil);
@@ -377,24 +391,6 @@ VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
       if (TEST_EXCEPTION(switchpoint_result)) {
         goto error;
       }
-    }
-    else {
-      int e = errno;
-      if ((e == EWOULDBLOCK || e == EAGAIN)) {
-        if (watcher.fiber == Qnil) {
-          watcher.fiber = rb_fiber_current();
-          ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_READ);
-        }
-        ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = libev_await(agent);
-        ev_io_stop(agent->ev_loop, &watcher.io);
-        if (TEST_EXCEPTION(switchpoint_result)) {
-          goto error;
-        }
-      }
-      else
-        rb_syserr_fail(e, strerror(e));
-        // rb_syserr_fail_path(e, fptr->pathv);
     }
   }
 
@@ -425,37 +421,20 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
   watcher.fiber = Qnil;
 
   while (left > 0) {
-    int result = write(fptr->fd, buf, left);
-    if (result < 0) {
+    int n = write(fptr->fd, buf, left);
+    if (n < 0) {
       int e = errno;
-      if (e == EAGAIN) {
-        if (watcher.fiber == Qnil) {
-          watcher.fiber = rb_fiber_current();
-          ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, EV_WRITE);
-        }
-        ev_io_start(agent->ev_loop, &watcher.io);
-        switchpoint_result = libev_await(agent);
-        ev_io_stop(agent->ev_loop, &watcher.io);
-        if (TEST_EXCEPTION(switchpoint_result))
-          goto error;
-      }
-      else {
-        rb_syserr_fail(e, strerror(e));
-        // rb_syserr_fail_path(e, fptr->pathv);
-        
-      }
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_READ);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      buf += result;
-      left -= result;
-    }
-  }
+      switchpoint_result = libev_snooze();
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
 
-  if (watcher.fiber == Qnil) {
-    Fiber_make_runnable(rb_fiber_current(), Qnil);
-    switchpoint_result = Thread_switch_fiber(rb_thread_current());
-    if (TEST_EXCEPTION(switchpoint_result)) {
-      goto error;
+      buf += n;
+      left -= n;
     }
   }
 
@@ -624,7 +603,7 @@ struct libev_timer {
   VALUE fiber;
 };
 
-static void LibevAgent_timer_callback(EV_P_ ev_timer *w, int revents)
+void LibevAgent_timer_callback(EV_P_ ev_timer *w, int revents)
 {
   struct libev_timer *watcher = (struct libev_timer *)w;
   Fiber_make_runnable(watcher->fiber, Qnil);
@@ -654,7 +633,7 @@ struct libev_child {
   VALUE fiber;
 };
 
-static void LibevAgent_child_callback(EV_P_ ev_child *w, int revents)
+void LibevAgent_child_callback(EV_P_ ev_child *w, int revents)
 {
   struct libev_child *watcher = (struct libev_child *)w;
   int exit_status = w->rstatus >> 8; // weird, why should we do this?
