@@ -1,5 +1,5 @@
 <p>
-  <img src="/digital-fabric/polyphony/raw/master/docs/polyphony-logo.png" style="max-height: 3em">
+  <img src="/docs/polyphony-logo.png" style="max-height: 3em">
 </p>
 
 # Polyphony - Fine-Grained Concurrency for Ruby
