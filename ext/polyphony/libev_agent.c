@@ -260,7 +260,7 @@ inline VALUE libev_io_wait(struct LibevAgent_t *agent, struct libev_io *watcher,
 
   if (watcher->fiber == Qnil) {
     watcher->fiber = rb_fiber_current();
-    ev_io_init(&watcher->io, LibevAgent_io_callback, fptr->fd, EV_READ);
+    ev_io_init(&watcher->io, LibevAgent_io_callback, fptr->fd, flags);
   }
   ev_io_start(agent->ev_loop, &watcher->io);
   switchpoint_result = libev_await(agent);
@@ -426,7 +426,7 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_READ);
+      switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_WRITE);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
