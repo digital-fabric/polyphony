@@ -6,7 +6,7 @@ require 'redis'
 require 'hiredis/reader'
 
 # Polyphony-based Redis driver
-class Driver
+class Polyphony::RedisDriver
   def self.connect(config)
     raise 'unix sockets not supported' if config[:scheme] == 'unix'
 
@@ -43,6 +43,7 @@ class Driver
   end
 
   def format_command(args)
+    args = args.flatten
     (+"*#{args.size}\r\n").tap do |s|
       args.each do |a|
         a = a.to_s
@@ -63,4 +64,4 @@ class Driver
   end
 end
 
-Redis::Connection.drivers << Driver
+Redis::Connection.drivers << Polyphony::RedisDriver
