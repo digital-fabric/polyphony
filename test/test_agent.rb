@@ -111,12 +111,12 @@ class AgentTest < MiniTest::Test
     end
 
     c1 = TCPSocket.new('127.0.0.1', 1234)
-    snooze
+    10.times { snooze }
 
     assert_equal 1, clients.size
 
     c2 = TCPSocket.new('127.0.0.1', 1234)
-    2.times { snooze }
+    10.times { snooze }
 
     assert_equal 2, clients.size
 

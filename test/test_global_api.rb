@@ -257,14 +257,14 @@ class GlobalAPIEtcTest < MiniTest::Test
     f.stop
     elapsed = Time.now - t0
     expected = (elapsed / 0.1).to_i
-    assert buffer.size >= expected - 1 && buffer.size <= expected + 1
+    assert buffer.size >= expected - 2 && buffer.size <= expected + 2
   end
 
   def test_sleep
     t0 = Time.now
-    sleep 0.05
+    sleep 0.1
     elapsed = Time.now - t0
-    assert (0.045..0.08).include? elapsed
+    assert (0.05..0.15).include? elapsed
 
     f = spin { sleep }
     snooze
