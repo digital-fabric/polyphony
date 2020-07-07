@@ -201,10 +201,13 @@ class SpinLoopTest < MiniTest::Test
   def test_spin_loop_with_rate
     buffer = []
     counter = 0
-    f = spin_loop(rate: 50) { buffer << (counter += 1) }
+    t0 = Time.now
+    f = spin_loop(rate: 10) { buffer << (counter += 1) }
     sleep 0.2
     f.stop
-    assert counter >= 8 && counter <= 12
+    elapsed = Time.now - t0
+    expected = (elapsed * 10).to_i
+    assert counter >= expected - 1 && counter <= expected + 1
   end
 end
 
@@ -220,7 +223,6 @@ class ThrottledLoopTest < MiniTest::Test
     f.stop
     elapsed = Time.now - t0
     expected = (elapsed * 10).to_i
-    puts "elapsed: #{elapsed} expected: #{expected} counter: #{counter}"
     assert counter >= expected - 1 && counter <= expected + 1
   end
 

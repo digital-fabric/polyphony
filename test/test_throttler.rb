@@ -4,14 +4,15 @@ require_relative 'helper'
 
 class ThrottlerTest < MiniTest::Test
   def test_throttler_with_rate
-    t = Polyphony::Throttler.new(50)
+    t = Polyphony::Throttler.new(10)
     buffer = []
+    t0 = Time.now
     f = spin { loop { t.process { buffer << 1 } } }
     sleep 0.2
     f.stop
-    snooze
-    assert buffer.size >= 8
-    assert buffer.size <= 12
+    elapsed = Time.now - t0
+    expected = (elapsed * 10).to_i
+    assert buffer.size >= expected - 1 && buffer.size <= expected + 1
   ensure
     t.stop
   end
