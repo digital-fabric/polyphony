@@ -249,12 +249,15 @@ class GlobalAPIEtcTest < MiniTest::Test
 
   def test_every
     buffer = []
+    t0 = Time.now
     f = spin do
-      every(0.01) { buffer << 1 }
+      every(0.1) { buffer << 1 }
     end
-    sleep 0.05
+    sleep 0.5
     f.stop
-    assert (4..5).include?(buffer.size)
+    elapsed = Time.now - t0
+    expected = (elapsed / 0.1).to_i
+    assert buffer.size >= expected - 1 && buffer.size <= expected + 1
   end
 
   def test_sleep
