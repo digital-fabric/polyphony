@@ -15,11 +15,13 @@ module Polyphony
       end
     end
 
-    def cancel_after(interval, &block)
+    def cancel_after(interval, with_exception: Polyphony::Cancel, &block)
       fiber = ::Fiber.current
       canceller = spin do
         sleep interval
-        fiber.schedule Polyphony::Cancel.new
+        exception = with_exception.is_a?(Class) ?
+          with_exception.new : RuntimeError.new(with_exception)
+        fiber.schedule exception
       end
       block ? cancel_after_wrap_block(canceller, &block) : canceller
     end

@@ -159,6 +159,30 @@ class CancelAfterTest < MiniTest::Test
     t1 = Time.now
     assert t1 - t0 < 0.1
   end
+
+  class CustomException < Exception
+  end
+
+  def test_cancel_after_with_custom_exception
+    assert_raises CustomException do
+      cancel_after(0.01, with_exception: CustomException) do
+        sleep 1
+        :foo
+      end
+    end
+
+    begin
+      e = nil
+      cancel_after(0.01, with_exception: 'foo') do
+        sleep 1
+        :foo
+      end
+    rescue => e
+    ensure
+      assert_kind_of RuntimeError, e
+      assert_equal 'foo', e.message
+    end
+  end
 end
 
 
