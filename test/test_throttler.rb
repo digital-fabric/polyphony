@@ -7,7 +7,7 @@ class ThrottlerTest < MiniTest::Test
     t = Polyphony::Throttler.new(50)
     buffer = []
     f = spin { loop { t.process { buffer << 1 } } }
-    sleep 0.1
+    sleep 0.2
     f.stop
     snooze
     assert buffer.size >= 8
