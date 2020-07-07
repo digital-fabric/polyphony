@@ -212,12 +212,16 @@ class ThrottledLoopTest < MiniTest::Test
   def test_throttled_loop
     buffer = []
     counter = 0
+    t0 = Time.now
     f = spin do
       throttled_loop(50) { buffer << (counter += 1) }
     end
     sleep 0.2
     f.stop
-    assert counter >= 8 && counter <= 12
+    elapsed = Time.now - t0
+    expected = (elapsed * 50).to_i
+    puts "elapsed: #{elapsed} expected: #{expected} counter: #{counter}"
+    assert counter >= expected - 1 && counter <= expected + 1
   end
 
   def test_throttled_loop_with_count
