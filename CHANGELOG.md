@@ -1,3 +1,11 @@
+## 0.43.2 2020-07-07
+
+* Fix sending Redis commands with array arguments (#21)
+
+## 0.43.1 2020-06
+
+* Fix compiling C-extension on MacOS (#20)
+
 ## 0.43 2020-07-05
 
 * Add IO#read_loop
