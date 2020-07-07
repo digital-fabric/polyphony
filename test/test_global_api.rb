@@ -106,7 +106,7 @@ class MoveOnAfterTest < MiniTest::Test
     end
     t1 = Time.now
 
-    assert t1 - t0 < 0.03
+    assert t1 - t0 < 0.1
     assert_nil v
   end
 
@@ -118,7 +118,7 @@ class MoveOnAfterTest < MiniTest::Test
     end
     t1 = Time.now
 
-    assert t1 - t0 < 0.02
+    assert t1 - t0 < 0.1
     assert_equal :bar, v
   end
 
@@ -129,7 +129,7 @@ class MoveOnAfterTest < MiniTest::Test
     assert_equal Fiber.current, f.parent
     v = sleep 1
     t1 = Time.now
-    assert t1 - t0 < 0.02
+    assert t1 - t0 < 0.1
     assert_equal 'foo', v
   end
 end
@@ -204,7 +204,7 @@ class SpinLoopTest < MiniTest::Test
     f = spin_loop(rate: 50) { buffer << (counter += 1) }
     sleep 0.2
     f.stop
-    assert counter >= 9 && counter <= 11
+    assert counter >= 8 && counter <= 12
   end
 end
 
@@ -217,7 +217,7 @@ class ThrottledLoopTest < MiniTest::Test
     end
     sleep 0.2
     f.stop
-    assert counter >= 9 && counter <= 11
+    assert counter >= 8 && counter <= 12
   end
 
   def test_throttled_loop_with_count
