@@ -1,3 +1,10 @@
+## 0.43.3 2020-07-08
+
+* Fix behaviour after call to `Process.daemon` (#8)
+* Replace core `Queue` class with `Polyphony::Queue` (#22)
+* Make `ResourcePool` reentrant (#1)
+* Accept `:with_exception` argument in `cancel_after` (#16)
+
 ## 0.43.2 2020-07-07
 
 * Fix sending Redis commands with array arguments (#21)
