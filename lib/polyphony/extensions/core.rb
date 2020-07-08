@@ -57,6 +57,12 @@ module ::Process
       fiber.define_singleton_method(:pid) { pid }
       fiber
     end
+
+    alias_method :orig_daemon, :daemon
+    def daemon(*args)
+      orig_daemon(*args)
+      Polyphony.original_pid = Process.pid
+    end
   end
 end
 

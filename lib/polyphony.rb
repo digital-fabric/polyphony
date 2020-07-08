@@ -120,19 +120,25 @@ module Polyphony
       threads.each(&:kill)
       threads.each(&:join)
     end
+
+    attr_accessor :original_pid
+
+    def install_at_exit_handler
+      @original_pid = ::Process.pid
+
+      # This at_exit handler is needed only when the original process exits. Due to
+      # the behaviour of fibers on fork (and especially on exit from forked
+      # processes,) we use a separate mechanism to terminate fibers in forked
+      # processes (see Polyphony.fork).
+      at_exit do
+        next unless @original_pid == ::Process.pid
+      
+        Polyphony.terminate_threads
+        Fiber.current.shutdown_all_children
+      end
+    end
   end
 end
 
 Polyphony.install_terminating_signal_handlers
-
-# This at_exit handler is needed only when the original process exits. Due to
-# the behaviour of fibers on fork (and especially on exit from forked
-# processes,) we use a separate mechanism to terminate fibers in forked
-# processes (see Polyphony.fork).
-orig_pid = Process.pid
-at_exit do
-  next unless orig_pid == Process.pid
-
-  Polyphony.terminate_threads
-  Fiber.current.shutdown_all_children
-end
+Polyphony.install_at_exit_handler
