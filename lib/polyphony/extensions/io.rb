@@ -97,7 +97,7 @@ class ::IO
   # end
 
   alias_method :orig_read, :read
-  def read(len = 1 << 30)
+  def read(len = 1 << 10)
     @read_buffer ||= +''
     result = Thread.current.agent.read(self, @read_buffer, len, true)
     return nil unless result
