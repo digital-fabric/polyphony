@@ -13,6 +13,7 @@ module Polyphony
 
       @stock = []
       @queue = []
+      @acquired_resources = {}
 
       @limit = opts[:limit] || 4
       @size = 0
@@ -23,16 +24,25 @@ module Polyphony
     end
 
     def acquire
-      Thread.current.agent.ref
-      resource = wait_for_resource
-      return unless resource
-
-      yield resource
-    ensure
-      Thread.current.agent.unref
-      release(resource) if resource
+      fiber = Fiber.current
+      if @acquired_resources[fiber]
+        yield @acquired_resources[fiber]
+      else
+        begin
+          Thread.current.agent.ref
+          resource = wait_for_resource
+          return unless resource
+          
+          @acquired_resources[fiber] = resource
+          yield resource
+        ensure
+          @acquired_resources[fiber] = nil
+          Thread.current.agent.unref
+          release(resource) if resource
+        end
+      end
     end
-
+        
     def wait_for_resource
       fiber = Fiber.current
       @queue << fiber

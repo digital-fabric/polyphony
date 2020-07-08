@@ -123,4 +123,16 @@ class ResourcePoolTest < MiniTest::Test
     pool.preheat!
     assert_equal 2, pool.size
   end
+
+  def test_reentrant_resource_pool
+    resources = [+'a', +'b']
+    pool = Polyphony::ResourcePool.new(limit: 1) { resources.shift }
+
+    pool.acquire do |r|
+      assert_equal 'a', r
+      pool.acquire do |r|
+        assert_equal 'a', r
+      end
+    end
+  end
 end
