@@ -370,15 +370,3 @@ class ::Fiber
 end
 
 Fiber.current.setup_main_fiber
-
-# This at_exit handler is needed only when the original process exits. Due to
-# the behaviour of fibers on fork (and especially on exit from forked
-# processes,) we use a separate mechanism to terminate fibers in forked
-# processes (see Polyphony.fork).
-orig_pid = Process.pid
-at_exit do
-  next unless orig_pid == Process.pid
-
-  Polyphony.terminate_threads
-  Fiber.current.shutdown_all_children
-end
