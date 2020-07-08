@@ -103,7 +103,7 @@ module Polyphony
 
     def sleep_forever
       Thread.current.agent.ref
-      suspend
+      loop { sleep 60 }
     ensure
       Thread.current.agent.unref
     end
