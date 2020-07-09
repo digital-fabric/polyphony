@@ -279,7 +279,7 @@ def chat_user_handler(user_name, connection)
   while command = connection.gets
     case command
     when /^connect (.+)/
-      room&.send [:unsubscribe, message_subscriber]
+      room&.send [:subscribe, message_subscriber]
       room = CHAT_ROOMS[$1]
     when "disconnect"
       room&.send [:unsubscribe, message_subscriber]
