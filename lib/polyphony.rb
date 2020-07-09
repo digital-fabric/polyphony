@@ -100,17 +100,9 @@ module Polyphony
       Polyphony::Process.watch(cmd, &block)
     end
 
-    def emit_signal_exception(exception, fiber = Thread.main.main_fiber)
-      Thread.current.break_out_of_ev_loop(fiber, exception)
-    end
-
-    def install_terminating_signal_handler(signal, exception_class)
-      trap(signal) { emit_signal_exception(exception_class.new) }
-    end
-
     def install_terminating_signal_handlers
-      install_terminating_signal_handler('SIGTERM', ::SystemExit)
-      install_terminating_signal_handler('SIGINT', ::Interrupt)
+      trap('SIGTERM', SystemExit)
+      trap('SIGINT', Interrupt)
     end
 
     def terminate_threads

@@ -126,6 +126,31 @@ module ::Kernel
       break
     end
   end
+
+  alias_method :orig_trap, :trap
+  def trap(sig, command = nil, &block)
+    return orig_trap(sig, command) if command.is_a? String
+      
+    block = command if command.respond_to?(:call) && !block
+    exception = command.is_a?(Class) && command.new
+
+    # The signal trap can be invoked at any time, including while the system
+    # agent is blocking while polling for events. In order to deal with this
+    # correctly, we spin a fiber that will run the signal handler code, then
+    # call break_out_of_ev_loop, which will put the fiber at the front of the
+    # run queue, then wake up the system agent.
+    #
+    # If the command argument is an exception class however, it will be raised
+    # directly in the context of the main fiber.
+    orig_trap(sig) do
+      if exception
+        Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, exception)
+      else
+        fiber = spin { snooze; block.call }
+        Thread.current.break_out_of_ev_loop(fiber, nil)
+      end
+    end
+  end
 end
 
 # Override Timeout to use cancel scope
