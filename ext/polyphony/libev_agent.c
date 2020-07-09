@@ -281,7 +281,8 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
   struct LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
-  long len = NUM2INT(length);
+  long dynamic_len = length == Qnil;
+  long len = dynamic_len ? 4096 : NUM2INT(length);
   int shrinkable = io_setstrbuf(&str, len);
   char *buf = RSTRING_PTR(str);
   long total = 0;
@@ -298,8 +299,8 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
   
   OBJ_TAINT(str);
 
-  while (len > 0) {
-    ssize_t n = read(fptr->fd, buf, len);
+  while (1) {
+    ssize_t n = read(fptr->fd, buf, len - total);
     if (n < 0) {
       int e = errno;
       if (e != EWOULDBLOCK && e != EAGAIN) rb_syserr_fail(e, strerror(e));
@@ -312,14 +313,21 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
 
       if (n == 0) break; // EOF
-
       total = total + n;
-      buf += n;
-      len -= n;
-      if (!read_to_eof || (len == 0)) break;
+      if (!read_to_eof) break;
+
+      if (total == len) {
+        if (!dynamic_len) break;
+      
+        rb_str_resize(str, total);
+        rb_str_modify_expand(str, len);
+        buf = RSTRING_PTR(str) + total;
+        shrinkable = 0;
+        len += len;
+      }
+      else buf += n;
     }
   }
-
   if (total == 0) return Qnil;
 
   io_set_read_length(str, total, shrinkable);
