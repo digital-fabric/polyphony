@@ -1,3 +1,9 @@
+## 0.43.4 2020-07-09
+
+* Reimplement Kernel#trap
+* Dynamically allocate read buffer if length not given (#23)
+* Prevent CPU saturation on infinite sleep (#24)
+
 ## 0.43.3 2020-07-08
 
 * Fix behaviour after call to `Process.daemon` (#8)
