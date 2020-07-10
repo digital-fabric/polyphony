@@ -49,7 +49,7 @@ module Polyphony
     end
 
     def run_queued_task
-      (block, watcher) = @task_queue.pop
+      (block, watcher) = @task_queue.shift
       result = block.()
       watcher&.signal(result)
     rescue Exception => e

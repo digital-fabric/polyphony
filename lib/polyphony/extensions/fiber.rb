@@ -189,7 +189,7 @@ module Polyphony
     end
 
     def receive_pending
-      @mailbox.shift_each
+      @mailbox.shift_all
     end
   end
 

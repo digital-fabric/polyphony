@@ -11,10 +11,9 @@ ID ID_runnable_next;
 ID ID_stop;
 
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
-  VALUE queue;
+  VALUE queue = rb_ary_new();
   
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
-  queue = rb_ary_new();
   rb_ivar_set(self, ID_run_queue, queue);
 
   return self;
