@@ -11,7 +11,7 @@ ID ID_runnable_next;
 ID ID_stop;
 
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
-  VALUE queue = rb_ary_new();
+  VALUE queue = rb_funcall(cLibevQueue, ID_new, 0);
   
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
   rb_ivar_set(self, ID_run_queue, queue);
@@ -60,7 +60,7 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   }
 
   queue = rb_ivar_get(self, ID_run_queue);
-  rb_ary_push(queue, fiber);
+  LibevQueue_push(queue, fiber);
   rb_ivar_set(fiber, ID_runnable, Qtrue);
 
   if (rb_thread_current() != self) {
@@ -87,13 +87,13 @@ VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) 
 
   // if fiber is already scheduled, remove it from the run queue
   if (rb_ivar_get(fiber, ID_runnable) != Qnil) {
-    rb_ary_delete(queue, fiber);
+    LibevQueue_delete(queue, fiber);
   } else {
     rb_ivar_set(fiber, ID_runnable, Qtrue);
   }
 
   // the fiber is given priority by putting it at the front of the run queue
-  rb_ary_unshift(queue, fiber);
+  LibevQueue_unshift(queue, fiber);
 
   if (rb_thread_current() != self) {
     // if the fiber scheduling is done across threads, we need to make sure the
@@ -123,7 +123,7 @@ VALUE Thread_switch_fiber(VALUE self) {
 
   ref_count = LibevAgent_ref_count(agent);
   while (1) {
-    next_fiber = rb_ary_shift(queue);
+    next_fiber = LibevQueue_shift_no_wait(queue);
     if (next_fiber != Qnil) {
       if (ref_count > 0) {
         // this mechanism prevents event starvation in case the run queue never
@@ -152,7 +152,7 @@ VALUE Thread_switch_fiber(VALUE self) {
 
 VALUE Thread_reset_fiber_scheduling(VALUE self) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
-  rb_ary_clear(queue);
+  LibevQueue_clear(queue);
   Thread_fiber_reset_ref_count(self);
   return self;
 }

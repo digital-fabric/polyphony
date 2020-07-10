@@ -190,6 +190,10 @@ void value_queue_remove_by_value(struct value_queue *queue, VALUE value) {
   }
 }
 
+void value_queue_clear(struct value_queue *queue) {
+  queue->count = 0;
+}
+
 void value_queue_shift_each(struct value_queue *queue) {
   if (queue->count == 0) return;
 
@@ -325,12 +329,34 @@ VALUE LibevQueue_shift(VALUE self) {
   return value_queue_shift(&queue->items);
 }
 
+VALUE LibevQueue_shift_no_wait(VALUE self) {
+    LibevQueue_t *queue;
+  GetQueue(self, queue);
+
+  return value_queue_shift(&queue->items);
+}
+
 VALUE LibevQueue_delete(VALUE self, VALUE value) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
   value_queue_remove_by_value(&queue->items, value);
   return self;
+}
+
+VALUE LibevQueue_clear(VALUE self) {
+  LibevQueue_t *queue;
+  GetQueue(self, queue);
+
+  value_queue_clear(&queue->items);
+  return self;
+}
+
+long LibevQueue_len(VALUE self) {
+  LibevQueue_t *queue;
+  GetQueue(self, queue);
+
+  return queue->items.count;
 }
 
 VALUE LibevQueue_shift_each(VALUE self) {
@@ -366,6 +392,7 @@ void Init_LibevQueue() {
 
   rb_define_method(cLibevQueue, "shift", LibevQueue_shift, 0);
   rb_define_method(cLibevQueue, "pop", LibevQueue_shift, 0);
+  rb_define_method(cLibevQueue, "shift_no_wait", LibevQueue_shift_no_wait, 0);
   rb_define_method(cLibevQueue, "delete", LibevQueue_delete, 1);
 
   rb_define_method(cLibevQueue, "shift_each", LibevQueue_shift_each, 0);

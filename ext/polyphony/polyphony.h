@@ -76,9 +76,15 @@ VALUE LibevAgent_unref(VALUE self);
 int LibevAgent_ref_count(VALUE self);
 void LibevAgent_reset_ref_count(VALUE self);
 
-VALUE Polyphony_snooze(VALUE self);
+VALUE LibevQueue_push(VALUE self, VALUE value);
+VALUE LibevQueue_unshift(VALUE self, VALUE value);
+VALUE LibevQueue_shift(VALUE self);
+VALUE LibevQueue_shift_no_wait(VALUE self);
+VALUE LibevQueue_clear(VALUE self);
+VALUE LibevQueue_delete(VALUE self, VALUE value);
+long LibevQueue_len(VALUE self);
 
-VALUE Polyphony_Queue_push(VALUE self, VALUE value);
+VALUE Polyphony_snooze(VALUE self);
 
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_switch_fiber(VALUE thread);
