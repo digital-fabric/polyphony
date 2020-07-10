@@ -6,16 +6,15 @@ require 'polyphony'
 def bm(fibers, iterations)
   count = 0
   t0 = Time.now
-  supervise do |s|
-    fibers.times do
-      s.spin do
-        iterations.times do
-          snooze
-          count += 1
-        end
+  fibers.times do
+    spin do
+      iterations.times do
+        snooze
+        count += 1
       end
     end
   end
+  Fiber.current.await_all_children
   dt = Time.now - t0
   puts "#{[fibers, iterations].inspect} count: #{count} #{count / dt.to_f}/s"
 end
