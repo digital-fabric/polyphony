@@ -6,48 +6,65 @@ struct async_watcher {
   VALUE fiber;
 };
 
-struct async_queue {
+struct async_watcher_queue {
   struct async_watcher **queue;
-  unsigned int len;
+  unsigned int length;
   unsigned int count;
   unsigned int push_idx;
-  unsigned int pop_idx;
+  unsigned int shift_idx;
 };
 
-void async_queue_init(struct async_queue *queue) {
-  queue->len = 4;
+void async_watcher_queue_init(struct async_watcher_queue *queue) {
+  queue->length = 1;
   queue->count = 0;
-  queue->queue = malloc(sizeof(struct async_watcher *) * queue->len);
+  queue->queue = malloc(sizeof(struct async_watcher *) * queue->length);
   queue->push_idx = 0;
-  queue->pop_idx = 0;
+  queue->shift_idx = 0;
 }
 
-void async_queue_free(struct async_queue *queue) {
+void async_watcher_queue_free(struct async_watcher_queue *queue) {
   free(queue->queue);
 }
 
-void async_queue_push(struct async_queue *queue, struct async_watcher *watcher) {
-  if (queue->push_idx == queue->len) {
-    queue->len = queue->len * 2;
-    queue->queue = realloc(queue->queue, sizeof(struct async_watcher *) * queue->len);
-  }
+void async_watcher_queue_realign(struct async_watcher_queue *queue) {
+  memmove(
+    queue->queue,
+    queue->queue + queue->shift_idx,
+    queue->count * sizeof(struct async_watcher *)
+  );
+  queue->push_idx = queue->push_idx - queue->shift_idx;
+  queue->shift_idx = 0;
+}
+
+#define QUEUE_REALIGN_THRESHOLD 32
+
+void async_watcher_queue_push(struct async_watcher_queue *queue, struct async_watcher *watcher) {
   if (queue->count == 0) {
     queue->push_idx = 0;
-    queue->pop_idx = 0;
+    queue->shift_idx = 0;
+  }
+  if (queue->push_idx == queue->length) {
+    // prevent shift idx moving too much away from zero
+    if (queue->length >= QUEUE_REALIGN_THRESHOLD && queue->shift_idx >= (queue->length / 2))
+      async_watcher_queue_realign(queue);
+    else {
+      queue->length = (queue->length == 1) ? 4 : queue->length * 2;
+      queue->queue = realloc(queue->queue, sizeof(struct async_watcher *) * queue->length);
+    }
   }
   queue->count++;
   queue->queue[queue->push_idx++] = watcher;
 }
 
-struct async_watcher *async_queue_pop(struct async_queue *queue) {
+struct async_watcher *async_watcher_queue_pop(struct async_watcher_queue *queue) {
   if (queue->count == 0) return 0;
 
   queue->count--;
 
-  return queue->queue[queue->pop_idx++];
+  return queue->queue[queue->shift_idx++];
 }
 
-void async_queue_remove_at_idx(struct async_queue *queue, unsigned int remove_idx) {
+void async_watcher_queue_remove_at_idx(struct async_watcher_queue *queue, unsigned int remove_idx) {
   queue->count--;
   queue->push_idx--;
   if (remove_idx < queue->push_idx)
@@ -58,12 +75,12 @@ void async_queue_remove_at_idx(struct async_queue *queue, unsigned int remove_id
     );
 }
 
-void async_queue_remove_by_fiber(struct async_queue *queue, VALUE fiber) {
+void async_watcher_queue_remove_by_fiber(struct async_watcher_queue *queue, VALUE fiber) {
   if (queue->count == 0) return;
 
-  for (unsigned idx = queue->pop_idx; idx < queue->push_idx; idx++) {
+  for (unsigned idx = queue->shift_idx; idx < queue->push_idx; idx++) {
     if (queue->queue[idx]->fiber == fiber) {
-      async_queue_remove_at_idx(queue, idx);
+      async_watcher_queue_remove_at_idx(queue, idx);
       return; 
     }
   }
@@ -71,7 +88,7 @@ void async_queue_remove_by_fiber(struct async_queue *queue, VALUE fiber) {
 
 typedef struct queue {
   VALUE items;
-  struct async_queue shift_queue;
+  struct async_watcher_queue shift_queue;
 } LibevQueue_t;
 
 
@@ -84,7 +101,7 @@ static void LibevQueue_mark(void *ptr) {
 
 static void LibevQueue_free(void *ptr) {
   LibevQueue_t *queue = ptr;
-  async_queue_free(&queue->shift_queue);
+  async_watcher_queue_free(&queue->shift_queue);
   xfree(ptr);
 }
 
@@ -113,7 +130,7 @@ static VALUE LibevQueue_initialize(VALUE self) {
   GetQueue(self, queue);
 
   queue->items = rb_ary_new();
-  async_queue_init(&queue->shift_queue);
+  async_watcher_queue_init(&queue->shift_queue);
 
   return self;
 }
@@ -122,7 +139,7 @@ VALUE LibevQueue_push(VALUE self, VALUE value) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
   if (queue->shift_queue.count > 0) {
-    struct async_watcher *watcher = async_queue_pop(&queue->shift_queue);
+    struct async_watcher *watcher = async_watcher_queue_pop(&queue->shift_queue);
     if (watcher) {
       ev_async_send(watcher->ev_loop, &watcher->async);
     }
@@ -133,7 +150,7 @@ VALUE LibevQueue_push(VALUE self, VALUE value) {
 
 struct ev_loop *LibevAgent_ev_loop(VALUE self);
 
-void async_queue_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
+void async_watcher_queue_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
   struct async_watcher *watcher = (struct async_watcher *)ev_async;
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
@@ -151,15 +168,15 @@ VALUE LibevQueue_shift(VALUE self) {
 
     watcher.ev_loop = LibevAgent_ev_loop(agent);
     watcher.fiber = rb_fiber_current();    
-    async_queue_push(&queue->shift_queue, &watcher);
-    ev_async_init(&watcher.async, async_queue_callback);
+    async_watcher_queue_push(&queue->shift_queue, &watcher);
+    ev_async_init(&watcher.async, async_watcher_queue_callback);
     ev_async_start(watcher.ev_loop, &watcher.async);
     
     switchpoint_result = libev_agent_await(agent);
     ev_async_stop(watcher.ev_loop, &watcher.async);
 
     if (RTEST(rb_obj_is_kind_of(switchpoint_result, rb_eException))) {
-      async_queue_remove_by_fiber(&queue->shift_queue, watcher.fiber);
+      async_watcher_queue_remove_by_fiber(&queue->shift_queue, watcher.fiber);
       return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
     }
     RB_GC_GUARD(watcher.fiber);
