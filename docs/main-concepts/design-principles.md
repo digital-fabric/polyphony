@@ -6,7 +6,7 @@ parent: Main Concepts
 permalink: /main-concepts/design-principles/
 prev_title: Extending Polyphony
 ---
-# The Design of Polyphony 
+# The Design of Polyphony
 
 Polyphony is a new gem that aims to enable developing high-performance
 concurrent applications in Ruby using a fluent, compact syntax and API.
@@ -47,7 +47,7 @@ Nevertheless, while work is being done to harness fibers for providing a better
 way to do concurrency in Ruby, fibers remain a mistery for most Ruby
 programmers, a perplexing unfamiliar corner right at the heart of Ruby.
 
-## Design Principles
+## The History of Polyphony
 
 Polyphony started as an experiment, but over about two years of slow, jerky
 evolution turned into something I'm really excited to share with the Ruby
@@ -58,31 +58,24 @@ Polyphony today as nothing like the way it began. A careful examination of the
 [CHANGELOG](https://github.com/digital-fabric/polyphony/blob/master/CHANGELOG.md)
 would show how Polyphony explored not only different event reactor designs, but
 also different API designs incorporating various concurrent paradigms such as
-promises, async/await, fibers, and finally structured concurrency. 
+promises, async/await, fibers, and finally structured concurrency.
+
+Throughout the development process, it was my intention to create a programming
+interface that would make it easy to author highly-concurrent Ruby programs.
+
+## Design Principles
 
 While Polyphony, like nio4r or EventMachine, uses an event reactor to turn
 blocking operations into non-blocking ones, it completely embraces fibers and in
-fact does not provide any callback-based APIs. Furthermore, Polyphony provides
-fullblown fiber-aware implementations of blocking operations, such as
-`read/write`, `sleep` or `waitpid`, instead of just event watching primitives.
+fact does not provide any callback-based APIs.
 
-Throughout the development process, it was my intention to create a programming
-interface that would make highly-concurrent 
+Furthermore, Polyphony provides fullblown fiber-aware implementations of
+blocking operations, such as `read/write`, `sleep` or `waitpid`, instead of just
+event watching primitives.
 
+Polyphony's design is based on the following principles:
 
-
-
-
-
-
-a single Ruby process may spin up millions of
-concurrent fibers.
-
-, by utilizing Ruby fibers together with the
-[libev](http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod) event reactor
-library. Polyphony's design is based on the following principles:
-
-- Polyphony's concurrency model should feel "baked-in". The API should allow
+- The concurrency model should feel "baked-in". The API should allow
   concurrency with minimal effort. Polyphony should facilitate writing both
   large apps and small scripts with as little boilerplate code as possible.
   There should be no calls to initialize the event reactor, or other ceremonial
@@ -91,8 +84,8 @@ library. Polyphony's design is based on the following principles:
   ```ruby
   require 'polyphony'
 
-  # start 10 fibers, each sleeping for 1 second
-  10.times { spin { sleep 1 } }
+  # start 10 fibers, each sleeping for 3 seconds
+  10.times { spin { sleep 3 } }
 
   puts 'going to sleep now'
   # wait for other fibers to terminate
@@ -106,14 +99,14 @@ library. Polyphony's design is based on the following principles:
   ```ruby
   # in Polyphony, I/O ops might block the current fiber, but implicitly yield to
   # other concurrent fibers:
-  clients.each { |client|
+  clients.each do |client|
     spin { client.puts 'Elvis has left the chatroom' }
-  }
+  end
   ```
 
 - Concurrency primitives should be accessible using idiomatic Ruby techniques
   (blocks, method chaining...) and should feel as much as possible "part of the
-  language". The resulting API is based more on methods and less on classes,
+  language". The resulting API is fundamentally based on methods rather than classes,
   for example `spin` or `move_on_after`, leading to a coding style that is both
   more compact and more legible:
 
@@ -124,8 +117,6 @@ library. Polyphony's design is based on the following principles:
     }
   }
   ```
-
-- Breaking up operations into 
 
 - Polyphony should embrace Ruby's standard `raise/rescue/ensure` exception
   handling mechanism. Exception handling in a highly concurrent environment
@@ -147,7 +138,8 @@ library. Polyphony's design is based on the following principles:
   constructs through composition.
 
 - The entire design should embrace fibers. There should be no callback-based
-  asynchronous APIs.
+  asynchronous APIs. The library and its ecosystem will foster the development
+  of techniques and tools for converting callback-based APIs to fiber-based ones.
 
 - Use of extensive monkey patching of Ruby core modules and classes such as
   `Kernel`, `Fiber`, `IO` and `Timeout`. This allows porting over non-Polyphony
@@ -160,13 +152,10 @@ library. Polyphony's design is based on the following principles:
   # use TCPServer from Ruby's stdlib
   server = TCPServer.open('127.0.0.1', 1234)
   while (client = server.accept)
-    spin do
+    spin {
       while (data = client.gets)
-        client.write('you said: ', data.chomp, "!\n")
+        client.write("you said: #{ data.chomp }\n")
       end
-    end
+    }
   end
   ```
-
-- Development of techniques and tools for converting callback-based APIs to
-  fiber-based ones.

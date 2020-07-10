@@ -44,7 +44,7 @@ pong = Fiber.new { loop { puts "pong"; ping.transfer } }
 ping.transfer
 ```
 
-`Fiber#transform` also allows using the main fiber as a general purpose
+`Fiber#transfer` also allows using the main fiber as a general purpose
 resumable execution context. For that reason, Polyphony uses `Fiber#transfer`
 exclusively for scheduling fibers. Normally, however, applications based on
 Polyphony will not use this API directly.
