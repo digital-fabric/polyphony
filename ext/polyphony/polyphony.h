@@ -1,5 +1,5 @@
-#ifndef RUBY_EV_H
-#define RUBY_EV_H
+#ifndef POLYPHONY_H
+#define POLYPHONY_H
 
 #include "ruby.h"
 #include "ruby/io.h"
@@ -83,6 +83,7 @@ VALUE LibevQueue_shift_no_wait(VALUE self);
 VALUE LibevQueue_clear(VALUE self);
 VALUE LibevQueue_delete(VALUE self, VALUE value);
 long LibevQueue_len(VALUE self);
+void LibevQueue_trace(VALUE self);
 
 VALUE Polyphony_snooze(VALUE self);
 
@@ -93,4 +94,4 @@ int io_setstrbuf(VALUE *str, long len);
 void io_set_read_length(VALUE str, long n, int shrinkable);
 VALUE io_enc_str(VALUE str, rb_io_t *fptr);
 
-#endif /* RUBY_EV_H */
+#endif /* POLYPHONY_H */

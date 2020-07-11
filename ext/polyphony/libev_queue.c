@@ -1,4 +1,5 @@
 #include "polyphony.h"
+#include "ring_buffer.h"
 
 struct async_watcher {
   ev_async async;
@@ -86,150 +87,21 @@ void async_watcher_queue_remove_by_fiber(struct async_watcher_queue *queue, VALU
   }
 }
 
-struct value_queue {
-  VALUE *queue;
-  unsigned int length;
-  unsigned int count;
-  unsigned int push_idx;
-  unsigned int shift_idx;
-};
-
-void value_queue_init(struct value_queue *queue) {
-  queue->length = 1;
-  queue->count = 0;
-  queue->queue = malloc(queue->length * sizeof(VALUE));
-  queue->push_idx = 0;
-  queue->shift_idx = 0;
-}
-
-void value_queue_mark(struct value_queue *queue) {
-  for (unsigned int idx = queue->shift_idx; idx < queue->push_idx; idx++) {
-    rb_gc_mark(queue->queue[idx]);
-  }
-}
-
-void value_queue_free(struct value_queue *queue) {
-  free(queue->queue);
-}
-
-void value_queue_realign(struct value_queue *queue) {
-  memmove(
-    queue->queue,
-    queue->queue + queue->shift_idx,
-    queue->count * sizeof(VALUE)
-  );
-  queue->push_idx = queue->push_idx - queue->shift_idx;
-  queue->shift_idx = 0;
-}
-
-#define QUEUE_REALIGN_THRESHOLD 32
-
-void value_queue_push(struct value_queue *queue, VALUE value) {
-  if (queue->count == 0) {
-    queue->push_idx = 0;
-    queue->shift_idx = 0;
-  }
-  if (queue->push_idx == queue->length) {
-    // prevent shift idx moving too much away from zero
-    if (queue->length >= QUEUE_REALIGN_THRESHOLD && queue->shift_idx >= (queue->length / 2))
-      value_queue_realign(queue);
-    else {
-      queue->length = (queue->length == 1) ? 4 : queue->length * 2;
-      queue->queue = realloc(queue->queue, queue->length * sizeof(VALUE));
-    }
-  }
-  queue->count++;
-  queue->queue[queue->push_idx++] = value;
-}
-
-void value_queue_unshift(struct value_queue *queue, VALUE value) {
-  if (queue->count == 0) {
-    queue->shift_idx = 0;
-    queue->push_idx = 0;
-  }
-  if (queue->shift_idx > 0)
-    queue->queue[--queue->shift_idx] = value;
-  else {
-    if (queue->count == queue->length) {
-      queue->length = (queue->length == 1) ? 4 : queue->length * 2;
-      queue->queue = realloc(queue->queue, queue->length * sizeof(VALUE));
-    }
-    memmove(queue->queue + 1, queue->queue, queue->count * sizeof(VALUE));
-    queue->push_idx++;
-  }
-  queue->queue[queue->shift_idx] = value;
-  queue->count++;
-}
-
-VALUE value_queue_shift(struct value_queue *queue) {
-  if (queue->count == 0) return Qnil;
-
-  queue->count--;
-  return queue->queue[queue->shift_idx++];
-}
-
-void value_queue_remove_at_idx(struct value_queue *queue, unsigned int remove_idx) {
-  queue->count--;
-  queue->push_idx--;
-  if (remove_idx < queue->push_idx)
-    memmove(
-      queue->queue + remove_idx,
-      queue->queue + remove_idx + 1,
-      (queue->push_idx - remove_idx) * sizeof(VALUE)
-    );
-}
-
-void value_queue_remove_by_value(struct value_queue *queue, VALUE value) {
-  if (queue->count == 0) return;
-
-  for (unsigned idx = queue->shift_idx; idx < queue->push_idx; idx++) {
-    if (queue->queue[idx] == value) {
-      value_queue_remove_at_idx(queue, idx);
-      return; 
-    }
-  }
-}
-
-void value_queue_clear(struct value_queue *queue) {
-  queue->count = 0;
-}
-
-void value_queue_shift_each(struct value_queue *queue) {
-  if (queue->count == 0) return;
-
-  for (unsigned int idx = queue->shift_idx; idx < queue->push_idx; idx++) {
-    rb_yield(queue->queue[idx]);
-  }
-  queue->count = 0;
-}
-
-VALUE value_queue_shift_all(struct value_queue *queue) {
-  VALUE ary;
-  if (queue->count == 0)
-    ary = rb_ary_new();
-  else {
-    ary = rb_ary_new_from_values(queue->count, queue->queue + queue->shift_idx);
-    queue->count = 0; 
-  }
-  return ary;
-}
-
 typedef struct queue {
-  struct value_queue items;
+  ring_buffer values;
   struct async_watcher_queue shift_queue;
 } LibevQueue_t;
-
 
 VALUE cLibevQueue = Qnil;
 
 static void LibevQueue_mark(void *ptr) {
   LibevQueue_t *queue = ptr;
-  value_queue_mark(&queue->items);
-  // rb_gc_mark(queue->items);
+  ring_buffer_mark(&queue->values);
 }
 
 static void LibevQueue_free(void *ptr) {
   LibevQueue_t *queue = ptr;
+  ring_buffer_free(&queue->values);
   async_watcher_queue_free(&queue->shift_queue);
   xfree(ptr);
 }
@@ -258,7 +130,7 @@ static VALUE LibevQueue_initialize(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  value_queue_init(&queue->items);
+  ring_buffer_init(&queue->values);
   async_watcher_queue_init(&queue->shift_queue);
 
   return self;
@@ -273,7 +145,7 @@ VALUE LibevQueue_push(VALUE self, VALUE value) {
       ev_async_send(watcher->ev_loop, &watcher->async);
     }
   }
-  value_queue_push(&queue->items, value);
+  ring_buffer_push(&queue->values, value);
   return self;
 }
 
@@ -286,7 +158,7 @@ VALUE LibevQueue_unshift(VALUE self, VALUE value) {
       ev_async_send(watcher->ev_loop, &watcher->async);
     }
   }
-  value_queue_unshift(&queue->items, value);
+  ring_buffer_unshift(&queue->values, value);
   return self;
 }
 
@@ -303,7 +175,7 @@ VALUE LibevQueue_shift(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  if (queue->items.count == 0) {
+  if (queue->values.count == 0) {
     struct async_watcher watcher;
     VALUE agent = rb_ivar_get(rb_thread_current(), ID_ivar_agent);
     VALUE switchpoint_result = Qnil;
@@ -326,21 +198,21 @@ VALUE LibevQueue_shift(VALUE self) {
     RB_GC_GUARD(switchpoint_result);
   }
 
-  return value_queue_shift(&queue->items);
+  return ring_buffer_shift(&queue->values);
 }
 
 VALUE LibevQueue_shift_no_wait(VALUE self) {
     LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  return value_queue_shift(&queue->items);
+  return ring_buffer_shift(&queue->values);
 }
 
 VALUE LibevQueue_delete(VALUE self, VALUE value) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  value_queue_remove_by_value(&queue->items, value);
+  ring_buffer_delete(&queue->values, value);
   return self;
 }
 
@@ -348,7 +220,7 @@ VALUE LibevQueue_clear(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  value_queue_clear(&queue->items);
+  ring_buffer_clear(&queue->values);
   return self;
 }
 
@@ -356,14 +228,14 @@ long LibevQueue_len(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  return queue->items.count;
+  return queue->values.count;
 }
 
 VALUE LibevQueue_shift_each(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  value_queue_shift_each(&queue->items);
+  ring_buffer_shift_each(&queue->values);
   return self;
 }
 
@@ -371,14 +243,27 @@ VALUE LibevQueue_shift_all(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  return value_queue_shift_all(&queue->items);
+  return ring_buffer_shift_all(&queue->values);
 }
 
 VALUE LibevQueue_empty_p(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  return (queue->items.count == 0) ? Qtrue : Qfalse;
+  return (queue->values.count == 0) ? Qtrue : Qfalse;
+}
+
+void LibevQueue_trace(VALUE self) {
+  LibevQueue_t *queue;
+  GetQueue(self, queue);
+
+  printf(
+    "queue size: %d count: %d head: %d tail: %d\n",
+    queue->values.size,
+    queue->values.count,
+    queue->values.head,
+    queue->values.tail
+  );
 }
 
 void Init_LibevQueue() {

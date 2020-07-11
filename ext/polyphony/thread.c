@@ -150,6 +150,12 @@ VALUE Thread_switch_fiber(VALUE self) {
     value : rb_funcall(next_fiber, ID_transfer, 1, value);
 }
 
+VALUE Thread_run_queue_trace(VALUE self) {
+  VALUE queue = rb_ivar_get(self, ID_run_queue);
+  LibevQueue_trace(queue);
+  return self;
+}
+
 VALUE Thread_reset_fiber_scheduling(VALUE self) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
   LibevQueue_clear(queue);
@@ -181,6 +187,7 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "schedule_fiber_with_priority",
     Thread_schedule_fiber_with_priority, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
+  rb_define_method(rb_cThread, "run_queue_trace", Thread_run_queue_trace, 0);
 
   ID_deactivate_all_watchers_post_fork = rb_intern("deactivate_all_watchers_post_fork");
   ID_ivar_agent               = rb_intern("@agent");

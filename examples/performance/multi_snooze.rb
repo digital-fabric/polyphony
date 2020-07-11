@@ -5,7 +5,7 @@ require 'polyphony'
 
 def bm(fibers, iterations)
   count = 0
-  t0 = Time.now
+  t_pre = Time.now
   fibers.times do
     spin do
       iterations.times do
@@ -14,9 +14,11 @@ def bm(fibers, iterations)
       end
     end
   end
+  t0 = Time.now
   Fiber.current.await_all_children
   dt = Time.now - t0
-  puts "#{[fibers, iterations].inspect} count: #{count} #{count / dt.to_f}/s"
+  puts "#{[fibers, iterations].inspect} setup: #{t0 - t_pre}s count: #{count} #{count / dt.to_f}/s"
+  Thread.current.run_queue_trace
 end
 
 GC.disable
@@ -26,5 +28,6 @@ bm(10, 100_000)
 bm(100, 10_000)
 bm(1_000, 1_000)
 bm(10_000, 100)
+
 # bm(100_000,    10)
 # bm(1_000_000,   1)
