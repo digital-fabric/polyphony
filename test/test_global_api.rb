@@ -211,13 +211,13 @@ class SpinLoopTest < MiniTest::Test
 
   def test_spin_loop_location
     location = /^#{__FILE__}:#{__LINE__ + 1}/
-    f = spin_loop {}
+    f = spin_loop { snooze }
     
     assert_match location, f.location
   end
 
   def test_spin_loop_tag
-    f = spin_loop(:my_loop) {}
+    f = spin_loop(:my_loop) { snooze }
 
     assert_equal :my_loop, f.tag
   end
