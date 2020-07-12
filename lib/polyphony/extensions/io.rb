@@ -119,8 +119,8 @@ class ::IO
   end
 
   alias_method :orig_write, :write
-  def write(str)
-    Thread.current.agent.write(self, str)
+  def write(str, *args)
+    Thread.current.agent.write(self, str, *args)
   end
 
   alias_method :orig_write_chevron, :<<
@@ -166,16 +166,13 @@ class ::IO
       return
     end
 
-    s = args.each_with_object(+'') do |a, str|
-      if a.is_a?(Array)
-        a.each { |a2| str << a2.to_s << "\n" }
-      else
-        a = a.to_s
-        str << a
-        str << "\n" unless a =~ /\n$/
-      end
+    strs = args.inject([]) do |m, a|
+      a = a.to_s
+      m << a
+      m << "\n" unless a =~ /\n$/
+      m
     end
-    write s
+    write *strs
     nil
   end
 

@@ -413,45 +413,60 @@ error:
   return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
 }
 
-VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
+VALUE LibevAgent_write(int argc, VALUE *argv, VALUE self) {
   struct LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
+  VALUE io;
+  VALUE underlying_io;
+  long total_written = 0;
+  int arg_idx = 1;
 
-  char *buf = StringValuePtr(str);
-  long len = RSTRING_LEN(str);
-  long left = len;
-
-  VALUE underlying_io = rb_iv_get(io, "@io");
+  if (argc < 2)
+    rb_raise(rb_eRuntimeError, "(wrong number of arguments (expected 2 or more))");
+  
+  io = argv[0];
+  underlying_io = rb_iv_get(io, "@io");
   if (underlying_io != Qnil) io = underlying_io;
   GetLibevAgent(self, agent);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
   watcher.fiber = Qnil;
 
-  while (left > 0) {
-    ssize_t n = write(fptr->fd, buf, left);
-    if (n < 0) {
-      int e = errno;
-      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+  while (arg_idx < argc) {
+    VALUE str = argv[arg_idx];
+    char *buf = StringValuePtr(str);
+    long len = RSTRING_LEN(str);
+    long left = len;
 
-      switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_WRITE);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
-    }
-    else {
-      switchpoint_result = libev_snooze();
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    while (left > 0) {
+      ssize_t n = write(fptr->fd, buf, left);
+      if (n < 0) {
+        int e = errno;
+        if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      buf += n;
-      left -= n;
+        switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_WRITE);
+        if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      }
+      else {
+        buf += n;
+        left -= n;
+      }
     }
+    total_written += len;
+    arg_idx++;
+  }
+
+  if (watcher.fiber == Qnil) {
+    switchpoint_result = libev_snooze();
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
 
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2NUM(len);
+  return INT2NUM(total_written);
 error:
   return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
 }
@@ -723,7 +738,7 @@ void Init_LibevAgent() {
 
   rb_define_method(cLibevAgent, "read", LibevAgent_read, 4);
   rb_define_method(cLibevAgent, "read_loop", LibevAgent_read_loop, 1);
-  rb_define_method(cLibevAgent, "write", LibevAgent_write, 2);
+  rb_define_method(cLibevAgent, "write", LibevAgent_write, -1);
   rb_define_method(cLibevAgent, "accept", LibevAgent_accept, 1);
   rb_define_method(cLibevAgent, "accept_loop", LibevAgent_accept_loop, 1);
   // rb_define_method(cLibevAgent, "connect", LibevAgent_accept, 3);
