@@ -30,6 +30,14 @@ class IOTest < MiniTest::Test
     assert_equal 'hello', msg
   end
 
+  def test_write_multiple_arguments
+    i, o = IO.pipe
+    count = o.write('a', 'b', "\n", 'c')
+    assert_equal 4, count
+    o.close
+    assert_equal "ab\nc", i.read
+  end
+
   def test_that_double_chevron_method_returns_io
     assert_equal @o, @o << 'foo'
 
@@ -121,7 +129,7 @@ class IOClassMethodsTest < MiniTest::Test
     assert_equal "end\n", lines[-1]
   end
 
-  def test_read
+  def test_read_class_method
     s = IO.read(__FILE__)
     assert_kind_of String, s
     assert(!s.empty?)
@@ -144,7 +152,7 @@ class IOClassMethodsTest < MiniTest::Test
 
   WRITE_DATA = "foo\nbar קוקו"
 
-  def test_write
+  def test_write_class_method
     fn = '/tmp/test_write'
     FileUtils.rm(fn) rescue nil
 
