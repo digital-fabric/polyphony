@@ -1,3 +1,6 @@
+* Use LibevQueue for fiber run queue
+* Reimplement LibevQueue as ring buffer
+
 ## 0.43.4 2020-07-09
 
 * Reimplement Kernel#trap

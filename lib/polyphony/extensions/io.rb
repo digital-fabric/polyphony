@@ -108,14 +108,18 @@ class ::IO
   end
 
   alias_method :orig_readpartial, :read
-  def readpartial(len)
+  def readpartial(len, str = nil)
     @read_buffer ||= +''
     result = Thread.current.agent.read(self, @read_buffer, len, false)
     raise EOFError unless result
 
-    already_read = @read_buffer
+    if str
+      str << @read_buffer
+    else
+      str = @read_buffer
+    end
     @read_buffer = +''
-    already_read
+    str
   end
 
   alias_method :orig_write, :write
@@ -190,7 +194,7 @@ class ::IO
 
   alias_method :orig_write_nonblock, :write_nonblock
   def write_nonblock(string, _options = {})
-    write(string, 0)
+    write(string)
   end
 
   alias_method :orig_read_nonblock, :read_nonblock

@@ -5,6 +5,16 @@ require 'socket'
 require_relative './io'
 require_relative '../core/thread_pool'
 
+class ::BasicSocket
+  def write_nonblock(string, _options = {})
+    write(string)
+  end
+
+  def read_nonblock(maxlen, str = nil, _options = {})
+    readpartial(maxlen, str)
+  end
+end
+
 # Socket overrides (eventually rewritten in C)
 class ::Socket
   def accept
