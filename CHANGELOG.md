@@ -1,3 +1,8 @@
+## 0.43.5 2020-07-13
+
+* Fix `#read_nonblock`, `#write_nonblock` for `IO` and `Socket` (#27)
+* Patch `Kernel#p`, `IO#puts` to issue single write call
+* Add support for multiple arguments in `IO#write` and `LibevAgent#write`
 * Use LibevQueue for fiber run queue
 * Reimplement LibevQueue as ring buffer
 
