@@ -107,6 +107,15 @@ module ::Kernel
     $stdin.gets
   end
 
+  alias_method :orig_p, :p
+  def p(*args)
+    strs = args.inject([]) do |m, a|
+      m << a.inspect << "\n"
+    end
+    STDOUT.write *strs
+    args.size == 1 ? args.first : args
+  end
+
   alias_method :orig_system, :system
   def system(*args)
     Open3.popen2(*args) do |i, o, _t|
