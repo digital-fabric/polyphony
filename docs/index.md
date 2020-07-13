@@ -6,6 +6,8 @@ permalink: /
 next_title: Installing Polyphony
 ---
 
+<p align="center"><img src="{{ 'polyphony-logo.png' | absolute_url }}" /></p>
+
 # Polyphony
 {:.text-center .logo-title}
 
@@ -21,7 +23,7 @@ for I/O, timers, and other asynchronous events.
 [Overview](getting-started/overview){: .btn .btn-green .text-gamma }
 [Take the tutorial](getting-started/tutorial){: .btn .btn-blue .text-gamma }
 [Source code](https://github.com/digital-fabric/polyphony){: .btn .btn-purple .text-gamma target="_blank" }
-{: .mt-6 .h-align-center }
+{:.text-center .mt-6 .h-align-center }
 
 ## Focused on Developer Happiness
 
