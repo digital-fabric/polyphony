@@ -221,7 +221,14 @@ module Polyphony
     def await_all_children
       return unless @children && !@children.empty?
 
-      Fiber.await(*@children.keys)
+      @results = @children.dup
+      @on_child_done = proc do |c, r|
+        @results[c] = r
+        self.schedule if @children.empty?
+      end
+      suspend
+      @on_child_done = nil
+      @results.values
     end
 
     def shutdown_all_children
