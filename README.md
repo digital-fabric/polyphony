@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="docs/polyphony-logo.png" />
-</p>
+<p align="center"><img src="docs/polyphony-logo.png" /></p>
 
 # Polyphony - Fine-Grained Concurrency for Ruby
 
