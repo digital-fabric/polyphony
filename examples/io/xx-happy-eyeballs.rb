@@ -2,12 +2,12 @@
 
 require 'polyphony'
 
-def try_connect(target, supervisor)
-  puts "trying #{target[2]}"
+def try_connect(ip_address, port, supervisor)
+  puts "trying #{ip_address}"
   sleep rand * 0.2
-  socket = TCPSocket.new(target[2], 80)
-  puts "connected to #{target[2]}"
-  supervisor.schedule [target[2], socket]
+  socket = TCPSocket.new(ip_address, port)
+  puts "connected to #{ip_address}"
+  supervisor.schedule [ip_address, socket]
 rescue IOError, SystemCallError
   # ignore error
 end
@@ -19,7 +19,7 @@ def happy_eyeballs(hostname, port, max_wait_time: 0.010)
   supervisor = Fiber.current
   spin do
     targets.each do |t|
-      spin { try_connect(t, supervisor) }
+      spin { try_connect(t[2], t[1], supervisor) }
       sleep(max_wait_time)
     end
     suspend
