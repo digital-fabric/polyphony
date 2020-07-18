@@ -113,8 +113,8 @@ active concurrent connections, each advancing at its own pace, consuming only a
 single CPU core.
 
 Nevertheless, Polyphony fully supports multithreading, with each thread having
-its own fiber run queue and its own libev event loop. In addition, Polyphony
-enables cross-thread communication using  
+its own fiber run queue and its own libev event loop. Polyphony even enables
+cross-thread communication using [fiber messaging](#message-passing). 
 
 ## Fibers vs Callbacks
 
