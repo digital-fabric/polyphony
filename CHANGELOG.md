@@ -1,3 +1,11 @@
+## 0.43.6 2020-07-18
+
+* Allow brute-force interrupting with second Ctrl-C
+* Fix outgoing SSL connections (#28)
+* Improve Fiber#await_all_children with many children
+* Use `writev` for writing multiple strings
+* Add logo (thanks [Gerald](https://webocube.com/)!)
+
 ## 0.43.5 2020-07-13
 
 * Fix `#read_nonblock`, `#write_nonblock` for `IO` and `Socket` (#27)
