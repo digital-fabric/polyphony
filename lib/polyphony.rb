@@ -102,7 +102,10 @@ module Polyphony
 
     def install_terminating_signal_handlers
       trap('SIGTERM', SystemExit)
-      trap('SIGINT', Interrupt)
+      orig_trap('SIGINT') do
+        orig_trap('SIGINT') { exit! }
+        Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, Interrupt.new)
+      end
     end
 
     def terminate_threads
