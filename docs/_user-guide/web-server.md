@@ -26,9 +26,9 @@ the entire request body.
 ## A basic web server
 
 ```ruby
-require 'polyphony/http'
+require 'tipi'
 
-Polyphony::HTTP::Server.serve('0.0.0.0', 1234) do |request|
+Tipi.serve('0.0.0.0', 1234) do |request|
   request.respond("Hello world!\n")
 end
 ```
@@ -55,13 +55,13 @@ TLS termination can be handled by passing a `secure_context` option to the
 server:
 
 ```ruby
-require 'polyphony/http'
+require 'tipi'
 require 'localhost/authority'
 
 authority = Localhost::Authority.fetch
 opts = { secure_context: authority.server_context }
 
-Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |request|
+Tipi.serve('0.0.0.0', 1234, opts) do |request|
   request.respond("Hello world!\n")
 end
 ```
@@ -72,8 +72,8 @@ Polyphony's web server makes it really easy to integrate websocket communication
 with normal HTTP processing:
 
 ```ruby
-require 'polyphony/http'
-require 'polyphony/websocket'
+require 'tipi'
+require 'tipi/websocket'
 
 ws_handler = Polyphony::Websocket.handler do |ws|
   while (msg = ws.recv)
@@ -85,7 +85,7 @@ opts = {
   upgrade: { websocket: ws_handler }
 }
 
-Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |request|
+Tipi.serve('0.0.0.0', 1234, opts) do |request|
   request.respond("Hello world!\n")
 end
 ```
@@ -93,7 +93,7 @@ end
 Polyphony also supports general-purpose HTTP upgrades using the same mechanism:
 
 ```ruby
-require 'polyphony/http'
+require 'tipi'
 
 opts = {
   upgrade: {
@@ -105,7 +105,7 @@ opts = {
   }
 }
 
-Polyphony::HTTP::Server.serve('0.0.0.0', 1234, opts) do |request|
+Tipi.serve('0.0.0.0', 1234, opts) do |request|
   request.respond("Hello world!\n")
 end
 ```
@@ -117,7 +117,7 @@ and enables streaming (using chunked encoding for HTTP/1.1 connections). Here's
 an example of an SSE response:
 
 ```ruby
-require 'polyphony/http'
+require 'tipi'
 
 def sse_response(request)
   request.send_headers('Content-Type': 'text/event-stream')
@@ -131,6 +131,6 @@ ensure
   request.send_chunk("retry: 0\n\n", done: true)
 end
 
-Polyphony::HTTP::Server.serve('0.0.0.0', 1234, &method(:sse_response))
+Tipi.serve('0.0.0.0', 1234, &method(:sse_response))
 ```
 
