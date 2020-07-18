@@ -5,6 +5,12 @@ require_relative './socket'
 
 # Open ssl socket helper methods (to make it compatible with Socket API)
 class ::OpenSSL::SSL::SSLSocket
+  alias_method :orig_initialize, :initialize
+  def initialize(socket, context = nil)
+    socket = socket.respond_to?(:io) ? socket.io || socket : socket
+    context ? orig_initialize(socket, context) : orig_initialize(socket)
+  end
+
   def dont_linger
     io.dont_linger
   end
@@ -35,6 +41,7 @@ class ::OpenSSL::SSL::SSLSocket
     loop do
       case (result = read_nonblock(maxlen, buf, exception: false))
       when :wait_readable then Thread.current.agent.wait_io(io, false)
+      when :wait_writable then Thread.current.agent.wait_io(io, true)
       else return result
       end
     end
@@ -44,6 +51,7 @@ class ::OpenSSL::SSL::SSLSocket
   def syswrite(buf)
     loop do
       case (result = write_nonblock(buf, exception: false))
+      when :wait_readable then Thread.current.agent.wait_io(io, false)
       when :wait_writable then Thread.current.agent.wait_io(io, true)
       else
         return result
