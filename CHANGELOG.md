@@ -1,3 +1,9 @@
+## 0.43.7 2020-07-20
+
+* Fix memory leak in ResourcePool (#31)
+* Check and adjust file position before reading (#30)
+* Minor documentation fixes
+
 ## 0.43.6 2020-07-18
 
 * Allow brute-force interrupting with second Ctrl-C
