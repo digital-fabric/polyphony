@@ -91,6 +91,20 @@ class IOTest < MiniTest::Test
 
     assert_raises(EOFError) { i.readpartial(1) }    
   end
+
+  # see https://github.com/digital-fabric/polyphony/issues/30
+  def test_reopened_tempfile
+    file = Tempfile.new
+    file << 'hello: world'
+    file.close
+
+    buf = nil
+    File.open(file, 'r:bom|utf-8') do |f|
+      buf = f.read(16384)
+    end
+
+    assert_equal 'hello: world', buf
+  end
 end
 
 class IOClassMethodsTest < MiniTest::Test

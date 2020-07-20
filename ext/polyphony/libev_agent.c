@@ -300,6 +300,15 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
   
   OBJ_TAINT(str);
 
+  // Apparently after reopening a closed file, the file position is not reset,
+  // which causes the read to fail. Fortunately we can use fptr->rbuf.len to
+  // find out if that's the case.
+  // See: https://github.com/digital-fabric/polyphony/issues/30
+  if (fptr->rbuf.len > 0) {
+    lseek(fptr->fd, -fptr->rbuf.len, SEEK_CUR);
+    fptr->rbuf.len = 0;
+  }
+
   while (1) {
     ssize_t n = read(fptr->fd, buf, len - total);
     if (n < 0) {
@@ -349,6 +358,7 @@ VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
     shrinkable = io_setstrbuf(&str, len); \
     buf = RSTRING_PTR(str); \
     total = 0; \
+    OBJ_TAINT(str); \
   }
 
   #define YIELD_STR() { \
@@ -378,7 +388,14 @@ VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
   rb_io_set_nonblock(fptr);
   watcher.fiber = Qnil;
 
-  OBJ_TAINT(str);
+  // Apparently after reopening a closed file, the file position is not reset,
+  // which causes the read to fail. Fortunately we can use fptr->rbuf.len to
+  // find out if that's the case.
+  // See: https://github.com/digital-fabric/polyphony/issues/30
+  if (fptr->rbuf.len > 0) {
+    lseek(fptr->fd, -fptr->rbuf.len, SEEK_CUR);
+    fptr->rbuf.len = 0;
+  }
 
   while (1) {
     ssize_t n = read(fptr->fd, buf, len);
