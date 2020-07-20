@@ -36,7 +36,7 @@ module Polyphony
           @acquired_resources[fiber] = resource
           yield resource
         ensure
-          @acquired_resources[fiber] = nil
+          @acquired_resources.delete fiber
           Thread.current.agent.unref
           release(resource) if resource
         end
