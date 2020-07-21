@@ -1,6 +1,8 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "polyphony.h"
 #include "../libev/ev.h"
@@ -278,6 +280,31 @@ VALUE libev_snooze() {
   return Thread_switch_fiber(rb_thread_current());
 }
 
+ID ID_ivar_is_nonblocking;
+
+// Since we need to ensure that fd's are non-blocking before every I/O
+// operation, here we improve upon Ruby's rb_io_set_nonblock by caching the
+// "nonblock" state in an instance variable. Calling rb_ivar_get on every read
+// is still much cheaper than doing a fcntl syscall on every read! Preliminary
+// benchmarks (with a "hello world" HTTP server) show throughput is improved
+// by 10-13%.
+inline void io_set_nonblock(rb_io_t *fptr, VALUE io) {
+#ifdef _WIN32
+  return rb_w32_set_nonblock(fptr->fd);
+#elif defined(F_GETFL)
+  VALUE is_nonblocking = rb_ivar_get(io, ID_ivar_is_nonblocking);
+  if (is_nonblocking == Qnil) {
+    rb_ivar_set(io, ID_ivar_is_nonblocking, Qtrue);
+    int oflags = fcntl(fptr->fd, F_GETFL);
+    if (oflags == -1) return;
+    if (oflags & O_NONBLOCK) return;
+    oflags |= O_NONBLOCK;
+    fcntl(fptr->fd, F_SETFL, oflags);
+  }
+#endif
+  return;
+}
+
 VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
   struct LibevAgent_t *agent;
   struct libev_io watcher;
@@ -295,7 +322,7 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
-  rb_io_set_nonblock(fptr);
+  io_set_nonblock(fptr, io);
   watcher.fiber = Qnil;
   
   OBJ_TAINT(str);
@@ -385,7 +412,7 @@ VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
-  rb_io_set_nonblock(fptr);
+  io_set_nonblock(fptr, io);
   watcher.fiber = Qnil;
 
   // Apparently after reopening a closed file, the file position is not reset,
@@ -570,7 +597,7 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
 
   GetLibevAgent(self, agent);
   GetOpenFile(sock, fptr);
-  rb_io_set_nonblock(fptr);
+  io_set_nonblock(fptr, sock);
   watcher.fiber = Qnil;
   while (1) {
     fd = accept(fptr->fd, &addr, &len);
@@ -596,7 +623,7 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
       fp->fd = fd;
       fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
       rb_io_ascii8bit_binmode(socket);
-      rb_io_set_nonblock(fp);
+      io_set_nonblock(fp, socket);
       rb_io_synchronized(fp);
       
       // if (rsock_do_not_reverse_lookup) {
@@ -625,7 +652,7 @@ VALUE LibevAgent_accept_loop(VALUE self, VALUE sock) {
 
   GetLibevAgent(self, agent);
   GetOpenFile(sock, fptr);
-  rb_io_set_nonblock(fptr);
+  io_set_nonblock(fptr, sock);
   watcher.fiber = Qnil;
 
   while (1) {
@@ -651,7 +678,7 @@ VALUE LibevAgent_accept_loop(VALUE self, VALUE sock) {
       fp->fd = fd;
       fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
       rb_io_ascii8bit_binmode(socket);
-      rb_io_set_nonblock(fp);
+      io_set_nonblock(fp, socket);
       rb_io_synchronized(fp);
 
       rb_yield(socket);
@@ -679,7 +706,7 @@ error:
 
 //   GetLibevAgent(self, agent);
 //   GetOpenFile(sock, fptr);
-//   rb_io_set_nonblock(fptr);
+//   io_set_nonblock(fptr, sock);
 //   watcher.fiber = Qnil;
 
 //   addr.sin_family = AF_INET; 
@@ -829,4 +856,6 @@ void Init_LibevAgent() {
   rb_define_method(cLibevAgent, "wait_io", LibevAgent_wait_io, 2);
   rb_define_method(cLibevAgent, "sleep", LibevAgent_sleep, 1);
   rb_define_method(cLibevAgent, "waitpid", LibevAgent_waitpid, 1);
+
+  ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
 }
