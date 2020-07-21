@@ -2,96 +2,9 @@
 #include "ring_buffer_value.h"
 #include "ring_buffer_ptr.h"
 
-struct async_watcher {
-  ev_async async;
-  struct ev_loop *ev_loop;
-  VALUE fiber;
-};
-
-struct async_watcher_queue {
-  struct async_watcher **queue;
-  unsigned int length;
-  unsigned int count;
-  unsigned int push_idx;
-  unsigned int shift_idx;
-};
-
-void async_watcher_queue_init(struct async_watcher_queue *queue) {
-  queue->length = 1;
-  queue->count = 0;
-  queue->queue = malloc(sizeof(struct async_watcher *) * queue->length);
-  queue->push_idx = 0;
-  queue->shift_idx = 0;
-}
-
-void async_watcher_queue_free(struct async_watcher_queue *queue) {
-  free(queue->queue);
-}
-
-void async_watcher_queue_realign(struct async_watcher_queue *queue) {
-  memmove(
-    queue->queue,
-    queue->queue + queue->shift_idx,
-    queue->count * sizeof(struct async_watcher *)
-  );
-  queue->push_idx = queue->push_idx - queue->shift_idx;
-  queue->shift_idx = 0;
-}
-
-#define QUEUE_REALIGN_THRESHOLD 32
-
-void async_watcher_queue_push(struct async_watcher_queue *queue, struct async_watcher *watcher) {
-  if (queue->count == 0) {
-    queue->push_idx = 0;
-    queue->shift_idx = 0;
-  }
-  if (queue->push_idx == queue->length) {
-    // prevent shift idx moving too much away from zero
-    if (queue->length >= QUEUE_REALIGN_THRESHOLD && queue->shift_idx >= (queue->length / 2))
-      async_watcher_queue_realign(queue);
-    else {
-      queue->length = (queue->length == 1) ? 4 : queue->length * 2;
-      queue->queue = realloc(queue->queue, sizeof(struct async_watcher *) * queue->length);
-    }
-  }
-  queue->count++;
-  queue->queue[queue->push_idx++] = watcher;
-}
-
-struct async_watcher *async_watcher_queue_shift(struct async_watcher_queue *queue) {
-  if (queue->count == 0) return 0;
-
-  queue->count--;
-
-  return queue->queue[queue->shift_idx++];
-}
-
-void async_watcher_queue_remove_at_idx(struct async_watcher_queue *queue, unsigned int remove_idx) {
-  queue->count--;
-  queue->push_idx--;
-  if (remove_idx < queue->push_idx)
-    memmove(
-      queue->queue + remove_idx,
-      queue->queue + remove_idx + 1,
-      (queue->push_idx - remove_idx) * sizeof(struct async_watcher *)
-    );
-}
-
-void async_watcher_queue_remove_by_fiber(struct async_watcher_queue *queue, VALUE fiber) {
-  if (queue->count == 0) return;
-
-  for (unsigned idx = queue->shift_idx; idx < queue->push_idx; idx++) {
-    if (queue->queue[idx]->fiber == fiber) {
-      async_watcher_queue_remove_at_idx(queue, idx);
-      return; 
-    }
-  }
-}
-
 typedef struct queue {
   ring_buffer_value values;
-  // struct async_watcher_queue shift_queue;
-  ring_buffer_value shift_queue;
+  ring_buffer_ptr shift_queue;
 } LibevQueue_t;
 
 VALUE cLibevQueue = Qnil;
@@ -99,13 +12,12 @@ VALUE cLibevQueue = Qnil;
 static void LibevQueue_mark(void *ptr) {
   LibevQueue_t *queue = ptr;
   ring_buffer_value_mark(&queue->values);
-  ring_buffer_value_mark(&queue->shift_queue);
 }
 
 static void LibevQueue_free(void *ptr) {
   LibevQueue_t *queue = ptr;
   ring_buffer_value_free(&queue->values);
-  ring_buffer_value_free(&queue->shift_queue);
+  ring_buffer_ptr_free(&queue->shift_queue);
   xfree(ptr);
 }
 
@@ -134,19 +46,25 @@ static VALUE LibevQueue_initialize(VALUE self) {
   GetQueue(self, queue);
 
   ring_buffer_value_init(&queue->values);
-  ring_buffer_value_init(&queue->shift_queue);
+  ring_buffer_ptr_init(&queue->shift_queue);
 
   return self;
 }
+
+struct event_waiter {
+  LibevQueue_t *queue;
+  void *event;
+  VALUE fiber;
+};
 
 VALUE LibevQueue_push(VALUE self, VALUE value) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
   if (queue->shift_queue.count > 0) {
-    printf("LibevQueue_push wakeup waiting fiber\n");
-    VALUE fiber = ring_buffer_value_shift(&queue->shift_queue);
-    if (fiber != Qnil)
-      Fiber_make_runnable(fiber, Qnil);
+    struct event_waiter *waiter = ring_buffer_ptr_shift(&queue->shift_queue);
+    if (waiter != 0) {
+      LibevAgent_event_signal(waiter->event);
+    }
   }
   ring_buffer_value_push(&queue->values, value);
   return self;
@@ -156,16 +74,18 @@ VALUE LibevQueue_unshift(VALUE self, VALUE value) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
   if (queue->shift_queue.count > 0) {
-    printf("LibevQueue_unshift wakeup waiting fiber\n");
-    VALUE fiber = ring_buffer_value_shift(&queue->shift_queue);
-    if (fiber != Qnil)
-      Fiber_make_runnable(fiber, Qnil);
+    struct event_waiter *waiter = ring_buffer_ptr_shift(&queue->shift_queue);
+    if (waiter != 0) LibevAgent_event_signal(waiter->event);
   }
   ring_buffer_value_unshift(&queue->values, value);
   return self;
 }
 
-VALUE libev_agent_await(VALUE self);
+void on_queue_event_start(void *event, void *data) {
+  struct event_waiter *waiter = (struct event_waiter *)data;
+  waiter->event = event;
+  ring_buffer_ptr_push(&waiter->queue->shift_queue, waiter);
+}
 
 VALUE LibevQueue_shift(VALUE self) {
   LibevQueue_t *queue;
@@ -174,11 +94,13 @@ VALUE LibevQueue_shift(VALUE self) {
   if (queue->values.count == 0) {
     VALUE agent = rb_ivar_get(rb_thread_current(), ID_ivar_agent);
     VALUE switchpoint_result = Qnil;
+    struct event_waiter waiter;
+    waiter.queue = queue;
+    waiter.fiber = rb_fiber_current();
 
-    ring_buffer_value_push(&queue->shift_queue, rb_fiber_current());
-    switchpoint_result = libev_agent_await(agent);
+    switchpoint_result = LibevAgent_event_wait(agent, on_queue_event_start, &waiter);
     if (RTEST(rb_obj_is_kind_of(switchpoint_result, rb_eException))) {
-      ring_buffer_value_delete(&queue->shift_queue, rb_fiber_current());
+      ring_buffer_ptr_delete(&queue->shift_queue, &waiter);
       return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
     }
     RB_GC_GUARD(agent);

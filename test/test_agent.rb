@@ -97,7 +97,7 @@ class AgentTest < MiniTest::Test
     o.close
 
     # read_loop will snooze after every read
-    4.times { snooze }
+    6.times { snooze }
 
     assert_equal [:ready, 'foo', 'bar', :done], buf
   end

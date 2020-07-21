@@ -132,8 +132,6 @@ VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue
   struct LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
-  printf("LibevAgent_poll no_wait: %d\n", is_nowait);
-
   if (is_nowait) {
     long runnable_count = LibevQueue_len(queue);
     agent->run_no_wait_count++;
@@ -491,10 +489,10 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
     }
   }
 
-  // if (watcher.fiber == Qnil) {
-  //   switchpoint_result = libev_snooze();
-  //   if (TEST_EXCEPTION(switchpoint_result)) goto error;
-  // }
+  if (watcher.fiber == Qnil) {
+    switchpoint_result = libev_snooze();
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
 
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
@@ -768,7 +766,6 @@ struct libev_timer {
 
 void LibevAgent_timer_callback(EV_P_ ev_timer *w, int revents)
 {
-  printf("LibevAgent_timer_callback\n");
   struct libev_timer *watcher = (struct libev_timer *)w;
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
@@ -783,9 +780,7 @@ VALUE LibevAgent_sleep(VALUE self, VALUE duration) {
   ev_timer_init(&watcher.timer, LibevAgent_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(agent->ev_loop, &watcher.timer);
 
-  printf("LibevAgent_sleep 1\n");
   switchpoint_result = libev_await(agent);
-  printf("LibevAgent_sleep 2\n");
 
   ev_timer_stop(agent->ev_loop, &watcher.timer);
 
@@ -833,6 +828,43 @@ struct ev_loop *LibevAgent_ev_loop(VALUE self) {
   struct LibevAgent_t *agent;
   GetLibevAgent(self, agent);
   return agent->ev_loop;
+}
+
+struct libev_async {
+  struct ev_async async;
+  struct ev_loop *ev_loop;
+  VALUE fiber;
+};
+
+void LibevAgent_async_callback(EV_P_ ev_async *w, int revents)
+{
+  struct libev_async *watcher = (struct libev_async *)w;
+  Fiber_make_runnable(watcher->fiber, Qnil);
+}
+
+VALUE LibevAgent_event_wait(VALUE self, void (on_event_start)(void *, void*), void *data) {
+  struct LibevAgent_t *agent;
+  struct libev_async watcher;
+  VALUE switchpoint_result = Qnil;
+  GetLibevAgent(self, agent);
+
+  watcher.fiber = rb_fiber_current();
+  watcher.ev_loop = agent->ev_loop;
+  ev_async_init(&watcher.async, LibevAgent_async_callback);
+  ev_async_start(agent->ev_loop, &watcher.async);
+  on_event_start(&watcher, data);
+  
+  switchpoint_result = libev_await(agent);
+  ev_async_stop(agent->ev_loop, &watcher.async);
+
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+  return switchpoint_result;
+}
+
+void LibevAgent_event_signal(void *event) {
+  struct libev_async *watcher = (struct libev_async *)event;
+  ev_async_send(watcher->ev_loop, &watcher->async);
 }
 
 void Init_LibevAgent() {

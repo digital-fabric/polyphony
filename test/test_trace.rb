@@ -34,7 +34,8 @@ class TraceTest < MiniTest::Test
 
   def test_2_fiber_trace
     records = []
-    t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
+    thread = Thread.current
+    t = Polyphony::Trace.new(:fiber_all) { |r| records << r if Thread.current == thread && r[:event] =~ /^fiber_/ }
     t.enable
     Polyphony.trace(true)
 
@@ -42,23 +43,23 @@ class TraceTest < MiniTest::Test
     suspend
     sleep 0
 
-    events = records.map { |r| [r[:fiber], r[:event]] }
+    events = records.map { |r| [r[:fiber] == f ? :f : :current, r[:event]] }
     assert_equal [
-      [f, :fiber_create],
-      [f, :fiber_schedule],
-      [Fiber.current, :fiber_switchpoint],
-      [f, :fiber_run],
-      [f, :fiber_switchpoint],
-      [f, :fiber_ev_loop_enter],
-      [f, :fiber_schedule],
-      [f, :fiber_ev_loop_leave],
-      [f, :fiber_run],
-      [f, :fiber_terminate],
-      [Fiber.current, :fiber_switchpoint],
-      [Fiber.current, :fiber_ev_loop_enter],
-      [Fiber.current, :fiber_schedule],
-      [Fiber.current, :fiber_ev_loop_leave],
-      [Fiber.current, :fiber_run]
+      [:f, :fiber_create],
+      [:f, :fiber_schedule],
+      [:current, :fiber_switchpoint],
+      [:f, :fiber_run],
+      [:f, :fiber_switchpoint],
+      [:f, :fiber_ev_loop_enter],
+      [:f, :fiber_schedule],
+      [:f, :fiber_ev_loop_leave],
+      [:f, :fiber_run],
+      [:f, :fiber_terminate],
+      [:current, :fiber_switchpoint],
+      [:current, :fiber_ev_loop_enter],
+      [:current, :fiber_schedule],
+      [:current, :fiber_ev_loop_leave],
+      [:current, :fiber_run]
     ], events
   ensure
     t&.disable

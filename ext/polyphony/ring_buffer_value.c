@@ -31,7 +31,6 @@ VALUE ring_buffer_value_shift(ring_buffer_value *buffer) {
 void ring_buffer_value_resize(ring_buffer_value *buffer) {
   unsigned int old_size = buffer->size;
   buffer->size = old_size == 1 ? 4 : old_size * 2;
-  // printf("new size: %d\n", buffer->size);
   buffer->entries = realloc(buffer->entries, buffer->size * sizeof(VALUE));
   for (unsigned int idx = 0; idx < buffer->head && idx < buffer->tail; idx++)
     buffer->entries[old_size + idx] = buffer->entries[idx];

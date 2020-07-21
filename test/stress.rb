@@ -2,7 +2,7 @@
 
 count = ARGV[0] ? ARGV[0].to_i : 100
 
-TEST_CMD = 'ruby test/run.rb'
+TEST_CMD = 'ruby test/test_agent.rb --name test_sleep'
 
 def run_test(count)
   puts "#{count}: running tests..."

@@ -96,4 +96,17 @@ class QueueTest < MiniTest::Test
     assert_nil f2.await
     assert_equal :bar, f3.await
   end
+
+  def test_fiber_removal_from_queue_simple
+    f1 = spin { @queue.shift }
+    
+    # let fibers run
+    snooze
+
+    f1.stop
+    snooze
+
+    @queue << :foo
+    assert_nil f1.await
+  end
 end

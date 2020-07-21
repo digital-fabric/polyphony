@@ -75,6 +75,8 @@ VALUE LibevAgent_ref(VALUE self);
 VALUE LibevAgent_unref(VALUE self);
 int LibevAgent_ref_count(VALUE self);
 void LibevAgent_reset_ref_count(VALUE self);
+VALUE LibevAgent_event_wait(VALUE self, void (on_event_start)(void *, void*), void *data);
+void LibevAgent_event_signal(void *event);
 
 VALUE LibevQueue_push(VALUE self, VALUE value);
 VALUE LibevQueue_unshift(VALUE self, VALUE value);
