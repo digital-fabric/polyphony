@@ -830,41 +830,23 @@ struct ev_loop *LibevAgent_ev_loop(VALUE self) {
   return agent->ev_loop;
 }
 
-struct libev_async {
-  struct ev_async async;
-  struct ev_loop *ev_loop;
-  VALUE fiber;
-};
+void LibevAgent_async_callback(EV_P_ ev_async *w, int revents) { }
 
-void LibevAgent_async_callback(EV_P_ ev_async *w, int revents)
-{
-  struct libev_async *watcher = (struct libev_async *)w;
-  Fiber_make_runnable(watcher->fiber, Qnil);
-}
-
-VALUE LibevAgent_event_wait(VALUE self, void (on_event_start)(void *, void*), void *data) {
+VALUE LibevAgent_wait_event(VALUE self, VALUE raise) {
   struct LibevAgent_t *agent;
-  struct libev_async watcher;
+  struct ev_async async;
   VALUE switchpoint_result = Qnil;
   GetLibevAgent(self, agent);
 
-  watcher.fiber = rb_fiber_current();
-  watcher.ev_loop = agent->ev_loop;
-  ev_async_init(&watcher.async, LibevAgent_async_callback);
-  ev_async_start(agent->ev_loop, &watcher.async);
-  on_event_start(&watcher, data);
+  ev_async_init(&async, LibevAgent_async_callback);
+  ev_async_start(agent->ev_loop, &async);
   
   switchpoint_result = libev_await(agent);
-  ev_async_stop(agent->ev_loop, &watcher.async);
+  ev_async_stop(agent->ev_loop, &async);
 
-  RB_GC_GUARD(watcher.fiber);
+  if (RTEST(raise)) TEST_RESUME_EXCEPTION(switchpoint_result);
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
-}
-
-void LibevAgent_event_signal(void *event) {
-  struct libev_async *watcher = (struct libev_async *)event;
-  ev_async_send(watcher->ev_loop, &watcher->async);
 }
 
 void Init_LibevAgent() {
