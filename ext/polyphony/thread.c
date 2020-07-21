@@ -114,6 +114,9 @@ VALUE Thread_switch_fiber(VALUE self) {
   VALUE value;
   VALUE agent = rb_ivar_get(self, ID_ivar_agent);
   int ref_count;
+  int agent_was_polled = 0;1;
+
+  printf("Thread_switch_fiber\n");
 
   if (__tracing_enabled__) {
     if (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse) {
@@ -123,9 +126,10 @@ VALUE Thread_switch_fiber(VALUE self) {
 
   ref_count = LibevAgent_ref_count(agent);
   while (1) {
+    printf("Thread_switch_fiber loop ref_count: %d\n", ref_count);
     next_fiber = LibevQueue_shift_no_wait(queue);
     if (next_fiber != Qnil) {
-      if (ref_count > 0) {
+      if (agent_was_polled == 0 && ref_count > 0) {
         // this mechanism prevents event starvation in case the run queue never
         // empties
         LibevAgent_poll(agent, Qtrue, current_fiber, queue);
@@ -135,6 +139,7 @@ VALUE Thread_switch_fiber(VALUE self) {
     if (ref_count == 0) break;
 
     LibevAgent_poll(agent, Qnil, current_fiber, queue);
+    agent_was_polled = 1;
   }
 
   if (next_fiber == Qnil) return Qnil;

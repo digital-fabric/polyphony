@@ -132,6 +132,8 @@ VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue
   struct LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
+  printf("LibevAgent_poll no_wait: %d\n", is_nowait);
+
   if (is_nowait) {
     long runnable_count = LibevQueue_len(queue);
     agent->run_no_wait_count++;
@@ -489,10 +491,10 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
     }
   }
 
-  if (watcher.fiber == Qnil) {
-    switchpoint_result = libev_snooze();
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
-  }
+  // if (watcher.fiber == Qnil) {
+  //   switchpoint_result = libev_snooze();
+  //   if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  // }
 
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
@@ -766,6 +768,7 @@ struct libev_timer {
 
 void LibevAgent_timer_callback(EV_P_ ev_timer *w, int revents)
 {
+  printf("LibevAgent_timer_callback\n");
   struct libev_timer *watcher = (struct libev_timer *)w;
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
@@ -780,7 +783,10 @@ VALUE LibevAgent_sleep(VALUE self, VALUE duration) {
   ev_timer_init(&watcher.timer, LibevAgent_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(agent->ev_loop, &watcher.timer);
 
+  printf("LibevAgent_sleep 1\n");
   switchpoint_result = libev_await(agent);
+  printf("LibevAgent_sleep 2\n");
+
   ev_timer_stop(agent->ev_loop, &watcher.timer);
 
   TEST_RESUME_EXCEPTION(switchpoint_result);

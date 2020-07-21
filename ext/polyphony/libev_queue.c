@@ -1,5 +1,6 @@
 #include "polyphony.h"
-#include "ring_buffer.h"
+#include "ring_buffer_value.h"
+#include "ring_buffer_ptr.h"
 
 struct async_watcher {
   ev_async async;
@@ -88,21 +89,23 @@ void async_watcher_queue_remove_by_fiber(struct async_watcher_queue *queue, VALU
 }
 
 typedef struct queue {
-  ring_buffer values;
-  struct async_watcher_queue shift_queue;
+  ring_buffer_value values;
+  // struct async_watcher_queue shift_queue;
+  ring_buffer_value shift_queue;
 } LibevQueue_t;
 
 VALUE cLibevQueue = Qnil;
 
 static void LibevQueue_mark(void *ptr) {
   LibevQueue_t *queue = ptr;
-  ring_buffer_mark(&queue->values);
+  ring_buffer_value_mark(&queue->values);
+  ring_buffer_value_mark(&queue->shift_queue);
 }
 
 static void LibevQueue_free(void *ptr) {
   LibevQueue_t *queue = ptr;
-  ring_buffer_free(&queue->values);
-  async_watcher_queue_free(&queue->shift_queue);
+  ring_buffer_value_free(&queue->values);
+  ring_buffer_value_free(&queue->shift_queue);
   xfree(ptr);
 }
 
@@ -130,8 +133,8 @@ static VALUE LibevQueue_initialize(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  ring_buffer_init(&queue->values);
-  async_watcher_queue_init(&queue->shift_queue);
+  ring_buffer_value_init(&queue->values);
+  ring_buffer_value_init(&queue->shift_queue);
 
   return self;
 }
@@ -140,12 +143,12 @@ VALUE LibevQueue_push(VALUE self, VALUE value) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
   if (queue->shift_queue.count > 0) {
-    struct async_watcher *watcher = async_watcher_queue_shift(&queue->shift_queue);
-    if (watcher) {
-      ev_async_send(watcher->ev_loop, &watcher->async);
-    }
+    printf("LibevQueue_push wakeup waiting fiber\n");
+    VALUE fiber = ring_buffer_value_shift(&queue->shift_queue);
+    if (fiber != Qnil)
+      Fiber_make_runnable(fiber, Qnil);
   }
-  ring_buffer_push(&queue->values, value);
+  ring_buffer_value_push(&queue->values, value);
   return self;
 }
 
@@ -153,20 +156,13 @@ VALUE LibevQueue_unshift(VALUE self, VALUE value) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
   if (queue->shift_queue.count > 0) {
-    struct async_watcher *watcher = async_watcher_queue_shift(&queue->shift_queue);
-    if (watcher) {
-      ev_async_send(watcher->ev_loop, &watcher->async);
-    }
+    printf("LibevQueue_unshift wakeup waiting fiber\n");
+    VALUE fiber = ring_buffer_value_shift(&queue->shift_queue);
+    if (fiber != Qnil)
+      Fiber_make_runnable(fiber, Qnil);
   }
-  ring_buffer_unshift(&queue->values, value);
+  ring_buffer_value_unshift(&queue->values, value);
   return self;
-}
-
-struct ev_loop *LibevAgent_ev_loop(VALUE self);
-
-void async_watcher_queue_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
-  struct async_watcher *watcher = (struct async_watcher *)ev_async;
-  Fiber_make_runnable(watcher->fiber, Qnil);
 }
 
 VALUE libev_agent_await(VALUE self);
@@ -176,43 +172,34 @@ VALUE LibevQueue_shift(VALUE self) {
   GetQueue(self, queue);
 
   if (queue->values.count == 0) {
-    struct async_watcher watcher;
     VALUE agent = rb_ivar_get(rb_thread_current(), ID_ivar_agent);
     VALUE switchpoint_result = Qnil;
 
-    watcher.ev_loop = LibevAgent_ev_loop(agent);
-    watcher.fiber = rb_fiber_current();    
-    async_watcher_queue_push(&queue->shift_queue, &watcher);
-    ev_async_init(&watcher.async, async_watcher_queue_callback);
-    ev_async_start(watcher.ev_loop, &watcher.async);
-    
+    ring_buffer_value_push(&queue->shift_queue, rb_fiber_current());
     switchpoint_result = libev_agent_await(agent);
-    ev_async_stop(watcher.ev_loop, &watcher.async);
-
     if (RTEST(rb_obj_is_kind_of(switchpoint_result, rb_eException))) {
-      async_watcher_queue_remove_by_fiber(&queue->shift_queue, watcher.fiber);
+      ring_buffer_value_delete(&queue->shift_queue, rb_fiber_current());
       return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
     }
-    RB_GC_GUARD(watcher.fiber);
     RB_GC_GUARD(agent);
     RB_GC_GUARD(switchpoint_result);
   }
 
-  return ring_buffer_shift(&queue->values);
+  return ring_buffer_value_shift(&queue->values);
 }
 
 VALUE LibevQueue_shift_no_wait(VALUE self) {
     LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  return ring_buffer_shift(&queue->values);
+  return ring_buffer_value_shift(&queue->values);
 }
 
 VALUE LibevQueue_delete(VALUE self, VALUE value) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  ring_buffer_delete(&queue->values, value);
+  ring_buffer_value_delete(&queue->values, value);
   return self;
 }
 
@@ -220,7 +207,7 @@ VALUE LibevQueue_clear(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  ring_buffer_clear(&queue->values);
+  ring_buffer_value_clear(&queue->values);
   return self;
 }
 
@@ -235,7 +222,7 @@ VALUE LibevQueue_shift_each(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  ring_buffer_shift_each(&queue->values);
+  ring_buffer_value_shift_each(&queue->values);
   return self;
 }
 
@@ -243,7 +230,7 @@ VALUE LibevQueue_shift_all(VALUE self) {
   LibevQueue_t *queue;
   GetQueue(self, queue);
 
-  return ring_buffer_shift_all(&queue->values);
+  return ring_buffer_value_shift_all(&queue->values);
 }
 
 VALUE LibevQueue_empty_p(VALUE self) {
@@ -251,19 +238,6 @@ VALUE LibevQueue_empty_p(VALUE self) {
   GetQueue(self, queue);
 
   return (queue->values.count == 0) ? Qtrue : Qfalse;
-}
-
-void LibevQueue_trace(VALUE self) {
-  LibevQueue_t *queue;
-  GetQueue(self, queue);
-
-  printf(
-    "queue size: %d count: %d head: %d tail: %d\n",
-    queue->values.size,
-    queue->values.count,
-    queue->values.head,
-    queue->values.tail
-  );
 }
 
 void Init_LibevQueue() {
