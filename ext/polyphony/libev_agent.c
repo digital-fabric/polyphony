@@ -133,7 +133,7 @@ VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue
   GetLibevAgent(self, agent);
 
   if (is_nowait) {
-    long runnable_count = LibevQueue_len(queue);
+    long runnable_count = Queue_len(queue);
     agent->run_no_wait_count++;
     if (agent->run_no_wait_count < runnable_count || agent->run_no_wait_count < 10)
       return self;

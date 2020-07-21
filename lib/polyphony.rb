@@ -4,9 +4,6 @@ require 'fiber'
 require_relative './polyphony_ext'
 
 module Polyphony
-  # Map Queue to Libev queue implementation
-  Queue = LibevQueue
-
   # replace core Queue class with our own
   verbose = $VERBOSE
   $VERBOSE = nil

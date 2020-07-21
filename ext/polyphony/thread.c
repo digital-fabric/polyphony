@@ -11,7 +11,7 @@ ID ID_runnable_next;
 ID ID_stop;
 
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
-  VALUE queue = rb_funcall(cLibevQueue, ID_new, 0);
+  VALUE queue = rb_funcall(cQueue, ID_new, 0);
   
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
   rb_ivar_set(self, ID_run_queue, queue);
@@ -60,7 +60,7 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   }
 
   queue = rb_ivar_get(self, ID_run_queue);
-  LibevQueue_push(queue, fiber);
+  Queue_push(queue, fiber);
   rb_ivar_set(fiber, ID_runnable, Qtrue);
 
   if (rb_thread_current() != self) {
@@ -87,13 +87,13 @@ VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) 
 
   // if fiber is already scheduled, remove it from the run queue
   if (rb_ivar_get(fiber, ID_runnable) != Qnil) {
-    LibevQueue_delete(queue, fiber);
+    Queue_delete(queue, fiber);
   } else {
     rb_ivar_set(fiber, ID_runnable, Qtrue);
   }
 
   // the fiber is given priority by putting it at the front of the run queue
-  LibevQueue_unshift(queue, fiber);
+  Queue_unshift(queue, fiber);
 
   if (rb_thread_current() != self) {
     // if the fiber scheduling is done across threads, we need to make sure the
@@ -124,7 +124,7 @@ VALUE Thread_switch_fiber(VALUE self) {
 
   ref_count = LibevAgent_ref_count(agent);
   while (1) {
-    next_fiber = LibevQueue_shift_no_wait(queue);
+    next_fiber = Queue_shift_no_wait(queue);
     if (next_fiber != Qnil) {
       if (agent_was_polled == 0 && ref_count > 0) {
         // this mechanism prevents event starvation in case the run queue never
@@ -154,13 +154,13 @@ VALUE Thread_switch_fiber(VALUE self) {
 
 VALUE Thread_run_queue_trace(VALUE self) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
-  LibevQueue_trace(queue);
+  Queue_trace(queue);
   return self;
 }
 
 VALUE Thread_reset_fiber_scheduling(VALUE self) {
   VALUE queue = rb_ivar_get(self, ID_run_queue);
-  LibevQueue_clear(queue);
+  Queue_clear(queue);
   Thread_fiber_reset_ref_count(self);
   return self;
 }

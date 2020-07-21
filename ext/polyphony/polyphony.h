@@ -19,7 +19,7 @@
 }
 
 extern VALUE mPolyphony;
-extern VALUE cLibevQueue;
+extern VALUE cQueue;
 extern VALUE cEvent;
 
 extern ID ID_call;
@@ -76,14 +76,14 @@ int LibevAgent_ref_count(VALUE self);
 void LibevAgent_reset_ref_count(VALUE self);
 VALUE LibevAgent_wait_event(VALUE self, VALUE raise);
 
-VALUE LibevQueue_push(VALUE self, VALUE value);
-VALUE LibevQueue_unshift(VALUE self, VALUE value);
-VALUE LibevQueue_shift(VALUE self);
-VALUE LibevQueue_shift_no_wait(VALUE self);
-VALUE LibevQueue_clear(VALUE self);
-VALUE LibevQueue_delete(VALUE self, VALUE value);
-long LibevQueue_len(VALUE self);
-void LibevQueue_trace(VALUE self);
+VALUE Queue_push(VALUE self, VALUE value);
+VALUE Queue_unshift(VALUE self, VALUE value);
+VALUE Queue_shift(VALUE self);
+VALUE Queue_shift_no_wait(VALUE self);
+VALUE Queue_clear(VALUE self);
+VALUE Queue_delete(VALUE self, VALUE value);
+long Queue_len(VALUE self);
+void Queue_trace(VALUE self);
 
 VALUE Polyphony_snooze(VALUE self);
 
