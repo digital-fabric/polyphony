@@ -32,6 +32,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'redis',                '4.1.0'
   s.add_development_dependency  'hiredis',              '0.6.3'
   s.add_development_dependency  'http_parser.rb',       '~>0.6.0'
+  s.add_development_dependency  'mysql2',               '0.5.3'
+  s.add_development_dependency  'sequel',               '5.34.0'
 
   s.add_development_dependency  'jekyll',               '~>3.8.6'
   s.add_development_dependency  'jekyll-remote-theme',  '~>0.4.1'
