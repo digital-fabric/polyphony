@@ -2,7 +2,6 @@
 
 VALUE mPolyphony;
 
-ID ID_await_no_raise;
 ID ID_call;
 ID ID_caller;
 ID ID_clear;
@@ -54,7 +53,6 @@ void Init_Polyphony() {
   rb_define_global_function("snooze", Polyphony_snooze, 0);
   rb_define_global_function("suspend", Polyphony_suspend, 0);
 
-  ID_await_no_raise = rb_intern("await_no_raise");
   ID_call           = rb_intern("call");
   ID_caller         = rb_intern("caller");
   ID_clear          = rb_intern("clear");

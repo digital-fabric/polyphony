@@ -45,4 +45,15 @@ class EventTest < MiniTest::Test
     t&.kill
     t&.join
   end
+
+  def test_exception_while_waiting_for_event
+    e = Polyphony::Event.new
+
+    f = spin { e.await }
+    g = spin { f.raise 'foo' }
+
+    assert_raises(RuntimeError) do
+      f.await
+    end
+  end
 end

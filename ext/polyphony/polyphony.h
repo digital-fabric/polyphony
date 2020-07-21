@@ -22,7 +22,6 @@ extern VALUE mPolyphony;
 extern VALUE cLibevQueue;
 extern VALUE cEvent;
 
-extern ID ID_await_no_raise;
 extern ID ID_call;
 extern ID ID_caller;
 extern ID ID_clear;

@@ -876,6 +876,7 @@ void Init_LibevAgent() {
   rb_define_method(cLibevAgent, "wait_io", LibevAgent_wait_io, 2);
   rb_define_method(cLibevAgent, "sleep", LibevAgent_sleep, 1);
   rb_define_method(cLibevAgent, "waitpid", LibevAgent_waitpid, 1);
+  rb_define_method(cLibevAgent, "wait_event", LibevAgent_wait_event, 1);
 
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
 }
