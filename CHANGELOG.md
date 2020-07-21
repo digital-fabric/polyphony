@@ -1,3 +1,11 @@
+## 0.43.8 2020-07-21
+
+* Rename `LibevQueue` to `Queue`
+* Reimplement Event using `Agent#wait_event`
+* Improve Queue shift queue performance
+* Introduce `Agent#wait_event` API for waiting on asynchronous events
+* Minimize `fcntl` syscalls in IO operations 
+
 ## 0.43.7 2020-07-20
 
 * Fix memory leak in ResourcePool (#31)

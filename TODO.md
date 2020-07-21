@@ -1,6 +1,5 @@
-## 0.43 
-
-- Reimplement ResourcePool, Channel, Mutex using LibevQueue
+- Implement `LibevAgent#connect` API
+- Reimplement ResourcePool, Channel, Mutex using Queue
 -- Add `Fiber#schedule_with_priority` method, aliased by `Fiber#wakeup`
 - Implement agent interface is virtual function table
 - Implement proxy agent for plugging in a user-provided agent class
