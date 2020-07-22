@@ -2,10 +2,12 @@
 
 require 'bundler/setup'
 require 'polyphony'
+require 'polyphony/core/channel'
 
 def echo(cin, cout)
   puts 'start echoer'
   while (msg = cin.receive)
+    puts "echoer received #{msg}"
     cout << "you said: #{msg}"
   end
 ensure
@@ -20,7 +22,7 @@ spin do
   puts 'start receiver'
   while (msg = chan2.receive)
     puts msg
-    $main.resume if msg =~ /world/
+    $main.schedule if msg =~ /world/
   end
 ensure
   puts 'receiver stopped'
@@ -42,4 +44,4 @@ $main = spin do
   puts "done #{Time.now - t0}"
 end
 
-suspend
+$main.await

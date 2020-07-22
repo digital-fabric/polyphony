@@ -139,6 +139,18 @@ VALUE Queue_shift_all(VALUE self) {
   return ring_buffer_shift_all(&queue->values);
 }
 
+VALUE Queue_flush_waiters(VALUE self, VALUE value) {
+  Queue_t *queue;
+  GetQueue(self, queue);
+
+  while(1) {
+    VALUE fiber = ring_buffer_shift(&queue->shift_queue);
+    if (fiber == Qnil) return self;
+    
+    Fiber_make_runnable(fiber, value);
+  }
+}
+
 VALUE Queue_empty_p(VALUE self) {
   Queue_t *queue;
   GetQueue(self, queue);
@@ -169,6 +181,7 @@ void Init_Queue() {
 
   rb_define_method(cQueue, "shift_each", Queue_shift_each, 0);
   rb_define_method(cQueue, "shift_all", Queue_shift_all, 0);
+  rb_define_method(cQueue, "flush_waiters", Queue_flush_waiters, 1);
   rb_define_method(cQueue, "empty?", Queue_empty_p, 0);
   rb_define_method(cQueue, "size", Queue_size_m, 0);
 }

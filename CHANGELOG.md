@@ -1,3 +1,9 @@
+* Rewrite `Channel` using `Queue`
+* Rewrite `Mutex` using `Queue`
+* Reimplement `Event` in C to prevent cross-thread race condition
+* Reimplement `ResourcePool` using `Queue`
+* Implement `Queue#size`
+
 ## 0.43.8 2020-07-21
 
 * Rename `LibevQueue` to `Queue`

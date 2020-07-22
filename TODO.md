@@ -1,5 +1,4 @@
 - Implement `LibevAgent#connect` API
-- Reimplement Channel, Mutex using Queue
 
 -- Add `Fiber#schedule_with_priority` method, aliased by `Fiber#wakeup`
 - Implement agent interface is virtual function table
