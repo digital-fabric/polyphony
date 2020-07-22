@@ -3,6 +3,8 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "polyphony.h"
 #include "../libev/ev.h"
@@ -694,46 +696,41 @@ error:
   return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
 }
 
-// VALUE LibevAgent_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
-//   struct LibevAgent_t *agent;
-//   struct libev_io watcher;
-//   rb_io_t *fptr;
-//   struct sockaddr_in addr;
-//   char *host_buf = StringValueCStr(host);
-//   VALUE switchpoint_result = Qnil;
-//   VALUE underlying_sock = rb_iv_get(sock, "@io");
-//   if (underlying_sock != Qnil) sock = underlying_sock;
+VALUE LibevAgent_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
+  struct LibevAgent_t *agent;
+  struct libev_io watcher;
+  rb_io_t *fptr;
+  struct sockaddr_in addr;
+  char *host_buf = StringValueCStr(host);
+  VALUE switchpoint_result = Qnil;
+  VALUE underlying_sock = rb_iv_get(sock, "@io");
+  if (underlying_sock != Qnil) sock = underlying_sock;
 
-//   GetLibevAgent(self, agent);
-//   GetOpenFile(sock, fptr);
-//   io_set_nonblock(fptr, sock);
-//   watcher.fiber = Qnil;
+  GetLibevAgent(self, agent);
+  GetOpenFile(sock, fptr);
+  io_set_nonblock(fptr, sock);
+  watcher.fiber = Qnil;
 
-//   addr.sin_family = AF_INET; 
-//   addr.sin_addr.s_addr = inet_addr(host_buf);
-//   addr.sin_port = htons(NUM2INT(port));   
+  addr.sin_family = AF_INET; 
+  addr.sin_addr.s_addr = inet_addr(host_buf);
+  addr.sin_port = htons(NUM2INT(port));
 
-//   while (1) {
-//     int result = connect(fptr->fd, &addr, sizeof(addr));
-//     if (result < 0) {
-//       int e = errno;
-//       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
-
-//       switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_WRITE);
-//       if (TEST_EXCEPTION(switchpoint_result)) goto error;
-//     }
-//     else {
-//       switchpoint_result = libev_snooze();
-//       if (TEST_EXCEPTION(switchpoint_result)) goto error;
-
-//       return sock;
-//     }
-//   }
-//   RB_GC_GUARD(switchpoint_result);
-//   return Qnil;
-// error:
-//   return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
-// }
+  int result = connect(fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
+  if (result < 0) {
+    int e = errno;
+    if (e != EINPROGRESS) rb_syserr_fail(e, strerror(e));
+    switchpoint_result = libev_io_wait(agent, &watcher, fptr, EV_WRITE);
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
+  else {
+    switchpoint_result = libev_snooze();
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
+  RB_GC_GUARD(switchpoint_result);
+  return sock;
+error:
+  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+}
 
 VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write) {
   struct LibevAgent_t *agent;
@@ -872,7 +869,7 @@ void Init_LibevAgent() {
   rb_define_method(cLibevAgent, "write", LibevAgent_write_m, -1);
   rb_define_method(cLibevAgent, "accept", LibevAgent_accept, 1);
   rb_define_method(cLibevAgent, "accept_loop", LibevAgent_accept_loop, 1);
-  // rb_define_method(cLibevAgent, "connect", LibevAgent_accept, 3);
+  rb_define_method(cLibevAgent, "connect", LibevAgent_connect, 3);
   rb_define_method(cLibevAgent, "wait_io", LibevAgent_wait_io, 2);
   rb_define_method(cLibevAgent, "sleep", LibevAgent_sleep, 1);
   rb_define_method(cLibevAgent, "waitpid", LibevAgent_waitpid, 1);

@@ -1,5 +1,3 @@
-- Implement `LibevAgent#connect` API
-
 -- Add `Fiber#schedule_with_priority` method, aliased by `Fiber#wakeup`
 - Implement agent interface is virtual function table
 - Implement proxy agent for plugging in a user-provided agent class

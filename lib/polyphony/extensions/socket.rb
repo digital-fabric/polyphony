@@ -24,15 +24,7 @@ class ::Socket
   NO_EXCEPTION = { exception: false }.freeze
 
   def connect(remotesockaddr)
-    loop do
-      result = connect_nonblock(remotesockaddr, **NO_EXCEPTION)
-      case result
-      when 0 then return
-      when :wait_writable then Thread.current.agent.wait_io(self, true)
-      else
-        raise IOError
-      end
-    end
+    Thread.current.agent.connect(self, remotesockaddr.ip_address, remotesockaddr.ip_port)
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
