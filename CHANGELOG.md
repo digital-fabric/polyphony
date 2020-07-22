@@ -1,3 +1,4 @@
+* Virtualize agent interface
 * Implement `LibevAgent_connect`
 
 ## 0.43.9 2020-07-22
