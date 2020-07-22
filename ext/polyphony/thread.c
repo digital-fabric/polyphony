@@ -21,12 +21,12 @@ static VALUE Thread_setup_fiber_scheduling(VALUE self) {
 
 int Thread_fiber_ref_count(VALUE self) {
   VALUE agent = rb_ivar_get(self, ID_ivar_agent);
-  return NUM2INT(LibevAgent_ref_count(agent));
+  return NUM2INT(__AGENT__.ref_count(agent));
 }
 
 inline void Thread_fiber_reset_ref_count(VALUE self) {
   VALUE agent = rb_ivar_get(self, ID_ivar_agent);
-  LibevAgent_reset_ref_count(agent);
+  __AGENT__.reset_ref_count(agent);
 }
 
 static VALUE SYM_scheduled_fibers;
@@ -41,7 +41,7 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   long scheduled_count = RARRAY_LEN(queue);
   rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(scheduled_count));
 
-  pending_count = LibevAgent_pending_count(agent);
+  pending_count = __AGENT__.pending_count(agent);
   rb_hash_aset(stats, SYM_pending_watchers, INT2NUM(pending_count));
 
   return stats;
@@ -68,7 +68,7 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
     // happen, not knowing that it there's already a fiber ready to run in its
     // run queue.
     VALUE agent = rb_ivar_get(self,ID_ivar_agent);
-    LibevAgent_break(agent);
+    __AGENT__.wakeup(agent);
   }
   return self;
 }
@@ -100,7 +100,7 @@ VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) 
     // happen, not knowing that it there's already a fiber ready to run in its
     // run queue.
     VALUE agent = rb_ivar_get(self, ID_ivar_agent);
-    LibevAgent_break(agent);
+    __AGENT__.wakeup(agent);
   }
   return self;
 }
@@ -120,20 +120,20 @@ VALUE Thread_switch_fiber(VALUE self) {
     }
   }
 
-  ref_count = LibevAgent_ref_count(agent);
+  ref_count = __AGENT__.ref_count(agent);
   while (1) {
     next_fiber = Queue_shift_no_wait(queue);
     if (next_fiber != Qnil) {
       if (agent_was_polled == 0 && ref_count > 0) {
         // this mechanism prevents event starvation in case the run queue never
         // empties
-        LibevAgent_poll(agent, Qtrue, current_fiber, queue);
+        __AGENT__.poll(agent, Qtrue, current_fiber, queue);
       }
       break;
     }
     if (ref_count == 0) break;
 
-    LibevAgent_poll(agent, Qnil, current_fiber, queue);
+    __AGENT__.poll(agent, Qnil, current_fiber, queue);
     agent_was_polled = 1;
   }
 
@@ -169,7 +169,7 @@ VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE fiber, VALUE resume_ob
     Thread_schedule_fiber_with_priority(self, fiber, resume_obj);
   }
 
-  if (LibevAgent_break(agent) == Qnil) {
+  if (__AGENT__.wakeup(agent) == Qnil) {
     // we're not inside the ev_loop, so we just do a switchpoint
     Thread_switch_fiber(self);
   }

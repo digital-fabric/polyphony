@@ -82,7 +82,7 @@ VALUE Queue_shift(VALUE self) {
     VALUE fiber = rb_fiber_current();
     VALUE switchpoint_result = Qnil;
     ring_buffer_push(&queue->shift_queue, fiber);
-    switchpoint_result = LibevAgent_wait_event(agent, Qnil);
+    switchpoint_result = __AGENT__.wait_event(agent, Qnil);
     if (RTEST(rb_obj_is_kind_of(switchpoint_result, rb_eException))) {
       ring_buffer_delete(&queue->shift_queue, fiber);
       return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);

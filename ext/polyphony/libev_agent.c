@@ -152,7 +152,7 @@ VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue
   return self;
 }
 
-VALUE LibevAgent_break(VALUE self) {
+VALUE LibevAgent_wakeup(VALUE self) {
   struct LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
@@ -862,7 +862,7 @@ void Init_LibevAgent() {
   rb_define_method(cLibevAgent, "unref", LibevAgent_unref, 0);
 
   rb_define_method(cLibevAgent, "poll", LibevAgent_poll, 3);
-  rb_define_method(cLibevAgent, "break", LibevAgent_break, 0);
+  rb_define_method(cLibevAgent, "break", LibevAgent_wakeup, 0);
 
   rb_define_method(cLibevAgent, "read", LibevAgent_read, 4);
   rb_define_method(cLibevAgent, "read_loop", LibevAgent_read_loop, 1);
@@ -876,4 +876,11 @@ void Init_LibevAgent() {
   rb_define_method(cLibevAgent, "wait_event", LibevAgent_wait_event, 1);
 
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
+
+  __AGENT__.wakeup          = LibevAgent_wakeup;
+  __AGENT__.pending_count   = LibevAgent_pending_count;
+  __AGENT__.poll            = LibevAgent_poll;
+  __AGENT__.ref_count       = LibevAgent_ref_count;
+  __AGENT__.reset_ref_count = LibevAgent_reset_ref_count;
+  __AGENT__.wait_event      = LibevAgent_wait_event;
 }

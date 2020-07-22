@@ -4,6 +4,7 @@
 #include "ruby.h"
 #include "ruby/io.h"
 #include "libev.h"
+#include "agent.h"
 
 // debugging
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
@@ -17,6 +18,12 @@
 #define TEST_RESUME_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { \
   return rb_funcall(rb_mKernel, ID_raise, 1, ret); \
 }
+
+extern agent_interface_t agent_interface;
+// #define __AGENT_PASTER__(call) (agent_interface ## . ## call)
+// #define __AGENT__(call) __AGENT_PASTER__(call)
+#define __AGENT__ (agent_interface)
+
 
 extern VALUE mPolyphony;
 extern VALUE cQueue;
@@ -64,17 +71,6 @@ enum {
 
 VALUE Fiber_auto_watcher(VALUE self);
 void Fiber_make_runnable(VALUE fiber, VALUE value);
-
-VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue);
-VALUE LibevAgent_break(VALUE self);
-VALUE LibevAgent_pending_count(VALUE self);
-VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write);
-
-VALUE LibevAgent_ref(VALUE self);
-VALUE LibevAgent_unref(VALUE self);
-int LibevAgent_ref_count(VALUE self);
-void LibevAgent_reset_ref_count(VALUE self);
-VALUE LibevAgent_wait_event(VALUE self, VALUE raise);
 
 VALUE Queue_push(VALUE self, VALUE value);
 VALUE Queue_unshift(VALUE self, VALUE value);

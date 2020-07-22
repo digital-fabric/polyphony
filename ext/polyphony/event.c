@@ -66,7 +66,7 @@ VALUE Event_await(VALUE self) {
 
   VALUE agent = rb_ivar_get(rb_thread_current(), ID_ivar_agent);
   event->waiting_fiber = rb_fiber_current();
-  VALUE switchpoint_result = LibevAgent_wait_event(agent, Qnil);
+  VALUE switchpoint_result = __AGENT__.wait_event(agent, Qnil);
   event->waiting_fiber = Qnil;
 
   TEST_RESUME_EXCEPTION(switchpoint_result);
