@@ -1,3 +1,5 @@
+## 0.43.9 2020-07-22
+
 * Rewrite `Channel` using `Queue`
 * Rewrite `Mutex` using `Queue`
 * Reimplement `Event` in C to prevent cross-thread race condition
