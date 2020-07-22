@@ -2,6 +2,7 @@
 
 require 'bundler/setup'
 require 'polyphony'
+require 'polyphony/core/sync'
 
 def loop_it(number, lock)
   loop do
@@ -13,7 +14,7 @@ def loop_it(number, lock)
   end
 end
 
-lock = Polyphony::Sync::Mutex.new
+lock = Polyphony::Mutex.new
 spin { loop_it(1, lock) }
 spin { loop_it(2, lock) }
 spin { loop_it(3, lock) }

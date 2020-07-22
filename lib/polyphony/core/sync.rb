@@ -4,18 +4,21 @@ module Polyphony
   # Implements mutex lock for synchronizing access to a shared resource
   class Mutex
     def initialize
-      @waiting_fibers = Polyphony::Queue.new
+      @store = Queue.new
+      @store << :token
     end
 
     def synchronize
-      fiber = Fiber.current
-      @waiting_fibers << fiber
-      suspend if @waiting_fibers.size > 1
-      yield
-    ensure
-      @waiting_fibers.delete(fiber)
-      @waiting_fibers.first&.schedule
-      snooze
+      return yield if @holding_fiber == Fiber.current
+
+      begin
+        token = @store.shift
+        @holding_fiber = Fiber.current
+        yield
+      ensure
+        @holding_fiber = nil
+        @store << token
+      end
     end
   end
 end
