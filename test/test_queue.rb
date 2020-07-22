@@ -109,4 +109,24 @@ class QueueTest < MiniTest::Test
     @queue << :foo
     assert_nil f1.await
   end
+
+  def test_queue_size
+    assert_equal 0, @queue.size
+
+    @queue.push 1
+    
+    assert_equal 1, @queue.size
+
+    @queue.push 2
+    
+    assert_equal 2, @queue.size
+
+    @queue.shift
+
+    assert_equal 1, @queue.size
+
+    @queue.shift
+
+    assert_equal 0, @queue.size
+  end
 end

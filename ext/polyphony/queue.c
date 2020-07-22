@@ -146,6 +146,13 @@ VALUE Queue_empty_p(VALUE self) {
   return (queue->values.count == 0) ? Qtrue : Qfalse;
 }
 
+VALUE Queue_size_m(VALUE self) {
+  Queue_t *queue;
+  GetQueue(self, queue);
+
+  return INT2NUM(queue->values.count);
+}
+
 void Init_Queue() {
   cQueue = rb_define_class_under(mPolyphony, "Queue", rb_cData);
   rb_define_alloc_func(cQueue, Queue_allocate);
@@ -163,6 +170,5 @@ void Init_Queue() {
   rb_define_method(cQueue, "shift_each", Queue_shift_each, 0);
   rb_define_method(cQueue, "shift_all", Queue_shift_all, 0);
   rb_define_method(cQueue, "empty?", Queue_empty_p, 0);
+  rb_define_method(cQueue, "size", Queue_size_m, 0);
 }
-
-
