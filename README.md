@@ -1,5 +1,4 @@
 <h1 align="center">
-  <br>
   <a href="https://digital-fabric.github.io/polyphony/">
     <img src="docs/polyphony-logo.png" alt="Polyphony">
   </a>
