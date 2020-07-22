@@ -1,10 +1,26 @@
-<p align="center"><img src="docs/polyphony-logo.png" /></p>
+<h1 align="center">
+  <br>
+  <a href="https://digital-fabric.github.io/polyphony/">
+    <img src="docs/polyphony-logo.png" alt="Polyphony">
+  </a>
+  <br>
+  Polyphony
+  <br>
+</h1>
 
-# Polyphony - Fine-Grained Concurrency for Ruby
+<h4 align="center">Fine-Grained Concurrency for Ruby</h4>
 
-[![Gem Version](https://badge.fury.io/rb/polyphony.svg)](http://rubygems.org/gems/polyphony)
-[![Modulation Test](https://github.com/digital-fabric/polyphony/workflows/Tests/badge.svg)](https://github.com/digital-fabric/polyphony/actions?query=workflow%3ATests)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/digital-fabric/polyphony/blob/master/LICENSE)
+<p align="center">
+  <a href="http://rubygems.org/gems/polyphony">
+    <img src="https://badge.fury.io/rb/polyphony.svg" alt="Ruby gem">
+  </a>
+  <a href="https://github.com/digital-fabric/polyphony/actions?query=workflow%3ATests">
+    <img src="https://github.com/digital-fabric/polyphony/workflows/Tests/badge.svg" alt="Tests">
+  </a>
+  <a href="https://github.com/digital-fabric/polyphony/blob/master/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License">
+  </a>
+</p>
 
 [DOCS](https://digital-fabric.github.io/polyphony/) |
 [EXAMPLES](examples)
