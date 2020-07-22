@@ -18,7 +18,7 @@ class ::Thread
   def execute
     # agent must be created in the context of the new thread, therefore it
     # cannot be created in Thread#initialize
-    @agent = Polyphony::LibevAgent.new
+    @agent = Polyphony::Agent.new
     setup
     @ready = true
     result = @block.(*@args)

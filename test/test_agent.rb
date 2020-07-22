@@ -6,7 +6,7 @@ class AgentTest < MiniTest::Test
   def setup
     super
     @prev_agent = Thread.current.agent
-    @agent = Polyphony::LibevAgent.new
+    @agent = Polyphony::Agent.new
     Thread.current.agent = @agent
   end
 

@@ -1,15 +1,6 @@
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
 #include "polyphony.h"
-#include "../libev/ev.h"
 
-VALUE cTCPSocket;
+VALUE cAgent = Qnil;
 
 struct LibevAgent_t {
   struct ev_loop *ev_loop;
@@ -849,7 +840,7 @@ void Init_LibevAgent() {
   rb_require("socket");
   cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
 
-  VALUE cAgent = rb_define_class_under(mPolyphony, "Agent", rb_cData);
+  cAgent = rb_define_class_under(mPolyphony, "Agent", rb_cData);
   rb_define_alloc_func(cAgent, LibevAgent_allocate);
 
   rb_define_method(cAgent, "initialize", LibevAgent_initialize, 0);

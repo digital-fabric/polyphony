@@ -17,7 +17,7 @@ require_relative './polyphony/extensions/fiber'
 require_relative './polyphony/extensions/io'
 
 Thread.current.setup_fiber_scheduling
-Thread.current.agent = Polyphony::LibevAgent.new
+Thread.current.agent = Polyphony::Agent.new
 
 require_relative './polyphony/core/global_api'
 require_relative './polyphony/core/resource_pool'

@@ -31,7 +31,7 @@ class MiniTest::Test
     end
     Fiber.current.setup_main_fiber
     Fiber.current.instance_variable_set(:@auto_watcher, nil)
-    Thread.current.agent = Polyphony::LibevAgent.new
+    Thread.current.agent = Polyphony::Agent.new
     sleep 0 # apparently this helps with timer accuracy
   end
 
