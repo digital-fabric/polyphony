@@ -4,6 +4,7 @@ void Init_Fiber();
 void Init_Polyphony();
 void Init_LibevAgent();
 void Init_Queue();
+void Init_Event();
 void Init_Thread();
 void Init_Tracing();
 
@@ -13,6 +14,7 @@ void Init_polyphony_ext() {
   Init_Polyphony();
   Init_LibevAgent();
   Init_Queue();
+  Init_Event();
 
   Init_Fiber();
   Init_Thread();

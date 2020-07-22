@@ -9,8 +9,6 @@ ID ID_trace_runnable;
 ID ID_trace_terminate;
 ID ID_trace_wait;
 
-VALUE cEvent = Qnil;
-
 VALUE SYM_dead;
 VALUE SYM_running;
 VALUE SYM_runnable;
@@ -35,9 +33,6 @@ static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
 
 inline VALUE Fiber_auto_watcher(VALUE self) {
   VALUE watcher;
-  if (cEvent == Qnil) {
-    cEvent = rb_const_get(mPolyphony, rb_intern("Event"));
-  }
 
   watcher = rb_ivar_get(self, ID_ivar_auto_watcher);
   if (watcher == Qnil) {

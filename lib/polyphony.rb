@@ -23,7 +23,6 @@ require_relative './polyphony/core/global_api'
 require_relative './polyphony/core/resource_pool'
 require_relative './polyphony/net'
 require_relative './polyphony/adapters/process'
-require_relative './polyphony/event'
 
 # Main Polyphony API
 module Polyphony

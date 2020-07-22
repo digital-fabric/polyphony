@@ -34,6 +34,7 @@ class EventTest < MiniTest::Test
       }
     }
     snooze
+
     t = Thread.new do
       orig_sleep 0.001
       3.times { a.signal }

@@ -53,11 +53,9 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   if (rb_fiber_alive_p(fiber) != Qtrue) return self;
 
   FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
-  // if fiber is already scheduled, just set the scheduled value, then return
   rb_ivar_set(fiber, ID_runnable_value, value);
-  if (rb_ivar_get(fiber, ID_runnable) != Qnil) {
-    return self;
-  }
+  // if fiber is already scheduled, just set the scheduled value, then return
+  if (rb_ivar_get(fiber, ID_runnable) != Qnil) return self;
 
   queue = rb_ivar_get(self, ID_run_queue);
   Queue_push(queue, fiber);
