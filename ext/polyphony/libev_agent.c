@@ -876,10 +876,12 @@ void Init_LibevAgent() {
 
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
 
-  __AGENT__.wakeup          = LibevAgent_wakeup;
   __AGENT__.pending_count   = LibevAgent_pending_count;
   __AGENT__.poll            = LibevAgent_poll;
+  __AGENT__.ref             = LibevAgent_ref;
   __AGENT__.ref_count       = LibevAgent_ref_count;
   __AGENT__.reset_ref_count = LibevAgent_reset_ref_count;
+  __AGENT__.unref           = LibevAgent_unref;
   __AGENT__.wait_event      = LibevAgent_wait_event;
+  __AGENT__.wakeup          = LibevAgent_wakeup;
 }
