@@ -8,7 +8,7 @@
 
 // debugging
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
-#define INSPECT(obj) { VALUE s = rb_funcall(obj, rb_intern("inspect"), 0); printf("%s\n", StringValueCStr(s));}
+#define INSPECT(str, obj) { printf(str); VALUE s = rb_funcall(obj, rb_intern("inspect"), 0); printf("%s\n", StringValueCStr(s));}
 #define FIBER_TRACE(...) if (__tracing_enabled__) { \
   rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__); \
 }
@@ -20,10 +20,7 @@
 }
 
 extern agent_interface_t agent_interface;
-// #define __AGENT_PASTER__(call) (agent_interface ## . ## call)
-// #define __AGENT__(call) __AGENT_PASTER__(call)
 #define __AGENT__ (agent_interface)
-
 
 extern VALUE mPolyphony;
 extern VALUE cQueue;

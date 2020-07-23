@@ -24,7 +24,7 @@ module Polyphony
       fiber = Fiber.current
       return @acquired_resources[fiber] if @acquired_resources[fiber]
 
-      add_to_stock if @size < @limit && @stock.empty?
+      add_to_stock if (@stock.empty? || @stock.pending?) && @size < @limit 
       resource = @stock.shift
       @acquired_resources[fiber] = resource
       yield resource

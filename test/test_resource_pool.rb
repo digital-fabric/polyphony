@@ -12,29 +12,19 @@ class ResourcePoolTest < MiniTest::Test
     assert_equal 0, pool.size
 
     results = []
-    4.times {
-      spin {
-        snooze
+    4.times { |i|
+      spin(:"foo#{i}") {
         pool.acquire { |resource|
           results << resource
           snooze
         }
       }
     }
-    2.times { snooze }
-    assert_equal 2, pool.limit
-    assert_equal 0, pool.available
-    assert_equal 2, pool.size
-
-    2.times { snooze }
-
-    assert_equal ['a', 'b', 'a', 'b'], results
-
-    2.times { snooze }
-
+    Fiber.current.await_all_children
     assert_equal 2, pool.limit
     assert_equal 2, pool.available
     assert_equal 2, pool.size
+    assert_equal ['a', 'b', 'a', 'b'], results
   end
 
   def test_single_resource_limit
@@ -51,7 +41,7 @@ class ResourcePoolTest < MiniTest::Test
         }
       }
     }
-    20.times { snooze }
+    21.times { snooze }
 
     assert_equal ['a'] * 10, results
   end
@@ -91,5 +81,24 @@ class ResourcePoolTest < MiniTest::Test
         assert_equal 'a', r
       end
     end
+  end
+
+  def test_overloaded_resource_pool
+    pool = Polyphony::ResourcePool.new(limit: 1) { 1 }
+
+    buf = []
+    fibers = 2.times.map do |i|
+      spin(:"foo#{i}") do
+        2.times do
+          pool.acquire do |r|
+            buf << r
+            snooze
+          end
+        end
+      end
+    end
+    Fiber.current.await_all_children
+
+    assert_equal [1, 1, 1, 1], buf
   end
 end

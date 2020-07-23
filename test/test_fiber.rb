@@ -692,7 +692,7 @@ class FiberTest < MiniTest::Test
 
     f.schedule
     f << 'bar'
-    snooze
+    2.times { snooze }
     assert_equal ['bar'], buffer
   end
 end

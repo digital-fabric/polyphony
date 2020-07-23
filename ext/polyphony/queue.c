@@ -54,6 +54,7 @@ static VALUE Queue_initialize(VALUE self) {
 VALUE Queue_push(VALUE self, VALUE value) {
   Queue_t *queue;
   GetQueue(self, queue);
+
   if (queue->shift_queue.count > 0) {
     VALUE fiber = ring_buffer_shift(&queue->shift_queue);
     if (fiber != Qnil) Fiber_make_runnable(fiber, Qnil);
@@ -77,21 +78,26 @@ VALUE Queue_shift(VALUE self) {
   Queue_t *queue;
   GetQueue(self, queue);
 
-  if (queue->values.count == 0) {
-    VALUE agent = rb_ivar_get(rb_thread_current(), ID_ivar_agent);
-    VALUE fiber = rb_fiber_current();
-    VALUE switchpoint_result = Qnil;
+  VALUE fiber = rb_fiber_current();
+  VALUE thread = rb_thread_current();
+  VALUE agent = rb_ivar_get(thread, ID_ivar_agent);
+
+  while (1) {
     ring_buffer_push(&queue->shift_queue, fiber);
-    switchpoint_result = __AGENT__.wait_event(agent, Qnil);
-    if (RTEST(rb_obj_is_kind_of(switchpoint_result, rb_eException))) {
-      ring_buffer_delete(&queue->shift_queue, fiber);
+    if (queue->values.count > 0) Fiber_make_runnable(fiber, Qnil);
+    
+    VALUE switchpoint_result = __AGENT__.wait_event(agent, Qnil);
+    ring_buffer_delete(&queue->shift_queue, fiber);
+
+    if (RTEST(rb_obj_is_kind_of(switchpoint_result, rb_eException)))
       return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
-    }
-    RB_GC_GUARD(agent);
     RB_GC_GUARD(switchpoint_result);
+
+    if (queue->values.count > 0)
+      return ring_buffer_shift(&queue->values);
   }
 
-  return ring_buffer_shift(&queue->values);
+  return Qnil;
 }
 
 VALUE Queue_shift_no_wait(VALUE self) {
@@ -158,6 +164,13 @@ VALUE Queue_empty_p(VALUE self) {
   return (queue->values.count == 0) ? Qtrue : Qfalse;
 }
 
+VALUE Queue_pending_p(VALUE self) {
+  Queue_t *queue;
+  GetQueue(self, queue);
+
+  return (queue->shift_queue.count > 0) ? Qtrue : Qfalse;
+}
+
 VALUE Queue_size_m(VALUE self) {
   Queue_t *queue;
   GetQueue(self, queue);
@@ -190,5 +203,6 @@ void Init_Queue() {
   rb_define_method(cQueue, "shift_all", Queue_shift_all, 0);
   rb_define_method(cQueue, "flush_waiters", Queue_flush_waiters, 1);
   rb_define_method(cQueue, "empty?", Queue_empty_p, 0);
+  rb_define_method(cQueue, "pending?", Queue_pending_p, 0);
   rb_define_method(cQueue, "size", Queue_size_m, 0);
 }
