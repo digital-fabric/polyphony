@@ -165,6 +165,13 @@ VALUE Queue_size_m(VALUE self) {
   return INT2NUM(queue->values.count);
 }
 
+void Queue_trace(VALUE self) {
+  Queue_t *queue;
+  GetQueue(self, queue);
+
+  printf("run queue size: %d count: %d\n", queue->values.size, queue->values.count);
+}
+
 void Init_Queue() {
   cQueue = rb_define_class_under(mPolyphony, "Queue", rb_cData);
   rb_define_alloc_func(cQueue, Queue_allocate);

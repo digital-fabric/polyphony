@@ -52,23 +52,34 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
 
   if (rb_fiber_alive_p(fiber) != Qtrue) return self;
 
-  FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
+  int already_runnable = rb_ivar_get(fiber, ID_runnable) != Qnil;
+
+  if (already_runnable) {
+    VALUE current_runnable_value = rb_ivar_get(fiber, ID_runnable_value);
+
+    // If the fiber is already runnable and the runnable value is an exception,
+    // we don't update the value, in order to prevent a race condition where
+    // exceptions will be lost (see issue #33)
+    if (TEST_EXCEPTION(current_runnable_value)) return self;
+  }
+
   rb_ivar_set(fiber, ID_runnable_value, value);
-  // if fiber is already scheduled, just set the scheduled value, then return
-  if (rb_ivar_get(fiber, ID_runnable) != Qnil) return self;
+  FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
 
-  queue = rb_ivar_get(self, ID_run_queue);
-  Queue_push(queue, fiber);
-  rb_ivar_set(fiber, ID_runnable, Qtrue);
+  if (!already_runnable) {
+    queue = rb_ivar_get(self, ID_run_queue);
+    Queue_push(queue, fiber);
+    rb_ivar_set(fiber, ID_runnable, Qtrue);
 
-  if (rb_thread_current() != self) {
-    // if the fiber scheduling is done across threads, we need to make sure the
-    // target thread is woken up in case it is in the middle of running its
-    // event selector. Otherwise it's gonna be stuck waiting for an event to
-    // happen, not knowing that it there's already a fiber ready to run in its
-    // run queue.
-    VALUE agent = rb_ivar_get(self,ID_ivar_agent);
-    __AGENT__.wakeup(agent);
+    if (rb_thread_current() != self) {
+      // If the fiber scheduling is done across threads, we need to make sure the
+      // target thread is woken up in case it is in the middle of running its
+      // event selector. Otherwise it's gonna be stuck waiting for an event to
+      // happen, not knowing that it there's already a fiber ready to run in its
+      // run queue.
+      VALUE agent = rb_ivar_get(self,ID_ivar_agent);
+      __AGENT__.wakeup(agent);
+    }
   }
   return self;
 }
