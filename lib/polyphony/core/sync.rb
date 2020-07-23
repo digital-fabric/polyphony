@@ -17,7 +17,7 @@ module Polyphony
         yield
       ensure
         @holding_fiber = nil
-        @store << token
+        @store << token if token
       end
     end
   end
