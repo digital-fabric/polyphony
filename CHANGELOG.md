@@ -1,3 +1,7 @@
+## 0.43.10 2020-07-23
+
+* Fix race condition when terminating fibers (#33)
+* Fix lock release in `Mutex` (#32)
 * Virtualize agent interface
 * Implement `LibevAgent_connect`
 
