@@ -46,6 +46,10 @@ class ::Exception
 
     backtrace.reject { |l| l[POLYPHONY_DIR] }
   end
+
+  def invoke
+    Kernel.raise(self)
+  end
 end
 
 # Overrides for Process

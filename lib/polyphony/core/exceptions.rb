@@ -33,4 +33,15 @@ module Polyphony
 
   # Restart is used to restart a fiber
   class Restart < BaseException; end
+
+  # Interjection is used to run arbitrary code on arbitrary fibers at any point
+  class Interjection < BaseException
+    def initialize(proc)
+      @proc = proc
+    end
+
+    def invoke
+      @proc.call
+    end
+  end
 end

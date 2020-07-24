@@ -376,7 +376,7 @@ VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eo
 
   return str;
 error:
-  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
@@ -456,7 +456,7 @@ VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
 
   return io;
 error:
-  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
@@ -500,7 +500,7 @@ VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
 
   return INT2NUM(len);
 error:
-  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE LibevAgent_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
@@ -570,7 +570,7 @@ VALUE LibevAgent_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   return INT2NUM(total_written);
 error:
   free(iov);
-  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE LibevAgent_write_m(int argc, VALUE *argv, VALUE self) {
@@ -636,7 +636,7 @@ VALUE LibevAgent_accept(VALUE self, VALUE sock) {
   RB_GC_GUARD(switchpoint_result);
   return Qnil;
 error:
-  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE LibevAgent_accept_loop(VALUE self, VALUE sock) {
@@ -692,7 +692,7 @@ VALUE LibevAgent_accept_loop(VALUE self, VALUE sock) {
   RB_GC_GUARD(switchpoint_result);
   return Qnil;
 error:
-  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE LibevAgent_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
@@ -728,7 +728,7 @@ VALUE LibevAgent_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   RB_GC_GUARD(switchpoint_result);
   return sock;
 error:
-  return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE libev_wait_fd(LibevAgent_t *agent, int fd, int events, int raise_exception) {

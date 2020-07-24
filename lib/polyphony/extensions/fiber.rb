@@ -67,6 +67,10 @@ module Polyphony
       else RuntimeError.new
       end
     end
+
+    def interject(&block)
+      raise Polyphony::Interjection.new(block)
+    end
   end
 
   # Fiber supervision

@@ -15,9 +15,11 @@
 
 #define TEST_EXCEPTION(ret) (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
 
+#define RAISE_EXCEPTION(e) rb_funcall(e, ID_invoke, 0);
 #define TEST_RESUME_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { \
-  return rb_funcall(rb_mKernel, ID_raise, 1, ret); \
+  return RAISE_EXCEPTION(ret); \
 }
+
 
 extern agent_interface_t agent_interface;
 #define __AGENT__ (agent_interface)
@@ -32,6 +34,7 @@ extern ID ID_clear;
 extern ID ID_each;
 extern ID ID_fiber_trace;
 extern ID ID_inspect;
+extern ID ID_invoke;
 extern ID ID_ivar_agent;
 extern ID ID_ivar_running;
 extern ID ID_ivar_thread;
