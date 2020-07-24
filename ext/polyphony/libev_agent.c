@@ -11,16 +11,16 @@
 
 VALUE cTCPSocket;
 
-struct LibevAgent_t {
+typedef struct LibevAgent_t {
   struct ev_loop *ev_loop;
   struct ev_async break_async;
   int running;
   int ref_count;
   int run_no_wait_count;
-};
+} LibevAgent_t;
 
 static size_t LibevAgent_size(const void *ptr) {
-  return sizeof(struct LibevAgent_t);
+  return sizeof(LibevAgent_t);
 }
 
 static const rb_data_type_t LibevAgent_type = {
@@ -30,13 +30,13 @@ static const rb_data_type_t LibevAgent_type = {
 };
 
 static VALUE LibevAgent_allocate(VALUE klass) {
-  struct LibevAgent_t *agent = ALLOC(struct LibevAgent_t);
+  LibevAgent_t *agent = ALLOC(LibevAgent_t);
   
   return TypedData_Wrap_Struct(klass, &LibevAgent_type, agent);
 }
 
 #define GetLibevAgent(obj, agent) \
-  TypedData_Get_Struct((obj), struct LibevAgent_t, &LibevAgent_type, (agent))
+  TypedData_Get_Struct((obj), LibevAgent_t, &LibevAgent_type, (agent))
 
 void break_async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
   // This callback does nothing, the break async is used solely for breaking out
@@ -44,7 +44,7 @@ void break_async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, in
 }
 
 static VALUE LibevAgent_initialize(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   VALUE thread = rb_thread_current();
   int is_main_thread = (thread == rb_thread_main());
 
@@ -63,7 +63,7 @@ static VALUE LibevAgent_initialize(VALUE self) {
 }
 
 VALUE LibevAgent_finalize(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
    ev_async_stop(agent->ev_loop, &agent->break_async);
@@ -74,7 +74,7 @@ VALUE LibevAgent_finalize(VALUE self) {
 }
 
 VALUE LibevAgent_post_fork(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
   if (!ev_is_default_loop(agent->ev_loop)) {
@@ -91,7 +91,7 @@ VALUE LibevAgent_post_fork(VALUE self) {
 }
 
 VALUE LibevAgent_ref(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
   agent->ref_count++;
@@ -99,7 +99,7 @@ VALUE LibevAgent_ref(VALUE self) {
 }
 
 VALUE LibevAgent_unref(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
   agent->ref_count--;
@@ -107,14 +107,14 @@ VALUE LibevAgent_unref(VALUE self) {
 }
 
 int LibevAgent_ref_count(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
   return agent->ref_count;
 }
 
 void LibevAgent_reset_ref_count(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
   agent->ref_count = 0;
@@ -122,7 +122,7 @@ void LibevAgent_reset_ref_count(VALUE self) {
 
 VALUE LibevAgent_pending_count(VALUE self) {
   int count;
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
   count = ev_pending_count(agent->ev_loop);
   return INT2NUM(count);
@@ -130,7 +130,7 @@ VALUE LibevAgent_pending_count(VALUE self) {
 
 VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue) {
   int is_nowait = nowait == Qtrue;
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
   if (is_nowait) {
@@ -152,7 +152,7 @@ VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue
 }
 
 VALUE LibevAgent_wakeup(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
   if (agent->running) {
@@ -246,7 +246,7 @@ void LibevAgent_io_callback(EV_P_ ev_io *w, int revents)
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
 
-inline VALUE libev_await(struct LibevAgent_t *agent) {
+inline VALUE libev_await(LibevAgent_t *agent) {
   VALUE ret;
   agent->ref_count++;
   ret = Thread_switch_fiber(rb_thread_current());
@@ -256,12 +256,12 @@ inline VALUE libev_await(struct LibevAgent_t *agent) {
 }
 
 VALUE libev_agent_await(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
   return libev_await(agent);
 }
 
-VALUE libev_io_wait(struct LibevAgent_t *agent, struct libev_io *watcher, rb_io_t *fptr, int flags) {
+VALUE libev_io_wait(LibevAgent_t *agent, struct libev_io *watcher, rb_io_t *fptr, int flags) {
   VALUE switchpoint_result;
 
   if (watcher->fiber == Qnil) {
@@ -307,7 +307,7 @@ inline void io_set_nonblock(rb_io_t *fptr, VALUE io) {
 }
 
 VALUE LibevAgent_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
   long dynamic_len = length == Qnil;
@@ -396,7 +396,7 @@ VALUE LibevAgent_read_loop(VALUE self, VALUE io) {
     PREPARE_STR(); \
   }
 
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
   VALUE str;
@@ -460,7 +460,7 @@ error:
 }
 
 VALUE LibevAgent_write(VALUE self, VALUE io, VALUE str) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
@@ -504,7 +504,7 @@ error:
 }
 
 VALUE LibevAgent_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
@@ -586,7 +586,7 @@ VALUE LibevAgent_write_m(int argc, VALUE *argv, VALUE self) {
 ///////////////////////////////////////////////////////////////////////////
 
 VALUE LibevAgent_accept(VALUE self, VALUE sock) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
   int fd;
@@ -640,7 +640,7 @@ error:
 }
 
 VALUE LibevAgent_accept_loop(VALUE self, VALUE sock) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
   int fd;
@@ -696,7 +696,7 @@ error:
 }
 
 VALUE LibevAgent_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   struct libev_io watcher;
   rb_io_t *fptr;
   struct sockaddr_in addr;
@@ -731,28 +731,31 @@ error:
   return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
 }
 
-VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write) {
-  struct LibevAgent_t *agent;
+VALUE libev_wait_fd(LibevAgent_t *agent, int fd, int events, int raise_exception) {
   struct libev_io watcher;
-  rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
-  int events = RTEST(write) ? EV_WRITE : EV_READ;
-
-  VALUE underlying_io = rb_iv_get(io, "@io");
-  GetLibevAgent(self, agent);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
   
   watcher.fiber = rb_fiber_current();
-  ev_io_init(&watcher.io, LibevAgent_io_callback, fptr->fd, events);
+  ev_io_init(&watcher.io, LibevAgent_io_callback, fd, events);
   ev_io_start(agent->ev_loop, &watcher.io);
   switchpoint_result = libev_await(agent);
   ev_io_stop(agent->ev_loop, &watcher.io);
   
-  TEST_RESUME_EXCEPTION(switchpoint_result);
-  RB_GC_GUARD(watcher.fiber);
+  if (raise_exception) TEST_RESUME_EXCEPTION(switchpoint_result);
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
+}
+
+VALUE LibevAgent_wait_io(VALUE self, VALUE io, VALUE write) {
+  LibevAgent_t *agent;
+  rb_io_t *fptr;
+  int events = RTEST(write) ? EV_WRITE : EV_READ;
+  VALUE underlying_io = rb_iv_get(io, "@io");
+  if (underlying_io != Qnil) io = underlying_io;
+  GetLibevAgent(self, agent);
+  GetOpenFile(io, fptr);
+  
+  return libev_wait_fd(agent, fptr->fd, events, 1);
 }
 
 struct libev_timer {
@@ -767,7 +770,7 @@ void LibevAgent_timer_callback(EV_P_ ev_timer *w, int revents)
 }
 
 VALUE LibevAgent_sleep(VALUE self, VALUE duration) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   struct libev_timer watcher;
   VALUE switchpoint_result = Qnil;
 
@@ -802,7 +805,7 @@ void LibevAgent_child_callback(EV_P_ ev_child *w, int revents)
 }
 
 VALUE LibevAgent_waitpid(VALUE self, VALUE pid) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   struct libev_child watcher;
   VALUE switchpoint_result = Qnil;
   GetLibevAgent(self, agent);
@@ -821,7 +824,7 @@ VALUE LibevAgent_waitpid(VALUE self, VALUE pid) {
 }
 
 struct ev_loop *LibevAgent_ev_loop(VALUE self) {
-  struct LibevAgent_t *agent;
+  LibevAgent_t *agent;
   GetLibevAgent(self, agent);
   return agent->ev_loop;
 }
@@ -829,14 +832,14 @@ struct ev_loop *LibevAgent_ev_loop(VALUE self) {
 void LibevAgent_async_callback(EV_P_ ev_async *w, int revents) { }
 
 VALUE LibevAgent_wait_event(VALUE self, VALUE raise) {
-  struct LibevAgent_t *agent;
-  struct ev_async async;
+  LibevAgent_t *agent;
   VALUE switchpoint_result = Qnil;
   GetLibevAgent(self, agent);
 
+  struct ev_async async;
+
   ev_async_init(&async, LibevAgent_async_callback);
   ev_async_start(agent->ev_loop, &async);
-  
   switchpoint_result = libev_await(agent);
   ev_async_stop(agent->ev_loop, &async);
 
