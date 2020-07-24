@@ -1,5 +1,3 @@
--- Add `Fiber#schedule_with_priority` method
-
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
     test fails

@@ -1,3 +1,11 @@
+## 0.43.11 2020-07-24
+
+* Dump uncaught exception info for forked process (#36)
+* Add additional socket config options (#37)
+  - :reuse_port (`SO_REUSEPORT`)
+  - :backlog (listen backlog, default `SOMAXCONN`)
+* Fix possible race condition in Queue#shift (#34)
+
 ## 0.43.10 2020-07-23
 
 * Fix race condition when terminating fibers (#33)
