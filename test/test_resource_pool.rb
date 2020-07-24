@@ -75,12 +75,16 @@ class ResourcePoolTest < MiniTest::Test
     resources = [+'a', +'b']
     pool = Polyphony::ResourcePool.new(limit: 1) { resources.shift }
 
+    results = []
     pool.acquire do |r|
-      assert_equal 'a', r
-      pool.acquire do |r|
-        assert_equal 'a', r
+      results << r
+      2.times do
+        pool.acquire do |r|
+          results << r
+        end
       end
     end
+    assert_equal ['a']*3, results
   end
 
   def test_overloaded_resource_pool

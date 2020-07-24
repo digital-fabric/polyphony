@@ -22,15 +22,17 @@ module Polyphony
 
     def acquire
       fiber = Fiber.current
-      return @acquired_resources[fiber] if @acquired_resources[fiber]
+      return yield @acquired_resources[fiber] if @acquired_resources[fiber]
 
       add_to_stock if (@stock.empty? || @stock.pending?) && @size < @limit 
       resource = @stock.shift
       @acquired_resources[fiber] = resource
       yield resource
     ensure
-      @acquired_resources.delete(fiber)
-      @stock.push resource if resource
+      if resource
+        @acquired_resources.delete(fiber)
+        @stock.push resource
+      end
     end
         
     def method_missing(sym, *args, &block)
