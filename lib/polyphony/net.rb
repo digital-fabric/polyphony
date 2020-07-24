@@ -35,9 +35,10 @@ module Polyphony
         ::Socket.new(:INET, :STREAM).tap do |s|
           s.reuse_addr if opts[:reuse_addr]
           s.dont_linger if opts[:dont_linger]
+          s.reuse_port if opts[:reuse_port]
           addr = ::Socket.sockaddr_in(port, host)
           s.bind(addr)
-          s.listen(0)
+          s.listen(opts[:backlog] || Socket::SOMAXCONN)
         end
       end
 

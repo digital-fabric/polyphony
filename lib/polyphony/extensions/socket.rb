@@ -67,6 +67,10 @@ class ::Socket
     setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
   end
 
+  def reuse_port
+    setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_REUSEPORT, 1)
+  end
+
   class << self
     alias_method :orig_getaddrinfo, :getaddrinfo
     def getaddrinfo(*args)
@@ -119,6 +123,10 @@ class ::TCPSocket
 
   def reuse_addr
     setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_REUSEADDR, 1)
+  end
+
+  def reuse_port
+    setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_REUSEPORT, 1)
   end
 end
 
