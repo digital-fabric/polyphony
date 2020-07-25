@@ -26,7 +26,7 @@ class AgentTest < MiniTest::Test
       @agent.sleep 0.01
       count += 1
     }.await
-    assert Time.now - t0 >= 0.03
+    assert_in_delta 0.03, Time.now - t0, 0.005
     assert_equal 3, count
   end
 
