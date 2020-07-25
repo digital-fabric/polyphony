@@ -1,3 +1,11 @@
+## 0.44.0 2020-07-25
+
+* Fix reentrant `ResourcePool` (#38)
+* Add `ResourcePool#discard!` (#35)
+* Add `Mysql2::Client` and `Sequel::ConnectionPool` adapters (#35)
+* Reimplement `Kernel.trap` using `Fiber#interject`
+* Add `Fiber#interject` for running arbitrary code on arbitrary fibers (#39)
+
 ## 0.43.11 2020-07-24
 
 * Dump uncaught exception info for forked process (#36)

@@ -1,4 +1,3 @@
-
 - Adapter for Pry, or maybe just an adapter for readline
 - Rename Agent to Backend
 - Review all code
@@ -6,10 +5,6 @@
   - Cleanup Ruby code (use Rubocop)
   - Cleanup and annotate examples (and remove all the examples used for
     debugging). Focus on examples that serve as "how-to".
-
-
-
-# 0.44
 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
