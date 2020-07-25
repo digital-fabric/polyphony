@@ -3,14 +3,6 @@
 require 'fiber'
 require_relative './polyphony_ext'
 
-module Polyphony
-  # replace core Queue class with our own
-  verbose = $VERBOSE
-  $VERBOSE = nil
-  Object.const_set(:Queue, Polyphony::Queue)
-  $VERBOSE = verbose
-end
-
 require_relative './polyphony/extensions/core'
 require_relative './polyphony/extensions/thread'
 require_relative './polyphony/extensions/fiber'
@@ -21,6 +13,7 @@ Thread.current.agent = Polyphony::Agent.new
 
 require_relative './polyphony/core/global_api'
 require_relative './polyphony/core/resource_pool'
+require_relative './polyphony/core/sync'
 require_relative './polyphony/net'
 require_relative './polyphony/adapters/process'
 
@@ -115,6 +108,14 @@ module Polyphony
       end
     end
   end
+
+  # replace core Queue class with our own
+  verbose = $VERBOSE
+  $VERBOSE = nil
+  Object.const_set(:Queue, Polyphony::Queue)
+  Object.const_set(:Mutex, Polyphony::Mutex)
+  Object.const_set(:ConditionVariable, Polyphony::ConditionVariable)
+  $VERBOSE = verbose
 end
 
 Polyphony.install_terminating_signal_handlers
