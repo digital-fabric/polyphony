@@ -64,7 +64,7 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   }
 
   rb_ivar_set(fiber, ID_runnable_value, value);
-  FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
+  COND_TRACE(3, SYM_fiber_schedule, fiber, value);
 
   if (!already_runnable) {
     queue = rb_ivar_get(self, ID_run_queue);
@@ -89,7 +89,7 @@ VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) 
 
   if (rb_fiber_alive_p(fiber) != Qtrue) return self;
 
-  FIBER_TRACE(3, SYM_fiber_schedule, fiber, value);
+  COND_TRACE(3, SYM_fiber_schedule, fiber, value);
   rb_ivar_set(fiber, ID_runnable_value, value);
 
   queue = rb_ivar_get(self, ID_run_queue);
@@ -123,13 +123,10 @@ VALUE Thread_switch_fiber(VALUE self) {
   VALUE value;
   VALUE agent = rb_ivar_get(self, ID_ivar_agent);
   int ref_count;
-  int agent_was_polled = 0;1;
+  int agent_was_polled = 0;
 
-  if (__tracing_enabled__) {
-    if (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse) {
-      rb_funcall(rb_cObject, ID_fiber_trace, 2, SYM_fiber_switchpoint, current_fiber);
-    }
-  }
+  if (__tracing_enabled__ && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
+    TRACE(2, SYM_fiber_switchpoint, current_fiber);
 
   ref_count = __AGENT__.ref_count(agent);
   while (1) {
@@ -152,7 +149,7 @@ VALUE Thread_switch_fiber(VALUE self) {
 
   // run next fiber
   value = rb_ivar_get(next_fiber, ID_runnable_value);
-  FIBER_TRACE(3, SYM_fiber_run, next_fiber, value);
+  COND_TRACE(3, SYM_fiber_run, next_fiber, value);
 
   rb_ivar_set(next_fiber, ID_runnable, Qnil);
   RB_GC_GUARD(next_fiber);
@@ -188,6 +185,11 @@ VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE fiber, VALUE resume_ob
   return self;
 }
 
+VALUE Thread_debug(VALUE self) {
+  rb_ivar_set(self, rb_intern("@__debug__"), Qtrue);
+  return self;
+}
+
 void Init_Thread() {
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
@@ -199,6 +201,8 @@ void Init_Thread() {
     Thread_schedule_fiber_with_priority, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
   rb_define_method(rb_cThread, "run_queue_trace", Thread_run_queue_trace, 0);
+
+  rb_define_method(rb_cThread, "debug!", Thread_debug, 0);
 
   ID_deactivate_all_watchers_post_fork = rb_intern("deactivate_all_watchers_post_fork");
   ID_ivar_agent               = rb_intern("@agent");

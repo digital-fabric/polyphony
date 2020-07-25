@@ -8,16 +8,22 @@
 
 // debugging
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
-#define INSPECT(str, obj) { printf(str); VALUE s = rb_funcall(obj, rb_intern("inspect"), 0); printf("%s\n", StringValueCStr(s));}
-#define FIBER_TRACE(...) if (__tracing_enabled__) { \
-  rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__); \
+#define INSPECT(str, obj) { printf(str); VALUE s = rb_funcall(obj, rb_intern("inspect"), 0); printf("%s\n", StringValueCStr(s)); }
+#define TRACE_CALLER() { VALUE c = rb_funcall(rb_mKernel, rb_intern("caller"), 0); INSPECT("caller: ", c); }
+
+// tracing
+#define TRACE(...)  rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__)
+#define COND_TRACE(...) if (__tracing_enabled__) { \
+  TRACE(__VA_ARGS__); \
 }
 
 #define TEST_EXCEPTION(ret) (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
 
+#define RAISE_EXCEPTION(e) rb_funcall(e, ID_invoke, 0);
 #define TEST_RESUME_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { \
-  return rb_funcall(rb_mKernel, ID_raise, 1, ret); \
+  return RAISE_EXCEPTION(ret); \
 }
+
 
 extern agent_interface_t agent_interface;
 #define __AGENT__ (agent_interface)
@@ -32,6 +38,7 @@ extern ID ID_clear;
 extern ID ID_each;
 extern ID ID_fiber_trace;
 extern ID ID_inspect;
+extern ID ID_invoke;
 extern ID ID_ivar_agent;
 extern ID ID_ivar_running;
 extern ID ID_ivar_thread;

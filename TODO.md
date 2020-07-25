@@ -1,7 +1,19 @@
+
+- Adapter for Pry, or maybe just an adapter for readline
+- Rename Agent to Backend
+- Review all code
+  - Cleanup C code
+  - Cleanup Ruby code (use Rubocop)
+  - Cleanup and annotate examples (and remove all the examples used for
+    debugging). Focus on examples that serve as "how-to".
+
+
+
+# 0.44
+
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
     test fails
-  - Needs to work with Pry (can write perhaps an extension for pry)
   - First impl in Ruby using `TracePoint` API
   - Mode of operation:
     - Two parts: tracer and controller
@@ -111,7 +123,7 @@
   - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
 
 
-## 0.44
+## 0.45
 
 ### Some more API work, more docs
 
@@ -124,13 +136,13 @@
   - proceed from there
 
 
-## 0.45
+## 0.46
 
 ### Sinatra / Sidekiq
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.46
+## 0.47
 
 ### Testing && Docs
 
@@ -141,10 +153,6 @@
   - `IO#read` (read to EOF)
   - `IO.foreach`
   - `Process.waitpid`
-
-## 0.47
-
-### Real IO#gets and IO#read
 
 ## 0.48 DNS
 

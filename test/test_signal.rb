@@ -56,35 +56,11 @@ class SignalTrapTest < Minitest::Test
     assert_equal "3 - interrupted\n2 - terminated\n1 - terminated\n", buffer
   end
 
-  def test_signal_exception_possible_race_condition
+  def test_interrupt_signal_scheduling
     i, o = IO.pipe
     pid = Polyphony.fork do
       i.close
-      f1 = nil
-      f2 = spin do
-        # this fiber will try to create a race condition by
-        # - being scheduled before f1 is scheduled with the Interrupt exception
-        # - scheduling f1 without an exception
-        suspend
-        f1.schedule
-      rescue ::Interrupt => e
-        o.puts '2-interrupt'
-        raise e
-      end
-      f1 = spin do
-        # this fiber is the one that will be current when the
-        # signal is trapped
-        sleep 1
-        o << 'boom'
-      rescue ::Interrupt => e
-        o.puts '1-interrupt'
-        raise e
-      end
-      old_trap = trap('INT') do
-        f2.schedule
-        old_trap.()
-      end
-      Fiber.current.await_all_children
+      sleep
     rescue ::Interrupt => e
       o.puts '3-interrupt'
     ensure
