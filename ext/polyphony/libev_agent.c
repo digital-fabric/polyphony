@@ -77,15 +77,13 @@ VALUE LibevAgent_post_fork(VALUE self) {
   LibevAgent_t *agent;
   GetLibevAgent(self, agent);
 
-  if (!ev_is_default_loop(agent->ev_loop)) {
-    // post_fork is called only for the main thread of the forked process. If
-    // the forked process was forked from a thread other than the main one,
-    // we remove the old non-default ev_loop and use the default one instead.
-    ev_loop_destroy(agent->ev_loop);
-    agent->ev_loop = EV_DEFAULT;
-  }
-
-  ev_loop_fork(agent->ev_loop);
+  // After fork there may be some watchers still active left over from the
+  // parent, so we destroy the loop, even if it's the default one, then use the
+  // default one, as post_fork is called only from the main thread of the forked
+  // process. That way we don't need to call ev_loop_fork, since the loop is
+  // always a fresh one.
+  ev_loop_destroy(agent->ev_loop);
+  agent->ev_loop = EV_DEFAULT;
 
   return self;
 }
@@ -142,11 +140,11 @@ VALUE LibevAgent_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue
 
   agent->run_no_wait_count = 0;
   
-  FIBER_TRACE(2, SYM_fiber_ev_loop_enter, current_fiber);
+  COND_TRACE(2, SYM_fiber_ev_loop_enter, current_fiber);
   agent->running = 1;
   ev_run(agent->ev_loop, is_nowait ? EVRUN_NOWAIT : EVRUN_ONCE);
   agent->running = 0;
-  FIBER_TRACE(2, SYM_fiber_ev_loop_leave, current_fiber);
+  COND_TRACE(2, SYM_fiber_ev_loop_leave, current_fiber);
 
   return self;
 }
