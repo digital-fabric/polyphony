@@ -27,6 +27,27 @@ class ResourcePoolTest < MiniTest::Test
     assert_equal ['a', 'b', 'a', 'b'], results
   end
 
+  def test_discard
+    resources = [+'a', +'b']
+    pool = Polyphony::ResourcePool.new(limit: 2) { resources.shift }
+
+    results = []
+    4.times {
+      spin {
+        snooze
+        pool.acquire { |resource|
+          results << resource
+          pool.discard! if resource == 'b'
+          snooze
+        }
+      }
+    }
+    7.times { snooze }
+
+    assert_equal ['a', 'b', 'a', 'a'], results
+    assert_equal 1, pool.size
+  end
+
   def test_single_resource_limit
     resources = [+'a', +'b']
     pool = Polyphony::ResourcePool.new(limit: 1) { resources.shift }

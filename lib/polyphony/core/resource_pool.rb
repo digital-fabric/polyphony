@@ -50,6 +50,14 @@ module Polyphony
       @stock << @allocator.call
     end
 
+    # Discards the currently-acquired resource
+    # instead of returning it to the pool when done.
+    def discard!(fiber = Fiber.current)
+      if @acquired_resources.delete(fiber)
+        @size -= 1
+      end
+    end
+
     def preheat!
       add_to_stock while @size < @limit
     end
