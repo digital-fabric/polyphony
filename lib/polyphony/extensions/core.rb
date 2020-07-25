@@ -46,6 +46,10 @@ class ::Exception
 
     backtrace.reject { |l| l[POLYPHONY_DIR] }
   end
+
+  def invoke
+    Kernel.raise(self)
+  end
 end
 
 # Overrides for Process
@@ -140,8 +144,16 @@ module ::Kernel
   def trap(sig, command = nil, &block)
     return orig_trap(sig, command) if command.is_a? String
       
-    block = command if command.respond_to?(:call) && !block
-    exception = command.is_a?(Class) && command.new
+    block = command if !block && command.respond_to?(:call)
+    if block
+      exception = Polyphony::Interjection.new(block)
+    else
+      exception = command.is_a?(Class) && command.new
+    end
+
+    unless exception
+      raise ArgumentError, "Must supply block or exception or callable object"
+    end
 
     # The signal trap can be invoked at any time, including while the system
     # agent is blocking while polling for events. In order to deal with this
@@ -152,12 +164,7 @@ module ::Kernel
     # If the command argument is an exception class however, it will be raised
     # directly in the context of the main fiber.
     orig_trap(sig) do
-      if exception
-        Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, exception)
-      else
-        fiber = spin { snooze; block.call }
-        Thread.current.break_out_of_ev_loop(fiber, nil)
-      end
+      Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, exception)
     end
   end
 end

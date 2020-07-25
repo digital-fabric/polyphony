@@ -27,26 +27,19 @@ require_relative './polyphony/adapters/process'
 # Main Polyphony API
 module Polyphony
   class << self
-    def wait_for_signal(sig)
-      raise "should be reimplemented"
-
-      fiber = Fiber.current
-      # Polyphony.ref
-      old_trap = trap(sig) do
-        # Polyphony.unref
-        fiber.schedule(sig)
-        trap(sig, old_trap)
-      end
-      suspend
-
-    end
-
     def fork(&block)
       Kernel.fork do
-        # # Since the fiber doing the fork will become the main fiber of the
-        # # forked process, we leave it behind by transferring to a new fiber
-        # # created in the context of the forked process, which rescues *all*
-        # # exceptions, including Interrupt and SystemExit.
+        # A race condition can arise if a TERM or INT signal is received before
+        # the forked process has finished initializing. To prevent this we restore
+        # the default signal handlers, and then reinstall the custom Polyphony
+        # handlers just before running the given block.
+        trap('SIGTERM', 'DEFAULT')
+        trap('SIGINT', 'DEFAULT')
+
+        # Since the fiber doing the fork will become the main fiber of the
+        # forked process, we leave it behind by transferring to a new fiber
+        # created in the context of the forked process, which rescues *all*
+        # exceptions, including Interrupt and SystemExit.
         spin_forked_block(&block).transfer
       end
     end
@@ -65,13 +58,6 @@ module Polyphony
     end
 
     def run_forked_block(&block)
-      # A race condition can arise if a TERM or INT signal is received before
-      # the forked process has finished initializing. To prevent this we restore
-      # the default signal handlers, and then reinstall the custom Polyphony
-      # handlers just before running the given block.
-      trap('SIGTERM', 'DEFAULT')
-      trap('SIGINT', 'DEFAULT')
-
       Thread.current.setup
       Fiber.current.setup_main_fiber
       Thread.current.agent.post_fork

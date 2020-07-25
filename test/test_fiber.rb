@@ -413,6 +413,22 @@ class FiberTest < MiniTest::Test
     f2&.stop
   end
 
+  def test_interject
+    buf = []
+    f = spin_loop { sleep }
+    snooze
+    f.interject { buf << Fiber.current }
+    snooze
+    assert_equal [f], buf
+    assert_equal :waiting, f.state
+
+    f.interject { buf << :foo; raise Polyphony::MoveOn }
+    snooze
+
+    assert_equal [f, :foo], buf
+    assert_equal :dead, f.state
+  end
+
   def test_state
     counter = 0
     f = spin do
