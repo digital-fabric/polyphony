@@ -19,6 +19,11 @@ class KernelTest < MiniTest::Test
     timer&.stop
   end
 
+  def test_Kernel_system_singleton_method
+    assert_equal true, Kernel.system("which ruby > /dev/null 2>&1")
+    assert_equal false, Kernel.system("which rruubbyy > /dev/null 2>&1")
+  end
+
   def patch_open3
     class << Open3
       alias_method :orig_popen2, :popen2

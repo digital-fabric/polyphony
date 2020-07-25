@@ -122,13 +122,22 @@ module ::Kernel
 
   alias_method :orig_system, :system
   def system(*args)
-    Open3.popen2(*args) do |i, o, _t|
-      i.close
-      pipe_to_eof(o, $stdout)
+    Kernel.system(*args)
+  end
+
+  class << self
+    alias_method :orig_system, :system
+    def system(*args)
+      waiter = nil
+      Open3.popen2(*args) do |i, o, t|
+        waiter = t
+        i.close
+        pipe_to_eof(o, $stdout)
+      end
+      waiter.await.last == 0
+    rescue SystemCallError
+      nil
     end
-    true
-  rescue SystemCallError
-    nil
   end
 
   def pipe_to_eof(src, dest)
