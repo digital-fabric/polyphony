@@ -36,13 +36,13 @@ class ResourcePoolTest < MiniTest::Test
       spin {
         snooze
         pool.acquire { |resource|
-          results << resource
-          pool.discard! if resource == 'b'
+        results << resource
+        pool.discard! if resource == 'b'
           snooze
         }
       }
     }
-    7.times { snooze }
+    Fiber.current.await_all_children
 
     assert_equal ['a', 'b', 'a', 'a'], results
     assert_equal 1, pool.size
@@ -62,7 +62,7 @@ class ResourcePoolTest < MiniTest::Test
         }
       }
     }
-    21.times { snooze }
+    Fiber.current.await_all_children
 
     assert_equal ['a'] * 10, results
   end

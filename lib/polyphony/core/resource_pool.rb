@@ -20,16 +20,20 @@ module Polyphony
       @stock.size
     end
 
-    def acquire
+    def acquire(&block)
       fiber = Fiber.current
       return yield @acquired_resources[fiber] if @acquired_resources[fiber]
 
+      acquire_from_stock(fiber, &block)
+    end
+
+    def acquire_from_stock(fiber)
       add_to_stock if (@stock.empty? || @stock.pending?) && @size < @limit 
       resource = @stock.shift
       @acquired_resources[fiber] = resource
       yield resource
     ensure
-      if resource
+      if resource && @acquired_resources[fiber] == resource
         @acquired_resources.delete(fiber)
         @stock.push resource
       end
@@ -47,15 +51,14 @@ module Polyphony
     # @return [any] allocated resource
     def add_to_stock
       @size += 1
-      @stock << @allocator.call
+      resource = @allocator.call
+      @stock << resource
     end
 
     # Discards the currently-acquired resource
     # instead of returning it to the pool when done.
-    def discard!(fiber = Fiber.current)
-      if @acquired_resources.delete(fiber)
-        @size -= 1
-      end
+    def discard!
+      @size -= 1 if @acquired_resources.delete(Fiber.current)
     end
 
     def preheat!
