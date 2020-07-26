@@ -23,8 +23,8 @@ module Polyphony
 
     def conditional_release
       @store << @token
-      @holding_fiber = nil
       @token = nil
+      @holding_fiber = nil
     end
 
     def conditional_reacquire
@@ -42,7 +42,6 @@ module Polyphony
       mutex.conditional_release
       @queue << Fiber.current
       Thread.current.agent.wait_event(true)
-    ensure
       mutex.conditional_reacquire
     end
 
