@@ -19,11 +19,16 @@ module Polyphony
       fiber = ::Fiber.current
       canceller = spin do
         sleep interval
-        exception = with_exception.is_a?(Class) ?
-          with_exception.new : RuntimeError.new(with_exception)
+        exception = cancel_exception(with_exception)
         fiber.schedule exception
       end
       block ? cancel_after_wrap_block(canceller, &block) : canceller
+    end
+
+    def cancel_exception(exception)
+      return exception.new if exception.is_a?(Class)
+
+      RuntimeError.new(exception)
     end
 
     def cancel_after_wrap_block(canceller, &block)

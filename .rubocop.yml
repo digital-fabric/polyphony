@@ -81,6 +81,7 @@ Lint/SuppressedException:
     - examples/**/*.rb
 
 Metrics/MethodLength:
+  Max: 12
   Exclude:
     - lib/polyphony/http/server/rack.rb
     - lib/polyphony/extensions/io.rb
@@ -111,6 +112,7 @@ Style/Documentation:
   Exclude:
     - test/**/*.rb
     - examples/**/*.rb
+    - lib/polyphony/adapters/**/*.rb
 
 Style/FormatString:
   Exclude:
@@ -173,3 +175,7 @@ Style/RedundantRegexpEscape:
 
 Style/SlicingWithRange:
   Enabled: true
+
+Style/RaiseArgs:
+  Exclude:
+    - lib/polyphony/extensions/fiber.rb

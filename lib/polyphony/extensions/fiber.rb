@@ -228,7 +228,7 @@ module Polyphony
       @results = @children.dup
       @on_child_done = proc do |c, r|
         @results[c] = r
-        self.schedule if @children.empty?
+        schedule if @children.empty?
       end
       suspend
       @on_child_done = nil

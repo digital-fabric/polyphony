@@ -116,7 +116,7 @@ module ::Kernel
     strs = args.inject([]) do |m, a|
       m << a.inspect << "\n"
     end
-    STDOUT.write *strs
+    STDOUT.write(*strs)
     args.size == 1 ? args.first : args
   end
 
@@ -152,17 +152,9 @@ module ::Kernel
   alias_method :orig_trap, :trap
   def trap(sig, command = nil, &block)
     return orig_trap(sig, command) if command.is_a? String
-      
-    block = command if !block && command.respond_to?(:call)
-    if block
-      exception = Polyphony::Interjection.new(block)
-    else
-      exception = command.is_a?(Class) && command.new
-    end
 
-    unless exception
-      raise ArgumentError, "Must supply block or exception or callable object"
-    end
+    block = command if !block && command.respond_to?(:call)
+    exception = signal_exception(block, command)
 
     # The signal trap can be invoked at any time, including while the system
     # backend is blocking while polling for events. In order to deal with this
@@ -175,6 +167,16 @@ module ::Kernel
     orig_trap(sig) do
       Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, exception)
     end
+  end
+end
+
+def signal_exception(block, command)
+  if block
+    Polyphony::Interjection.new(block)
+  elsif command.is_a?(Class)
+    command.new
+  else
+    raise ArgumentError, 'Must supply block or exception or callable object'
   end
 end
 

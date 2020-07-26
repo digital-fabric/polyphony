@@ -24,7 +24,8 @@ class ::Thread
     result = @block.(*@args)
   rescue Polyphony::MoveOn, Polyphony::Terminate => e
     result = e.value
-  rescue Exception => result
+  rescue Exception => e
+    result = e
   ensure
     @ready = true
     finalize(result)

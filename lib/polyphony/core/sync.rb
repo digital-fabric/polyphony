@@ -33,12 +33,13 @@ module Polyphony
     end
   end
 
+  # Implements a fiber-aware ConditionVariable
   class ConditionVariable
     def initialize
       @queue = Polyphony::Queue.new
     end
 
-    def wait(mutex, timeout = nil)
+    def wait(mutex, _timeout = nil)
       mutex.conditional_release
       @queue << Fiber.current
       Thread.current.backend.wait_event(true)

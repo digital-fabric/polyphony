@@ -28,7 +28,7 @@ module Polyphony
     end
 
     def acquire_from_stock(fiber)
-      add_to_stock if (@stock.empty? || @stock.pending?) && @size < @limit 
+      add_to_stock if (@stock.empty? || @stock.pending?) && @size < @limit
       resource = @stock.shift
       @acquired_resources[fiber] = resource
       yield resource
@@ -38,7 +38,7 @@ module Polyphony
         @stock.push resource
       end
     end
-        
+
     def method_missing(sym, *args, &block)
       acquire { |r| r.send(sym, *args, &block) }
     end

@@ -17,7 +17,7 @@ require_relative './polyphony/core/sync'
 require_relative './polyphony/net'
 require_relative './polyphony/adapters/process'
 
-# Main Polyphony API
+# Polyphony API
 module Polyphony
   class << self
     def fork(&block)
@@ -102,7 +102,7 @@ module Polyphony
       # processes (see Polyphony.fork).
       at_exit do
         next unless @original_pid == ::Process.pid
-      
+
         Polyphony.terminate_threads
         Fiber.current.shutdown_all_children
       end

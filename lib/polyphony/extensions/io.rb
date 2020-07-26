@@ -170,13 +170,12 @@ class ::IO
       return
     end
 
-    strs = args.inject([]) do |m, a|
+    strs = args.each_with_object([]) do |a, m|
       a = a.to_s
       m << a
       m << "\n" unless a =~ /\n$/
-      m
     end
-    write *strs
+    write(*strs)
     nil
   end
 

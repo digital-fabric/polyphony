@@ -39,7 +39,7 @@ module Polyphony
   # Override Sequel::Database to use FiberConnectionPool by default.
   Sequel::Database.prepend(Module.new do
     def connection_pool_default_options
-      {pool_class: FiberConnectionPool}
+      { pool_class: FiberConnectionPool }
     end
   end)
 end
