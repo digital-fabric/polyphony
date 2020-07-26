@@ -21,14 +21,14 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.required_ruby_version = '>= 2.6'
 
-  s.add_development_dependency  'httparty',             '0.17.0'
-  s.add_development_dependency  'localhost',            '1.1.4'
+  s.add_development_dependency  'rake-compiler',        '1.0.5'
   s.add_development_dependency  'minitest',             '5.13.0'
   s.add_development_dependency  'minitest-reporters',   '1.4.2'
   s.add_development_dependency  'simplecov',            '0.17.1'
   s.add_development_dependency  'rubocop',              '0.85.1'
+  s.add_development_dependency  'pry',                  '0.13.1'
+  
   s.add_development_dependency  'pg',                   '1.1.4'
-  s.add_development_dependency  'rake-compiler',        '1.0.5'
   s.add_development_dependency  'redis',                '4.1.0'
   s.add_development_dependency  'hiredis',              '0.6.3'
   s.add_development_dependency  'http_parser.rb',       '~>0.6.0'
