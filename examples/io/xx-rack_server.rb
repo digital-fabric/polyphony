@@ -32,7 +32,7 @@ def handle_client(socket, &handler)
   parser.on_message_complete = proc do |env|
     reqs << Object.new # parser
   end
-  while (data = socket.readpartial(8192)) do
+  socket.read_loop do |data|
     parser << data
     while (req = reqs.shift)
       handler.call(socket, req)

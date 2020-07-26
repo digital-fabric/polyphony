@@ -1,12 +1,14 @@
 - Review all code
   - Cleanup C code
-  - Cleanup Ruby code (use Rubocop)
   - Cleanup and annotate examples (and remove all the examples used for
     debugging). Focus on examples that serve as "how-to".
 
-0.45
+0.44.1
 
-- Adapter for Pry, or maybe just an adapter for readline
+- Adapter for Pry and IRB (Which fixes #5 and #6)
+
+0.45.0
+
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
     test fails
