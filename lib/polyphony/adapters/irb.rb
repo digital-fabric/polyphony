@@ -26,22 +26,7 @@ if Object.constants.include?(:Reline)
     end
   end
 else
-  # readline blocks the current thread, so we offload it to the blocking-ops
-  # thread pool. That way, the reactor loop can keep running while waiting for
-  # readline to return
-  module ::Readline
-    alias_method :orig_readline, :readline
-
-    Workers = Polyphony::ThreadPool.new
-
-    def readline(*args)
-      p :readline
-      # caller.each do |l|
-      #   STDOUT.orig_puts l
-      # end
-      Workers.process { orig_readline(*args) }
-    end
-  end
+  require_relative './readline'
 
   # RubyLex patches
   class ::RubyLex
