@@ -22,7 +22,7 @@ ID ID_R;
 ID ID_W;
 ID ID_RW;
 
-agent_interface_t agent_interface;
+backend_interface_t backend_interface;
 
 VALUE Polyphony_snooze(VALUE self) {
   VALUE ret;

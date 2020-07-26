@@ -4,7 +4,7 @@
 #include "ruby.h"
 #include "ruby/io.h"
 #include "libev.h"
-#include "agent.h"
+#include "backend.h"
 
 // debugging
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
@@ -25,8 +25,8 @@
 }
 
 
-extern agent_interface_t agent_interface;
-#define __AGENT__ (agent_interface)
+extern backend_interface_t backend_interface;
+#define __BACKEND__ (backend_interface)
 
 extern VALUE mPolyphony;
 extern VALUE cQueue;
@@ -39,7 +39,7 @@ extern ID ID_each;
 extern ID ID_fiber_trace;
 extern ID ID_inspect;
 extern ID ID_invoke;
-extern ID ID_ivar_agent;
+extern ID ID_ivar_backend;
 extern ID ID_ivar_running;
 extern ID ID_ivar_thread;
 extern ID ID_new;

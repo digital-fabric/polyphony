@@ -16,9 +16,9 @@ class ::Thread
   end
 
   def execute
-    # agent must be created in the context of the new thread, therefore it
+    # backend must be created in the context of the new thread, therefore it
     # cannot be created in Thread#initialize
-    @agent = Polyphony::Agent.new
+    @backend = Polyphony::Backend.new
     setup
     @ready = true
     result = @block.(*@args)
@@ -30,7 +30,7 @@ class ::Thread
     finalize(result)
   end
 
-  attr_accessor :agent
+  attr_accessor :backend
 
   def setup
     @main_fiber = Fiber.current
@@ -48,7 +48,7 @@ class ::Thread
       @result = result
       signal_waiters(result)
     end
-    @agent.finalize
+    @backend.finalize
   end
 
   def signal_waiters(result)

@@ -341,25 +341,25 @@ move_on_after(10) { perform_query }
 cancel_after(10) { perform_query }
 ```
 
-## The System Agent
+## The Polyphony Backend
 
 In order to implement automatic fiber switching when performing blocking
-operations, Polyphony introduces a concept called the *system agent*. The system
-agent is an object having a uniform interface, that performs all blocking
+operations, Polyphony introduces a concept called the *system backend*. The system
+backend is an object having a uniform interface, that performs all blocking
 operations.
 
 While a standard event loop-based solution would implement a blocking call
-separately from the fiber scheduling, the system agent integrates the two to
+separately from the fiber scheduling, the system backend integrates the two to
 create a blocking call that is already knows how to switch and schedule fibers.
 For example, in Polyphony all APIs having to do with reading from files or
-sockets end up calling `Thread.current.agent.read`, which does all the work.
+sockets end up calling `Thread.current.backend.read`, which does all the work.
 
 This design offers some major advantages over other designs. It minimizes memory
 allocations, of both Ruby objects and C structures. For example, instead of
 having to allocate libev watchers on the heap and then pass them around, they
 are allocated on the stack instead, which saves up on both memory and CPU cycles.
 
-In addition, the agent interface includes two methods that allow maximizing
+In addition, the backend interface includes two methods that allow maximizing
 server performance by accepting connections and reading from sockets in a tight
 loop. Here's a naive implementation of an HTTP/1 server:
 
@@ -372,7 +372,7 @@ def handle_client(socket)
   reqs = []
   parser.on_message_complete = proc { |env| reqs << { foo: :bar } }
 
-  Thread.current.agent.read_loop(socket) do |data|
+  Thread.current.backend.read_loop(socket) do |data|
     parser << data
     reqs.each { |r| reply(socket, r) }
     reqs.clear
@@ -388,20 +388,20 @@ end
 server = TCPServer.open('0.0.0.0', 1234)
 puts "listening on port 1234"
 
-Thread.current.agent.accept_loop(server) do |client|
+Thread.current.backend.accept_loop(server) do |client|
   spin { handle_client(client) }
 end
 ```
 
-The `#read_loop` and `#accept_loop` agent methods implement tight loops that
+The `#read_loop` and `#accept_loop` backend methods implement tight loops that
 provide a significant boost to performance (up to +30% better throughput.)
 
-Currently, Polyphony includes a single system agent based on
+Currently, Polyphony includes a single system backend based on
 [libev](http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod). In the future,
-Polyphony will include other platform-specific system agents, such as a Windows
-agent using
+Polyphony will include other platform-specific system backends, such as a Windows
+backend using
 [IOCP](https://docs.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports),
-or an [io_uring](https://unixism.net/loti/what_is_io_uring.html) agent,
+or an [io_uring](https://unixism.net/loti/what_is_io_uring.html) backend,
 which might be a game-changer for writing highly-concurrent Ruby-based web apps.
 
 ## Writing Web Apps with Polyphony
@@ -482,5 +482,5 @@ reach version 1.0. Here are some of the exciting directions we're working on.
 
 - Support for more core and stdlib APIs
 - More adapters for gems with C-extensions, such as `mysql`, `sqlite3` etc
-- Use `io_uring` agent as alternative to the libev agent 
+- Use `io_uring` backend as alternative to the libev backend 
 - More concurrency constructs for building highly concurrent applications

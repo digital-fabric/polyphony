@@ -13,7 +13,7 @@ Mysql2::Client.prepend(Module.new do
 
   def query(sql, **options)
     super
-    Thread.current.agent.wait_io(@io, false)
+    Thread.current.backend.wait_io(@io, false)
     async_result
   end
 end)

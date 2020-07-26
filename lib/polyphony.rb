@@ -9,7 +9,7 @@ require_relative './polyphony/extensions/fiber'
 require_relative './polyphony/extensions/io'
 
 Thread.current.setup_fiber_scheduling
-Thread.current.agent = Polyphony::Agent.new
+Thread.current.backend = Polyphony::Backend.new
 
 require_relative './polyphony/core/global_api'
 require_relative './polyphony/core/resource_pool'
@@ -53,7 +53,7 @@ module Polyphony
     def run_forked_block(&block)
       Thread.current.setup
       Fiber.current.setup_main_fiber
-      Thread.current.agent.post_fork
+      Thread.current.backend.post_fork
 
       install_terminating_signal_handlers
 

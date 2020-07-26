@@ -7,7 +7,7 @@ module Polyphony
       def watch(cmd = nil, &block)
         terminated = nil
         pid = cmd ? Kernel.spawn(cmd) : Polyphony.fork(&block)
-        Thread.current.agent.waitpid(pid)
+        Thread.current.backend.waitpid(pid)
         terminated = true
       ensure
         kill_process(pid) unless terminated || pid.nil?
@@ -23,7 +23,7 @@ module Polyphony
 
       def kill_and_await(sig, pid)
         ::Process.kill(sig, pid)
-        Thread.current.agent.waitpid(pid)
+        Thread.current.backend.waitpid(pid)
       rescue SystemCallError
         # ignore
         puts 'SystemCallError in kill_and_await'

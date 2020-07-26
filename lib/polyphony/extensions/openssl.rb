@@ -28,8 +28,8 @@ class ::OpenSSL::SSL::SSLSocket
     loop do
       result = accept_nonblock(exception: false)
       case result
-      when :wait_readable then Thread.current.agent.wait_io(io, false)
-      when :wait_writable then Thread.current.agent.wait_io(io, true)
+      when :wait_readable then Thread.current.backend.wait_io(io, false)
+      when :wait_writable then Thread.current.backend.wait_io(io, true)
       else
         return result
       end
@@ -40,8 +40,8 @@ class ::OpenSSL::SSL::SSLSocket
   def sysread(maxlen, buf = +'')
     loop do
       case (result = read_nonblock(maxlen, buf, exception: false))
-      when :wait_readable then Thread.current.agent.wait_io(io, false)
-      when :wait_writable then Thread.current.agent.wait_io(io, true)
+      when :wait_readable then Thread.current.backend.wait_io(io, false)
+      when :wait_writable then Thread.current.backend.wait_io(io, true)
       else return result
       end
     end
@@ -51,8 +51,8 @@ class ::OpenSSL::SSL::SSLSocket
   def syswrite(buf)
     loop do
       case (result = write_nonblock(buf, exception: false))
-      when :wait_readable then Thread.current.agent.wait_io(io, false)
-      when :wait_writable then Thread.current.agent.wait_io(io, true)
+      when :wait_readable then Thread.current.backend.wait_io(io, false)
+      when :wait_writable then Thread.current.backend.wait_io(io, true)
       else
         return result
       end

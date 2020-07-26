@@ -2,28 +2,28 @@
 
 require_relative 'helper'
 
-class AgentTest < MiniTest::Test
+class BackendTest < MiniTest::Test
   def setup
     super
-    @prev_agent = Thread.current.agent
-    @agent = Polyphony::Agent.new
-    Thread.current.agent = @agent
+    @prev_backend = Thread.current.backend
+    @backend = Polyphony::Backend.new
+    Thread.current.backend = @backend
   end
 
   def teardown
-    @agent.finalize
-    Thread.current.agent = @prev_agent
+    @backend.finalize
+    Thread.current.backend = @prev_backend
   end
 
   def test_sleep
     count = 0
     t0 = Time.now
     spin {
-      @agent.sleep 0.01
+      @backend.sleep 0.01
       count += 1
-      @agent.sleep 0.01
+      @backend.sleep 0.01
       count += 1
-      @agent.sleep 0.01
+      @backend.sleep 0.01
       count += 1
     }.await
     assert_in_delta 0.03, Time.now - t0, 0.005
@@ -33,8 +33,8 @@ class AgentTest < MiniTest::Test
   def test_write_read_partial
     i, o = IO.pipe
     buf = +''
-    f = spin { @agent.read(i, buf, 5, false) }
-    @agent.write(o, 'Hello world')
+    f = spin { @backend.read(i, buf, 5, false) }
+    @backend.write(o, 'Hello world')
     return_value = f.await
     
     assert_equal 'Hello', buf
@@ -44,10 +44,10 @@ class AgentTest < MiniTest::Test
   def test_write_read_to_eof_limited_buffer
     i, o = IO.pipe
     buf = +''
-    f = spin { @agent.read(i, buf, 5, true) }
-    @agent.write(o, 'Hello')
+    f = spin { @backend.read(i, buf, 5, true) }
+    @backend.write(o, 'Hello')
     snooze
-    @agent.write(o, ' world')
+    @backend.write(o, ' world')
     snooze
     o.close
     return_value = f.await
@@ -59,10 +59,10 @@ class AgentTest < MiniTest::Test
   def test_write_read_to_eof
     i, o = IO.pipe
     buf = +''
-    f = spin { @agent.read(i, buf, 10**6, true) }
-    @agent.write(o, 'Hello')
+    f = spin { @backend.read(i, buf, 10**6, true) }
+    @backend.write(o, 'Hello')
     snooze
-    @agent.write(o, ' world')
+    @backend.write(o, ' world')
     snooze
     o.close
     return_value = f.await
@@ -73,11 +73,11 @@ class AgentTest < MiniTest::Test
 
   def test_waitpid
     pid = fork do
-      @agent.post_fork
+      @backend.post_fork
       exit(42)
     end
     
-    result = @agent.waitpid(pid)
+    result = @backend.waitpid(pid)
     assert_equal [pid, 42], result
   end
 
@@ -87,7 +87,7 @@ class AgentTest < MiniTest::Test
     buf = []
     spin do
       buf << :ready
-      @agent.read_loop(i) { |d| buf << d }
+      @backend.read_loop(i) { |d| buf << d }
       buf << :done
     end
 
@@ -107,7 +107,7 @@ class AgentTest < MiniTest::Test
 
     clients = []
     server_fiber = spin do
-      @agent.accept_loop(server) { |c| clients << c }
+      @backend.accept_loop(server) { |c| clients << c }
     end
 
     c1 = TCPSocket.new('127.0.0.1', 1234)

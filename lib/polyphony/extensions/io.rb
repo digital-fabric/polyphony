@@ -99,7 +99,7 @@ class ::IO
   alias_method :orig_read, :read
   def read(len = nil)
     @read_buffer ||= +''
-    result = Thread.current.agent.read(self, @read_buffer, len, true)
+    result = Thread.current.backend.read(self, @read_buffer, len, true)
     return nil unless result
 
     already_read = @read_buffer
@@ -110,7 +110,7 @@ class ::IO
   alias_method :orig_readpartial, :read
   def readpartial(len, str = nil)
     @read_buffer ||= +''
-    result = Thread.current.agent.read(self, @read_buffer, len, false)
+    result = Thread.current.backend.read(self, @read_buffer, len, false)
     raise EOFError unless result
 
     if str
@@ -124,12 +124,12 @@ class ::IO
 
   alias_method :orig_write, :write
   def write(str, *args)
-    Thread.current.agent.write(self, str, *args)
+    Thread.current.backend.write(self, str, *args)
   end
 
   alias_method :orig_write_chevron, :<<
   def <<(str)
-    Thread.current.agent.write(self, str)
+    Thread.current.backend.write(self, str)
     self
   end
 
@@ -203,7 +203,7 @@ class ::IO
   end
 
   def read_loop(&block)
-    Thread.current.agent.read_loop(self, &block)
+    Thread.current.backend.read_loop(self, &block)
   end
 
   # alias_method :orig_read, :read

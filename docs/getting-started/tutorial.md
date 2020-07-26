@@ -123,7 +123,7 @@ suspend # The main fiber suspends, waiting for all other work to finish
   sleep 1 # The sleeper fiber goes to sleep
     Gyro::Timer.new(1, 0).await # A timer event watcher is setup and yields
       Thread.current.switch_fiber # Polyphony looks for other runnable fibers
-        Thread.current.agent.poll # With no work left, the event loop is ran
+        Thread.current.backend.poll # With no work left, the event loop is ran
           fiber.schedule # The timer event fires, scheduling the sleeper fiber
   # <= The sleep method returns
   puts "Woke up"

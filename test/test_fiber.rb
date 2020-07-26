@@ -352,7 +352,7 @@ class FiberTest < MiniTest::Test
     result = []
     f = Fiber.current.spin do
       result << :start
-      result << Thread.current.agent.sleep(1)
+      result << Thread.current.backend.sleep(1)
     end
     snooze
     f.interrupt
@@ -641,7 +641,7 @@ class FiberTest < MiniTest::Test
       end
     end
     sleep 0.1
-    f = spin { Thread.current.agent.waitpid(pid) }
+    f = spin { Thread.current.backend.waitpid(pid) }
     o.close
     Process.kill('INT', pid)
     f.await
@@ -663,7 +663,7 @@ class FiberTest < MiniTest::Test
       end
     end
     sleep 0.2
-    f = spin { Thread.current.agent.waitpid(pid) }
+    f = spin { Thread.current.backend.waitpid(pid) }
     o.close
     Process.kill('TERM', pid)
     f.await
@@ -690,7 +690,7 @@ class FiberTest < MiniTest::Test
       sleep 0.2
       Process.kill('TERM', pid)
     end
-    Thread.current.agent.waitpid(pid)
+    Thread.current.backend.waitpid(pid)
     klass = i.read
     i.close
     assert_equal 'Polyphony::Terminate', klass

@@ -2,7 +2,7 @@
 
 void Init_Fiber();
 void Init_Polyphony();
-void Init_LibevAgent();
+void Init_LibevBackend();
 void Init_Queue();
 void Init_Event();
 void Init_Thread();
@@ -12,7 +12,7 @@ void Init_polyphony_ext() {
   ev_set_allocator(xrealloc);
 
   Init_Polyphony();
-  Init_LibevAgent();
+  Init_LibevBackend();
   Init_Queue();
   Init_Event();
 

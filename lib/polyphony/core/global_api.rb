@@ -50,7 +50,7 @@ module Polyphony
       next_time = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC) + interval
       loop do
         now = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
-        Thread.current.agent.sleep(next_time - now)
+        Thread.current.backend.sleep(next_time - now)
         yield
         loop do
           next_time += interval
@@ -98,14 +98,14 @@ module Polyphony
     def sleep(duration = nil)
       return sleep_forever unless duration
 
-      Thread.current.agent.sleep duration
+      Thread.current.backend.sleep duration
     end
 
     def sleep_forever
-      Thread.current.agent.ref
+      Thread.current.backend.ref
       loop { sleep 60 }
     ensure
-      Thread.current.agent.unref
+      Thread.current.backend.unref
     end
 
     def throttled_loop(rate, count: nil, &block)

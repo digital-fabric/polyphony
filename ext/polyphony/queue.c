@@ -80,13 +80,13 @@ VALUE Queue_shift(VALUE self) {
 
   VALUE fiber = rb_fiber_current();
   VALUE thread = rb_thread_current();
-  VALUE agent = rb_ivar_get(thread, ID_ivar_agent);
+  VALUE backend = rb_ivar_get(thread, ID_ivar_backend);
 
   while (1) {
     ring_buffer_push(&queue->shift_queue, fiber);
     if (queue->values.count > 0) Fiber_make_runnable(fiber, Qnil);
     
-    VALUE switchpoint_result = __AGENT__.wait_event(agent, Qnil);
+    VALUE switchpoint_result = __BACKEND__.wait_event(backend, Qnil);
     ring_buffer_delete(&queue->shift_queue, fiber);
 
     if (RTEST(rb_obj_is_kind_of(switchpoint_result, rb_eException)))

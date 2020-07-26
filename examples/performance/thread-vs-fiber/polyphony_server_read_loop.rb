@@ -37,7 +37,7 @@ spin do
   server = TCPServer.open('0.0.0.0', 1234)
   puts "listening on port 1234"
 
-  Thread.current.agent.accept_loop(server) do |client|
+  Thread.current.backend.accept_loop(server) do |client|
     spin { handle_client(client) }
   end
   # loop do

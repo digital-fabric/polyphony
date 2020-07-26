@@ -23,7 +23,7 @@ class SignalTrapTest < Minitest::Test
     sleep 0.01
     o.close
     Process.kill('INT', pid)
-    Thread.current.agent.waitpid(pid)
+    Thread.current.backend.waitpid(pid)
     buffer = i.read
     assert_equal "3-interrupt\n", buffer
   end
@@ -51,7 +51,7 @@ class SignalTrapTest < Minitest::Test
     sleep 0.02
     o.close
     Process.kill('INT', pid)
-    Thread.current.agent.waitpid(pid)
+    Thread.current.backend.waitpid(pid)
     buffer = i.read
     assert_equal "3 - interrupted\n2 - terminated\n1 - terminated\n", buffer
   end
@@ -69,7 +69,7 @@ class SignalTrapTest < Minitest::Test
     o.close
     sleep 0.1
     Process.kill('INT', pid)
-    Thread.current.agent.waitpid(pid)
+    Thread.current.backend.waitpid(pid)
     buffer = i.read
     assert_equal "3-interrupt\n", buffer
   end

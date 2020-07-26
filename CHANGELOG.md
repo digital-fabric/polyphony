@@ -1,3 +1,7 @@
+* Rename `Agent` to `Backend`
+* Implement `Polyphony::ConditionVariable`
+* Fix Kernel.system
+
 ## 0.44.0 2020-07-25
 
 * Fix reentrant `ResourcePool` (#38)

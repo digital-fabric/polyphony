@@ -55,7 +55,7 @@ class IOTest < MiniTest::Test
         results << result
         case result
         when :wait_readable
-          Thread.current.agent.wait_io(i, false)
+          Thread.current.backend.wait_io(i, false)
         else
           break result
         end

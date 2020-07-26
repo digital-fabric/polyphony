@@ -57,7 +57,7 @@ module ::Process
   class << self
     alias_method :orig_detach, :detach
     def detach(pid)
-      fiber = spin { Thread.current.agent.waitpid(pid) }
+      fiber = spin { Thread.current.backend.waitpid(pid) }
       fiber.define_singleton_method(:pid) { pid }
       fiber
     end
@@ -165,10 +165,10 @@ module ::Kernel
     end
 
     # The signal trap can be invoked at any time, including while the system
-    # agent is blocking while polling for events. In order to deal with this
+    # backend is blocking while polling for events. In order to deal with this
     # correctly, we spin a fiber that will run the signal handler code, then
     # call break_out_of_ev_loop, which will put the fiber at the front of the
-    # run queue, then wake up the system agent.
+    # run queue, then wake up the backend.
     #
     # If the command argument is an exception class however, it will be raised
     # directly in the context of the main fiber.

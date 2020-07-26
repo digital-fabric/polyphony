@@ -1,11 +1,12 @@
-- Adapter for Pry, or maybe just an adapter for readline
-- Rename Agent to Backend
 - Review all code
   - Cleanup C code
   - Cleanup Ruby code (use Rubocop)
   - Cleanup and annotate examples (and remove all the examples used for
     debugging). Focus on examples that serve as "how-to".
 
+0.45
+
+- Adapter for Pry, or maybe just an adapter for readline
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
     test fails
@@ -118,7 +119,7 @@
   - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
 
 
-## 0.45
+## 0.46
 
 ### Some more API work, more docs
 
@@ -131,13 +132,13 @@
   - proceed from there
 
 
-## 0.46
+## 0.47
 
 ### Sinatra / Sidekiq
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.47
+## 0.48
 
 ### Testing && Docs
 
@@ -149,7 +150,7 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.48 DNS
+## 0.49 DNS
 
 ### DNS client
 

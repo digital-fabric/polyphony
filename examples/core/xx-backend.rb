@@ -27,17 +27,17 @@ class Test
   
   def test_file
     f = File.open(__FILE__, 'r')
-    puts Thread.current.agent.read(f, +'', 10000, true)
+    puts Thread.current.backend.read(f, +'', 10000, true)
     
-    Thread.current.agent.write(STDOUT, "Write something: ")
+    Thread.current.backend.write(STDOUT, "Write something: ")
     str = +''
-    Thread.current.agent.read(STDIN, str, 5, false)
+    Thread.current.backend.read(STDIN, str, 5, false)
     puts str
   end
   
   def test_fork
     pid = fork do
-      Thread.current.agent.post_fork
+      Thread.current.backend.post_fork
       puts 'child going to sleep'
       sleep 1
       puts 'child done sleeping'
@@ -45,7 +45,7 @@ class Test
     end
     
     puts "Waiting for pid #{pid}"
-    result = Thread.current.agent.waitpid(pid)
+    result = Thread.current.backend.waitpid(pid)
     puts "Done waiting"
     p result
   end

@@ -18,13 +18,13 @@ end
 # Socket overrides (eventually rewritten in C)
 class ::Socket
   def accept
-    Thread.current.agent.accept(self)
+    Thread.current.backend.accept(self)
   end
 
   NO_EXCEPTION = { exception: false }.freeze
 
   def connect(remotesockaddr)
-    Thread.current.agent.connect(self, remotesockaddr.ip_address, remotesockaddr.ip_port)
+    Thread.current.backend.connect(self, remotesockaddr.ip_address, remotesockaddr.ip_port)
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
@@ -33,7 +33,7 @@ class ::Socket
       result = recv_nonblock(maxlen, flags, outbuf, **NO_EXCEPTION)
       case result
       when nil then raise IOError
-      when :wait_readable then Thread.current.agent.wait_io(self, false)
+      when :wait_readable then Thread.current.backend.wait_io(self, false)
       else
         return result
       end
@@ -46,7 +46,7 @@ class ::Socket
       result = recvfrom_nonblock(maxlen, flags, @read_buffer, **NO_EXCEPTION)
       case result
       when nil then raise IOError
-      when :wait_readable then Thread.current.agent.wait_io(self, false)
+      when :wait_readable then Thread.current.backend.wait_io(self, false)
       else
         return result
       end

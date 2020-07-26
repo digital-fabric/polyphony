@@ -64,13 +64,13 @@ VALUE Event_await(VALUE self) {
   if (event->waiting_fiber != Qnil)
     rb_raise(rb_eRuntimeError, "Event is already awaited by another fiber");
 
-  VALUE agent = rb_ivar_get(rb_thread_current(), ID_ivar_agent);
+  VALUE backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
   event->waiting_fiber = rb_fiber_current();
-  VALUE switchpoint_result = __AGENT__.wait_event(agent, Qnil);
+  VALUE switchpoint_result = __BACKEND__.wait_event(backend, Qnil);
   event->waiting_fiber = Qnil;
 
   TEST_RESUME_EXCEPTION(switchpoint_result);
-  RB_GC_GUARD(agent);
+  RB_GC_GUARD(backend);
   RB_GC_GUARD(switchpoint_result);
 
   return switchpoint_result;

@@ -12,7 +12,7 @@ module Polyphony
     def call
       now = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
       delta = @next_time - now
-      Thread.current.agent.sleep(delta) if delta > 0
+      Thread.current.backend.sleep(delta) if delta > 0
       yield self
 
       loop do
