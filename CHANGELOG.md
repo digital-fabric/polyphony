@@ -1,3 +1,6 @@
+## 0.45.0
+
+* Cleanup code
 * Rename `Agent` to `Backend`
 * Implement `Polyphony::ConditionVariable`
 * Fix Kernel.system

@@ -1,13 +1,15 @@
+0.45
+
 - Review all code
   - Cleanup C code
   - Cleanup and annotate examples (and remove all the examples used for
     debugging). Focus on examples that serve as "how-to".
 
-0.44.1
+0.45.1
 
 - Adapter for Pry and IRB (Which fixes #5 and #6)
 
-0.45.0
+0.46.0
 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
@@ -121,7 +123,7 @@
   - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
 
 
-## 0.46
+## 0.47
 
 ### Some more API work, more docs
 
@@ -134,13 +136,13 @@
   - proceed from there
 
 
-## 0.47
+## 0.48
 
 ### Sinatra / Sidekiq
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
 
-## 0.48
+## 0.49
 
 ### Testing && Docs
 
@@ -152,7 +154,7 @@
   - `IO.foreach`
   - `Process.waitpid`
 
-## 0.49 DNS
+## 0.50 DNS
 
 ### DNS client
 
