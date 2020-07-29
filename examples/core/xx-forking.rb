@@ -20,5 +20,5 @@ end
 puts "got child pid #{pid}"
 
 puts 'parent waiting for child'
-Gyro::Child.new(pid).await
+Thread.current.backend.waitpid(pid)
 puts 'parent done waiting'

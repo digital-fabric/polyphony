@@ -3,8 +3,10 @@
 require 'bundler/setup'
 require 'polyphony'
 
-class GenServer
-  def self.start(receiver, *args)
+module GenServer
+  module_function
+
+  def start(receiver, *args)
     fiber = spin do
       state = receiver.initial_state(*args)
       loop do
@@ -14,11 +16,10 @@ class GenServer
       end
     end
     build_api(fiber, receiver)
-    snooze
     fiber
   end
 
-  def self.build_api(fiber, receiver)
+  def build_api(fiber, receiver)
     receiver.methods(false).each do |m|
       if m =~ /!$/
         fiber.define_singleton_method(m) do |*args|
@@ -32,7 +33,7 @@ class GenServer
     end
   end
 
-  def self.cast(process, method, *args)
+  def cast(process, method, *args)
     process << {
       from:   Fiber.current,
       method: method,
@@ -40,7 +41,7 @@ class GenServer
     }
   end
 
-  def self.call(process, method, *args)
+  def call(process, method, *args)
     process << {
       from:   Fiber.current,
       method: method,
@@ -50,21 +51,27 @@ class GenServer
   end
 end
 
+# In a generic server the state is not held in an instance variable but rather
+# passed as the first parameter to method calls. The return value of each method
+# is an array consisting of the result and the potentially mutated state.
 module Map
-  def self.initial_state(hash = {})
+  module_function
+
+  def initial_state(hash = {})
     hash
   end
 
-  def self.get(state, key)
+  def get(state, key)
     [state[key], state]
   end
 
-  def self.put!(state, key, value)
+  def put!(state, key, value)
     state[key] = value
     [:noreply, state]
   end
 end
 
+# start server with initial state
 map_server = GenServer.start(Map, {foo: :bar})
 
 puts 'getting value from map server'

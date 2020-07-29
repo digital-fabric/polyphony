@@ -8,6 +8,12 @@
 0.45.1
 
 - Adapter for Pry and IRB (Which fixes #5 and #6)
+- Redesign signal handling - the current mechanism is problematic in that it
+  does not address signals that do not kill, for instance HUP or USR1.
+- Improve `#supervise`. It does not work as advertised, and seems to exhibit an
+  inconsistent behaviour (see supervisor example).
+- Fix backtrace for `Timeout.timeout` API (see timeout example).
+- Check why worker-thread example doesn't work.
 
 0.46.0
 

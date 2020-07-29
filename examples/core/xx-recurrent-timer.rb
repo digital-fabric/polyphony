@@ -3,7 +3,7 @@
 require 'bundler/setup'
 require 'polyphony'
 
-move_on_after(3) do
+move_on_after(3.1) do
   puts 'Start...'
   every(1) do
     puts Time.now

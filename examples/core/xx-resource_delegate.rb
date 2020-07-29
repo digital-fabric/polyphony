@@ -10,7 +10,7 @@ class Number
 
   def greet(other)
     puts "You are number #{other}, I am number #{@id}"
-    sleep(0.05 + rand * 0.2)
+    sleep rand(0.2..0.3)
   end
 end
 
@@ -25,7 +25,6 @@ def meet(number)
   end
 end
 
-3.times { |x| spin { meet(x) } }
+(4..10).each { |x| spin { meet(x) } }
 
-t0 = Time.now
-every(10) { puts "uptime: #{Time.now - t0}" }
+sleep 1

@@ -8,7 +8,7 @@ Exception.__disable_sanitized_backtrace__ = true
 supervisor = spin do
   puts "parent pid #{Process.pid}"
 
-  Polyphony::ProcessSupervisor.supervise do
+  Polyphony.watch_process do
     puts "child pid #{Process.pid}"
     puts "go to sleep"
     sleep 5
@@ -22,9 +22,12 @@ supervisor = spin do
 end
 
 begin
+  spin do
+    sleep 2.5
+    Process.kill('TERM', Process.pid)
+  end
   supervisor.await
-rescue Interrupt
-  exit!
-  # supervisor.terminate
-  # supervisor.await
+rescue SystemExit
+  supervisor.terminate
+  supervisor.await
 end

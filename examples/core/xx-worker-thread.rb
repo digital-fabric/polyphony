@@ -5,9 +5,9 @@ require 'polyphony'
 
 def do_work(client)
   result = yield
-  client.schedule(result)
+  client << result
 rescue Exception => e
-  client.schedule(e)
+  client << e
 end
 
 $worker = Thread.new do

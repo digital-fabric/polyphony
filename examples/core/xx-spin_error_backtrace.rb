@@ -9,7 +9,7 @@ end
 
 def deferred_error(t)
   puts "deferred_error"
-  spin { de2(t) }
+  spin { de2(t) }.await
 end
 
 def de2(t)

@@ -9,10 +9,12 @@ pong = spin_loop do
   ping << 'pong'
 end
 
-ping = spin_loop do
-  pong << ['ping', Fiber.current]
-  msg = receive
-  puts msg
+ping = spin do
+  3.times do
+    pong << ['ping', Fiber.current]
+    msg = receive
+    puts msg
+  end
 end
 
-suspend
+ping.await
