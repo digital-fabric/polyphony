@@ -13,8 +13,9 @@ class ::Socket
 
   NO_EXCEPTION = { exception: false }.freeze
 
-  def connect(remotesockaddr)
-    Thread.current.backend.connect(self, remotesockaddr.ip_address, remotesockaddr.ip_port)
+  def connect(addr)
+    addr = Addrinfo.new(addr) if addr.is_a?(String)
+    Thread.current.backend.connect(self, addr.ip_address, addr.ip_port)
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
