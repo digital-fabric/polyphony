@@ -2,7 +2,7 @@
 
 require 'bundler/setup'
 require 'polyphony/adapters/sequel'
-require 'polyphony/adapters/mysql2'
+require 'polyphony/adapters/postgres'
 
 time_printer = spin do
   last = Time.now

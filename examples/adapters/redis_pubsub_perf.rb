@@ -6,7 +6,7 @@ require 'json'
 
 X_SESSIONS = 1000
 X_NODES = 10_000
-X_SUBSCRIPTIONS_PER_SESSION = 100
+X_SUBSCRIPTIONS_PER_SESSION = 1000
 
 $sessions = []
 X_SESSIONS.times do
@@ -17,8 +17,11 @@ X_SESSIONS.times do
   }
 end
 
+REDIS_HOST = ENV['REDIS_HOST'] || 'localhost'
+p redis_host: REDIS_HOST
+
 spin do
-  redis = Redis.new
+  redis = Redis.new(host: REDIS_HOST)
   redis.subscribe('events') do |on|
     on.message do |_, message|
       distribute_event(JSON.parse(message, symbolize_names: true))
@@ -30,18 +33,18 @@ $update_count = 0
 
 def distribute_event(event)
   $update_count += 1
-  # t0 = Time.now
+  t0 = Time.now
   count = 0
   $sessions.each do |s|
     count += 1 if s[:subscriptions].include?(event[:path])
   end
-  # elapsed = Time.now - t0
-  # rate = X_SESSIONS / elapsed
-  # puts "elapsed: #{elapsed} (#{rate}/s)" if $update_count % 100 == 0
+  elapsed = Time.now - t0
+  rate = X_SESSIONS / elapsed
+  puts "elapsed: #{elapsed} (#{rate}/s)" if $update_count % 100 == 0
 end
 
 spin do
-  redis = Redis.new
+  redis = Redis.new(host: REDIS_HOST)
   throttled_loop(1000) do
     redis.publish('events', { path: "node#{rand(X_NODES)}" }.to_json)
   end
@@ -60,7 +63,7 @@ spin do
   end
 end
 
-trap(:int) do
+trap('SIGINT') do
   puts 'bye...'
   exit!
 end

@@ -3,7 +3,9 @@
 require 'bundler/setup'
 require 'polyphony/adapters/redis'
 
-redis = Redis.new
+::Exception.__disable_sanitized_backtrace__ = true
+
+redis = Redis.new(host: ENV['REDIS_HOST'] || 'localhost')
 
 X = 10
 
