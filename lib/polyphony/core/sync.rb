@@ -8,9 +8,13 @@ module Polyphony
       @store << :token
     end
 
-    def synchronize
+    def synchronize(&block)
       return yield if @holding_fiber == Fiber.current
 
+      synchronize_not_holding(&block)
+    end
+
+    def synchronize_not_holding
       begin
         @token = @store.shift
         @holding_fiber = Fiber.current
