@@ -17,7 +17,7 @@ begin
         scope.when_cancelled do
           client.write "Disconnecting due to inactivity\n"
         end
-        while (data = client.readpartial(8192))
+        client.read_loop do |data|
           scope.reset_timeout
           client.write "You said: #{data}"
         end

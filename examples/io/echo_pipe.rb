@@ -11,6 +11,6 @@ spin do
   o.close
 end
 
-while (data = i.readpartial(8192))
+i.read_loop do |data|
   STDOUT << "You said: #{data}"
 end

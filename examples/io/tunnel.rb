@@ -3,6 +3,11 @@
 require 'bundler/setup'
 require 'polyphony'
 
+if ARGV.size < 2
+  puts "Usage: ruby examples/tunnel.rb <port1> <port2>"
+  exit
+end
+
 Ports = ARGV[0..1]
 EndPoints = []
 
@@ -24,7 +29,7 @@ def endpoint_loop(idx, peer_idx)
     conn.binmode
     EndPoints[idx] = conn
     log "Client connected on port #{port} (#{conn.remote_address.inspect})"
-    while data = conn.readpartial(8192)
+    conn.read_loop do |data|
       peer = EndPoints[peer_idx]
       if peer
         peer << data

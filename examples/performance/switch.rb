@@ -13,3 +13,4 @@ t0 = Time.now
 X.times { f.transfer }
 dt = Time.now - t0
 puts "#{X / dt.to_f}/s"
+puts fs.size
