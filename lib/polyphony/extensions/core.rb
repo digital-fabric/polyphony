@@ -141,12 +141,7 @@ module ::Kernel
   end
 
   def pipe_to_eof(src, dest)
-    loop do
-      data = src.readpartial(8192)
-      dest << data
-    rescue EOFError
-      break
-    end
+    src.read_loop { |data| dest << data }
   end
 
   alias_method :orig_trap, :trap

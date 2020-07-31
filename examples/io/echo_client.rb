@@ -15,7 +15,7 @@ end
 
 reader = spin do
   puts 'received from echo server:'
-  while (data = socket.readpartial(8192))
+  socket.read_loop do |data|
     STDOUT << data
   end
 end

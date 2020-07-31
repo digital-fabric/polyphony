@@ -11,11 +11,7 @@ def handle_client(client)
       headers = "Content-Length: #{data.bytesize}\r\n"
       client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
     end
-    loop do
-      while data = client.readpartial(8192) rescue nil
-        parser << data
-      end
-    end
+    client.read_loop { |data| parser << data }
     client.close
   end
 end

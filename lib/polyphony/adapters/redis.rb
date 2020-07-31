@@ -56,7 +56,7 @@ class Polyphony::RedisDriver
     reply = @reader.gets
     return reply if reply
 
-    while (data = @connection.readpartial(8192))
+    @connection.read_loop do |data|
       @reader.feed(data)
       reply = @reader.gets
       return reply unless reply == false
