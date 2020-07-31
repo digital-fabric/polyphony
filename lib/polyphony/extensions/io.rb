@@ -163,19 +163,31 @@ class ::IO
   # def putc(obj)
   # end
 
+  LINEFEED = "\n"
+  LINEFEED_RE = /\n$/.freeze
+
   alias_method :orig_puts, :puts
   def puts(*args)
     if args.empty?
-      write "\n"
+      write LINEFEED
       return
     end
 
-    strs = args.each_with_object([]) do |a, m|
-      a = a.to_s
-      m << a
-      m << "\n" unless a =~ /\n$/
+    idx = 0
+    while idx < args.size
+      arg = args[idx]
+      unless arg.is_a?(String)
+        args[idx] = arg = arg.to_s
+      end
+      unless arg =~ LINEFEED_RE
+        args.insert(idx + 1, LINEFEED)
+        idx += 2
+      else
+        idx += 1
+      end
     end
-    write(*strs)
+      
+    write(*args)
     nil
   end
 

@@ -246,4 +246,20 @@ class IOClassMethodsTest < MiniTest::Test
     assert_equal 1e6, s.bytesize
     assert s == IO.orig_read(fn)
   end
+
+  def pipe_read
+    i, o = IO.pipe
+    yield o
+    o.close
+    i.read
+  ensure
+    i.close
+  end
+
+  def test_puts
+    assert_equal "foo\n", pipe_read { |f| f.puts 'foo' }
+    assert_equal "foo\n", pipe_read { |f| f.puts "foo\n" }
+    assert_equal "foo\nbar\n", pipe_read { |f| f.puts 'foo', 'bar' }
+    assert_equal "foo\nbar\n", pipe_read { |f| f.puts 'foo', "bar\n" }
+  end
 end
