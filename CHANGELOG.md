@@ -1,3 +1,13 @@
+## 0.45.1
+
+* Fix Net::HTTP compatibility
+* Fix fs adapter
+* Improve performance of IO#puts
+* Mutex#synchronize
+* Fix Socket#connect
+* Cleanup code
+* Improve support for Ruby 3 keyword args
+
 ## 0.45.0
 
 * Cleanup code

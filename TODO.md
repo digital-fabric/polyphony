@@ -1,10 +1,3 @@
-0.45
-
-- Review all code
-  - Cleanup C code
-  - Cleanup and annotate examples (and remove all the examples used for
-    debugging). Focus on examples that serve as "how-to".
-
 0.45.1
 
 - Adapter for Pry and IRB (Which fixes #5 and #6)
