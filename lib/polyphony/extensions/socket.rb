@@ -119,6 +119,14 @@ class ::TCPSocket
   def reuse_port
     setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_REUSEPORT, 1)
   end
+
+  def read_nonblock(len, str = nil, exception: true)
+    @io.read_nonblock(len, str, exception: exception)
+  end
+
+  def write_nonblock(buf, exception: true)
+    @io.write_nonblock(buf, exception: exception)
+  end
 end
 
 # Override stock TCPServer code by encapsulating a Socket instance.

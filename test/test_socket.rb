@@ -32,3 +32,20 @@ class SocketTest < MiniTest::Test
     server&.close
   end
 end
+
+class HTTPClientTest < MiniTest::Test
+  require 'httparty'
+  require 'json'
+
+  def test_http
+    res = HTTParty.get('http://worldtimeapi.org/api/timezone/Europe/Paris')
+    response = JSON.load(res.body)
+    assert_equal "CEST", response['abbreviation']
+  end
+
+  def test_https
+    res = HTTParty.get('https://worldtimeapi.org/api/timezone/Europe/Paris')
+    response = JSON.load(res.body)
+    assert_equal "CEST", response['abbreviation']
+  end
+end

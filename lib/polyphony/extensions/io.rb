@@ -229,4 +229,28 @@ class ::IO
   #   end
   #   outbuf
   # end
+
+  def wait_readable(timeout = nil)
+    if timeout
+      move_on_after(timeout) do
+        Thread.current.backend.wait_io(self, false)
+        self
+      end
+    else
+      Thread.current.backend.wait_io(self, false)
+      self
+    end
+  end
+
+  def wait_writable(timeout = nil)
+    if timeout
+      move_on_after(timeout) do
+        Thread.current.backend.wait_io(self, true)
+        self
+      end
+    else
+      Thread.current.backend.wait_io(self, true)
+      self
+    end
+  end
 end
