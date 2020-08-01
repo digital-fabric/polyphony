@@ -24,7 +24,6 @@
   return RAISE_EXCEPTION(ret); \
 }
 
-
 extern backend_interface_t backend_interface;
 #define __BACKEND__ (backend_interface)
 
@@ -67,12 +66,6 @@ enum {
   FIBER_STATE_SCHEDULED     = 2
 };
 
-// watcher flags
-enum {
-  // a watcher's active field will be set to this after fork
-  GYRO_WATCHER_POST_FORK = 0xFF
-};
-
 VALUE Fiber_auto_watcher(VALUE self);
 void Fiber_make_runnable(VALUE fiber, VALUE value);
 
@@ -85,13 +78,7 @@ VALUE Queue_delete(VALUE self, VALUE value);
 long Queue_len(VALUE self);
 void Queue_trace(VALUE self);
 
-VALUE Polyphony_snooze(VALUE self);
-
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_switch_fiber(VALUE thread);
-
-int io_setstrbuf(VALUE *str, long len);
-void io_set_read_length(VALUE str, long n, int shrinkable);
-VALUE io_enc_str(VALUE str, rb_io_t *fptr);
 
 #endif /* POLYPHONY_H */

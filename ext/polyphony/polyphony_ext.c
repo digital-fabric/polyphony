@@ -12,12 +12,11 @@ void Init_polyphony_ext() {
   ev_set_allocator(xrealloc);
 
   Init_Polyphony();
+
   Init_LibevBackend();
   Init_Queue();
   Init_Event();
-
   Init_Fiber();
   Init_Thread();
-
   Init_Tracing();
 }

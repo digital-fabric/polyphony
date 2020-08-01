@@ -12,7 +12,7 @@ ID ID_stop;
 
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
   VALUE queue = rb_funcall(cQueue, ID_new, 0);
-  
+
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
   rb_ivar_set(self, ID_run_queue, queue);
 
@@ -133,8 +133,7 @@ VALUE Thread_switch_fiber(VALUE self) {
     next_fiber = Queue_shift_no_wait(queue);
     if (next_fiber != Qnil) {
       if (backend_was_polled == 0 && ref_count > 0) {
-        // this mechanism prevents event starvation in case the run queue never
-        // empties
+        // this prevents event starvation in case the run queue never empties
         __BACKEND__.poll(backend, Qtrue, current_fiber, queue);
       }
       break;
@@ -154,7 +153,7 @@ VALUE Thread_switch_fiber(VALUE self) {
   rb_ivar_set(next_fiber, ID_runnable, Qnil);
   RB_GC_GUARD(next_fiber);
   RB_GC_GUARD(value);
-  return (next_fiber == current_fiber) ? 
+  return (next_fiber == current_fiber) ?
     value : rb_funcall(next_fiber, ID_transfer, 1, value);
 }
 

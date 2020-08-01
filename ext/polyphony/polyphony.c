@@ -9,7 +9,6 @@ ID ID_each;
 ID ID_inspect;
 ID ID_invoke;
 ID ID_new;
-ID ID_raise;
 ID ID_ivar_running;
 ID ID_ivar_thread;
 ID ID_runnable;
@@ -65,7 +64,6 @@ void Init_Polyphony() {
   ID_ivar_running   = rb_intern("@running");
   ID_ivar_thread    = rb_intern("@thread");
   ID_new            = rb_intern("new");
-  ID_raise          = rb_intern("raise");
   ID_runnable       = rb_intern("runnable");
   ID_runnable_value = rb_intern("runnable_value");
   ID_signal         = rb_intern("signal");

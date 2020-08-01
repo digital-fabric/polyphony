@@ -85,12 +85,11 @@ VALUE Queue_shift(VALUE self) {
   while (1) {
     ring_buffer_push(&queue->shift_queue, fiber);
     if (queue->values.count > 0) Fiber_make_runnable(fiber, Qnil);
-    
+
     VALUE switchpoint_result = __BACKEND__.wait_event(backend, Qnil);
     ring_buffer_delete(&queue->shift_queue, fiber);
 
-    if (RTEST(rb_obj_is_kind_of(switchpoint_result, rb_eException)))
-      return rb_funcall(rb_mKernel, ID_raise, 1, switchpoint_result);
+    TEST_RESUME_EXCEPTION(switchpoint_result);
     RB_GC_GUARD(switchpoint_result);
 
     if (queue->values.count > 0)
@@ -152,7 +151,7 @@ VALUE Queue_flush_waiters(VALUE self, VALUE value) {
   while(1) {
     VALUE fiber = ring_buffer_shift(&queue->shift_queue);
     if (fiber == Qnil) return self;
-    
+
     Fiber_make_runnable(fiber, value);
   }
 }

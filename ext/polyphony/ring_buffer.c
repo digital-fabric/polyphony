@@ -24,7 +24,6 @@ VALUE ring_buffer_shift(ring_buffer *buffer) {
   value = buffer->entries[buffer->head];
   buffer->head = (buffer->head + 1) % buffer->size;
   buffer->count--;
-  // INSPECT(value);
   return value;
 }
 

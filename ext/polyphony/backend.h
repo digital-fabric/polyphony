@@ -7,7 +7,6 @@
 
 // VALUE LibevBackend_accept(VALUE self, VALUE sock);
 // VALUE LibevBackend_accept_loop(VALUE self, VALUE sock);
-// VALUE libev_backend_await(VALUE self);
 // VALUE LibevBackend_connect(VALUE self, VALUE sock, VALUE host, VALUE port);
 // VALUE LibevBackend_finalize(VALUE self);
 // VALUE LibevBackend_post_fork(VALUE self);
