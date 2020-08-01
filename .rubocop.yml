@@ -96,6 +96,7 @@ Metrics/ModuleLength:
 Metrics/ClassLength:
   Exclude:
     - lib/polyphony/http/server/http1.rb
+    - lib/polyphony/extensions/io.rb
     - test/**/*.rb
     - examples/**/*.rb
 

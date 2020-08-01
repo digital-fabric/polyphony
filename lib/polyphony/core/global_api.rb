@@ -113,7 +113,7 @@ module Polyphony
       Thread.current.backend.unref
     end
 
-    def throttled_loop(rate = nil,  **opts, &block)
+    def throttled_loop(rate = nil, **opts, &block)
       throttler = Polyphony::Throttler.new(rate || opts)
       if opts[:count]
         opts[:count].times { |_i| throttler.(&block) }

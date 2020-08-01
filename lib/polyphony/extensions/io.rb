@@ -176,17 +176,15 @@ class ::IO
     idx = 0
     while idx < args.size
       arg = args[idx]
-      unless arg.is_a?(String)
-        args[idx] = arg = arg.to_s
-      end
-      unless arg =~ LINEFEED_RE
+      args[idx] = arg = arg.to_s unless arg.is_a?(String)
+      if arg =~ LINEFEED_RE
+        idx += 1
+      else
         args.insert(idx + 1, LINEFEED)
         idx += 2
-      else
-        idx += 1
       end
     end
-      
+
     write(*args)
     nil
   end
