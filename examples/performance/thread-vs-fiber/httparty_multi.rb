@@ -21,11 +21,10 @@ end
 t0 = Time.now
 results = []
 move_on_after(3) do
-  supervise do |s|
-    10.times do
-      s.spin { get_time(results) }
-    end
+  10.times do
+    spin { get_time(results) }
   end
+  supervise
   puts 'done'
 end
 

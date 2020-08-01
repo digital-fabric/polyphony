@@ -6,7 +6,8 @@ class Fiber
   attr_accessor :next
 end
 
-# This program shows how the performance 
+# This program shows how the performance of Fiber.transfer degrades as the fiber
+# count increases
 
 def run(num_fibers)
   count = 0

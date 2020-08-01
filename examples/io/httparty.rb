@@ -16,23 +16,14 @@ end
 zones = %w{
   Europe/London Europe/Paris Europe/Bucharest America/New_York Asia/Bangkok
 }
-# zones.each do |tzone|
-#   spin do
-#     time = get_time(tzone)
-#     puts "Time in #{tzone}: #{time}"
-#   end
-# end
-
-# suspend
 
 def get_times(zones)
-  Polyphony::Supervisor.new do |s|
-    zones.each do |tzone|
-      s.spin { [tzone, get_time(tzone)] }
-    end
+  fibers = zones.map do |tzone|
+    spin { [tzone, get_time(tzone)] }
   end
+  Fiber.await(*fibers)
 end
 
-get_times(zones).await.each do |tzone, time|
+get_times(zones).each do |tzone, time|
   puts "Time in #{tzone}: #{time}"
 end
