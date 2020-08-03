@@ -1,5 +1,21 @@
 0.45.1
 
+- `Fiber` - improve performance, reduce instance memory footprint
+  - create on demand:
+    - `@children`
+    - `@mailbox`
+    - ``
+    - ``
+    - ``
+
+  - rewrite in C:
+    - `#await`
+    - `#<<`
+    - `#receive`
+    - `#receive_pending`
+
+0.45.2
+
 - Adapter for Pry and IRB (Which fixes #5 and #6)
 - Redesign signal handling - the current mechanism is problematic in that it
   does not address signals that do not kill, for instance HUP or USR1.

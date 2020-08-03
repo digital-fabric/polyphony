@@ -92,8 +92,8 @@ module Polyphony
       Fiber.current.receive
     end
 
-    def receive_pending
-      Fiber.current.receive_pending
+    def receive_all_pending
+      Fiber.current.receive_all_pending
     end
 
     def supervise(*args, &block)

@@ -192,7 +192,7 @@ module Polyphony
       @mailbox.shift
     end
 
-    def receive_pending
+    def receive_all_pending
       @mailbox.shift_all
     end
   end
@@ -225,14 +225,14 @@ module Polyphony
     def await_all_children
       return unless @children && !@children.empty?
 
-      @results = @children.dup
+      results = @children.dup
       @on_child_done = proc do |c, r|
-        @results[c] = r
+        results[c] = r
         schedule if @children.empty?
       end
       suspend
       @on_child_done = nil
-      @results.values
+      results.values
     end
 
     def shutdown_all_children

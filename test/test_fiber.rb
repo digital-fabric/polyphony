@@ -811,20 +811,20 @@ class MailboxTest < MiniTest::Test
     assert_equal ['foo'] * 100, messages
   end
 
-  def test_receive_pending
-    assert_equal [], receive_pending
+  def test_receive_all_pending
+    assert_equal [], receive_all_pending
 
     (1..5).each { |i| Fiber.current << i }
-    assert_equal (1..5).to_a, receive_pending
-    assert_equal [], receive_pending
+    assert_equal (1..5).to_a, receive_all_pending
+    assert_equal [], receive_all_pending
   end
 
-  def test_receive_pending_on_termination
+  def test_receive_all_pending_on_termination
     buffer = []
     worker = spin do
       loop { buffer << receive }
     rescue Polyphony::Terminate
-      receive_pending.each { |r| buffer << r }
+      receive_all_pending.each { |r| buffer << r }
     end
 
     worker << 1
