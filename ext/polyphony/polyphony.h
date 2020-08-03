@@ -72,6 +72,7 @@ void Fiber_make_runnable(VALUE fiber, VALUE value);
 VALUE Queue_push(VALUE self, VALUE value);
 VALUE Queue_unshift(VALUE self, VALUE value);
 VALUE Queue_shift(VALUE self);
+VALUE Queue_shift_all(VALUE self);
 VALUE Queue_shift_no_wait(VALUE self);
 VALUE Queue_clear(VALUE self);
 VALUE Queue_delete(VALUE self, VALUE value);

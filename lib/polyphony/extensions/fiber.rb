@@ -7,20 +7,6 @@ require_relative '../core/exceptions'
 module Polyphony
   # Fiber control API
   module FiberControl
-    def await
-      if @running == false
-        return @result.is_a?(Exception) ? (Kernel.raise @result) : @result
-      end
-
-      fiber = Fiber.current
-      @waiting_fibers ||= {}
-      @waiting_fibers[fiber] = true
-      suspend
-    ensure
-      @waiting_fibers&.delete(fiber)
-    end
-    alias_method :join, :await
-
     def interrupt(value = nil)
       return if @running == false
 
@@ -181,22 +167,6 @@ module Polyphony
     end
   end
 
-  # Messaging functionality
-  module FiberMessaging
-    def <<(value)
-      @mailbox << value
-    end
-    alias_method :send, :<<
-
-    def receive
-      @mailbox.shift
-    end
-
-    def receive_all_pending
-      @mailbox.shift_all
-    end
-  end
-
   # Methods for controlling child fibers
   module ChildFiberControl
     def children
@@ -249,7 +219,6 @@ module Polyphony
       @parent = parent
       @caller = caller
       @block = block
-      @mailbox = Polyphony::Queue.new
       __fiber_trace__(:fiber_create, self)
       schedule
     end
@@ -279,7 +248,6 @@ module Polyphony
     # allows the fiber to be scheduled and to receive messages.
     def setup_raw
       @thread = Thread.current
-      @mailbox = Polyphony::Queue.new
     end
 
     def setup_main_fiber
@@ -288,11 +256,10 @@ module Polyphony
       @thread = Thread.current
       @running = true
       @children&.clear
-      @mailbox = Polyphony::Queue.new
     end
 
     def restart_self(first_value)
-      @mailbox = Polyphony::Queue.new
+      @mailbox = nil
       @when_done_procs = nil
       @waiting_fibers = nil
       run(first_value)
@@ -324,13 +291,10 @@ module Polyphony
     def inform_dependants(result, uncaught_exception)
       @parent&.child_done(self, result)
       @when_done_procs&.each { |p| p.(result) }
-      @waiting_fibers&.each_key do |f|
-        f.schedule(result)
-      end
-      return unless uncaught_exception && !@waiting_fibers
-
+      @waiting_fibers&.each_key { |f| f.schedule(result) }
+      
       # propagate unaught exception to parent
-      @parent&.schedule(result)
+      @parent&.schedule(result) if uncaught_exception && !@waiting_fibers
     end
 
     def when_done(&block)
@@ -344,7 +308,6 @@ end
 class ::Fiber
   prepend Polyphony::FiberControl
   include Polyphony::FiberSupervision
-  include Polyphony::FiberMessaging
   include Polyphony::ChildFiberControl
   include Polyphony::FiberLifeCycle
 

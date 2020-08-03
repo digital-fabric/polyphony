@@ -2,12 +2,9 @@
 
 ID ID_fiber_trace;
 ID ID_ivar_auto_watcher;
-ID ID_trace_ev_loop_enter;
-ID ID_trace_ev_loop_leave;
-ID ID_trace_run;
-ID ID_trace_runnable;
-ID ID_trace_terminate;
-ID ID_trace_wait;
+ID ID_ivar_mailbox;
+ID ID_ivar_result;
+ID ID_ivar_waiting_fibers;
 
 VALUE SYM_dead;
 VALUE SYM_running;
@@ -67,12 +64,72 @@ void Fiber_make_runnable(VALUE fiber, VALUE value) {
   }
 }
 
+VALUE Fiber_await(VALUE self) {
+  VALUE result;
+
+  // we compare with false, since a fiber that has not yet started will have
+  // @running set to nil
+  if (rb_ivar_get(self, ID_ivar_running) == Qfalse) {
+    result = rb_ivar_get(self, ID_ivar_result);
+    TEST_RESUME_EXCEPTION(result);
+    return result;
+  }
+
+  VALUE fiber = rb_fiber_current();
+  VALUE waiting_fibers = rb_ivar_get(self, ID_ivar_waiting_fibers);
+  if (waiting_fibers == Qnil) {
+    waiting_fibers = rb_hash_new();
+    rb_ivar_set(self, ID_ivar_waiting_fibers, waiting_fibers);
+  }
+  rb_hash_aset(waiting_fibers, fiber, Qtrue);
+
+  result = Thread_switch_fiber(rb_thread_current());
+
+  rb_hash_delete(waiting_fibers, fiber);
+  TEST_RESUME_EXCEPTION(result);
+  RB_GC_GUARD(result);
+  return result;
+}
+
+VALUE Fiber_send(VALUE self, VALUE value) {
+  VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
+  if (mailbox == Qnil) {
+    mailbox = rb_funcall(cQueue, ID_new, 0);
+    rb_ivar_set(self, ID_ivar_mailbox, mailbox);
+  }
+  Queue_push(mailbox, value);
+  return self;
+}
+
+VALUE Fiber_receive(VALUE self) {
+  VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
+  if (mailbox == Qnil) {
+    mailbox = rb_funcall(cQueue, ID_new, 0);
+    rb_ivar_set(self, ID_ivar_mailbox, mailbox);
+  }
+  return Queue_shift(mailbox);  
+}
+
+VALUE Fiber_receive_all_pending(VALUE self) {
+  VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
+  return (mailbox == Qnil) ? rb_ary_new() : Queue_shift_all(mailbox);
+}
+
 void Init_Fiber() {
   VALUE cFiber = rb_const_get(rb_cObject, rb_intern("Fiber"));
   rb_define_method(cFiber, "safe_transfer", Fiber_safe_transfer, -1);
   rb_define_method(cFiber, "schedule", Fiber_schedule, -1);
   rb_define_method(cFiber, "state", Fiber_state, 0);
   rb_define_method(cFiber, "auto_watcher", Fiber_auto_watcher, 0);
+
+  rb_define_method(cFiber, "await", Fiber_await, 0);
+  rb_define_method(cFiber, "join", Fiber_await, 0);
+
+  rb_define_method(cFiber, "<<", Fiber_send, 1);
+  rb_define_method(cFiber, "send", Fiber_send, 1);
+
+  rb_define_method(cFiber, "receive", Fiber_receive, 0);
+  rb_define_method(cFiber, "receive_all_pending", Fiber_receive_all_pending, 0);
 
   SYM_dead = ID2SYM(rb_intern("dead"));
   SYM_running = ID2SYM(rb_intern("running"));
@@ -85,6 +142,9 @@ void Init_Fiber() {
 
   ID_fiber_trace          = rb_intern("__fiber_trace__");
   ID_ivar_auto_watcher    = rb_intern("@auto_watcher");
+  ID_ivar_mailbox         = rb_intern("@mailbox");
+  ID_ivar_result          = rb_intern("@result");
+  ID_ivar_waiting_fibers  = rb_intern("@waiting_fibers");
 
   SYM_fiber_create        = ID2SYM(rb_intern("fiber_create"));
   SYM_fiber_ev_loop_enter = ID2SYM(rb_intern("fiber_ev_loop_enter"));
