@@ -1,3 +1,7 @@
+## 0.45.2
+
+* Rewrite `Fiber#<<`, `Fiber#await`, `Fiber#receive` in C
+
 ## 0.45.1
 
 * Fix Net::HTTP compatibility
