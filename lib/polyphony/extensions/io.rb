@@ -90,11 +90,22 @@ class ::IO
   # def each_codepoint
   # end
 
-  # def getbyte
-  # end
+  alias_method :orig_getbyte, :getbyte
+  def getbyte
+    char = getc
+    char ? char.getbyte(0) : nil
+  end
 
-  # def getc
-  # end
+  alias_method :orig_getc, :getc
+  def getc
+    return @read_buffer.slice!(0) if @read_buffer && !@read_buffer.empty?
+    
+    @read_buffer ||= +''
+    Thread.current.backend.read(self, @read_buffer, 8192, false)
+    return @read_buffer.slice!(0) if !@read_buffer.empty?
+
+    nil
+  end
 
   alias_method :orig_read, :read
   def read(len = nil)

@@ -1,5 +1,6 @@
 0.45.2
 
+- Adapter for io/console (what does `IO#raw` do?)
 - Adapter for Pry and IRB (Which fixes #5 and #6)
 - Redesign signal handling - the current mechanism is problematic in that it
   does not address signals that do not kill, for instance HUP or USR1.
