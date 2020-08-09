@@ -103,7 +103,7 @@ module Polyphony
       suspend
       fibers.map(&:result)
     ensure
-      await_select_cleanup(state)
+      await_select_cleanup(state) if state
     end
     alias_method :join, :await
 
