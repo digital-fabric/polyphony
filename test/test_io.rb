@@ -92,6 +92,48 @@ class IOTest < MiniTest::Test
     assert_raises(EOFError) { i.readpartial(1) }    
   end
 
+  def test_getc
+    i, o = IO.pipe
+
+    buf = []
+    f = spin do
+      while (c = i.getc)
+        buf << c
+      end
+    end
+
+    snooze
+    assert_equal [], buf
+
+    o << 'f'
+    snooze
+    o << 'g'
+    o.close
+    f.await
+    assert_equal ['f', 'g'], buf
+  end
+
+  def test_getbyte
+    i, o = IO.pipe
+
+    buf = []
+    f = spin do
+      while (b = i.getbyte)
+        buf << b
+      end
+    end
+
+    snooze
+    assert_equal [], buf
+
+    o << 'f'
+    snooze
+    o << 'g'
+    o.close
+    f.await
+    assert_equal [102, 103], buf
+  end
+
   # see https://github.com/digital-fabric/polyphony/issues/30
   def test_reopened_tempfile
     file = Tempfile.new
