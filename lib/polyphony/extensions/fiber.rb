@@ -314,7 +314,7 @@ class ::Fiber
   extend Polyphony::FiberControlClassMethods
 
   attr_accessor :tag, :thread, :parent
-  attr_reader :result
+  attr_reader :result, :mailbox
 
   def running?
     @running
