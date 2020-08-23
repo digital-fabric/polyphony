@@ -24,9 +24,6 @@ module Polyphony
       def kill_and_await(sig, pid)
         ::Process.kill(sig, pid)
         Thread.current.backend.waitpid(pid)
-      rescue SystemCallError
-        # ignore
-        puts 'SystemCallError in kill_and_await'
       end
     end
   end
