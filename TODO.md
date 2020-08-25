@@ -1,9 +1,21 @@
+(
+  io_uring: some work has been done on an io_uring based scheduler here:
+    https://github.com/dsh0416/evt
+  
+  This can serve as a starting point for doing stuff with io_uring
+)
+
 0.45.2
+
+- Redesign signal handling - the current mechanism is problematic in that it
+  does not address signals that do not kill, for instance HUP or USR1.
+  - Instead of raising the signal on the main fiber, spin a new fiber, schedule
+    it with priority, and then let the any raised error bubble up
+
+0.45.3
 
 - Adapter for io/console (what does `IO#raw` do?)
 - Adapter for Pry and IRB (Which fixes #5 and #6)
-- Redesign signal handling - the current mechanism is problematic in that it
-  does not address signals that do not kill, for instance HUP or USR1.
 - Improve `#supervise`. It does not work as advertised, and seems to exhibit an
   inconsistent behaviour (see supervisor example).
 - Fix backtrace for `Timeout.timeout` API (see timeout example).
