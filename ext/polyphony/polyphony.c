@@ -47,6 +47,13 @@ VALUE Polyphony_trace(VALUE self, VALUE enabled) {
 }
 
 void Init_Polyphony() {
+  
+#if HAVE_LIBURING_H
+  printf("we has liburing\n");
+#else
+  printf("we no has liburing\n");
+#endif
+
   mPolyphony = rb_define_module("Polyphony");
 
   rb_define_singleton_method(mPolyphony, "trace", Polyphony_trace, 1);
