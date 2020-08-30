@@ -8,7 +8,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        ruby: [2.6, 2.7]
+        ruby: [2.6, 2.7, truffleruby-head]
 
     name: >-
       ${{matrix.os}}, ${{matrix.ruby}}
@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
     - uses: actions/checkout@v1
-    - uses: actions/setup-ruby@v1
+    - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{matrix.ruby}}
     - name: Install dependencies
