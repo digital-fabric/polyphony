@@ -1,3 +1,10 @@
+## 0.45.3
+
+* Don't swallow error in `Process#kill_and_await`
+* Add `Fiber#mailbox` attribute reader
+* Fix bug in `Fiber.await`
+* Implement `IO#getc`, `IO#getbyte`
+
 ## 0.45.2
 
 * Rewrite `Fiber#<<`, `Fiber#await`, `Fiber#receive` in C
