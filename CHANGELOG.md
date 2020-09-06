@@ -1,3 +1,7 @@
+## 0.45.4
+
+* Improve signal trapping mechanism
+
 ## 0.45.3
 
 * Don't swallow error in `Process#kill_and_await`
