@@ -165,6 +165,20 @@ module Polyphony
         state[:selected] = true
       end
     end
+
+    # Creates and schedules with priority an out-of-band fiber that runs the
+    # supplied block. If any uncaught exception is raised while the fiber is
+    # running, it will bubble up to the main thread's main fiber, which will
+    # also be scheduled with priority. This method is mainly used trapping
+    # signals (see also the patched `Kernel#trap`)
+    def schedule_priority_oob_fiber(&block)
+      f = Fiber.new do
+        block.call
+      rescue Exception => e
+        Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, e)
+      end
+      Thread.current.break_out_of_ev_loop(f, nil)
+    end
   end
 
   # Methods for controlling child fibers
@@ -173,9 +187,9 @@ module Polyphony
       (@children ||= {}).keys
     end
 
-    def spin(tag = nil, orig_caller = Kernel.caller, &block)
+    def spin(tag = nil, orig_caller = Kernel.caller, do_schedule: true, &block)
       f = Fiber.new { |v| f.run(v) }
-      f.prepare(tag, block, orig_caller, self)
+      f.prepare(tag, block, orig_caller, self, do_schedule: do_schedule)
       (@children ||= {})[f] = true
       f
     end
@@ -213,14 +227,14 @@ module Polyphony
 
   # Fiber life cycle methods
   module FiberLifeCycle
-    def prepare(tag, block, caller, parent)
+    def prepare(tag, block, caller, parent, do_schedule: true)
       @thread = Thread.current
       @tag = tag
       @parent = parent
       @caller = caller
       @block = block
       __fiber_trace__(:fiber_create, self)
-      schedule
+      schedule if do_schedule
     end
 
     def run(first_value)

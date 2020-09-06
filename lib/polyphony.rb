@@ -76,10 +76,10 @@ module Polyphony
     end
 
     def install_terminating_signal_handlers
-      trap('SIGTERM', SystemExit)
+      trap('SIGTERM') { raise SystemExit }
       orig_trap('SIGINT') do
         orig_trap('SIGINT') { exit! }
-        Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, Interrupt.new)
+        Fiber.schedule_priority_oob_fiber { raise Interrupt }
       end
     end
 

@@ -5,11 +5,6 @@
   This can serve as a starting point for doing stuff with io_uring
 )
 
-- Redesign signal handling - the current mechanism is problematic in that it
-  does not address signals that do not kill, for instance HUP or USR1.
-  - Instead of raising the signal on the main fiber, spin a new fiber, schedule
-    it with priority, and then let the any raised error bubble up
-
 0.45.4
 
 - Adapter for io/console (what does `IO#raw` do?)

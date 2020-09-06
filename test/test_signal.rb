@@ -3,18 +3,21 @@
 require_relative 'helper'
 
 class SignalTrapTest < Minitest::Test
+  def test_int_signal
+    Thread.new { sleep 0.001; Process.kill('INT', Process.pid) }
+    assert_raises(Interrupt) { sleep 5 }
+  end
+
+  def test_term_signal
+    Thread.new { sleep 0.001; Process.kill('TERM', Process.pid) }
+    assert_raises(SystemExit) { sleep 5 }
+  end
+
   def test_signal_exception_handling
     i, o = IO.pipe
     pid = Polyphony.fork do
       i.close
-      spin do
-        spin do
-          sleep 5
-        rescue ::Interrupt => e
-          # the signal should be raised only in the main fiber
-          o.puts "1-interrupt"
-        end.await
-      end.await
+      sleep 5
     rescue ::Interrupt => e
       o.puts "3-interrupt"
     ensure

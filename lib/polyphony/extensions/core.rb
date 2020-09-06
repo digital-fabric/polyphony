@@ -149,29 +149,16 @@ module ::Kernel
     return orig_trap(sig, command) if command.is_a? String
 
     block = command if !block && command.respond_to?(:call)
-    exception = signal_exception(block, command)
 
     # The signal trap can be invoked at any time, including while the system
     # backend is blocking while polling for events. In order to deal with this
-    # correctly, we spin a fiber that will run the signal handler code, then
-    # call break_out_of_ev_loop, which will put the fiber at the front of the
-    # run queue, then wake up the backend.
-    #
-    # If the command argument is an exception class however, it will be raised
-    # directly in the context of the main fiber.
+    # correctly, we run the signal handler code in an out-of-band, priority
+    # scheduled fiber, that will pass any uncaught exception (including
+    # SystemExit and Interrupt) to the main thread's main fiber. See also
+    # `Fiber#schedule_priority_oob_fiber`.
     orig_trap(sig) do
-      Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, exception)
+      Fiber.schedule_priority_oob_fiber(&block)
     end
-  end
-end
-
-def signal_exception(block, command)
-  if block
-    Polyphony::Interjection.new(block)
-  elsif command.is_a?(Class)
-    command.new
-  else
-    raise ArgumentError, 'Must supply block or exception or callable object'
   end
 end
 
