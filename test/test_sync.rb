@@ -20,6 +20,27 @@ class MutexTest < MiniTest::Test
     assert_equal ['>> 1', '<< 1', '>> 2', '<< 2', '>> 3', '<< 3'], buf
   end
 
+  def test_mutex_race_condition
+    lock = Polyphony::Mutex.new
+    buf = []
+    f1 = spin do
+      lock.synchronize { buf << 1; snooze; lock.synchronize { buf << 1.1 }; snooze }
+    end
+    f2 = spin do
+      lock.synchronize { buf << 2 }
+    end
+    f3 = spin do
+      lock.synchronize { buf << 3 }
+    end
+
+    snooze
+    f2.terminate
+
+    f3.await
+
+    assert_equal [1, 1.1, 3], buf
+  end
+
   def test_condition_variable
     buf = []
     lock1 = Polyphony::Mutex.new

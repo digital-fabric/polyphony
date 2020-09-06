@@ -16,11 +16,13 @@ module Polyphony
 
     def synchronize_not_holding
       @token = @store.shift
-      @holding_fiber = Fiber.current
-      yield
-    ensure
-      @holding_fiber = nil
-      @store << @token if @token
+      begin
+        @holding_fiber = Fiber.current
+        yield
+      ensure
+        @holding_fiber = nil
+        @store << @token if @token
+      end
     end
 
     def conditional_release
