@@ -46,7 +46,7 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   return stats;
 }
 
-VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize) {
   VALUE runqueue;
   int already_runnable;
 
@@ -55,7 +55,7 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
 
   COND_TRACE(3, SYM_fiber_schedule, fiber, value);
   runqueue = rb_ivar_get(self, ID_ivar_runqueue);
-  Runqueue_push(runqueue, fiber, value, already_runnable);
+  (prioritize ? Runqueue_unshift : Runqueue_push)(runqueue, fiber, value, already_runnable);
   if (!already_runnable) {
     rb_ivar_set(fiber, ID_runnable, Qtrue);
     if (rb_thread_current() != self) {
@@ -68,31 +68,15 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
       __BACKEND__.wakeup(backend);
     }
   }
+}
+
+VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+  schedule_fiber(self, fiber, value, 0);
   return self;
 }
 
 VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) {
-  VALUE runqueue;
-  int already_runnable;
-
-  if (rb_fiber_alive_p(fiber) != Qtrue) return self;
-  already_runnable = rb_ivar_get(fiber, ID_runnable) != Qnil;
-
-  COND_TRACE(3, SYM_fiber_schedule, fiber, value);
-  runqueue = rb_ivar_get(self, ID_ivar_runqueue);
-  Runqueue_unshift(runqueue, fiber, value, already_runnable);
-  if (!already_runnable) {
-    rb_ivar_set(fiber, ID_runnable, Qtrue);
-    if (rb_thread_current() != self) {
-      // If the fiber scheduling is done across threads, we need to make sure the
-      // target thread is woken up in case it is in the middle of running its
-      // event selector. Otherwise it's gonna be stuck waiting for an event to
-      // happen, not knowing that it there's already a fiber ready to run in its
-      // run queue.
-      VALUE backend = rb_ivar_get(self,ID_ivar_backend);
-      __BACKEND__.wakeup(backend);
-    }
-  }
+  schedule_fiber(self, fiber, value, 1);
   return self;
 }
 
