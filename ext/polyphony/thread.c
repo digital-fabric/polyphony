@@ -119,15 +119,9 @@ VALUE Thread_switch_fiber(VALUE self) {
     next.value : rb_funcall(next.fiber, ID_transfer, 1, next.value);
 }
 
-VALUE Thread_run_queue_trace(VALUE self) {
-  VALUE queue = rb_ivar_get(self, ID_ivar_runqueue);
-  Queue_trace(queue);
-  return self;
-}
-
 VALUE Thread_reset_fiber_scheduling(VALUE self) {
   VALUE queue = rb_ivar_get(self, ID_ivar_runqueue);
-  Queue_clear(queue);
+  Runqueue_clear(queue);
   Thread_fiber_reset_ref_count(self);
   return self;
 }
@@ -161,7 +155,6 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "schedule_fiber_with_priority",
     Thread_schedule_fiber_with_priority, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
-  rb_define_method(rb_cThread, "run_queue_trace", Thread_run_queue_trace, 0);
 
   rb_define_method(rb_cThread, "debug!", Thread_debug, 0);
 
