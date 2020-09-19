@@ -5,6 +5,7 @@
 #include "ruby/io.h"
 #include "libev.h"
 #include "backend.h"
+#include "runqueue_ring_buffer.h"
 
 // debugging
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
@@ -30,6 +31,7 @@ extern backend_interface_t backend_interface;
 extern VALUE mPolyphony;
 extern VALUE cQueue;
 extern VALUE cEvent;
+extern VALUE cRunqueue;
 
 extern ID ID_call;
 extern ID ID_caller;
@@ -43,8 +45,7 @@ extern ID ID_ivar_running;
 extern ID ID_ivar_thread;
 extern ID ID_new;
 extern ID ID_raise;
-extern ID ID_runnable;
-extern ID ID_runnable_value;
+extern ID ID_ivar_runnable;
 extern ID ID_signal;
 extern ID ID_size;
 extern ID ID_switch_fiber;
@@ -78,6 +79,15 @@ VALUE Queue_clear(VALUE self);
 VALUE Queue_delete(VALUE self, VALUE value);
 long Queue_len(VALUE self);
 void Queue_trace(VALUE self);
+
+
+void Runqueue_push(VALUE self, VALUE fiber, VALUE value, int reschedule);
+void Runqueue_unshift(VALUE self, VALUE fiber, VALUE value, int reschedule);
+runqueue_entry Runqueue_shift(VALUE self);
+void Runqueue_delete(VALUE self, VALUE fiber);
+void Runqueue_clear(VALUE self);
+long Runqueue_len(VALUE self);
+int Runqueue_empty_p(VALUE self);
 
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);
