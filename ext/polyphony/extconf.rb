@@ -24,6 +24,17 @@ if !force_use_libev && RUBY_PLATFORM =~ /linux/ && `uname -srm` =~ /Linux (5\.\d
 end
 
 if use_liburing
+  puts "Compiling liburing"
+  ext_dir = File.join(FileUtils.pwd, RbConfig::CONFIG["srcdir"], '..')
+  `cd #{ext_dir}/liburing && make`
+
+  lib_dir = RbConfig::CONFIG['libdir']
+  include_dir = RbConfig::CONFIG['includedir']
+
+  header_dirs = [include_dir, File.join(ext_dir, 'liburing/src/include')]
+  lib_dirs = [lib_dir, File.join(ext_dir, 'liburing/src')]
+  dir_config('polyphony', header_dirs, lib_dirs)
+
   $defs << "-DPOLYPHONY_BACKEND_LIBURING"
 else
   $defs << "-DPOLYPHONY_BACKEND_LIBEV"
