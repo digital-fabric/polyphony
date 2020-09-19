@@ -47,16 +47,18 @@ static VALUE Runqueue_initialize(VALUE self) {
   return self;
 }
 
-void Runqueue_push(VALUE self, VALUE fiber, VALUE value) {
+void Runqueue_push(VALUE self, VALUE fiber, VALUE value, int reschedule) {
   Runqueue_t *runqueue;
   GetRunqueue(self, runqueue);
 
+  if (reschedule) runqueue_ring_buffer_delete(&runqueue->entries, fiber);
   runqueue_ring_buffer_push(&runqueue->entries, fiber, value);
 }
 
-void Runqueue_unshift(VALUE self, VALUE fiber, VALUE value) {
+void Runqueue_unshift(VALUE self, VALUE fiber, VALUE value, int reschedule) {
   Runqueue_t *runqueue;
   GetRunqueue(self, runqueue);
+  if (reschedule) runqueue_ring_buffer_delete(&runqueue->entries, fiber);
   runqueue_ring_buffer_unshift(&runqueue->entries, fiber, value);
 }
 

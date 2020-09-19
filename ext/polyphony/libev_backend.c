@@ -126,13 +126,13 @@ VALUE LibevBackend_pending_count(VALUE self) {
   return INT2NUM(count);
 }
 
-VALUE LibevBackend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue) {
+VALUE LibevBackend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
   int is_nowait = nowait == Qtrue;
   LibevBackend_t *backend;
   GetLibevBackend(self, backend);
 
   if (is_nowait) {
-    long runnable_count = Queue_len(queue);
+    long runnable_count = Runqueue_len(runqueue);
     backend->run_no_wait_count++;
     if (backend->run_no_wait_count < runnable_count || backend->run_no_wait_count < 10)
       return self;

@@ -82,8 +82,8 @@ long Queue_len(VALUE self);
 void Queue_trace(VALUE self);
 
 
-void Runqueue_push(VALUE self, VALUE fiber, VALUE value);
-void Runqueue_unshift(VALUE self, VALUE fiber, VALUE value);
+void Runqueue_push(VALUE self, VALUE fiber, VALUE value, int reschedule);
+void Runqueue_unshift(VALUE self, VALUE fiber, VALUE value, int reschedule);
 runqueue_entry Runqueue_shift(VALUE self);
 void Runqueue_delete(VALUE self, VALUE fiber);
 void Runqueue_clear(VALUE self);

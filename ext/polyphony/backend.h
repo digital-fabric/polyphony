@@ -18,7 +18,7 @@
 // VALUE LibevBackend_write(int argc, VALUE *argv, VALUE self);
 
 typedef VALUE (* backend_pending_count_t)(VALUE self);
-typedef VALUE (*backend_poll_t)(VALUE self, VALUE nowait, VALUE current_fiber, VALUE queue);
+typedef VALUE (*backend_poll_t)(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue);
 typedef VALUE (* backend_ref_t)(VALUE self);
 typedef int (* backend_ref_count_t)(VALUE self);
 typedef void (* backend_reset_ref_count_t)(VALUE self);
