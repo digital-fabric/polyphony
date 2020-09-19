@@ -132,10 +132,11 @@ VALUE LibevBackend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE run
   GetLibevBackend(self, backend);
 
   if (is_nowait) {
-    long runnable_count = Runqueue_len(runqueue);
     backend->run_no_wait_count++;
-    if (backend->run_no_wait_count < runnable_count || backend->run_no_wait_count < 10)
-      return self;
+    if (backend->run_no_wait_count < 10) return self;
+
+    long runnable_count = Runqueue_len(runqueue);
+    if (backend->run_no_wait_count < runnable_count) return self;
   }
 
   backend->run_no_wait_count = 0;
