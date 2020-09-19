@@ -2,8 +2,6 @@
 #define POLYPHONY_H
 
 #include "ruby.h"
-#include "ruby/io.h"
-#include "libev.h"
 #include "backend.h"
 #include "runqueue_ring_buffer.h"
 
