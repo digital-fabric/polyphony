@@ -50,14 +50,14 @@ void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize) {
   VALUE runqueue;
   int already_runnable;
 
-  if (rb_fiber_alive_p(fiber) != Qtrue) return self;
-  already_runnable = rb_ivar_get(fiber, ID_runnable) != Qnil;
+  if (rb_fiber_alive_p(fiber) != Qtrue) return;
+  already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
 
   COND_TRACE(3, SYM_fiber_schedule, fiber, value);
   runqueue = rb_ivar_get(self, ID_ivar_runqueue);
   (prioritize ? Runqueue_unshift : Runqueue_push)(runqueue, fiber, value, already_runnable);
   if (!already_runnable) {
-    rb_ivar_set(fiber, ID_runnable, Qtrue);
+    rb_ivar_set(fiber, ID_ivar_runnable, Qtrue);
     if (rb_thread_current() != self) {
       // If the fiber scheduling is done across threads, we need to make sure the
       // target thread is woken up in case it is in the middle of running its
@@ -112,7 +112,7 @@ VALUE Thread_switch_fiber(VALUE self) {
   // run next fiber
   COND_TRACE(3, SYM_fiber_run, next.fiber, next.value);
 
-  rb_ivar_set(next.fiber, ID_runnable, Qnil);
+  rb_ivar_set(next.fiber, ID_ivar_runnable, Qnil);
   RB_GC_GUARD(next.fiber);
   RB_GC_GUARD(next.value);
   return (next.fiber == current_fiber) ?

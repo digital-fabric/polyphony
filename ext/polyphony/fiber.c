@@ -77,7 +77,7 @@ static VALUE Fiber_state(VALUE self) {
   if (!rb_fiber_alive_p(self) || (rb_ivar_get(self, ID_ivar_running) == Qfalse))
     return SYM_dead;
   if (rb_fiber_current() == self) return SYM_running;
-  if (rb_ivar_get(self, ID_runnable) != Qnil) return SYM_runnable;
+  if (rb_ivar_get(self, ID_ivar_runnable) != Qnil) return SYM_runnable;
 
   return SYM_waiting;
 }
