@@ -10,6 +10,7 @@
 
 #include "polyphony.h"
 #include "../libev/ev.h"
+#include "ruby/io.h"
 
 VALUE cTCPSocket;
 
@@ -851,6 +852,8 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
 }
 
 void Init_Backend() {
+  ev_set_allocator(xrealloc);
+
   rb_require("socket");
   cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
 

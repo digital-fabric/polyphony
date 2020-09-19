@@ -10,8 +10,6 @@ void Init_Thread();
 void Init_Tracing();
 
 void Init_polyphony_ext() {
-  ev_set_allocator(xrealloc);
-
   Init_Polyphony();
 
   Init_Backend();
