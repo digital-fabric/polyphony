@@ -4,10 +4,10 @@ require 'rubygems'
 require 'mkmf'
 
 use_liburing = false
+force_use_libev = ENV['POLYPHONY_USE_LIBEV'] != nil
 
-if RUBY_PLATFORM =~ /linux/ && `uname -srm` =~ /Linux (5\.\d)/
+if !force_use_libev && RUBY_PLATFORM =~ /linux/ && `uname -srm` =~ /Linux (5\.\d)/
   kernel_version = $1.gsub('.', '').to_i
-  puts "kernel version: #{kernel_version}"
   $defs << "-DPOLYPHONY_KERNEL_VERSION_#{kernel_version}"
   case kernel_version
   when 55..59
@@ -22,8 +22,6 @@ if RUBY_PLATFORM =~ /linux/ && `uname -srm` =~ /Linux (5\.\d)/
     $defs << "-DPOLYPHONY_IO_URING_TIMEOUT"
   end
 end
-
-puts "use_liburing: #{use_liburing}"
 
 if use_liburing
   $defs << "-DPOLYPHONY_BACKEND_LIBURING"

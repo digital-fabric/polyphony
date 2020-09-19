@@ -2,7 +2,7 @@
 
 void Init_Fiber();
 void Init_Polyphony();
-void Init_LibevBackend();
+void Init_Backend();
 void Init_Queue();
 void Init_Event();
 void Init_Runqueue();
@@ -14,7 +14,7 @@ void Init_polyphony_ext() {
 
   Init_Polyphony();
 
-  Init_LibevBackend();
+  Init_Backend();
   Init_Queue();
   Init_Event();
   Init_Runqueue();

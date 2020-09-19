@@ -1,3 +1,5 @@
+#ifdef POLYPHONY_BACKEND_LIBEV
+
 #define EV_STANDALONE /* keeps ev from requiring config.h */
 
 #ifdef _WIN32
@@ -7,3 +9,5 @@
 #endif
 
 #include "../libev/ev.h"
+
+#endif // POLYPHONY_BACKEND_LIBEV

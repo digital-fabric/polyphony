@@ -1,3 +1,5 @@
+#ifdef POLYPHONY_BACKEND_LIBEV
+
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
@@ -11,44 +13,44 @@
 
 VALUE cTCPSocket;
 
-typedef struct LibevBackend_t {
+typedef struct Backend_t {
   struct ev_loop *ev_loop;
   struct ev_async break_async;
   int running;
   int ref_count;
   int run_no_wait_count;
-} LibevBackend_t;
+} Backend_t;
 
-static size_t LibevBackend_size(const void *ptr) {
-  return sizeof(LibevBackend_t);
+static size_t Backend_size(const void *ptr) {
+  return sizeof(Backend_t);
 }
 
-static const rb_data_type_t LibevBackend_type = {
+static const rb_data_type_t Backend_type = {
     "Libev",
-    {0, 0, LibevBackend_size,},
+    {0, 0, Backend_size,},
     0, 0, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
-static VALUE LibevBackend_allocate(VALUE klass) {
-  LibevBackend_t *backend = ALLOC(LibevBackend_t);
+static VALUE Backend_allocate(VALUE klass) {
+  Backend_t *backend = ALLOC(Backend_t);
 
-  return TypedData_Wrap_Struct(klass, &LibevBackend_type, backend);
+  return TypedData_Wrap_Struct(klass, &Backend_type, backend);
 }
 
-#define GetLibevBackend(obj, backend) \
-  TypedData_Get_Struct((obj), LibevBackend_t, &LibevBackend_type, (backend))
+#define GetBackend(obj, backend) \
+  TypedData_Get_Struct((obj), Backend_t, &Backend_type, (backend))
 
 void break_async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, int revents) {
   // This callback does nothing, the break async is used solely for breaking out
   // of a *blocking* event loop (waking it up) in a thread-safe, signal-safe manner
 }
 
-static VALUE LibevBackend_initialize(VALUE self) {
-  LibevBackend_t *backend;
+static VALUE Backend_initialize(VALUE self) {
+  Backend_t *backend;
   VALUE thread = rb_thread_current();
   int is_main_thread = (thread == rb_thread_main());
 
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   backend->ev_loop = is_main_thread ? EV_DEFAULT : ev_loop_new(EVFLAG_NOSIGMASK);
 
   ev_async_init(&backend->break_async, break_async_callback);
@@ -62,9 +64,9 @@ static VALUE LibevBackend_initialize(VALUE self) {
   return Qnil;
 }
 
-VALUE LibevBackend_finalize(VALUE self) {
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+VALUE Backend_finalize(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
 
    ev_async_stop(backend->ev_loop, &backend->break_async);
 
@@ -73,9 +75,9 @@ VALUE LibevBackend_finalize(VALUE self) {
   return self;
 }
 
-VALUE LibevBackend_post_fork(VALUE self) {
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+VALUE Backend_post_fork(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
 
   // After fork there may be some watchers still active left over from the
   // parent, so we destroy the loop, even if it's the default one, then use the
@@ -88,48 +90,48 @@ VALUE LibevBackend_post_fork(VALUE self) {
   return self;
 }
 
-VALUE LibevBackend_ref(VALUE self) {
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+VALUE Backend_ref(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
 
   backend->ref_count++;
   return self;
 }
 
-VALUE LibevBackend_unref(VALUE self) {
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+VALUE Backend_unref(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
 
   backend->ref_count--;
   return self;
 }
 
-int LibevBackend_ref_count(VALUE self) {
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+int Backend_ref_count(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
 
   return backend->ref_count;
 }
 
-void LibevBackend_reset_ref_count(VALUE self) {
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+void Backend_reset_ref_count(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
 
   backend->ref_count = 0;
 }
 
-VALUE LibevBackend_pending_count(VALUE self) {
+VALUE Backend_pending_count(VALUE self) {
   int count;
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+  Backend_t *backend;
+  GetBackend(self, backend);
   count = ev_pending_count(backend->ev_loop);
   return INT2NUM(count);
 }
 
-VALUE LibevBackend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
+VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
   int is_nowait = nowait == Qtrue;
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+  Backend_t *backend;
+  GetBackend(self, backend);
 
   if (is_nowait) {
     backend->run_no_wait_count++;
@@ -150,9 +152,9 @@ VALUE LibevBackend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE run
   return self;
 }
 
-VALUE LibevBackend_wakeup(VALUE self) {
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+VALUE Backend_wakeup(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
 
   if (backend->running) {
     // Since the loop will run until at least one event has occurred, we signal
@@ -239,13 +241,13 @@ struct libev_io {
   VALUE fiber;
 };
 
-void LibevBackend_io_callback(EV_P_ ev_io *w, int revents)
+void Backend_io_callback(EV_P_ ev_io *w, int revents)
 {
   struct libev_io *watcher = (struct libev_io *)w;
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
 
-inline VALUE libev_await(LibevBackend_t *backend) {
+inline VALUE libev_await(Backend_t *backend) {
   VALUE ret;
   backend->ref_count++;
   ret = Thread_switch_fiber(rb_thread_current());
@@ -254,12 +256,12 @@ inline VALUE libev_await(LibevBackend_t *backend) {
   return ret;
 }
 
-VALUE libev_wait_fd_with_watcher(LibevBackend_t *backend, int fd, struct libev_io *watcher, int events) {
+VALUE libev_wait_fd_with_watcher(Backend_t *backend, int fd, struct libev_io *watcher, int events) {
   VALUE switchpoint_result;
 
   if (watcher->fiber == Qnil) {
     watcher->fiber = rb_fiber_current();
-    ev_io_init(&watcher->io, LibevBackend_io_callback, fd, events);
+    ev_io_init(&watcher->io, Backend_io_callback, fd, events);
   }
   ev_io_start(backend->ev_loop, &watcher->io);
 
@@ -270,7 +272,7 @@ VALUE libev_wait_fd_with_watcher(LibevBackend_t *backend, int fd, struct libev_i
   return switchpoint_result;
 }
 
-VALUE libev_wait_fd(LibevBackend_t *backend, int fd, int events, int raise_exception) {
+VALUE libev_wait_fd(Backend_t *backend, int fd, int events, int raise_exception) {
   struct libev_io watcher;
   VALUE switchpoint_result = Qnil;
   watcher.fiber = Qnil;
@@ -311,8 +313,8 @@ inline void io_set_nonblock(rb_io_t *fptr, VALUE io) {
 #endif
 }
 
-VALUE LibevBackend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
-  LibevBackend_t *backend;
+VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
+  Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
   long dynamic_len = length == Qnil;
@@ -324,7 +326,7 @@ VALUE LibevBackend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_
   int read_to_eof = RTEST(to_eof);
   VALUE underlying_io = rb_iv_get(io, "@io");
 
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
@@ -387,7 +389,7 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE LibevBackend_read_loop(VALUE self, VALUE io) {
+VALUE Backend_read_loop(VALUE self, VALUE io) {
 
   #define PREPARE_STR() { \
     str = Qnil; \
@@ -404,7 +406,7 @@ VALUE LibevBackend_read_loop(VALUE self, VALUE io) {
     PREPARE_STR(); \
   }
 
-  LibevBackend_t *backend;
+  Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
   VALUE str;
@@ -417,7 +419,7 @@ VALUE LibevBackend_read_loop(VALUE self, VALUE io) {
 
   PREPARE_STR();
 
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
@@ -462,8 +464,8 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE LibevBackend_write(VALUE self, VALUE io, VALUE str) {
-  LibevBackend_t *backend;
+VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
+  Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
@@ -474,7 +476,7 @@ VALUE LibevBackend_write(VALUE self, VALUE io, VALUE str) {
 
   underlying_io = rb_iv_get(io, "@io");
   if (underlying_io != Qnil) io = underlying_io;
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
   watcher.fiber = Qnil;
@@ -509,8 +511,8 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE LibevBackend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
-  LibevBackend_t *backend;
+VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
+  Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
@@ -523,7 +525,7 @@ VALUE LibevBackend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 
   underlying_io = rb_iv_get(io, "@io");
   if (underlying_io != Qnil) io = underlying_io;
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
   watcher.fiber = Qnil;
@@ -581,20 +583,20 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE LibevBackend_write_m(int argc, VALUE *argv, VALUE self) {
+VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
   if (argc < 2)
     // TODO: raise ArgumentError
     rb_raise(rb_eRuntimeError, "(wrong number of arguments (expected 2 or more))");
 
   return (argc == 2) ?
-    LibevBackend_write(self, argv[0], argv[1]) :
-    LibevBackend_writev(self, argv[0], argc - 1, argv + 1);
+    Backend_write(self, argv[0], argv[1]) :
+    Backend_writev(self, argv[0], argc - 1, argv + 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
-VALUE LibevBackend_accept(VALUE self, VALUE sock) {
-  LibevBackend_t *backend;
+VALUE Backend_accept(VALUE self, VALUE sock) {
+  Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
   int fd;
@@ -604,7 +606,7 @@ VALUE LibevBackend_accept(VALUE self, VALUE sock) {
   VALUE underlying_sock = rb_iv_get(sock, "@io");
   if (underlying_sock != Qnil) sock = underlying_sock;
 
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   GetOpenFile(sock, fptr);
   io_set_nonblock(fptr, sock);
   watcher.fiber = Qnil;
@@ -649,8 +651,8 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE LibevBackend_accept_loop(VALUE self, VALUE sock) {
-  LibevBackend_t *backend;
+VALUE Backend_accept_loop(VALUE self, VALUE sock) {
+  Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
   int fd;
@@ -661,7 +663,7 @@ VALUE LibevBackend_accept_loop(VALUE self, VALUE sock) {
   VALUE underlying_sock = rb_iv_get(sock, "@io");
   if (underlying_sock != Qnil) sock = underlying_sock;
 
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   GetOpenFile(sock, fptr);
   io_set_nonblock(fptr, sock);
   watcher.fiber = Qnil;
@@ -707,8 +709,8 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE LibevBackend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
-  LibevBackend_t *backend;
+VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
+  Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
   struct sockaddr_in addr;
@@ -717,7 +719,7 @@ VALUE LibevBackend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   VALUE underlying_sock = rb_iv_get(sock, "@io");
   if (underlying_sock != Qnil) sock = underlying_sock;
 
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   GetOpenFile(sock, fptr);
   io_set_nonblock(fptr, sock);
   watcher.fiber = Qnil;
@@ -746,13 +748,13 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE LibevBackend_wait_io(VALUE self, VALUE io, VALUE write) {
-  LibevBackend_t *backend;
+VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
+  Backend_t *backend;
   rb_io_t *fptr;
   int events = RTEST(write) ? EV_WRITE : EV_READ;
   VALUE underlying_io = rb_iv_get(io, "@io");
   if (underlying_io != Qnil) io = underlying_io;
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   GetOpenFile(io, fptr);
 
   return libev_wait_fd(backend, fptr->fd, events, 1);
@@ -763,20 +765,20 @@ struct libev_timer {
   VALUE fiber;
 };
 
-void LibevBackend_timer_callback(EV_P_ ev_timer *w, int revents)
+void Backend_timer_callback(EV_P_ ev_timer *w, int revents)
 {
   struct libev_timer *watcher = (struct libev_timer *)w;
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
 
-VALUE LibevBackend_sleep(VALUE self, VALUE duration) {
-  LibevBackend_t *backend;
+VALUE Backend_sleep(VALUE self, VALUE duration) {
+  Backend_t *backend;
   struct libev_timer watcher;
   VALUE switchpoint_result = Qnil;
 
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
   watcher.fiber = rb_fiber_current();
-  ev_timer_init(&watcher.timer, LibevBackend_timer_callback, NUM2DBL(duration), 0.);
+  ev_timer_init(&watcher.timer, Backend_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(backend->ev_loop, &watcher.timer);
 
   switchpoint_result = libev_await(backend);
@@ -793,7 +795,7 @@ struct libev_child {
   VALUE fiber;
 };
 
-void LibevBackend_child_callback(EV_P_ ev_child *w, int revents)
+void Backend_child_callback(EV_P_ ev_child *w, int revents)
 {
   struct libev_child *watcher = (struct libev_child *)w;
   int exit_status = w->rstatus >> 8; // weird, why should we do this?
@@ -803,14 +805,14 @@ void LibevBackend_child_callback(EV_P_ ev_child *w, int revents)
   Fiber_make_runnable(watcher->fiber, status);
 }
 
-VALUE LibevBackend_waitpid(VALUE self, VALUE pid) {
-  LibevBackend_t *backend;
+VALUE Backend_waitpid(VALUE self, VALUE pid) {
+  Backend_t *backend;
   struct libev_child watcher;
   VALUE switchpoint_result = Qnil;
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
 
   watcher.fiber = rb_fiber_current();
-  ev_child_init(&watcher.child, LibevBackend_child_callback, NUM2INT(pid), 0);
+  ev_child_init(&watcher.child, Backend_child_callback, NUM2INT(pid), 0);
   ev_child_start(backend->ev_loop, &watcher.child);
 
   switchpoint_result = libev_await(backend);
@@ -822,22 +824,22 @@ VALUE LibevBackend_waitpid(VALUE self, VALUE pid) {
   return switchpoint_result;
 }
 
-struct ev_loop *LibevBackend_ev_loop(VALUE self) {
-  LibevBackend_t *backend;
-  GetLibevBackend(self, backend);
+struct ev_loop *Backend_ev_loop(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
   return backend->ev_loop;
 }
 
-void LibevBackend_async_callback(EV_P_ ev_async *w, int revents) { }
+void Backend_async_callback(EV_P_ ev_async *w, int revents) { }
 
-VALUE LibevBackend_wait_event(VALUE self, VALUE raise) {
-  LibevBackend_t *backend;
+VALUE Backend_wait_event(VALUE self, VALUE raise) {
+  Backend_t *backend;
   VALUE switchpoint_result = Qnil;
-  GetLibevBackend(self, backend);
+  GetBackend(self, backend);
 
   struct ev_async async;
 
-  ev_async_init(&async, LibevBackend_async_callback);
+  ev_async_init(&async, Backend_async_callback);
   ev_async_start(backend->ev_loop, &async);
 
   switchpoint_result = libev_await(backend);
@@ -848,43 +850,45 @@ VALUE LibevBackend_wait_event(VALUE self, VALUE raise) {
   return switchpoint_result;
 }
 
-void Init_LibevBackend() {
+void Init_Backend() {
   rb_require("socket");
   cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
 
   VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cData);
-  rb_define_alloc_func(cBackend, LibevBackend_allocate);
+  rb_define_alloc_func(cBackend, Backend_allocate);
 
-  rb_define_method(cBackend, "initialize", LibevBackend_initialize, 0);
-  rb_define_method(cBackend, "finalize", LibevBackend_finalize, 0);
-  rb_define_method(cBackend, "post_fork", LibevBackend_post_fork, 0);
-  rb_define_method(cBackend, "pending_count", LibevBackend_pending_count, 0);
+  rb_define_method(cBackend, "initialize", Backend_initialize, 0);
+  rb_define_method(cBackend, "finalize", Backend_finalize, 0);
+  rb_define_method(cBackend, "post_fork", Backend_post_fork, 0);
+  rb_define_method(cBackend, "pending_count", Backend_pending_count, 0);
 
-  rb_define_method(cBackend, "ref", LibevBackend_ref, 0);
-  rb_define_method(cBackend, "unref", LibevBackend_unref, 0);
+  rb_define_method(cBackend, "ref", Backend_ref, 0);
+  rb_define_method(cBackend, "unref", Backend_unref, 0);
 
-  rb_define_method(cBackend, "poll", LibevBackend_poll, 3);
-  rb_define_method(cBackend, "break", LibevBackend_wakeup, 0);
+  rb_define_method(cBackend, "poll", Backend_poll, 3);
+  rb_define_method(cBackend, "break", Backend_wakeup, 0);
 
-  rb_define_method(cBackend, "read", LibevBackend_read, 4);
-  rb_define_method(cBackend, "read_loop", LibevBackend_read_loop, 1);
-  rb_define_method(cBackend, "write", LibevBackend_write_m, -1);
-  rb_define_method(cBackend, "accept", LibevBackend_accept, 1);
-  rb_define_method(cBackend, "accept_loop", LibevBackend_accept_loop, 1);
-  rb_define_method(cBackend, "connect", LibevBackend_connect, 3);
-  rb_define_method(cBackend, "wait_io", LibevBackend_wait_io, 2);
-  rb_define_method(cBackend, "sleep", LibevBackend_sleep, 1);
-  rb_define_method(cBackend, "waitpid", LibevBackend_waitpid, 1);
-  rb_define_method(cBackend, "wait_event", LibevBackend_wait_event, 1);
+  rb_define_method(cBackend, "read", Backend_read, 4);
+  rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
+  rb_define_method(cBackend, "write", Backend_write_m, -1);
+  rb_define_method(cBackend, "accept", Backend_accept, 1);
+  rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 1);
+  rb_define_method(cBackend, "connect", Backend_connect, 3);
+  rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
+  rb_define_method(cBackend, "sleep", Backend_sleep, 1);
+  rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
+  rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
 
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
 
-  __BACKEND__.pending_count   = LibevBackend_pending_count;
-  __BACKEND__.poll            = LibevBackend_poll;
-  __BACKEND__.ref             = LibevBackend_ref;
-  __BACKEND__.ref_count       = LibevBackend_ref_count;
-  __BACKEND__.reset_ref_count = LibevBackend_reset_ref_count;
-  __BACKEND__.unref           = LibevBackend_unref;
-  __BACKEND__.wait_event      = LibevBackend_wait_event;
-  __BACKEND__.wakeup          = LibevBackend_wakeup;
+  __BACKEND__.pending_count   = Backend_pending_count;
+  __BACKEND__.poll            = Backend_poll;
+  __BACKEND__.ref             = Backend_ref;
+  __BACKEND__.ref_count       = Backend_ref_count;
+  __BACKEND__.reset_ref_count = Backend_reset_ref_count;
+  __BACKEND__.unref           = Backend_unref;
+  __BACKEND__.wait_event      = Backend_wait_event;
+  __BACKEND__.wakeup          = Backend_wakeup;
 }
+
+#endif // POLYPHONY_BACKEND_LIBEV
