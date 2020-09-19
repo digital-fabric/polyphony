@@ -3,9 +3,20 @@
 require 'rubygems'
 require 'mkmf'
 
-have_library('uring')
-have_header('liburing.h')
-have_header('unistd.h')
+if RUBY_PLATFORM =~ /linux/ && `uname -srm` =~ /Linux (5\.\d)/
+  kernel_version = $1.gsub('.', '').to_i
+  $defs << "-DPOLYPHONY_KERNEL_VERSION_#{kernel_version}"
+  case kernel_version
+  when 55..59
+    $defs << "-DPOLYPHONY_IO_URING"
+    $defs << "-DPOLYPHONY_IO_URING_ACCEPT"
+    $defs << "-DPOLYPHONY_IO_URING_CONNECT"
+    $defs << "-DPOLYPHONY_IO_URING_ASYNC_CANCEL"
+  when 54
+    $defs << "-DPOLYPHONY_IO_URING"
+    $defs << "-DPOLYPHONY_IO_URING_TIMEOUT"
+  end
+end
 
 $defs << '-DEV_USE_LINUXAIO'     if have_header('linux/aio_abi.h')
 $defs << '-DEV_USE_SELECT'       if have_header('sys/select.h')
