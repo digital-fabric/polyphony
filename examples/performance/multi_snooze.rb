@@ -18,7 +18,6 @@ def bm(fibers, iterations)
   Fiber.current.await_all_children
   dt = Time.now - t0
   puts "#{[fibers, iterations].inspect} setup: #{t0 - t_pre}s count: #{count} #{count / dt.to_f}/s"
-  Thread.current.run_queue_trace
 end
 
 GC.disable

@@ -6,15 +6,14 @@ ID ID_ivar_join_wait_queue;
 ID ID_ivar_main_fiber;
 ID ID_ivar_result;
 ID ID_ivar_terminated;
-ID ID_run_queue;
-ID ID_runnable_next;
+ID ID_ivar_runqueue;
 ID ID_stop;
 
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
-  VALUE queue = rb_funcall(cQueue, ID_new, 0);
+  VALUE runqueue = rb_funcall(cRunqueue, ID_new, 0);
 
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
-  rb_ivar_set(self, ID_run_queue, queue);
+  rb_ivar_set(self, ID_ivar_runqueue, runqueue);
 
   return self;
 }
@@ -35,10 +34,10 @@ static VALUE SYM_pending_watchers;
 static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   VALUE backend = rb_ivar_get(self,ID_ivar_backend);
   VALUE stats = rb_hash_new();
-  VALUE queue = rb_ivar_get(self, ID_run_queue);
+  VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
   long pending_count;
 
-  long scheduled_count = RARRAY_LEN(queue);
+  long scheduled_count = Runqueue_len(runqueue);
   rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(scheduled_count));
 
   pending_count = __BACKEND__.pending_count(backend);
@@ -47,30 +46,18 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   return stats;
 }
 
-VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
-  VALUE queue;
+void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize) {
+  VALUE runqueue;
+  int already_runnable;
 
-  if (rb_fiber_alive_p(fiber) != Qtrue) return self;
+  if (rb_fiber_alive_p(fiber) != Qtrue) return;
+  already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
 
-  int already_runnable = rb_ivar_get(fiber, ID_runnable) != Qnil;
-
-  if (already_runnable) {
-    VALUE current_runnable_value = rb_ivar_get(fiber, ID_runnable_value);
-
-    // If the fiber is already runnable and the runnable value is an exception,
-    // we don't update the value, in order to prevent a race condition where
-    // exceptions will be lost (see issue #33)
-    if (TEST_EXCEPTION(current_runnable_value)) return self;
-  }
-
-  rb_ivar_set(fiber, ID_runnable_value, value);
   COND_TRACE(3, SYM_fiber_schedule, fiber, value);
-
+  runqueue = rb_ivar_get(self, ID_ivar_runqueue);
+  (prioritize ? Runqueue_unshift : Runqueue_push)(runqueue, fiber, value, already_runnable);
   if (!already_runnable) {
-    queue = rb_ivar_get(self, ID_run_queue);
-    Queue_push(queue, fiber);
-    rb_ivar_set(fiber, ID_runnable, Qtrue);
-
+    rb_ivar_set(fiber, ID_ivar_runnable, Qtrue);
     if (rb_thread_current() != self) {
       // If the fiber scheduling is done across threads, we need to make sure the
       // target thread is woken up in case it is in the middle of running its
@@ -81,46 +68,22 @@ VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
       __BACKEND__.wakeup(backend);
     }
   }
+}
+
+VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+  schedule_fiber(self, fiber, value, 0);
   return self;
 }
 
 VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) {
-  VALUE queue;
-
-  if (rb_fiber_alive_p(fiber) != Qtrue) return self;
-
-  COND_TRACE(3, SYM_fiber_schedule, fiber, value);
-  rb_ivar_set(fiber, ID_runnable_value, value);
-
-  queue = rb_ivar_get(self, ID_run_queue);
-
-  // if fiber is already scheduled, remove it from the run queue
-  if (rb_ivar_get(fiber, ID_runnable) != Qnil) {
-    Queue_delete(queue, fiber);
-  } else {
-    rb_ivar_set(fiber, ID_runnable, Qtrue);
-  }
-
-  // the fiber is given priority by putting it at the front of the run queue
-  Queue_unshift(queue, fiber);
-
-  if (rb_thread_current() != self) {
-    // if the fiber scheduling is done across threads, we need to make sure the
-    // target thread is woken up in case it is in the middle of running its
-    // event loop. Otherwise it's gonna be stuck waiting for an event to
-    // happen, not knowing that it there's already a fiber ready to run in its
-    // run queue.
-    VALUE backend = rb_ivar_get(self, ID_ivar_backend);
-    __BACKEND__.wakeup(backend);
-  }
+  schedule_fiber(self, fiber, value, 1);
   return self;
 }
 
 VALUE Thread_switch_fiber(VALUE self) {
   VALUE current_fiber = rb_fiber_current();
-  VALUE queue = rb_ivar_get(self, ID_run_queue);
-  VALUE next_fiber;
-  VALUE value;
+  VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
+  runqueue_entry next;
   VALUE backend = rb_ivar_get(self, ID_ivar_backend);
   int ref_count;
   int backend_was_polled = 0;
@@ -130,42 +93,35 @@ VALUE Thread_switch_fiber(VALUE self) {
 
   ref_count = __BACKEND__.ref_count(backend);
   while (1) {
-    next_fiber = Queue_shift_no_wait(queue);
-    if (next_fiber != Qnil) {
+    next = Runqueue_shift(runqueue);
+    if (next.fiber != Qnil) {
       if (backend_was_polled == 0 && ref_count > 0) {
         // this prevents event starvation in case the run queue never empties
-        __BACKEND__.poll(backend, Qtrue, current_fiber, queue);
+        __BACKEND__.poll(backend, Qtrue, current_fiber, runqueue);
       }
       break;
     }
     if (ref_count == 0) break;
 
-    __BACKEND__.poll(backend, Qnil, current_fiber, queue);
+    __BACKEND__.poll(backend, Qnil, current_fiber, runqueue);
     backend_was_polled = 1;
   }
 
-  if (next_fiber == Qnil) return Qnil;
+  if (next.fiber == Qnil) return Qnil;
 
   // run next fiber
-  value = rb_ivar_get(next_fiber, ID_runnable_value);
-  COND_TRACE(3, SYM_fiber_run, next_fiber, value);
+  COND_TRACE(3, SYM_fiber_run, next.fiber, next.value);
 
-  rb_ivar_set(next_fiber, ID_runnable, Qnil);
-  RB_GC_GUARD(next_fiber);
-  RB_GC_GUARD(value);
-  return (next_fiber == current_fiber) ?
-    value : rb_funcall(next_fiber, ID_transfer, 1, value);
-}
-
-VALUE Thread_run_queue_trace(VALUE self) {
-  VALUE queue = rb_ivar_get(self, ID_run_queue);
-  Queue_trace(queue);
-  return self;
+  rb_ivar_set(next.fiber, ID_ivar_runnable, Qnil);
+  RB_GC_GUARD(next.fiber);
+  RB_GC_GUARD(next.value);
+  return (next.fiber == current_fiber) ?
+    next.value : rb_funcall(next.fiber, ID_transfer, 1, next.value);
 }
 
 VALUE Thread_reset_fiber_scheduling(VALUE self) {
-  VALUE queue = rb_ivar_get(self, ID_run_queue);
-  Queue_clear(queue);
+  VALUE queue = rb_ivar_get(self, ID_ivar_runqueue);
+  Runqueue_clear(queue);
   Thread_fiber_reset_ref_count(self);
   return self;
 }
@@ -199,7 +155,6 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "schedule_fiber_with_priority",
     Thread_schedule_fiber_with_priority, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
-  rb_define_method(rb_cThread, "run_queue_trace", Thread_run_queue_trace, 0);
 
   rb_define_method(rb_cThread, "debug!", Thread_debug, 0);
 
@@ -209,8 +164,7 @@ void Init_Thread() {
   ID_ivar_main_fiber          = rb_intern("@main_fiber");
   ID_ivar_result              = rb_intern("@result");
   ID_ivar_terminated          = rb_intern("@terminated");
-  ID_run_queue                = rb_intern("run_queue");
-  ID_runnable_next            = rb_intern("runnable_next");
+  ID_ivar_runqueue            = rb_intern("@runqueue");
   ID_stop                     = rb_intern("stop");
 
   SYM_scheduled_fibers = ID2SYM(rb_intern("scheduled_fibers"));
