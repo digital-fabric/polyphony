@@ -3,19 +3,32 @@
 require 'rubygems'
 require 'mkmf'
 
+use_liburing = false
+
 if RUBY_PLATFORM =~ /linux/ && `uname -srm` =~ /Linux (5\.\d)/
   kernel_version = $1.gsub('.', '').to_i
+  puts "kernel version: #{kernel_version}"
   $defs << "-DPOLYPHONY_KERNEL_VERSION_#{kernel_version}"
   case kernel_version
   when 55..59
+    use_liburing = true
     $defs << "-DPOLYPHONY_IO_URING"
     $defs << "-DPOLYPHONY_IO_URING_ACCEPT"
     $defs << "-DPOLYPHONY_IO_URING_CONNECT"
     $defs << "-DPOLYPHONY_IO_URING_ASYNC_CANCEL"
   when 54
+    use_liburing = true
     $defs << "-DPOLYPHONY_IO_URING"
     $defs << "-DPOLYPHONY_IO_URING_TIMEOUT"
   end
+end
+
+puts "use_liburing: #{use_liburing}"
+
+if use_liburing
+  $defs << "-DPOLYPHONY_BACKEND_LIBURING"
+else
+  $defs << "-DPOLYPHONY_BACKEND_LIBEV"
 end
 
 $defs << '-DEV_USE_LINUXAIO'     if have_header('linux/aio_abi.h')
