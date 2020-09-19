@@ -1,3 +1,11 @@
+- When bubbling up uncaught exceptions, the parent fiber should be scheduled
+  with priority, so as to prevent race conditions, avoid further work before the
+  exceptions reaches top-level, and expedite the bubbling up:
+
+  - Add Fiber#schedule_with_priority method (implement in C)
+  - In Fiber#inform_dependants, schedule parent with priority in case of
+    uncaught exception
+
 (
   io_uring: some work has been done on an io_uring based scheduler here:
     https://github.com/dsh0416/evt

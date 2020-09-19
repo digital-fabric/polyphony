@@ -39,9 +39,37 @@ inline VALUE Fiber_auto_watcher(VALUE self) {
   return watcher;
 }
 
+void Fiber_make_runnable(VALUE fiber, VALUE value) {
+  VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
+  if (thread == Qnil) {
+    // rb_raise(rb_eRuntimeError, "No thread set for fiber");
+    rb_warn("No thread set for fiber");
+    return;
+  }
+
+  Thread_schedule_fiber(thread, fiber, value);
+}
+
+void Fiber_make_runnable_with_priority(VALUE fiber, VALUE value) {
+  VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
+  if (thread == Qnil) {
+    // rb_raise(rb_eRuntimeError, "No thread set for fiber");
+    rb_warn("No thread set for fiber");
+    return;
+  }
+
+  Thread_schedule_fiber_with_priority(thread, fiber, value);
+}
+
 static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
   VALUE value = (argc == 0) ? Qnil : argv[0];
   Fiber_make_runnable(self, value);
+  return self;
+}
+
+static VALUE Fiber_schedule_with_priority(int argc, VALUE *argv, VALUE self) {
+  VALUE value = (argc == 0) ? Qnil : argv[0];
+  Fiber_make_runnable_with_priority(self, value);
   return self;
 }
 
@@ -52,16 +80,6 @@ static VALUE Fiber_state(VALUE self) {
   if (rb_ivar_get(self, ID_runnable) != Qnil) return SYM_runnable;
 
   return SYM_waiting;
-}
-
-void Fiber_make_runnable(VALUE fiber, VALUE value) {
-  VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
-  if (thread != Qnil) {
-    Thread_schedule_fiber(thread, fiber, value);
-  }
-  else {
-    rb_warn("No thread set for fiber (fiber, value, caller):");
-  }
 }
 
 VALUE Fiber_await(VALUE self) {
@@ -119,6 +137,7 @@ void Init_Fiber() {
   VALUE cFiber = rb_const_get(rb_cObject, rb_intern("Fiber"));
   rb_define_method(cFiber, "safe_transfer", Fiber_safe_transfer, -1);
   rb_define_method(cFiber, "schedule", Fiber_schedule, -1);
+  rb_define_method(cFiber, "schedule_with_priority", Fiber_schedule_with_priority, -1);
   rb_define_method(cFiber, "state", Fiber_state, 0);
   rb_define_method(cFiber, "auto_watcher", Fiber_auto_watcher, 0);
 

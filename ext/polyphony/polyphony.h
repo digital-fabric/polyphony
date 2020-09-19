@@ -80,6 +80,7 @@ long Queue_len(VALUE self);
 void Queue_trace(VALUE self);
 
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
+VALUE Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_switch_fiber(VALUE thread);
 
 #endif /* POLYPHONY_H */

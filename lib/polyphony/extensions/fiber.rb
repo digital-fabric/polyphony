@@ -187,9 +187,9 @@ module Polyphony
       (@children ||= {}).keys
     end
 
-    def spin(tag = nil, orig_caller = Kernel.caller, do_schedule: true, &block)
+    def spin(tag = nil, orig_caller = Kernel.caller, &block)
       f = Fiber.new { |v| f.run(v) }
-      f.prepare(tag, block, orig_caller, self, do_schedule: do_schedule)
+      f.prepare(tag, block, orig_caller, self)
       (@children ||= {})[f] = true
       f
     end
@@ -227,14 +227,14 @@ module Polyphony
 
   # Fiber life cycle methods
   module FiberLifeCycle
-    def prepare(tag, block, caller, parent, do_schedule: true)
+    def prepare(tag, block, caller, parent)
       @thread = Thread.current
       @tag = tag
       @parent = parent
       @caller = caller
       @block = block
       __fiber_trace__(:fiber_create, self)
-      schedule if do_schedule
+      schedule
     end
 
     def run(first_value)
@@ -308,7 +308,7 @@ module Polyphony
       @waiting_fibers&.each_key { |f| f.schedule(result) }
       
       # propagate unaught exception to parent
-      @parent&.schedule(result) if uncaught_exception && !@waiting_fibers
+      @parent&.schedule_with_priority(result) if uncaught_exception && !@waiting_fibers
     end
 
     def when_done(&block)
