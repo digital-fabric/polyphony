@@ -170,72 +170,9 @@ VALUE Backend_wakeup(VALUE self) {
   return Qnil;
 }
 
-#include "polyphony.h"
 #include "../libev/ev.h"
 
-//////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////
-// the following is copied verbatim from the Ruby source code (io.c)
-struct io_internal_read_struct {
-    int fd;
-    int nonblock;
-    void *buf;
-    size_t capa;
-};
-
-#define StringValue(v) rb_string_value(&(v))
-
-int io_setstrbuf(VALUE *str, long len) {
-  #ifdef _WIN32
-    len = (len + 1) & ~1L;	/* round up for wide char */
-  #endif
-  if (NIL_P(*str)) {
-    *str = rb_str_new(0, len);
-    return 1;
-  }
-  else {
-    VALUE s = StringValue(*str);
-    long clen = RSTRING_LEN(s);
-    if (clen >= len) {
-      rb_str_modify(s);
-      return 0;
-    }
-    len -= clen;
-  }
-  rb_str_modify_expand(*str, len);
-  return 0;
-}
-
-#define MAX_REALLOC_GAP 4096
-static void io_shrink_read_string(VALUE str, long n) {
-  if (rb_str_capacity(str) - n > MAX_REALLOC_GAP) {
-    rb_str_resize(str, n);
-  }
-}
-
-void io_set_read_length(VALUE str, long n, int shrinkable) {
-  if (RSTRING_LEN(str) != n) {
-    rb_str_modify(str);
-    rb_str_set_len(str, n);
-    if (shrinkable) io_shrink_read_string(str, n);
-  }
-}
-
-static rb_encoding* io_read_encoding(rb_io_t *fptr) {
-    if (fptr->encs.enc) {
-	return fptr->encs.enc;
-    }
-    return rb_default_external_encoding();
-}
-
-VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
-    OBJ_TAINT(str);
-    rb_enc_associate(str, io_read_encoding(fptr));
-    return str;
-}
-
-//////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////
+#include "backend_common.h"
 
 struct libev_io {
   struct ev_io io;
@@ -248,15 +185,6 @@ void Backend_io_callback(EV_P_ ev_io *w, int revents)
   Fiber_make_runnable(watcher->fiber, Qnil);
 }
 
-inline VALUE libev_await(Backend_t *backend) {
-  VALUE ret;
-  backend->ref_count++;
-  ret = Thread_switch_fiber(rb_thread_current());
-  backend->ref_count--;
-  RB_GC_GUARD(ret);
-  return ret;
-}
-
 VALUE libev_wait_fd_with_watcher(Backend_t *backend, int fd, struct libev_io *watcher, int events) {
   VALUE switchpoint_result;
 
@@ -266,7 +194,7 @@ VALUE libev_wait_fd_with_watcher(Backend_t *backend, int fd, struct libev_io *wa
   }
   ev_io_start(backend->ev_loop, &watcher->io);
 
-  switchpoint_result = libev_await(backend);
+  switchpoint_result = backend_await(backend);
 
   ev_io_stop(backend->ev_loop, &watcher->io);
   RB_GC_GUARD(switchpoint_result);
@@ -283,35 +211,6 @@ VALUE libev_wait_fd(Backend_t *backend, int fd, int events, int raise_exception)
   if (raise_exception) TEST_RESUME_EXCEPTION(switchpoint_result);
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
-}
-
-VALUE libev_snooze() {
-  Fiber_make_runnable(rb_fiber_current(), Qnil);
-  return Thread_switch_fiber(rb_thread_current());
-}
-
-ID ID_ivar_is_nonblocking;
-
-// Since we need to ensure that fd's are non-blocking before every I/O
-// operation, here we improve upon Ruby's rb_io_set_nonblock by caching the
-// "nonblock" state in an instance variable. Calling rb_ivar_get on every read
-// is still much cheaper than doing a fcntl syscall on every read! Preliminary
-// benchmarks (with a "hello world" HTTP server) show throughput is improved
-// by 10-13%.
-inline void io_set_nonblock(rb_io_t *fptr, VALUE io) {
-  VALUE is_nonblocking = rb_ivar_get(io, ID_ivar_is_nonblocking);
-  if (is_nonblocking == Qtrue) return;
-
-  rb_ivar_set(io, ID_ivar_is_nonblocking, Qtrue);
-
-#ifdef _WIN32
-  rb_w32_set_nonblock(fptr->fd);
-#elif defined(F_GETFL)
-  int oflags = fcntl(fptr->fd, F_GETFL);
-  if ((oflags == -1) && (oflags & O_NONBLOCK)) return;
-  oflags |= O_NONBLOCK;
-  fcntl(fptr->fd, F_SETFL, oflags);
-#endif
 }
 
 VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
@@ -356,7 +255,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      switchpoint_result = libev_snooze();
+      switchpoint_result = backend_snooze();
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
 
@@ -446,7 +345,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      switchpoint_result = libev_snooze();
+      switchpoint_result = backend_snooze();
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
 
@@ -499,7 +398,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   }
 
   if (watcher.fiber == Qnil) {
-    switchpoint_result = libev_snooze();
+    switchpoint_result = backend_snooze();
 
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
@@ -569,7 +468,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     }
   }
   if (watcher.fiber == Qnil) {
-    switchpoint_result = libev_snooze();
+    switchpoint_result = backend_snooze();
 
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
@@ -624,7 +523,7 @@ VALUE Backend_accept(VALUE self, VALUE sock) {
     else {
       VALUE socket;
       rb_io_t *fp;
-      switchpoint_result = libev_snooze();
+      switchpoint_result = backend_snooze();
 
       if (TEST_EXCEPTION(switchpoint_result)) {
         close(fd); // close fd since we're raising an exception
@@ -681,7 +580,7 @@ VALUE Backend_accept_loop(VALUE self, VALUE sock) {
     }
     else {
       rb_io_t *fp;
-      switchpoint_result = libev_snooze();
+      switchpoint_result = backend_snooze();
 
       if (TEST_EXCEPTION(switchpoint_result)) {
         close(fd); // close fd since we're raising an exception
@@ -739,7 +638,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
   else {
-    switchpoint_result = libev_snooze();
+    switchpoint_result = backend_snooze();
 
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
@@ -782,7 +681,7 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
   ev_timer_init(&watcher.timer, Backend_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(backend->ev_loop, &watcher.timer);
 
-  switchpoint_result = libev_await(backend);
+  switchpoint_result = backend_await(backend);
 
   ev_timer_stop(backend->ev_loop, &watcher.timer);
   TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -816,7 +715,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   ev_child_init(&watcher.child, Backend_child_callback, NUM2INT(pid), 0);
   ev_child_start(backend->ev_loop, &watcher.child);
 
-  switchpoint_result = libev_await(backend);
+  switchpoint_result = backend_await(backend);
 
   ev_child_stop(backend->ev_loop, &watcher.child);
   TEST_RESUME_EXCEPTION(switchpoint_result);
@@ -824,14 +723,6 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
 }
-
-struct ev_loop *Backend_ev_loop(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-  return backend->ev_loop;
-}
-
-void Backend_async_callback(EV_P_ ev_async *w, int revents) { }
 
 VALUE Backend_wait_event(VALUE self, VALUE raise) {
   Backend_t *backend;
@@ -843,7 +734,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   ev_async_init(&async, Backend_async_callback);
   ev_async_start(backend->ev_loop, &async);
 
-  switchpoint_result = libev_await(backend);
+  switchpoint_result = backend_await(backend);
 
   ev_async_stop(backend->ev_loop, &async);
   if (RTEST(raise)) TEST_RESUME_EXCEPTION(switchpoint_result);
