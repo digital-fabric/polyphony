@@ -1,3 +1,0 @@
-[submodule "ext/liburing"]
-	path = ext/liburing
-	url = https://github.com/axboe/liburing.git
