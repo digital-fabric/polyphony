@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 
 #include "polyphony.h"
-#include <liburing.h>
+#include "../liburing/liburing.h"
 #include <poll.h>
 
 VALUE cTCPSocket;

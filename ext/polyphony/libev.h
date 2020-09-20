@@ -1,6 +1,8 @@
+#define EV_STANDALONE
+
 #ifdef POLYPHONY_BACKEND_LIBEV
 
-#define EV_STANDALONE /* keeps ev from requiring config.h */
+/* keeps ev from requiring config.h */
 
 #ifdef _WIN32
 #define EV_SELECT_IS_WINSOCKET 1
