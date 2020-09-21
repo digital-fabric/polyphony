@@ -138,13 +138,20 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
   
   sqe_context_t *ctx = io_uring_cqe_get_data(cqe);
   if (ctx && !(ctx->flags && SQE_CONTEXT_CANCELLED))
-    Fiber_make_runnable(ctx->fiber, Qnil);
+    Fiber_make_runnable(ctx->fiber, INT2NUM(cqe->res));
   io_uring_cqe_seen(&backend->ring, cqe);
 
   return self;
 }
 
 VALUE Backend_wakeup(VALUE self) {
+  // TODO: wakeup from io_uring polling, we'll perhaps use eventfd for each ring:
+  //  - use io_uring_prep_poll_add on the fd and submit sqe
+  //  - associate a special user data value, which signifies a wakeup event
+  //  - when io_uring_wait_cqe returns, if user data is a wakeup event,
+  //    - read from event fd
+  //    - resubmit sqe for event fd
+
   Backend_t *backend;
   GetBackend(self, backend);
 
@@ -156,7 +163,6 @@ VALUE Backend_wakeup(VALUE self) {
     // `ev_async` allows us to interrupt the event loop across threads.
     
     // ev_async_send(backend->ev_loop, &backend->break_async);
-    // TODO: wakeup from io_uring polling
     
     return Qtrue;
   }
@@ -249,24 +255,36 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 }
 
 VALUE Backend_sleep(VALUE self, VALUE duration) {
-  // Backend_t *backend;
-  // struct libev_timer watcher;
-  // VALUE switchpoint_result = Qnil;
+  Backend_t *backend;
+  sqe_context_t ctx;
+  VALUE switchpoint_result = Qnil;
+  ctx.fiber = rb_fiber_current();
+  ctx.flags = 0;
+  struct io_uring_sqe *sqe;
+  double duration_integral;
+  double duration_fraction = modf(NUM2DBL(duration), &duration_integral);
+  struct __kernel_timespec ts;
 
-  // GetBackend(self, backend);
-  // watcher.fiber = rb_fiber_current();
-  // ev_timer_init(&watcher.timer, Backend_timer_callback, NUM2DBL(duration), 0.);
-  // ev_timer_start(backend->ev_loop, &watcher.timer);
+  GetBackend(self, backend);
+  sqe = io_uring_get_sqe(&backend->ring);
+  
 
-  // switchpoint_result = libev_await(backend);
+  ts.tv_sec = duration_integral;
+	ts.tv_nsec = floor(duration_fraction * 1000000000);
+  io_uring_prep_timeout(sqe, &ts, 0, 0);
+  io_uring_sqe_set_data(sqe, &ctx);
+  io_uring_submit(&backend->ring);
 
-  // ev_timer_stop(backend->ev_loop, &watcher.timer);
-  // TEST_RESUME_EXCEPTION(switchpoint_result);
-  // RB_GC_GUARD(watcher.fiber);
-  // RB_GC_GUARD(switchpoint_result);
-  // return switchpoint_result;
-  rb_raise(rb_eRuntimeError, "Not implemented");
-  return self;
+  switchpoint_result = backend_await(backend);
+
+  if (TEST_EXCEPTION(switchpoint_result)) {
+    sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_timeout_remove(sqe, (__u64)&ctx, 0);
+    io_uring_submit(&backend->ring);
+    RAISE_EXCEPTION(switchpoint_result);
+  }
+  RB_GC_GUARD(switchpoint_result);
+  return Qnil;
 }
 
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
