@@ -26,5 +26,7 @@ end
 
 CONFIG['optflags'] << ' -fno-strict-aliasing' unless RUBY_PLATFORM =~ /mswin/
 
+$CFLAGS << " -Wpointer-arith"
+
 dir_config 'polyphony_ext'
 create_makefile 'polyphony_ext'

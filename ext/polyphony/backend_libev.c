@@ -27,7 +27,7 @@ static size_t Backend_size(const void *ptr) {
 }
 
 static const rb_data_type_t Backend_type = {
-    "Libev",
+    "LibevBackend",
     {0, 0, Backend_size,},
     0, 0, RUBY_TYPED_FREE_IMMEDIATELY
 };
