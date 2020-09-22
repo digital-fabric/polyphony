@@ -28,6 +28,7 @@ VALUE cTCPSocket;
 
 typedef struct Backend_t {
   struct  io_uring ring;
+  int     wakeup_fd;
   int     running;
   int     ref_count;
   int     run_no_wait_count;
@@ -59,16 +60,27 @@ static VALUE Backend_allocate(VALUE klass) {
 #define GetBackend(obj, backend) \
   TypedData_Get_Struct((obj), Backend_t, &Backend_type, (backend))
 
+#define USER_DATA_WAKEUP	((__u64) -2)
+
+void io_uring_backend_watch_wakeup_fd(struct io_uring *ring, int wakeup_fd) {
+  struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
+  io_uring_prep_poll_add(sqe, wakeup_fd, POLLIN);
+  io_uring_sqe_set_data(sqe, (void *)USER_DATA_WAKEUP);
+  io_uring_submit(ring);
+}
+
 static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
   io_uring_queue_init(100, &backend->ring, 0); // TODO: dynamic queue depth
 
+  backend->wakeup_fd = eventfd(0, 0);
   backend->running = 0;
   backend->ref_count = 0;
   backend->run_no_wait_count = 0;
-
+  io_uring_backend_watch_wakeup_fd(&backend->ring, backend->wakeup_fd);
+  
   return Qnil;
 }
 
@@ -77,6 +89,7 @@ VALUE Backend_finalize(VALUE self) {
   GetBackend(self, backend);
 
   io_uring_queue_exit(&backend->ring);
+  close(backend->wakeup_fd);
   return self;
 }
 
@@ -129,14 +142,18 @@ void *io_uring_backend_poll(void *ptr) {
   struct io_uring_cqe *cqe;
   int ret = io_uring_wait_cqe(ring, &cqe);
   if (ret < 0) return 0;
+  int wakeup = 0;
 
   sqe_context_t *ctx = io_uring_cqe_get_data(cqe);
-  if (ctx) {
+  if (ctx == (void *)USER_DATA_WAKEUP) {
+    wakeup = -1;
+  }
+  else if (ctx) {
     ctx->result = cqe->res;
     Fiber_make_runnable(ctx->fiber, Qnil);
   }
   io_uring_cqe_seen(ring, cqe);
-  return 0;
+  return wakeup ? (void *)-1 : 0;
 }
 
 VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
@@ -156,32 +173,27 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
 
   COND_TRACE(2, SYM_backend_poll_enter, current_fiber);
   backend->running = 1;
-  rb_thread_call_without_gvl(io_uring_backend_poll, (void *)&backend->ring, RUBY_UBF_IO, 0);
+  void *result = rb_thread_call_without_gvl(io_uring_backend_poll, (void *)&backend->ring, RUBY_UBF_IO, 0);
   backend->running = 0;
   COND_TRACE(2, SYM_backend_poll_leave, current_fiber);
+
+  if (result) io_uring_backend_watch_wakeup_fd(&backend->ring, backend->wakeup_fd);
   
   return self;
 }
 
 VALUE Backend_wakeup(VALUE self) {
-  // TODO: wakeup from io_uring polling, we'll perhaps use eventfd for each ring:
-  //  - use io_uring_prep_poll_add on the fd and submit sqe
-  //  - associate a special user data value, which signifies a wakeup event
-  //  - when io_uring_wait_cqe returns, if user data is a wakeup event,
-  //    - read from event fd
-  //    - resubmit sqe for event fd
-
   Backend_t *backend;
   GetBackend(self, backend);
 
   if (backend->running) {
-    // Since the loop will run until at least one event has occurred, we signal
-    // the selector's associated async watcher, which will cause the ev loop to
-    // return. In contrast to using `ev_break` to break out of the loop, which
-    // should be called from the same thread (from within the ev_loop), using an
-    // `ev_async` allows us to interrupt the event loop across threads.
-    
-    // ev_async_send(backend->ev_loop, &backend->break_async);
+    // Since we're currently blocking while waiting for a completion, we need to
+    // signal the associated eventfd in order for the associated eventfd in
+    // order for the polling to end immediately.
+    uint64_t u = 1;
+    int ret = write(backend->wakeup_fd, &u, sizeof(u));
+    if (ret != sizeof(uint64_t))
+      rb_raise(rb_eRuntimeError, "Failed to wakeup backend's event fd (result: %d)", ret);
     
     return Qtrue;
   }
