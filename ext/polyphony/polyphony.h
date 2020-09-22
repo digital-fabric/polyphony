@@ -50,8 +50,8 @@ extern ID ID_switch_fiber;
 extern ID ID_transfer;
 
 extern VALUE SYM_fiber_create;
-extern VALUE SYM_fiber_ev_loop_enter;
-extern VALUE SYM_fiber_ev_loop_leave;
+extern VALUE SYM_backend_poll_enter;
+extern VALUE SYM_backend_poll_leave;
 extern VALUE SYM_fiber_run;
 extern VALUE SYM_fiber_schedule;
 extern VALUE SYM_fiber_switchpoint;

@@ -154,11 +154,11 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
 
   backend->run_no_wait_count = 0;
 
-  COND_TRACE(2, SYM_fiber_ev_loop_enter, current_fiber);
+  COND_TRACE(2, SYM_backend_poll_enter, current_fiber);
   backend->running = 1;
   rb_thread_call_without_gvl(io_uring_backend_poll, (void *)&backend->ring, RUBY_UBF_IO, 0);
   backend->running = 0;
-  COND_TRACE(2, SYM_fiber_ev_loop_leave, current_fiber);
+  COND_TRACE(2, SYM_backend_poll_leave, current_fiber);
   
   return self;
 }
