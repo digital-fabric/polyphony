@@ -10,6 +10,7 @@
 
 #include "polyphony.h"
 #include "../liburing/liburing.h"
+#include "ruby/thread.h"
 
 #include <poll.h>
 #include <sys/types.h>
@@ -123,6 +124,21 @@ VALUE Backend_pending_count(VALUE self) {
   return INT2NUM(0);
 }
 
+void *io_uring_backend_poll(void *ptr) {
+  struct io_uring *ring = (struct io_uring *)ptr;
+  struct io_uring_cqe *cqe;
+  int ret = io_uring_wait_cqe(ring, &cqe);
+  if (ret < 0) return 0;
+
+  sqe_context_t *ctx = io_uring_cqe_get_data(cqe);
+  if (ctx) {
+    ctx->result = cqe->res;
+    Fiber_make_runnable(ctx->fiber, Qnil);
+  }
+  io_uring_cqe_seen(ring, cqe);
+  return 0;
+}
+
 VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
   int is_nowait = nowait == Qtrue;
   Backend_t *backend;
@@ -138,22 +154,12 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
 
   backend->run_no_wait_count = 0;
 
-  struct io_uring_cqe *cqe;
-
   COND_TRACE(2, SYM_fiber_ev_loop_enter, current_fiber);
   backend->running = 1;
-  int ret = io_uring_wait_cqe(&backend->ring, &cqe);
+  rb_thread_call_without_gvl(io_uring_backend_poll, (void *)&backend->ring, RUBY_UBF_IO, 0);
   backend->running = 0;
   COND_TRACE(2, SYM_fiber_ev_loop_leave, current_fiber);
-  if (ret < 0) return self;
   
-  sqe_context_t *ctx = io_uring_cqe_get_data(cqe);
-  if (ctx) {
-    ctx->result = cqe->res;
-    Fiber_make_runnable(ctx->fiber, Qnil);
-  }
-  io_uring_cqe_seen(&backend->ring, cqe);
-
   return self;
 }
 
