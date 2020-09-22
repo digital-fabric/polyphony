@@ -443,7 +443,10 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     ssize_t n = writev(fptr->fd, iov_ptr, iov_count);
     if (n < 0) {
       int e = errno;
-      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+      if ((e != EWOULDBLOCK && e != EAGAIN)) {
+        free(iov);
+        rb_syserr_fail(e, strerror(e));
+      }
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_WRITE);
 
@@ -469,7 +472,6 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   }
   if (watcher.fiber == Qnil) {
     switchpoint_result = backend_snooze();
-
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
 
