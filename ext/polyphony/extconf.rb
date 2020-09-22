@@ -6,18 +6,9 @@ require 'mkmf'
 use_liburing = false
 force_use_libev = ENV['POLYPHONY_USE_LIBEV'] != nil
 
-if !force_use_libev && RUBY_PLATFORM =~ /linux/ && `uname -srm` =~ /Linux (5\.\d)/
+if !force_use_libev && RUBY_PLATFORM =~ /linux/ && `uname -sr` =~ /Linux (5\.\d)/
   kernel_version = $1.gsub('.', '').to_i
-  $defs << "-DPOLYPHONY_KERNEL_VERSION_#{kernel_version}"
-  if kernel_version >= 54
-    use_liburing = true
-    $defs << "-DPOLYPHONY_IO_URING_TIMEOUT"
-  end
-  if kernel_version >= 55
-    $defs << "-DPOLYPHONY_IO_URING_ACCEPT"
-    $defs << "-DPOLYPHONY_IO_URING_CONNECT"
-    $defs << "-DPOLYPHONY_IO_URING_ASYNC_CANCEL"
-  end
+  use_liburing = kernel_version >= 55
 end
 
 if use_liburing

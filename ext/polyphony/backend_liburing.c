@@ -10,22 +10,33 @@
 
 #include "polyphony.h"
 #include "../liburing/liburing.h"
+
 #include <poll.h>
+#include <sys/types.h>
+#include <sys/eventfd.h>
+
+#ifndef __NR_pidfd_open
+#define __NR_pidfd_open 434   /* System call # on most architectures */
+#endif
+
+static int pidfd_open(pid_t pid, unsigned int flags) {
+  return syscall(__NR_pidfd_open, pid, flags);
+}
 
 VALUE cTCPSocket;
 
 typedef struct Backend_t {
-  struct io_uring ring;
-  int running;
-  int ref_count;
-  int run_no_wait_count;
+  struct  io_uring ring;
+  int     running;
+  int     ref_count;
+  int     run_no_wait_count;
 } Backend_t;
 
-int SQE_CONTEXT_CANCELLED = 1;
+#include "backend_common.h"
 
 typedef struct sqe_context {
-  VALUE fiber;
-  unsigned int flags;
+  VALUE         fiber;
+  __s32         result;
 } sqe_context_t;
 
 static size_t Backend_size(const void *ptr) {
@@ -33,7 +44,7 @@ static size_t Backend_size(const void *ptr) {
 }
 
 static const rb_data_type_t Backend_type = {
-    "Libev",
+    "LiburingBackend",
     {0, 0, Backend_size,},
     0, 0, RUBY_TYPED_FREE_IMMEDIATELY
 };
@@ -137,8 +148,10 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
   if (ret < 0) return self;
   
   sqe_context_t *ctx = io_uring_cqe_get_data(cqe);
-  if (ctx && !(ctx->flags && SQE_CONTEXT_CANCELLED))
-    Fiber_make_runnable(ctx->fiber, INT2NUM(cqe->res));
+  if (ctx) {
+    ctx->result = cqe->res;
+    Fiber_make_runnable(ctx->fiber, Qnil);
+  }
   io_uring_cqe_seen(&backend->ring, cqe);
 
   return self;
@@ -170,13 +183,10 @@ VALUE Backend_wakeup(VALUE self) {
   return Qnil;
 }
 
-#include "backend_common.h"
-
 VALUE liburing_wait_fd(Backend_t *backend, int fd, int events, int raise_exception) {
   sqe_context_t ctx;
   VALUE switchpoint_result = Qnil;
   ctx.fiber = rb_fiber_current();
-  ctx.flags = 0;
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_poll_add(sqe, fd, events);
@@ -205,14 +215,82 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   return self;
 }
 
-VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
-  rb_raise(rb_eRuntimeError, "Not implemented");
-  return self;
-}
-
 VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
-  rb_raise(rb_eRuntimeError, "Not implemented");
-  return self;
+  Backend_t *backend;
+  rb_io_t *fptr;
+  VALUE switchpoint_result = Qnil;
+  VALUE underlying_io;
+  long total_length = 0;
+  long total_written = 0;
+  struct iovec *iov = 0;
+  struct iovec *iov_ptr = 0;
+  int iov_count = argc;
+  sqe_context_t ctx;
+  ctx.fiber = rb_fiber_current();
+
+  underlying_io = rb_iv_get(io, "@io");
+  if (underlying_io != Qnil) io = underlying_io;
+  GetBackend(self, backend);
+  io = rb_io_get_write_io(io);
+  GetOpenFile(io, fptr);
+
+  iov = malloc(iov_count * sizeof(struct iovec));
+  for (int i = 0; i < argc; i++) {
+    VALUE str = argv[i];
+    iov[i].iov_base = StringValuePtr(str);
+    iov[i].iov_len = RSTRING_LEN(str);
+    total_length += iov[i].iov_len;
+  }
+  iov_ptr = iov;
+
+  while (1) {
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_writev(sqe, fptr->fd, iov_ptr, iov_count, -1);
+    io_uring_sqe_set_data(sqe, &ctx);
+    io_uring_submit(&backend->ring);
+
+    switchpoint_result = backend_await(backend);
+    if (TEST_EXCEPTION(switchpoint_result)) {
+      sqe = io_uring_get_sqe(&backend->ring);
+      io_uring_prep_poll_remove(sqe, &ctx);
+      io_uring_submit(&backend->ring);
+      RAISE_EXCEPTION(switchpoint_result);
+    }
+
+    ssize_t n = ctx.result;
+    if (n < 0) {
+      free(iov);
+      rb_syserr_fail(n, strerror(n));
+    }
+    else {
+      total_written += n;
+      if (total_written == total_length) break;
+
+      while (n > 0) {
+        if ((size_t) n < iov_ptr[0].iov_len) {
+          iov_ptr[0].iov_base = (char *) iov_ptr[0].iov_base + n;
+          iov_ptr[0].iov_len -= n;
+          n = 0;
+        }
+        else {
+          n -= iov_ptr[0].iov_len;
+          iov_ptr += 1;
+          iov_count -= 1;
+        }
+      }
+    }
+  }
+
+  if (TEST_EXCEPTION(switchpoint_result)) goto error;
+
+  RB_GC_GUARD(ctx.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  free(iov);
+  return INT2NUM(total_written);
+error:
+  free(iov);
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
@@ -220,9 +298,7 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
     // TODO: raise ArgumentError
     rb_raise(rb_eRuntimeError, "(wrong number of arguments (expected 2 or more))");
 
-  return (argc == 2) ?
-    Backend_write(self, argv[0], argv[1]) :
-    Backend_writev(self, argv[0], argc - 1, argv + 1);
+  return Backend_writev(self, argv[0], argc - 1, argv + 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -259,7 +335,6 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
   sqe_context_t ctx;
   VALUE switchpoint_result = Qnil;
   ctx.fiber = rb_fiber_current();
-  ctx.flags = 0;
   struct io_uring_sqe *sqe;
   double duration_integral;
   double duration_fraction = modf(NUM2DBL(duration), &duration_integral);
@@ -288,12 +363,28 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
 }
 
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
-  rb_raise(rb_eRuntimeError, "Not implemented");
+  Backend_t *backend;
+  VALUE switchpoint_result;
+  int fd = pidfd_open(NUM2INT(pid), 0);
+  GetBackend(self, backend);
+  
+  switchpoint_result = liburing_wait_fd(backend, fd, POLLIN, 0);
+  close(fd);
+
+  TEST_RESUME_EXCEPTION(switchpoint_result);
   return self;
 }
 
 VALUE Backend_wait_event(VALUE self, VALUE raise) {
-  rb_raise(rb_eRuntimeError, "Not implemented");
+  Backend_t *backend;
+  VALUE switchpoint_result;
+  int fd = eventfd(0, 0);
+  GetBackend(self, backend);
+
+  switchpoint_result = liburing_wait_fd(backend, fd, POLLIN, 0);
+  close(fd);
+
+  TEST_RESUME_EXCEPTION(switchpoint_result);
   return self;
 }
 
