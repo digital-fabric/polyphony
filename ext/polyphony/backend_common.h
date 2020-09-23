@@ -80,30 +80,6 @@ inline VALUE backend_snooze() {
   return Thread_switch_fiber(rb_thread_current());
 }
 
-ID ID_ivar_is_nonblocking;
-
-// Since we need to ensure that fd's are non-blocking before every I/O
-// operation, here we improve upon Ruby's rb_io_set_nonblock by caching the
-// "nonblock" state in an instance variable. Calling rb_ivar_get on every read
-// is still much cheaper than doing a fcntl syscall on every read! Preliminary
-// benchmarks (with a "hello world" HTTP server) show throughput is improved
-// by 10-13%.
-inline void io_set_nonblock(rb_io_t *fptr, VALUE io) {
-  VALUE is_nonblocking = rb_ivar_get(io, ID_ivar_is_nonblocking);
-  if (is_nonblocking == Qtrue) return;
-
-  rb_ivar_set(io, ID_ivar_is_nonblocking, Qtrue);
-
-#ifdef _WIN32
-  rb_w32_set_nonblock(fptr->fd);
-#elif defined(F_GETFL)
-  int oflags = fcntl(fptr->fd, F_GETFL);
-  if ((oflags == -1) && (oflags & O_NONBLOCK)) return;
-  oflags |= O_NONBLOCK;
-  fcntl(fptr->fd, F_SETFL, oflags);
-#endif
-}
-
 // macros for doing read loops
 
 #define READ_LOOP_PREPARE_STR() { \
