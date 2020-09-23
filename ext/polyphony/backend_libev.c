@@ -208,7 +208,7 @@ VALUE libev_wait_fd(Backend_t *backend, int fd, int events, int raise_exception)
 
   switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, events);
 
-  if (raise_exception) TEST_RESUME_EXCEPTION(switchpoint_result);
+  if (raise_exception) RAISE_IF_EXCEPTION(switchpoint_result);
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
 }
@@ -653,7 +653,7 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
   switchpoint_result = backend_await(backend);
 
   ev_timer_stop(backend->ev_loop, &watcher.timer);
-  TEST_RESUME_EXCEPTION(switchpoint_result);
+  RAISE_IF_EXCEPTION(switchpoint_result);
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
@@ -687,7 +687,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   switchpoint_result = backend_await(backend);
 
   ev_child_stop(backend->ev_loop, &watcher.child);
-  TEST_RESUME_EXCEPTION(switchpoint_result);
+  RAISE_IF_EXCEPTION(switchpoint_result);
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
@@ -706,7 +706,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   switchpoint_result = backend_await(backend);
 
   ev_async_stop(backend->ev_loop, &async);
-  if (RTEST(raise)) TEST_RESUME_EXCEPTION(switchpoint_result);
+  if (RTEST(raise)) RAISE_IF_EXCEPTION(switchpoint_result);
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
 }

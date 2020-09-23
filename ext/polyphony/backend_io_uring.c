@@ -561,7 +561,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   io_uring_backend_wait_fd(backend, fd, 0, &exception);
   close(fd);
 
-  TEST_RESUME_EXCEPTION(exception);
+  RAISE_IF_NOT_NIL(exception);
   RB_GC_GUARD(exception);
   return self;
 }
@@ -575,7 +575,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   io_uring_backend_wait_fd(backend, fd, 0, &exception);
   close(fd);
 
-  TEST_RESUME_EXCEPTION(exception);
+  RAISE_IF_NOT_NIL(exception);
   RB_GC_GUARD(exception);
   return self;
 }

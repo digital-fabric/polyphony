@@ -19,9 +19,8 @@
 #define TEST_EXCEPTION(ret) (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
 
 #define RAISE_EXCEPTION(e) rb_funcall(e, ID_invoke, 0);
-#define TEST_RESUME_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { \
-  return RAISE_EXCEPTION(ret); \
-}
+#define RAISE_IF_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { RAISE_EXCEPTION(ret); }
+#define RAISE_IF_NOT_NIL(ret) if (ret != Qnil) { RAISE_EXCEPTION(ret); }
 
 extern backend_interface_t backend_interface;
 #define __BACKEND__ (backend_interface)

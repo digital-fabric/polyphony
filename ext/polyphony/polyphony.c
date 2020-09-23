@@ -29,7 +29,7 @@ VALUE Polyphony_snooze(VALUE self) {
 
   Fiber_make_runnable(fiber, Qnil);
   ret = Thread_switch_fiber(rb_thread_current());
-  TEST_RESUME_EXCEPTION(ret);
+  RAISE_IF_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
 }
@@ -37,7 +37,7 @@ VALUE Polyphony_snooze(VALUE self) {
 static VALUE Polyphony_suspend(VALUE self) {
   VALUE ret = Thread_switch_fiber(rb_thread_current());
 
-  TEST_RESUME_EXCEPTION(ret);
+  RAISE_IF_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
 }
