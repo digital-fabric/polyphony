@@ -231,18 +231,9 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
   io_set_nonblock(fptr, io);
+  rectify_io_file_pos(fptr);
   watcher.fiber = Qnil;
-
   OBJ_TAINT(str);
-
-  // Apparently after reopening a closed file, the file position is not reset,
-  // which causes the read to fail. Fortunately we can use fptr->rbuf.len to
-  // find out if that's the case.
-  // See: https://github.com/digital-fabric/polyphony/issues/30
-  if (fptr->rbuf.len > 0) {
-    lseek(fptr->fd, -fptr->rbuf.len, SEEK_CUR);
-    fptr->rbuf.len = 0;
-  }
 
   while (1) {
     ssize_t n = read(fptr->fd, buf, len - total);
@@ -290,22 +281,6 @@ error:
 }
 
 VALUE Backend_read_loop(VALUE self, VALUE io) {
-
-  #define PREPARE_STR() { \
-    str = Qnil; \
-    shrinkable = io_setstrbuf(&str, len); \
-    buf = RSTRING_PTR(str); \
-    total = 0; \
-    OBJ_TAINT(str); \
-  }
-
-  #define YIELD_STR() { \
-    io_set_read_length(str, total, shrinkable); \
-    io_enc_str(str, fptr); \
-    rb_yield(str); \
-    PREPARE_STR(); \
-  }
-
   Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
@@ -317,23 +292,15 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   VALUE switchpoint_result = Qnil;
   VALUE underlying_io = rb_iv_get(io, "@io");
 
-  PREPARE_STR();
+  READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
   io_set_nonblock(fptr, io);
+  rectify_io_file_pos(fptr);
   watcher.fiber = Qnil;
-
-  // Apparently after reopening a closed file, the file position is not reset,
-  // which causes the read to fail. Fortunately we can use fptr->rbuf.len to
-  // find out if that's the case.
-  // See: https://github.com/digital-fabric/polyphony/issues/30
-  if (fptr->rbuf.len > 0) {
-    lseek(fptr->fd, -fptr->rbuf.len, SEEK_CUR);
-    fptr->rbuf.len = 0;
-  }
 
   while (1) {
     ssize_t n = read(fptr->fd, buf, len);
@@ -351,7 +318,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
 
       if (n == 0) break; // EOF
       total = n;
-      YIELD_STR();
+      READ_LOOP_YIELD_STR();
     }
   }
 

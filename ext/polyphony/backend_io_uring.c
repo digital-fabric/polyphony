@@ -201,8 +201,13 @@ VALUE Backend_wakeup(VALUE self) {
   return Qnil;
 }
 
-VALUE io_uring_backend_submit_and_await(Backend_t *backend, struct io_uring_sqe *sqe, sqe_context_t *ctx, int raise_exception) {
+VALUE io_uring_backend_submit_and_await(
+  Backend_t *backend, struct io_uring_sqe *sqe, sqe_context_t *ctx,
+  int raise_exception, int *is_exception
+)
+{
   VALUE switchpoint_result = Qnil;
+  if (is_exception) (*is_exception) = 0;
 
   io_uring_sqe_set_data(sqe, ctx);
   io_uring_submit(&backend->ring);
@@ -210,6 +215,7 @@ VALUE io_uring_backend_submit_and_await(Backend_t *backend, struct io_uring_sqe 
   switchpoint_result = backend_await(backend);
   
   if (TEST_EXCEPTION(switchpoint_result)) {
+    if (is_exception) (*is_exception) = 1;
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_cancel(sqe, ctx, 0);
     io_uring_submit(&backend->ring);
@@ -225,17 +231,124 @@ VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write, int raise_
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_poll_add(sqe, fd, write ? POLLOUT : POLLIN);
-  return io_uring_backend_submit_and_await(backend, sqe, &ctx, raise_exception);
+  return io_uring_backend_submit_and_await(backend, sqe, &ctx, raise_exception, 0);
 }
 
 VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
-  rb_raise(rb_eRuntimeError, "Not implemented");
-  return self;
+  Backend_t *backend;
+  rb_io_t *fptr;
+  long dynamic_len = length == Qnil;
+  long len = dynamic_len ? 4096 : NUM2INT(length);
+  int shrinkable = io_setstrbuf(&str, len);
+  char *buf = RSTRING_PTR(str);
+  long total = 0;
+  VALUE switchpoint_result = Qnil;
+  sqe_context_t ctx;
+  int read_to_eof = RTEST(to_eof);
+  VALUE underlying_io = rb_iv_get(io, "@io");
+  struct iovec iov[1];
+  ctx.fiber = rb_fiber_current();
+
+  GetBackend(self, backend);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetOpenFile(io, fptr);
+  rb_io_check_byte_readable(fptr);
+  rectify_io_file_pos(fptr);
+  OBJ_TAINT(str);
+
+  while (1) {
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    int is_exception;
+    iov[0].iov_base = buf;
+    iov[0].iov_len = len - total;
+    io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
+    switchpoint_result = io_uring_backend_submit_and_await(backend, sqe, &ctx, 0, &is_exception);
+    if (is_exception) goto error;
+
+    ssize_t n = ctx.result;
+    if (n < 0) {
+      rb_syserr_fail(n, strerror(n));
+    }
+    else {
+      if (n == 0) break; // EOF
+      total = total + n;
+      if (!read_to_eof) break;
+
+      if (total == len) {
+        if (!dynamic_len) break;
+
+        rb_str_resize(str, total);
+        rb_str_modify_expand(str, len);
+        buf = RSTRING_PTR(str) + total;
+        shrinkable = 0;
+        len += len;
+      }
+      else buf += n;
+    }
+  }
+
+  io_set_read_length(str, total, shrinkable);
+  io_enc_str(str, fptr);
+
+  if (total == 0) return Qnil;
+
+  RB_GC_GUARD(ctx.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return str;
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE Backend_read_loop(VALUE self, VALUE io) {
-  rb_raise(rb_eRuntimeError, "Not implemented");
-  return self;
+  Backend_t *backend;
+  rb_io_t *fptr;
+  VALUE str;
+  long total;
+  long len = 8192;
+  int shrinkable;
+  char *buf;
+  VALUE switchpoint_result = Qnil;
+  sqe_context_t ctx;
+  struct iovec iov[1];
+  ctx.fiber = rb_fiber_current();
+  VALUE underlying_io = rb_iv_get(io, "@io");
+
+  READ_LOOP_PREPARE_STR();
+
+  GetBackend(self, backend);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetOpenFile(io, fptr);
+  rb_io_check_byte_readable(fptr);
+  rectify_io_file_pos(fptr);
+
+  while (1) {
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    int is_exception;
+    iov[0].iov_base = buf;
+    iov[0].iov_len = len;
+    io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
+    switchpoint_result = io_uring_backend_submit_and_await(backend, sqe, &ctx, 0, &is_exception);
+    if (is_exception) goto error;
+
+    ssize_t n = ctx.result;
+    if (n < 0)
+      rb_syserr_fail(n, strerror(n));
+    else if (n == 0)
+      break; // EOF
+    else {
+      total = n;
+      READ_LOOP_YIELD_STR();
+    }
+  }
+
+  RB_GC_GUARD(str);
+  RB_GC_GUARD(ctx.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return io;
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
 }
 
 VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
@@ -268,9 +381,10 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    int is_exception = 0;
     io_uring_prep_writev(sqe, fptr->fd, iov_ptr, iov_count, -1);
-    switchpoint_result = io_uring_backend_submit_and_await(backend, sqe, &ctx, 0);
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    switchpoint_result = io_uring_backend_submit_and_await(backend, sqe, &ctx, 0, &is_exception);
+    if (is_exception) goto error;
 
     ssize_t n = ctx.result;
     if (n < 0) {
@@ -357,7 +471,7 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
 	ts.tv_nsec = floor(duration_fraction * 1000000000);
   
   io_uring_prep_timeout(sqe, &ts, 0, 0);
-  return io_uring_backend_submit_and_await(backend, sqe, &ctx, 1);
+  return io_uring_backend_submit_and_await(backend, sqe, &ctx, 1, 0);
 }
 
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
