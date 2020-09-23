@@ -430,15 +430,15 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
 }
 
 VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
-  sqe_context_t ctx;
   rb_io_t *fptr;
   int fd;
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE exception = Qnil;
   VALUE underlying_sock = rb_iv_get(sock, "@io");
-  if (underlying_sock != Qnil) sock = underlying_sock;
   VALUE socket = Qnil;
+  sqe_context_t ctx;
+  if (underlying_sock != Qnil) sock = underlying_sock;
 
   ctx.fiber = rb_fiber_current();
   GetOpenFile(sock, fptr);
@@ -492,8 +492,33 @@ VALUE Backend_accept_loop(VALUE self, VALUE sock) {
 }
 
 VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
-  rb_raise(rb_eRuntimeError, "Not implemented");
-  return self;
+  Backend_t *backend;
+  rb_io_t *fptr;
+  struct sockaddr_in addr;
+  char *host_buf = StringValueCStr(host);
+  VALUE exception = Qnil;
+  VALUE underlying_sock = rb_iv_get(sock, "@io");
+  sqe_context_t ctx;
+  ctx.fiber = rb_fiber_current();
+  if (underlying_sock != Qnil) sock = underlying_sock;
+
+  GetBackend(self, backend);
+  GetOpenFile(sock, fptr);
+
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(host_buf);
+  addr.sin_port = htons(NUM2INT(port));
+
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+  io_uring_prep_connect(sqe, fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
+  int result = io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+  if (exception != Qnil) goto error;
+  if (result < 0) rb_syserr_fail(result, strerror(result));
+  
+  RB_GC_GUARD(exception);
+  return sock;
+error:
+  return RAISE_EXCEPTION(exception);
 }
 
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
