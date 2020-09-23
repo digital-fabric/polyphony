@@ -36,10 +36,10 @@ typedef struct Backend_t {
 
 #include "backend_common.h"
 
-typedef struct sqe_context {
+typedef struct op_context {
   VALUE         fiber;
   __s32         result;
-} sqe_context_t;
+} op_context_t;
 
 static size_t Backend_size(const void *ptr) {
   return sizeof(Backend_t);
@@ -73,7 +73,7 @@ static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  io_uring_queue_init(100, &backend->ring, 0); // TODO: dynamic queue depth
+  io_uring_queue_init(10000, &backend->ring, 0); // TODO: dynamic queue depth
 
   backend->wakeup_fd = eventfd(0, 0);
   backend->running = 0;
@@ -98,7 +98,7 @@ VALUE Backend_post_fork(VALUE self) {
   GetBackend(self, backend);
 
   io_uring_queue_exit(&backend->ring);  
-  io_uring_queue_init(100, &backend->ring, 0); // TODO: dynamic queue depth
+  io_uring_queue_init(10000, &backend->ring, 0); // TODO: dynamic queue depth
 
   return self;
 }
@@ -137,23 +137,32 @@ VALUE Backend_pending_count(VALUE self) {
   return INT2NUM(0);
 }
 
-void *io_uring_backend_poll(void *ptr) {
-  struct io_uring *ring = (struct io_uring *)ptr;
+typedef struct poll_context {
+  struct io_uring     *ring;
   struct io_uring_cqe *cqe;
-  int ret = io_uring_wait_cqe(ring, &cqe);
-  if (ret < 0) return 0;
-  int wakeup = 0;
+  int                 result;
+} poll_context_t;
 
-  sqe_context_t *ctx = io_uring_cqe_get_data(cqe);
-  if (ctx == (void *)USER_DATA_WAKEUP) {
-    wakeup = -1;
+void *io_uring_backend_poll_without_gvl(void *ptr) {
+  poll_context_t *ctx = (poll_context_t *)ptr;
+  ctx->result = io_uring_wait_cqe(ctx->ring, &ctx->cqe);
+  return 0;
+}
+
+void io_uring_backend_poll(Backend_t *backend) {
+  poll_context_t poll_ctx;
+  poll_ctx.ring = &backend->ring;
+  rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
+  if (poll_ctx.result < 0) return;
+
+  op_context_t *op_ctx = io_uring_cqe_get_data(poll_ctx.cqe);
+  if (op_ctx == (void *)USER_DATA_WAKEUP)
+    io_uring_backend_watch_wakeup_fd(&backend->ring, backend->wakeup_fd);
+  else if (op_ctx) {
+    op_ctx->result = poll_ctx.cqe->res;
+    Fiber_make_runnable(op_ctx->fiber, Qnil);
   }
-  else if (ctx) {
-    ctx->result = cqe->res;
-    Fiber_make_runnable(ctx->fiber, Qnil);
-  }
-  io_uring_cqe_seen(ring, cqe);
-  return wakeup ? (void *)-1 : 0;
+  io_uring_cqe_seen(&backend->ring, poll_ctx.cqe);
 }
 
 VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
@@ -173,11 +182,9 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
 
   COND_TRACE(2, SYM_backend_poll_enter, current_fiber);
   backend->running = 1;
-  void *result = rb_thread_call_without_gvl(io_uring_backend_poll, (void *)&backend->ring, RUBY_UBF_IO, 0);
+  io_uring_backend_poll(backend);
   backend->running = 0;
   COND_TRACE(2, SYM_backend_poll_leave, current_fiber);
-
-  if (result) io_uring_backend_watch_wakeup_fd(&backend->ring, backend->wakeup_fd);
   
   return self;
 }
@@ -206,7 +213,7 @@ VALUE Backend_wakeup(VALUE self) {
 // if the exception argument is not null, it is set to the resumed exception
 // otherwise, the exception is raised
 int io_uring_backend_submit_and_await(
-  Backend_t *backend, struct io_uring_sqe *sqe, sqe_context_t *ctx, VALUE *exception
+  Backend_t *backend, struct io_uring_sqe *sqe, op_context_t *ctx, VALUE *exception
 )
 {
   VALUE switchpoint_result = Qnil;
@@ -230,7 +237,7 @@ int io_uring_backend_submit_and_await(
 }
 
 void io_uring_backend_wait_fd(Backend_t *backend, int fd, int write, VALUE *exception) {
-  sqe_context_t ctx;
+  op_context_t ctx;
   ctx.fiber = rb_fiber_current();
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
@@ -247,7 +254,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   char *buf = RSTRING_PTR(str);
   long total = 0;
   VALUE exception = Qnil;
-  sqe_context_t ctx;
+  op_context_t ctx;
   int read_to_eof = RTEST(to_eof);
   VALUE underlying_io = rb_iv_get(io, "@io");
   struct iovec iov[1];
@@ -312,7 +319,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   int shrinkable;
   char *buf;
   VALUE exception = Qnil;
-  sqe_context_t ctx;
+  op_context_t ctx;
   struct iovec iov[1];
   ctx.fiber = rb_fiber_current();
   VALUE underlying_io = rb_iv_get(io, "@io");
@@ -363,7 +370,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   struct iovec *iov = 0;
   struct iovec *iov_ptr = 0;
   int iov_count = argc;
-  sqe_context_t ctx;
+  op_context_t ctx;
   ctx.fiber = rb_fiber_current();
 
   underlying_io = rb_iv_get(io, "@io");
@@ -437,7 +444,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
   VALUE exception = Qnil;
   VALUE underlying_sock = rb_iv_get(sock, "@io");
   VALUE socket = Qnil;
-  sqe_context_t ctx;
+  op_context_t ctx;
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   ctx.fiber = rb_fiber_current();
@@ -498,7 +505,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   char *host_buf = StringValueCStr(host);
   VALUE exception = Qnil;
   VALUE underlying_sock = rb_iv_get(sock, "@io");
-  sqe_context_t ctx;
+  op_context_t ctx;
   ctx.fiber = rb_fiber_current();
   if (underlying_sock != Qnil) sock = underlying_sock;
 
@@ -535,7 +542,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 
 VALUE Backend_sleep(VALUE self, VALUE duration) {
   Backend_t *backend;
-  sqe_context_t ctx;
+  op_context_t ctx;
   ctx.fiber = rb_fiber_current();
   struct io_uring_sqe *sqe;
   double duration_integral;
