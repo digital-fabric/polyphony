@@ -464,8 +464,6 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
     Backend_writev(self, argv[0], argc - 1, argv + 1);
 }
 
-///////////////////////////////////////////////////////////////////////////
-
 VALUE Backend_accept(VALUE self, VALUE sock) {
   Backend_t *backend;
   struct libev_io watcher;
