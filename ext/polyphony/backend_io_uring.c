@@ -609,8 +609,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
 
-  ID_ivar_is_nonblocking = rb_intern("@is_nonblocking"); // declared in backend_common.c
-
   __BACKEND__.pending_count   = Backend_pending_count;
   __BACKEND__.poll            = Backend_poll;
   __BACKEND__.ref             = Backend_ref;
