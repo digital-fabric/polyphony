@@ -346,6 +346,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
+  io_set_nonblock(fptr, io);
   watcher.fiber = Qnil;
 
   while (left > 0) {
@@ -395,6 +396,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
+  io_set_nonblock(fptr, io);
   watcher.fiber = Qnil;
 
   iov = malloc(iov_count * sizeof(struct iovec));
