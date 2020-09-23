@@ -23,7 +23,7 @@ static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
   VALUE arg = (argc == 0) ? Qnil : argv[0];
   VALUE ret = rb_funcall(self, ID_transfer, 1, arg);
 
-  TEST_RESUME_EXCEPTION(ret);
+  RAISE_IF_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
 }
@@ -89,7 +89,7 @@ VALUE Fiber_await(VALUE self) {
   // @running set to nil
   if (rb_ivar_get(self, ID_ivar_running) == Qfalse) {
     result = rb_ivar_get(self, ID_ivar_result);
-    TEST_RESUME_EXCEPTION(result);
+    RAISE_IF_EXCEPTION(result);
     return result;
   }
 
@@ -104,7 +104,7 @@ VALUE Fiber_await(VALUE self) {
   result = Thread_switch_fiber(rb_thread_current());
 
   rb_hash_delete(waiting_fibers, fiber);
-  TEST_RESUME_EXCEPTION(result);
+  RAISE_IF_EXCEPTION(result);
   RB_GC_GUARD(result);
   return result;
 }
