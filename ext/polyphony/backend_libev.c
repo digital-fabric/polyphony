@@ -763,6 +763,9 @@ void Init_Backend() {
   rb_define_method(cBackend, "accept", Backend_accept, 1);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 1);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
+  rb_define_method(cBackend, "recv", Backend_read, 4);
+  rb_define_method(cBackend, "recv_loop", Backend_read_loop, 1);
+  rb_define_method(cBackend, "send", Backend_write, 2);
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
