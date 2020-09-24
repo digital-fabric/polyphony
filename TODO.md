@@ -1,11 +1,16 @@
-(
-  io_uring: some work has been done on an io_uring based scheduler here:
-    https://github.com/dsh0416/evt
-  
-  This can serve as a starting point for doing stuff with io_uring
-)
+- io_uring limit on number of entries:
+  - according to https://github.com/axboe/liburing/issues/209, if we submit
+    SQE's one by one, there should be no problem even if more operations are in
+    flight than the max entries in the ring. This made me think though, that one
+    optimization we can make is to defer calling `io_uring_submit` to just
+    before polling.
+  - In fact, we can combine submitting and waiting for at least one CQE in the
+    same syscall if we call `io_uring_enter` directly instead of calling
+    `io_uring_submit` and then `io_uring_wait_cqe`.
+  - We can keep a count of non-submitted SQE's. If the count reaches the max
+    entries limit, we call `io_uring_submit` and reset the count.
 
-0.45.4
+0.46.0
 
 - Adapter for io/console (what does `IO#raw` do?)
 - Adapter for Pry and IRB (Which fixes #5 and #6)
@@ -14,7 +19,7 @@
 - Fix backtrace for `Timeout.timeout` API (see timeout example).
 - Check why worker-thread example doesn't work.
 
-0.46.0
+0.46.1
 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some

@@ -436,6 +436,143 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
   return Backend_writev(self, argv[0], argc - 1, argv + 1);
 }
 
+VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
+  Backend_t *backend;
+  rb_io_t *fptr;
+  long dynamic_len = length == Qnil;
+  long len = dynamic_len ? 4096 : NUM2INT(length);
+  int shrinkable = io_setstrbuf(&str, len);
+  char *buf = RSTRING_PTR(str);
+  long total = 0;
+  VALUE exception = Qnil;
+  op_context_t ctx;
+  VALUE underlying_io = rb_iv_get(io, "@io");
+  ctx.fiber = rb_fiber_current();
+
+  GetBackend(self, backend);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetOpenFile(io, fptr);
+  rb_io_check_byte_readable(fptr);
+  rectify_io_file_pos(fptr);
+  OBJ_TAINT(str);
+
+  while (1) {
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_recv(sqe, fptr->fd, buf, len - total, 0);
+    io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    if (exception != Qnil) goto error;
+
+    ssize_t n = ctx.result;
+    if (n < 0) {
+      rb_syserr_fail(-n, strerror(-n));
+    }
+    else {
+      total = total + n;
+      break;
+    }
+  }
+
+  io_set_read_length(str, total, shrinkable);
+  io_enc_str(str, fptr);
+
+  if (total == 0) return Qnil;
+
+  RB_GC_GUARD(ctx.fiber);
+  RB_GC_GUARD(exception);
+
+  return str;
+error:
+  return RAISE_EXCEPTION(exception);
+}
+
+VALUE Backend_recv_loop(VALUE self, VALUE io) {
+  Backend_t *backend;
+  rb_io_t *fptr;
+  VALUE str;
+  long total;
+  long len = 8192;
+  int shrinkable;
+  char *buf;
+  VALUE exception = Qnil;
+  op_context_t ctx;
+  ctx.fiber = rb_fiber_current();
+  VALUE underlying_io = rb_iv_get(io, "@io");
+
+  READ_LOOP_PREPARE_STR();
+
+  GetBackend(self, backend);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetOpenFile(io, fptr);
+  rb_io_check_byte_readable(fptr);
+  rectify_io_file_pos(fptr);
+
+  while (1) {
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_recv(sqe, fptr->fd, buf, len, 0);
+    io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    if (exception != Qnil) goto error;
+
+    ssize_t n = ctx.result;
+    if (n < 0)
+      rb_syserr_fail(-n, strerror(-n));
+    else if (n == 0)
+      break; // EOF
+    else {
+      total = n;
+      READ_LOOP_YIELD_STR();
+    }
+  }
+
+  RB_GC_GUARD(str);
+  RB_GC_GUARD(ctx.fiber);
+  RB_GC_GUARD(exception);
+
+  return io;
+error:
+  return RAISE_EXCEPTION(exception);
+}
+
+VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
+  Backend_t *backend;
+  rb_io_t *fptr;
+  VALUE exception = Qnil;
+  VALUE underlying_io;
+  op_context_t ctx;
+  ctx.fiber = rb_fiber_current();
+
+  underlying_io = rb_iv_get(io, "@io");
+  if (underlying_io != Qnil) io = underlying_io;
+  GetBackend(self, backend);
+  io = rb_io_get_write_io(io);
+  GetOpenFile(io, fptr);
+
+  char *buf = StringValuePtr(str);
+  long len = RSTRING_LEN(str);
+  long left = len;
+
+  while (left > 0) {
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_send(sqe, fptr->fd, buf, left, 0);
+    io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    if (exception != Qnil) goto error;
+
+    ssize_t n = ctx.result;
+    if (n < 0)
+      rb_syserr_fail(-n, strerror(-n));
+    else {
+      buf += n;
+      left -= n;
+    }
+  }
+
+  RB_GC_GUARD(ctx.fiber);
+  RB_GC_GUARD(exception);
+
+  return INT2NUM(len);
+error:
+  return RAISE_EXCEPTION(exception);
+}
+
 VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
   rb_io_t *fptr;
   int fd;
@@ -608,6 +745,9 @@ void Init_Backend() {
   rb_define_method(cBackend, "read", Backend_read, 4);
   rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
   rb_define_method(cBackend, "write", Backend_write_m, -1);
+  rb_define_method(cBackend, "recv", Backend_recv, 3);
+  rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 1);
+  rb_define_method(cBackend, "send", Backend_send, 2);
   rb_define_method(cBackend, "accept", Backend_accept, 1);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 1);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
