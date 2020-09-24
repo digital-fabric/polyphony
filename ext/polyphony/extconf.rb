@@ -6,9 +6,9 @@ require 'mkmf'
 use_liburing = false
 force_use_libev = ENV['POLYPHONY_USE_LIBEV'] != nil
 
-if !force_use_libev && RUBY_PLATFORM =~ /linux/ && `uname -sr` =~ /Linux (5\.\d)/
-  kernel_version = $1.gsub('.', '').to_i
-  use_liburing = kernel_version >= 55
+if !force_use_libev && RUBY_PLATFORM =~ /linux/ && `uname -sr` =~ /Linux 5\.([\d+])/
+  kernel_minor_version = $1.gsub('.', '').to_i
+  use_liburing = kernel_minor_version >= 6
 end
 
 if use_liburing
