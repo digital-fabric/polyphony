@@ -27,11 +27,13 @@ static int pidfd_open(pid_t pid, unsigned int flags) {
 VALUE cTCPSocket;
 
 typedef struct Backend_t {
-  struct  io_uring ring;
-  int     wakeup_fd;
-  int     running;
-  int     ref_count;
-  int     run_no_wait_count;
+  struct io_uring ring;
+  int             wakeup_fd;
+  int             running;
+  int             ref_count;
+  int             run_no_wait_count;
+  int             prepared_count;
+  int             prepared_limit;
 } Backend_t;
 
 #include "backend_common.h"
@@ -62,24 +64,28 @@ static VALUE Backend_allocate(VALUE klass) {
 
 #define USER_DATA_WAKEUP	((__u64) -2)
 
-void io_uring_backend_watch_wakeup_fd(struct io_uring *ring, int wakeup_fd) {
-  struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
+void io_uring_backend_defer_submit(Backend_t *backend);
+
+void io_uring_backend_watch_wakeup_fd(Backend_t *backend, int wakeup_fd) {
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_poll_add(sqe, wakeup_fd, POLLIN);
   io_uring_sqe_set_data(sqe, (void *)USER_DATA_WAKEUP);
-  io_uring_submit(ring);
+  io_uring_backend_defer_submit(backend);
 }
 
 static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  io_uring_queue_init(10000, &backend->ring, 0); // TODO: dynamic queue depth
-
   backend->wakeup_fd = eventfd(0, 0);
   backend->running = 0;
   backend->ref_count = 0;
   backend->run_no_wait_count = 0;
-  io_uring_backend_watch_wakeup_fd(&backend->ring, backend->wakeup_fd);
+  backend->prepared_count = 0;
+  backend->prepared_limit = 1024;
+
+  io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
+  io_uring_backend_watch_wakeup_fd(backend, backend->wakeup_fd);
   
   return Qnil;
 }
@@ -98,7 +104,9 @@ VALUE Backend_post_fork(VALUE self) {
   GetBackend(self, backend);
 
   io_uring_queue_exit(&backend->ring);  
-  io_uring_queue_init(10000, &backend->ring, 0); // TODO: dynamic queue depth
+  io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
+  io_uring_backend_watch_wakeup_fd(backend, backend->wakeup_fd);
+  backend->prepared_count = 0;
 
   return self;
 }
@@ -157,7 +165,7 @@ void io_uring_backend_poll(Backend_t *backend) {
 
   op_context_t *op_ctx = io_uring_cqe_get_data(poll_ctx.cqe);
   if (op_ctx == (void *)USER_DATA_WAKEUP)
-    io_uring_backend_watch_wakeup_fd(&backend->ring, backend->wakeup_fd);
+    io_uring_backend_watch_wakeup_fd(backend, backend->wakeup_fd);
   else if (op_ctx) {
     op_ctx->result = poll_ctx.cqe->res;
     Fiber_make_runnable(op_ctx->fiber, Qnil);
@@ -169,6 +177,11 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
   int is_nowait = nowait == Qtrue;
   Backend_t *backend;
   GetBackend(self, backend);
+
+  if (backend->prepared_count > 0) {
+    backend->prepared_count = 0;
+    io_uring_submit(&backend->ring);
+  }
 
   if (is_nowait) {
     backend->run_no_wait_count++;
@@ -208,18 +221,26 @@ VALUE Backend_wakeup(VALUE self) {
   return Qnil;
 }
 
+void io_uring_backend_defer_submit(Backend_t *backend) {
+  backend->prepared_count += 1;
+  if (backend->prepared_count >= backend->prepared_limit) {
+    backend->prepared_count = 0;
+    io_uring_submit(&backend->ring);
+  }
+}
+
 // submits and awaits completion of an async op
 // if waiting is interrupted with an exception, the async op is cancelled
 // if the exception argument is not null, it is set to the resumed exception
 // otherwise, the exception is raised
-int io_uring_backend_submit_and_await(
+int io_uring_backend_defer_submit_and_await(
   Backend_t *backend, struct io_uring_sqe *sqe, op_context_t *ctx, VALUE *exception
 )
 {
   VALUE switchpoint_result = Qnil;
 
   io_uring_sqe_set_data(sqe, ctx);
-  io_uring_submit(&backend->ring);
+  io_uring_backend_defer_submit(backend);
   
   switchpoint_result = backend_await(backend);
   
@@ -242,7 +263,7 @@ void io_uring_backend_wait_fd(Backend_t *backend, int fd, int write, VALUE *exce
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_poll_add(sqe, fd, write ? POLLOUT : POLLIN);
-  io_uring_backend_submit_and_await(backend, sqe, &ctx, exception);
+  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, exception);
 }
 
 VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
@@ -272,7 +293,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
     iov[0].iov_base = buf;
     iov[0].iov_len = len - total;
     io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
-    io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -337,7 +358,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
     iov[0].iov_base = buf;
     iov[0].iov_len = len;
     io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
-    io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -391,7 +412,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_writev(sqe, fptr->fd, iov_ptr, iov_count, -1);
-    io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -459,7 +480,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_recv(sqe, fptr->fd, buf, len - total, 0);
-    io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -509,7 +530,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_recv(sqe, fptr->fd, buf, len, 0);
-    io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -553,7 +574,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   while (left > 0) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_send(sqe, fptr->fd, buf, left, 0);
-    io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -589,7 +610,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_accept(sqe, fptr->fd, &addr, &len, 0);
-    fd = io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+    fd = io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
     if (exception != Qnil) goto error;
     if (fd < 0)
       rb_syserr_fail(-fd, strerror(-fd));
@@ -655,7 +676,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_connect(sqe, fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
-  int result = io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
+  int result = io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
   if (exception != Qnil) goto error;
   if (result < 0) rb_syserr_fail(-result, strerror(-result));
   
@@ -692,7 +713,7 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
 	ts.tv_nsec = floor(duration_fraction * 1000000000);
   
   io_uring_prep_timeout(sqe, &ts, 0, 0);
-  io_uring_backend_submit_and_await(backend, sqe, &ctx, 0);
+  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, 0);
   return self;
 }
 

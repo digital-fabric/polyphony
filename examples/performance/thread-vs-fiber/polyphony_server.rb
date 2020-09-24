@@ -7,7 +7,6 @@ require 'http/parser'
 $connection_count = 0
 
 def handle_client(socket)
-  p(handle_client: socket)
   $connection_count += 1
   parser = Http::Parser.new
   reqs = []
@@ -22,7 +21,6 @@ def handle_client(socket)
     end
   end
 rescue IOError, SystemCallError => e
-  p e
   # do nothing
 ensure
   $connection_count -= 1
