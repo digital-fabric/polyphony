@@ -277,7 +277,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
 
     ssize_t n = ctx.result;
     if (n < 0) {
-      rb_syserr_fail(n, strerror(n));
+      rb_syserr_fail(-n, strerror(-n));
     }
     else {
       if (n == 0) break; // EOF
@@ -342,7 +342,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
 
     ssize_t n = ctx.result;
     if (n < 0)
-      rb_syserr_fail(n, strerror(n));
+      rb_syserr_fail(-n, strerror(-n));
     else if (n == 0)
       break; // EOF
     else {
@@ -397,7 +397,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     ssize_t n = ctx.result;
     if (n < 0) {
       free(iov);
-      rb_syserr_fail(n, strerror(n));
+      rb_syserr_fail(-n, strerror(-n));
     }
     else {
       total_written += n;
@@ -455,7 +455,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
     fd = io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
     if (exception != Qnil) goto error;
     if (fd < 0)
-      rb_syserr_fail(fd, strerror(fd));
+      rb_syserr_fail(-fd, strerror(-fd));
     else {
       rb_io_t *fp;
 
@@ -520,7 +520,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   io_uring_prep_connect(sqe, fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
   int result = io_uring_backend_submit_and_await(backend, sqe, &ctx, &exception);
   if (exception != Qnil) goto error;
-  if (result < 0) rb_syserr_fail(result, strerror(result));
+  if (result < 0) rb_syserr_fail(-result, strerror(-result));
   
   RB_GC_GUARD(exception);
   return sock;
