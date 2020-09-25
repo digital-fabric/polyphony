@@ -70,7 +70,7 @@ void io_uring_backend_watch_wakeup_fd(Backend_t *backend, int wakeup_fd) {
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_poll_add(sqe, wakeup_fd, POLLIN);
   io_uring_sqe_set_data(sqe, (void *)USER_DATA_WAKEUP);
-  io_uring_backend_defer_submit(backend);
+  io_uring_submit(&backend->ring);
 }
 
 static VALUE Backend_initialize(VALUE self) {
@@ -153,8 +153,61 @@ typedef struct poll_context {
 
 void *io_uring_backend_poll_without_gvl(void *ptr) {
   poll_context_t *ctx = (poll_context_t *)ptr;
-  ctx->result = io_uring_wait_cqe(ctx->ring, &ctx->cqe);
+  ctx->result = __io_uring_get_cqe(ctx->ring, &ctx->cqe, 0, 1, 0);
   return 0;
+}
+
+// copied from queue.c
+static inline bool cq_ring_needs_flush(struct io_uring *ring) {
+	return IO_URING_READ_ONCE(*ring->sq.kflags) & IORING_SQ_CQ_OVERFLOW;
+}
+
+extern int __sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complete, unsigned flags, sigset_t *sig);
+
+void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
+  op_context_t *op_ctx = io_uring_cqe_get_data(cqe);
+  if (op_ctx == (void *)USER_DATA_WAKEUP)
+    io_uring_backend_watch_wakeup_fd(backend, backend->wakeup_fd);
+  else if (op_ctx) {
+    op_ctx->result = cqe->res;
+    Fiber_make_runnable(op_ctx->fiber, Qnil);
+  }
+}
+
+// adapted from io_uring_peek_batch_cqe in queue.c 
+// this peeks at cqes and for each one 
+void io_uring_backend_handle_ready_cqes(Backend_t *backend) {
+	unsigned ready;
+	bool overflow_checked = false;
+  struct io_uring *ring = &backend->ring;
+
+again:
+	ready = io_uring_cq_ready(ring);
+  
+	if (ready) {
+		unsigned head = *ring->cq.khead;
+		unsigned mask = *ring->cq.kring_mask;
+		unsigned last;
+		int i = 0;
+
+		last = head + ready;
+		for (;head != last; head++, i++)
+      io_uring_backend_handle_completion(&ring->cq.cqes[head & mask], backend);
+
+    io_uring_cq_advance(ring, ready);
+	}
+
+	if (overflow_checked)
+		goto done;
+
+	if (cq_ring_needs_flush(ring)) {
+		__sys_io_uring_enter(ring->ring_fd, 0, 0, IORING_ENTER_GETEVENTS, NULL);
+		overflow_checked = true;
+		goto again;
+	}
+
+done:
+	return;
 }
 
 void io_uring_backend_poll(Backend_t *backend) {
@@ -163,25 +216,16 @@ void io_uring_backend_poll(Backend_t *backend) {
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
   if (poll_ctx.result < 0) return;
 
-  op_context_t *op_ctx = io_uring_cqe_get_data(poll_ctx.cqe);
-  if (op_ctx == (void *)USER_DATA_WAKEUP)
-    io_uring_backend_watch_wakeup_fd(backend, backend->wakeup_fd);
-  else if (op_ctx) {
-    op_ctx->result = poll_ctx.cqe->res;
-    Fiber_make_runnable(op_ctx->fiber, Qnil);
-  }
+  io_uring_backend_handle_completion(poll_ctx.cqe, backend);
   io_uring_cqe_seen(&backend->ring, poll_ctx.cqe);
 }
+
+extern int __io_uring_flush_sq(struct io_uring *ring);
 
 VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
   int is_nowait = nowait == Qtrue;
   Backend_t *backend;
   GetBackend(self, backend);
-
-  if (backend->prepared_count > 0) {
-    backend->prepared_count = 0;
-    io_uring_submit(&backend->ring);
-  }
 
   if (is_nowait) {
     backend->run_no_wait_count++;
@@ -195,7 +239,12 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
 
   COND_TRACE(2, SYM_backend_poll_enter, current_fiber);
   backend->running = 1;
-  io_uring_backend_poll(backend);
+  if (backend->prepared_count > 0) {
+    io_uring_submit(&backend->ring);
+    backend->prepared_count = 0;
+  }
+  if (!is_nowait) io_uring_backend_poll(backend);
+  io_uring_backend_handle_ready_cqes(backend);
   backend->running = 0;
   COND_TRACE(2, SYM_backend_poll_leave, current_fiber);
   
