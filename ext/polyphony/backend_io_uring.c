@@ -177,28 +177,21 @@ void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *bac
 // adapted from io_uring_peek_batch_cqe in queue.c 
 // this peeks at cqes and for each one 
 void io_uring_backend_handle_ready_cqes(Backend_t *backend) {
-	unsigned ready;
-	bool overflow_checked = false;
   struct io_uring *ring = &backend->ring;
+	bool overflow_checked = false;
+  struct io_uring_cqe *cqe;
+	unsigned head;
+  unsigned cqe_count;
 
 again:
-	ready = io_uring_cq_ready(ring);
-  
-	if (ready) {
-		unsigned head = *ring->cq.khead;
-		unsigned mask = *ring->cq.kring_mask;
-		unsigned last;
-		int i = 0;
+  cqe_count = 0;
+  io_uring_for_each_cqe(ring, head, cqe) {
+    ++cqe_count;
+    io_uring_backend_handle_completion(cqe, backend);
+  }
+  io_uring_cq_advance(ring, cqe_count);
 
-		last = head + ready;
-		for (;head != last; head++, i++)
-      io_uring_backend_handle_completion(&ring->cq.cqes[head & mask], backend);
-
-    io_uring_cq_advance(ring, ready);
-	}
-
-	if (overflow_checked)
-		goto done;
+	if (overflow_checked) goto done;
 
 	if (cq_ring_needs_flush(ring)) {
 		__sys_io_uring_enter(ring->ring_fd, 0, 0, IORING_ENTER_GETEVENTS, NULL);
