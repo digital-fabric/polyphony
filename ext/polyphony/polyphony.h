@@ -12,9 +12,7 @@
 
 // tracing
 #define TRACE(...)  rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__)
-#define COND_TRACE(...) if (__tracing_enabled__) { \
-  TRACE(__VA_ARGS__); \
-}
+#define COND_TRACE(...) if (__tracing_enabled__) { TRACE(__VA_ARGS__); }
 
 #define TEST_EXCEPTION(ret) (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
 
