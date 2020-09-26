@@ -71,6 +71,7 @@ void io_uring_backend_watch_wakeup_fd(Backend_t *backend, int wakeup_fd) {
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_poll_add(sqe, wakeup_fd, POLLIN);
   io_uring_sqe_set_data(sqe, (void *)USER_DATA_WAKEUP);
+  // io_uring_prep_nop(sqe);
   io_uring_submit(&backend->ring);
 }
 
@@ -167,10 +168,13 @@ extern int __sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complet
 
 void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
   op_context_t *op_ctx = io_uring_cqe_get_data(cqe);
+  printf("ctx (completion res: %d): %p\n", cqe->res, op_ctx);
+  if (op_ctx == 0 || cqe->res == -ECANCELED) return;
   if (op_ctx == (void *)USER_DATA_WAKEUP)
     io_uring_backend_watch_wakeup_fd(backend, backend->wakeup_fd);
-  else if (op_ctx) {
+  else {
     op_ctx->result = cqe->res;
+    INSPECT("resume fiber", op_ctx->fiber);
     Fiber_make_runnable(op_ctx->fiber, Qnil);
   }
 }
@@ -282,13 +286,25 @@ int io_uring_backend_defer_submit_and_await(
 {
   VALUE switchpoint_result = Qnil;
 
+  INSPECT("io_uring_backend_defer_submit_and_await fiber", ctx->fiber);
+  TRACE_CALLER();
+  printf("ctx (submission): %p\n", ctx);
   io_uring_sqe_set_data(sqe, ctx);
   io_uring_backend_defer_submit(backend);
   
   switchpoint_result = backend_await(backend);
   
   if (TEST_EXCEPTION(switchpoint_result)) {
+    INSPECT("got exception", switchpoint_result);
+    printf("backend->prepared_count: %d\n", backend->prepared_count);
+    if (backend->prepared_count) {
+      // TODO: the original sqe might not have been submitted yet, so maybe we
+      // can can set its user data to null instead of submitting twice?
+      backend->prepared_count = 0;
+      io_uring_submit(&backend->ring);
+    }
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    // io_uring_prep_timeout_remove(sqe, (__u64)ctx, 0);
     io_uring_prep_cancel(sqe, ctx, 0);
     io_uring_submit(&backend->ring);
     if (exception)
