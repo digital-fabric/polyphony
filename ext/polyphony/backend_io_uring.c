@@ -15,6 +15,7 @@
 #include <poll.h>
 #include <sys/types.h>
 #include <sys/eventfd.h>
+#include <sys/wait.h>
 
 #ifndef __NR_pidfd_open
 #define __NR_pidfd_open 434   /* System call # on most architectures */
@@ -762,7 +763,8 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
   Backend_t *backend;
   VALUE exception = Qnil;
-  int fd = pidfd_open(NUM2INT(pid), 0);
+  int pid_int = NUM2INT(pid);
+  int fd = pidfd_open(pid_int, 0);
   GetBackend(self, backend);
   
   io_uring_backend_wait_fd(backend, fd, 0, &exception);
@@ -770,7 +772,10 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
 
   RAISE_IF_NOT_NIL(exception);
   RB_GC_GUARD(exception);
-  return self;
+
+  int status;
+  pid_t ret = waitpid(pid_int, &status, WNOHANG);
+  return rb_ary_new_from_args(2, INT2NUM(ret), INT2NUM(WEXITSTATUS(status)));
 }
 
 VALUE Backend_wait_event(VALUE self, VALUE raise) {
