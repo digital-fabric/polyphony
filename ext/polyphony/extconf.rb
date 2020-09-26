@@ -24,6 +24,8 @@ else
   $defs << '-DHAVE_SYS_RESOURCE_H' if have_header('sys/resource.h')  
 end
 
+$defs << '-DPOLYPHONY_PLAYGROUND' if ENV['POLYPHONY_PLAYGROUND']
+
 CONFIG['optflags'] << ' -fno-strict-aliasing' unless RUBY_PLATFORM =~ /mswin/
 
 $CFLAGS << " -Wpointer-arith"
