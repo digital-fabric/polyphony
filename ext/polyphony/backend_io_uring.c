@@ -780,7 +780,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
 
 VALUE Backend_wait_event(VALUE self, VALUE raise) {
   Backend_t *backend;
-  VALUE exception;
+  VALUE exception = Qnil;
   int fd = eventfd(0, 0);
   GetBackend(self, backend);
 
