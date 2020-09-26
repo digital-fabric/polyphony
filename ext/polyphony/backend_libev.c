@@ -691,7 +691,7 @@ struct libev_child {
 void Backend_child_callback(EV_P_ ev_child *w, int revents)
 {
   struct libev_child *watcher = (struct libev_child *)w;
-  int exit_status = w->rstatus >> 8; // weird, why should we do this?
+  int exit_status = WEXITSTATUS(w->rstatus);
   VALUE status;
 
   status = rb_ary_new_from_args(2, INT2NUM(w->rpid), INT2NUM(exit_status));
