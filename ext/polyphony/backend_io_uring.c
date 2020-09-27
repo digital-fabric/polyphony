@@ -29,8 +29,7 @@ VALUE cTCPSocket;
 
 typedef struct Backend_t {
   struct io_uring ring;
-  int             wakeup_fd;
-  int             running;
+  int             waiting_for_cqe;
   int             ref_count;
   int             run_no_wait_count;
   int             prepared_count;
@@ -65,29 +64,17 @@ static VALUE Backend_allocate(VALUE klass) {
 
 #define USER_DATA_WAKEUP	((__u64) -2)
 
-void io_uring_backend_defer_submit(Backend_t *backend);
-
-void io_uring_backend_watch_wakeup_fd(Backend_t *backend, int wakeup_fd) {
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
-  io_uring_prep_poll_add(sqe, wakeup_fd, POLLIN);
-  io_uring_sqe_set_data(sqe, (void *)USER_DATA_WAKEUP);
-  // io_uring_prep_nop(sqe);
-  io_uring_submit(&backend->ring);
-}
-
 static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  backend->wakeup_fd = eventfd(0, 0);
-  backend->running = 0;
+  backend->waiting_for_cqe = 0;
   backend->ref_count = 0;
   backend->run_no_wait_count = 0;
   backend->prepared_count = 0;
   backend->prepared_limit = 1024;
 
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
-  io_uring_backend_watch_wakeup_fd(backend, backend->wakeup_fd);
   
   return Qnil;
 }
@@ -97,7 +84,6 @@ VALUE Backend_finalize(VALUE self) {
   GetBackend(self, backend);
 
   io_uring_queue_exit(&backend->ring);
-  close(backend->wakeup_fd);
   return self;
 }
 
@@ -107,7 +93,6 @@ VALUE Backend_post_fork(VALUE self) {
 
   io_uring_queue_exit(&backend->ring);  
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
-  io_uring_backend_watch_wakeup_fd(backend, backend->wakeup_fd);
   backend->prepared_count = 0;
 
   return self;
@@ -170,13 +155,10 @@ void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *bac
   op_context_t *op_ctx = io_uring_cqe_get_data(cqe);
   printf("ctx (completion res: %d): %p\n", cqe->res, op_ctx);
   if (op_ctx == 0 || cqe->res == -ECANCELED) return;
-  if (op_ctx == (void *)USER_DATA_WAKEUP)
-    io_uring_backend_watch_wakeup_fd(backend, backend->wakeup_fd);
-  else {
-    op_ctx->result = cqe->res;
-    INSPECT("resume fiber", op_ctx->fiber);
-    Fiber_make_runnable(op_ctx->fiber, Qnil);
-  }
+
+  op_ctx->result = cqe->res;
+  INSPECT("resume fiber", op_ctx->fiber);
+  Fiber_make_runnable(op_ctx->fiber, Qnil);
 }
 
 // adapted from io_uring_peek_batch_cqe in queue.c 
@@ -211,7 +193,9 @@ done:
 void io_uring_backend_poll(Backend_t *backend) {
   poll_context_t poll_ctx;
   poll_ctx.ring = &backend->ring;
+  backend->waiting_for_cqe = 1;
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
+  backend->waiting_for_cqe = 0;
   if (poll_ctx.result < 0) return;
 
   io_uring_backend_handle_completion(poll_ctx.cqe, backend);
@@ -236,14 +220,12 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
   backend->run_no_wait_count = 0;
 
   COND_TRACE(2, SYM_backend_poll_enter, current_fiber);
-  backend->running = 1;
   if (backend->prepared_count > 0) {
     io_uring_submit(&backend->ring);
     backend->prepared_count = 0;
   }
   if (!is_nowait) io_uring_backend_poll(backend);
   io_uring_backend_handle_ready_cqes(backend);
-  backend->running = 0;
   COND_TRACE(2, SYM_backend_poll_leave, current_fiber);
   
   return self;
@@ -253,14 +235,12 @@ VALUE Backend_wakeup(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  if (backend->running) {
-    // Since we're currently blocking while waiting for a completion, we need to
-    // signal the associated eventfd in order for the associated eventfd in
-    // order for the polling to end immediately.
-    uint64_t u = 1;
-    int ret = write(backend->wakeup_fd, &u, sizeof(u));
-    if (ret != sizeof(uint64_t))
-      rb_raise(rb_eRuntimeError, "Failed to wakeup backend's event fd (result: %d)", ret);
+  if (backend->waiting_for_cqe) {
+    // Since we're currently blocking while waiting for a completion, we add a
+    // NOP which would case the io_uring_enter syscall to return
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_nop(sqe);
+    io_uring_submit(&backend->ring);
     
     return Qtrue;
   }
