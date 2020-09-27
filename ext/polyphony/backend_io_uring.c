@@ -30,10 +30,11 @@ VALUE cTCPSocket;
 typedef struct Backend_t {
   struct io_uring ring;
   int             waiting_for_cqe;
-  int             ref_count;
-  int             run_no_wait_count;
-  int             prepared_count;
-  int             prepared_limit;
+  unsigned int    ref_count;
+  unsigned int    run_no_wait_count;
+  unsigned int    pending_submit_count;
+  unsigned int    prepared_limit;
+  int             event_fd;
 } Backend_t;
 
 #include "backend_common.h"
@@ -62,8 +63,6 @@ static VALUE Backend_allocate(VALUE klass) {
 #define GetBackend(obj, backend) \
   TypedData_Get_Struct((obj), Backend_t, &Backend_type, (backend))
 
-#define USER_DATA_WAKEUP	((__u64) -2)
-
 static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -71,10 +70,11 @@ static VALUE Backend_initialize(VALUE self) {
   backend->waiting_for_cqe = 0;
   backend->ref_count = 0;
   backend->run_no_wait_count = 0;
-  backend->prepared_count = 0;
+  backend->pending_submit_count = 0;
   backend->prepared_limit = 1024;
 
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
+  backend->event_fd = eventfd(0, 0);
   
   return Qnil;
 }
@@ -84,6 +84,7 @@ VALUE Backend_finalize(VALUE self) {
   GetBackend(self, backend);
 
   io_uring_queue_exit(&backend->ring);
+  close(backend->event_fd);
   return self;
 }
 
@@ -93,7 +94,7 @@ VALUE Backend_post_fork(VALUE self) {
 
   io_uring_queue_exit(&backend->ring);  
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
-  backend->prepared_count = 0;
+  backend->pending_submit_count = 0;
 
   return self;
 }
@@ -220,9 +221,9 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
   backend->run_no_wait_count = 0;
 
   COND_TRACE(2, SYM_backend_poll_enter, current_fiber);
-  if (backend->prepared_count > 0) {
+  if (backend->pending_submit_count) {
     io_uring_submit(&backend->ring);
-    backend->prepared_count = 0;
+    backend->pending_submit_count = 0;
   }
   if (!is_nowait) io_uring_backend_poll(backend);
   io_uring_backend_handle_ready_cqes(backend);
@@ -249,9 +250,9 @@ VALUE Backend_wakeup(VALUE self) {
 }
 
 void io_uring_backend_defer_submit(Backend_t *backend) {
-  backend->prepared_count += 1;
-  if (backend->prepared_count >= backend->prepared_limit) {
-    backend->prepared_count = 0;
+  backend->pending_submit_count += 1;
+  if (backend->pending_submit_count >= backend->prepared_limit) {
+    backend->pending_submit_count = 0;
     io_uring_submit(&backend->ring);
   }
 }
@@ -276,11 +277,11 @@ int io_uring_backend_defer_submit_and_await(
   
   if (TEST_EXCEPTION(switchpoint_result)) {
     INSPECT("got exception", switchpoint_result);
-    printf("backend->prepared_count: %d\n", backend->prepared_count);
-    if (backend->prepared_count) {
+    printf("backend->pending_submit_count: %d\n", backend->pending_submit_count);
+    if (backend->pending_submit_count) {
       // TODO: the original sqe might not have been submitted yet, so maybe we
       // can can set its user data to null instead of submitting twice?
-      backend->prepared_count = 0;
+      backend->pending_submit_count = 0;
       io_uring_submit(&backend->ring);
     }
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
@@ -733,7 +734,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   GetBackend(self, backend);
   GetOpenFile(io, fptr);
 
-  io_uring_backend_wait_fd(backend, fptr->fd, RTEST(write), 0);
+  io_uring_backend_wait_fd(backend, fptr->fd, RTEST(write), NULL);
   return self;
 }
 
@@ -776,15 +777,9 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
 
 VALUE Backend_wait_event(VALUE self, VALUE raise) {
   Backend_t *backend;
-  VALUE exception = Qnil;
-  int fd = eventfd(0, 0);
   GetBackend(self, backend);
 
-  io_uring_backend_wait_fd(backend, fd, 0, &exception);
-  close(fd);
-
-  RAISE_IF_NOT_NIL(exception);
-  RB_GC_GUARD(exception);
+  io_uring_backend_wait_fd(backend, backend->event_fd, 0, NULL);
   return self;
 }
 
