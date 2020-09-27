@@ -66,6 +66,7 @@ done:
 noreturn void playground() {
   struct io_uring ring;
   int fd = eventfd(0, 0);
+  printf("eventfd => %d\n", fd);
   struct io_uring_sqe *sqe;
 
   io_uring_queue_init(10, &ring, 0);

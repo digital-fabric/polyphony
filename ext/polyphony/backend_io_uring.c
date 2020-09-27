@@ -74,8 +74,8 @@ static VALUE Backend_initialize(VALUE self) {
   backend->prepared_limit = 1024;
 
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
-  backend->event_fd = eventfd(0, 0);
-  
+  backend->event_fd = -1;
+
   return Qnil;
 }
 
@@ -84,7 +84,7 @@ VALUE Backend_finalize(VALUE self) {
   GetBackend(self, backend);
 
   io_uring_queue_exit(&backend->ring);
-  close(backend->event_fd);
+  if (backend->event_fd != -1) close(backend->event_fd);
   return self;
 }
 
@@ -778,6 +778,14 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
 VALUE Backend_wait_event(VALUE self, VALUE raise) {
   Backend_t *backend;
   GetBackend(self, backend);
+
+  if (backend->event_fd == -1) {
+    backend->event_fd = eventfd(0, 0);
+    if (backend->event_fd == -1) {
+      int n = errno();
+      rb_syserr_fail(n, strerror(n));
+    }
+  }
 
   io_uring_backend_wait_fd(backend, backend->event_fd, 0, NULL);
   return self;
