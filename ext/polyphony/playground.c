@@ -65,13 +65,26 @@ done:
 
 noreturn void playground() {
   struct io_uring ring;
+  int fd = eventfd(0, 0);
+  struct io_uring_sqe *sqe;
 
   io_uring_queue_init(10, &ring, 0);
   
+  printf("poll fd 1");
+  sqe = io_uring_get_sqe(&ring);
+  io_uring_prep_poll_add(sqe, fd, POLLIN);
+  io_uring_sqe_set_data(sqe, (void *)11);
+
+  printf("poll fd 2");
+  sqe = io_uring_get_sqe(&ring);
+  io_uring_prep_poll_add(sqe, fd, POLLIN);
+  io_uring_sqe_set_data(sqe, (void *)12);
+  io_uring_submit(&ring);
+
   struct __kernel_timespec ts;
   ts.tv_sec = 3;
 	ts.tv_nsec = 0;
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+  sqe = io_uring_get_sqe(&ring);
   io_uring_prep_timeout(sqe, &ts, 0, 0);
   io_uring_sqe_set_data(sqe, (void *)13);
   printf("submit sleep op\n");

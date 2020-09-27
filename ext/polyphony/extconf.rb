@@ -28,7 +28,7 @@ $defs << '-DPOLYPHONY_PLAYGROUND' if ENV['POLYPHONY_PLAYGROUND']
 
 CONFIG['optflags'] << ' -fno-strict-aliasing' unless RUBY_PLATFORM =~ /mswin/
 
-$CFLAGS << " -Wpointer-arith"
+$CFLAGS << " -Wno-pointer-arith" if use_liburing
 
 dir_config 'polyphony_ext'
 create_makefile 'polyphony_ext'
