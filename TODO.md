@@ -1,3 +1,9 @@
+- io_uring
+  - solve problem with cancellation
+  - change wait_event to wait on a common eventfd (created when ring is
+    created), since any way the fiber is scheduled without the event's
+    associated eventfd ever being written to
+
 0.46.0
 
 - Adapter for io/console (what does `IO#raw` do?)
