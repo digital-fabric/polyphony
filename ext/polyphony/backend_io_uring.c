@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/eventfd.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #ifndef __NR_pidfd_open
 #define __NR_pidfd_open 434   /* System call # on most architectures */
@@ -782,7 +783,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   if (backend->event_fd == -1) {
     backend->event_fd = eventfd(0, 0);
     if (backend->event_fd == -1) {
-      int n = errno();
+      int n = errno;
       rb_syserr_fail(n, strerror(n));
     }
   }
