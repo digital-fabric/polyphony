@@ -122,6 +122,21 @@ class MoveOnAfterTest < MiniTest::Test
     assert_equal :bar, v
   end
 
+  def test_move_on_after_with_reset
+    t0 = Time.now
+    v = move_on_after(0.01, with_value: :moved_on) do |timeout|
+      sleep 0.007
+      timeout.reset
+      sleep 0.007
+      nil
+    end
+    t1 = Time.now
+
+    assert_nil v
+    assert t1 - t0 >= 0.014
+    assert t1 - t0 < 0.02
+  end
+
   def test_move_on_after_without_block
     t0 = Time.now
     f = move_on_after(0.01, with_value: 'foo')
@@ -158,6 +173,20 @@ class CancelAfterTest < MiniTest::Test
     end
     t1 = Time.now
     assert t1 - t0 < 0.1
+  end
+
+  def test_cancel_after_with_reset
+    t0 = Time.now
+    cancel_after(0.01) do |f|
+      assert_kind_of Fiber, f
+      assert_equal Fiber.current, f.parent
+      sleep 0.007
+      f.reset
+      sleep 0.007
+    end
+    t1 = Time.now
+    assert t1 - t0 >= 0.014
+    assert t1 - t0 < 0.02
   end
 
   class CustomException < Exception
