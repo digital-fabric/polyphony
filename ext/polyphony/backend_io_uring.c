@@ -67,10 +67,13 @@ const char *op_type_to_str(enum op_type type) {
 }
 
 typedef struct op_context {
-  enum op_type  type;
-  VALUE         fiber;
+  enum op_type  type : 16;
+  int           completed : 16;
   __s32         result;
+  VALUE         fiber;
 } op_context_t;
+
+#define OP_CONTEXT(op_type) {.type = op_type, .fiber = rb_fiber_current()}
 
 static size_t Backend_size(const void *ptr) {
   return sizeof(Backend_t);
@@ -186,6 +189,7 @@ void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *bac
   if (op_ctx == 0 || cqe->res == -ECANCELED) return;
 
   op_ctx->result = cqe->res;
+  op_ctx->completed = 1;
   // INSPECT("resume fiber", op_ctx->fiber);
   Fiber_make_runnable(op_ctx->fiber, Qnil);
 }
@@ -223,7 +227,9 @@ void io_uring_backend_poll(Backend_t *backend) {
   poll_context_t poll_ctx;
   poll_ctx.ring = &backend->ring;
   backend->waiting_for_cqe = 1;
+  printf("poll > %d\n", backend->ref_count);
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
+  printf("poll <\n");
   backend->waiting_for_cqe = 0;
   if (poll_ctx.result < 0) return;
 
@@ -299,6 +305,7 @@ int io_uring_backend_defer_submit_and_await(
 )
 {
   VALUE switchpoint_result = Qnil;
+  ctx->completed = 0;
 
   // INSPECT("io_uring_backend_defer_submit_and_await fiber", ctx->fiber);
   // TRACE_CALLER();
@@ -307,20 +314,23 @@ int io_uring_backend_defer_submit_and_await(
   io_uring_backend_defer_submit(backend);
   
   switchpoint_result = backend_await(backend);
+
+  if (!ctx->completed) {
+    // op was not completed, so we need to cancel it
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_cancel(sqe, ctx, 0);
+    io_uring_submit(&backend->ring);
+  }
   
   if (TEST_EXCEPTION(switchpoint_result)) {
     // INSPECT("got exception", switchpoint_result);
     // printf("backend->pending_submit_count: %d\n", backend->pending_submit_count);
-    if (backend->pending_submit_count) {
-      // TODO: the original sqe might not have been submitted yet, so maybe we
-      // can can set its user data to null instead of submitting twice?
-      backend->pending_submit_count = 0;
-      io_uring_submit(&backend->ring);
-    }
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
-    // io_uring_prep_timeout_remove(sqe, (__u64)ctx, 0);
-    io_uring_prep_cancel(sqe, ctx, 0);
-    io_uring_submit(&backend->ring);
+    // if (backend->pending_submit_count) {
+    //   // TODO: the original sqe might not have been submitted yet, so maybe we
+    //   // can can set its user data to null instead of submitting twice?
+    //   backend->pending_submit_count = 0;
+    //   io_uring_submit(&backend->ring);
+    // }
     if (exception)
       (*exception) = switchpoint_result;
     else
@@ -333,14 +343,16 @@ int io_uring_backend_defer_submit_and_await(
   return ctx->result;
 }
 
-void io_uring_backend_wait_fd(Backend_t *backend, int fd, int write, VALUE *exception) {
-  op_context_t ctx;
-  ctx.type = OP_POLL;
-  ctx.fiber = rb_fiber_current();
+VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write, VALUE *exception) {
+  op_context_t ctx = OP_CONTEXT(OP_POLL);
+  VALUE resumed_value = Qnil;
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_poll_add(sqe, fd, write ? POLLOUT : POLLIN);
-  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, exception, NULL);
+
+  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, exception, &resumed_value);
+  RB_GC_GUARD(resumed_value);
+  return resumed_value;
 }
 
 VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
@@ -352,12 +364,10 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   char *buf = RSTRING_PTR(str);
   long total = 0;
   VALUE exception = Qnil;
-  op_context_t ctx;
+  op_context_t ctx = OP_CONTEXT(OP_READV);
   int read_to_eof = RTEST(to_eof);
   VALUE underlying_io = rb_iv_get(io, "@io");
   struct iovec iov[1];
-  ctx.type = OP_READV;
-  ctx.fiber = rb_fiber_current();
 
   GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
@@ -418,10 +428,8 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   int shrinkable;
   char *buf;
   VALUE exception = Qnil;
-  op_context_t ctx;
+  op_context_t ctx = OP_CONTEXT(OP_READV);
   struct iovec iov[1];
-  ctx.type = OP_READV;
-  ctx.fiber = rb_fiber_current();
   VALUE underlying_io = rb_iv_get(io, "@io");
 
   READ_LOOP_PREPARE_STR();
@@ -470,9 +478,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   struct iovec *iov = 0;
   struct iovec *iov_ptr = 0;
   int iov_count = argc;
-  op_context_t ctx;
-  ctx.type = OP_WRITEV;
-  ctx.fiber = rb_fiber_current();
+  op_context_t ctx = OP_CONTEXT(OP_WRITEV);
 
   underlying_io = rb_iv_get(io, "@io");
   if (underlying_io != Qnil) io = underlying_io;
@@ -546,10 +552,8 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   char *buf = RSTRING_PTR(str);
   long total = 0;
   VALUE exception = Qnil;
-  op_context_t ctx;
+  op_context_t ctx = OP_CONTEXT(OP_RECV);
   VALUE underlying_io = rb_iv_get(io, "@io");
-  ctx.type = OP_RECV;
-  ctx.fiber = rb_fiber_current();
 
   GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
@@ -596,9 +600,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
   int shrinkable;
   char *buf;
   VALUE exception = Qnil;
-  op_context_t ctx;
-  ctx.type = OP_RECV;
-  ctx.fiber = rb_fiber_current();
+  op_context_t ctx = OP_CONTEXT(OP_RECV);
   VALUE underlying_io = rb_iv_get(io, "@io");
 
   READ_LOOP_PREPARE_STR();
@@ -640,9 +642,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   rb_io_t *fptr;
   VALUE exception = Qnil;
   VALUE underlying_io;
-  op_context_t ctx;
-  ctx.type = OP_SEND;
-  ctx.fiber = rb_fiber_current();
+  op_context_t ctx = OP_CONTEXT(OP_SEND);
 
   underlying_io = rb_iv_get(io, "@io");
   if (underlying_io != Qnil) io = underlying_io;
@@ -685,11 +685,9 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
   VALUE exception = Qnil;
   VALUE underlying_sock = rb_iv_get(sock, "@io");
   VALUE socket = Qnil;
-  op_context_t ctx;
+  op_context_t ctx = OP_CONTEXT(OP_ACCEPT);
   if (underlying_sock != Qnil) sock = underlying_sock;
 
-  ctx.type = OP_ACCEPT;
-  ctx.fiber = rb_fiber_current();
   GetOpenFile(sock, fptr);
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
@@ -747,9 +745,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   char *host_buf = StringValueCStr(host);
   VALUE exception = Qnil;
   VALUE underlying_sock = rb_iv_get(sock, "@io");
-  op_context_t ctx;
-  ctx.type = OP_CONNECT;
-  ctx.fiber = rb_fiber_current();
+  op_context_t ctx = OP_CONTEXT(OP_CONNECT);
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
@@ -785,9 +781,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 
 VALUE Backend_sleep(VALUE self, VALUE duration) {
   Backend_t *backend;
-  op_context_t ctx;
-  ctx.type = OP_TIMEOUT;
-  ctx.fiber = rb_fiber_current();
+  op_context_t ctx = OP_CONTEXT(OP_TIMEOUT);
   struct io_uring_sqe *sqe;
   double duration_integral;
   double duration_fraction = modf(NUM2DBL(duration), &duration_integral);
@@ -834,8 +828,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
     }
   }
 
-  io_uring_backend_wait_fd(backend, backend->event_fd, 0, NULL);
-  return self;
+  return io_uring_backend_wait_fd(backend, backend->event_fd, 0, NULL);
 }
 
 void Init_Backend() {

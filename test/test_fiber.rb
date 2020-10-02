@@ -128,15 +128,15 @@ class FiberTest < MiniTest::Test
     worker&.join
   end
 
-  def test_ev_loop_anti_starve_mechanism
-    async = Polyphony::Event.new
+  def test_backend_wakeup_mechanism
+    event = Polyphony::Event.new
     t = Thread.new do
       f = spin_loop { snooze }
       sleep 0.001
-      async.signal(:foo)
+      event.signal(:foo)
     end
 
-    result = move_on_after(1) { async.await }
+    result = move_on_after(1) { event.await }
 
     assert_equal :foo, result
   ensure
