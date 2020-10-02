@@ -40,7 +40,34 @@ typedef struct Backend_t {
 
 #include "backend_common.h"
 
+enum op_type {
+  OP_NONE,
+  OP_READV,
+  OP_WRITEV,
+  OP_RECV,
+  OP_SEND,
+  OP_TIMEOUT,
+  OP_POLL,
+  OP_ACCEPT,
+  OP_CONNECT
+};
+
+const char *op_type_to_str(enum op_type type) {
+  switch (type) {
+  case OP_READV: return "READV";
+  case OP_WRITEV: return "WRITEV";
+  case OP_RECV: return "RECV";
+  case OP_SEND: return "SEND";
+  case OP_TIMEOUT: return "TIMEOUT";
+  case OP_POLL: return "POLL";
+  case OP_ACCEPT: return "ACCEPT";
+  case OP_CONNECT: return "CONNECT";
+  default: return "";
+  };
+}
+
 typedef struct op_context {
+  enum op_type  type;
   VALUE         fiber;
   __s32         result;
 } op_context_t;
@@ -155,11 +182,11 @@ extern int __sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complet
 
 void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
   op_context_t *op_ctx = io_uring_cqe_get_data(cqe);
-  printf("ctx (completion res: %d): %p\n", cqe->res, op_ctx);
+  // printf("complete ctx %p (%s) res: %d\n", op_ctx, op_type_to_str(op_ctx ? op_ctx->type : OP_NONE), cqe->res);
   if (op_ctx == 0 || cqe->res == -ECANCELED) return;
 
   op_ctx->result = cqe->res;
-  INSPECT("resume fiber", op_ctx->fiber);
+  // INSPECT("resume fiber", op_ctx->fiber);
   Fiber_make_runnable(op_ctx->fiber, Qnil);
 }
 
@@ -258,27 +285,32 @@ void io_uring_backend_defer_submit(Backend_t *backend) {
   }
 }
 
-// submits and awaits completion of an async op
-// if waiting is interrupted with an exception, the async op is cancelled
-// if the exception argument is not null, it is set to the resumed exception
-// otherwise, the exception is raised
+// submits and awaits completion of an async op if waiting is interrupted with
+// an exception, the async op is cancelled if the exception argument is not
+// null, it is set to the resumed exception otherwise, the exception is raised.
+// If the resumed value is not an exception and the value_ptr argument is not
+// null, it is set to the resumed value.
 int io_uring_backend_defer_submit_and_await(
-  Backend_t *backend, struct io_uring_sqe *sqe, op_context_t *ctx, VALUE *exception
+  Backend_t *backend,
+  struct io_uring_sqe *sqe,
+  op_context_t *ctx,
+  VALUE *exception,
+  VALUE *value_ptr
 )
 {
   VALUE switchpoint_result = Qnil;
 
-  INSPECT("io_uring_backend_defer_submit_and_await fiber", ctx->fiber);
-  TRACE_CALLER();
-  printf("ctx (submission): %p\n", ctx);
+  // INSPECT("io_uring_backend_defer_submit_and_await fiber", ctx->fiber);
+  // TRACE_CALLER();
+  // printf("submit ctx %p (%s)\n", ctx, op_type_to_str(ctx->type));
   io_uring_sqe_set_data(sqe, ctx);
   io_uring_backend_defer_submit(backend);
   
   switchpoint_result = backend_await(backend);
   
   if (TEST_EXCEPTION(switchpoint_result)) {
-    INSPECT("got exception", switchpoint_result);
-    printf("backend->pending_submit_count: %d\n", backend->pending_submit_count);
+    // INSPECT("got exception", switchpoint_result);
+    // printf("backend->pending_submit_count: %d\n", backend->pending_submit_count);
     if (backend->pending_submit_count) {
       // TODO: the original sqe might not have been submitted yet, so maybe we
       // can can set its user data to null instead of submitting twice?
@@ -294,17 +326,21 @@ int io_uring_backend_defer_submit_and_await(
     else
       RAISE_EXCEPTION(switchpoint_result);
   }
+  else if (value_ptr)
+    (*value_ptr) = switchpoint_result;
+
   RB_GC_GUARD(switchpoint_result);
   return ctx->result;
 }
 
 void io_uring_backend_wait_fd(Backend_t *backend, int fd, int write, VALUE *exception) {
   op_context_t ctx;
+  ctx.type = OP_POLL;
   ctx.fiber = rb_fiber_current();
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_poll_add(sqe, fd, write ? POLLOUT : POLLIN);
-  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, exception);
+  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, exception, NULL);
 }
 
 VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
@@ -320,6 +356,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   int read_to_eof = RTEST(to_eof);
   VALUE underlying_io = rb_iv_get(io, "@io");
   struct iovec iov[1];
+  ctx.type = OP_READV;
   ctx.fiber = rb_fiber_current();
 
   GetBackend(self, backend);
@@ -334,7 +371,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
     iov[0].iov_base = buf;
     iov[0].iov_len = len - total;
     io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -383,6 +420,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   VALUE exception = Qnil;
   op_context_t ctx;
   struct iovec iov[1];
+  ctx.type = OP_READV;
   ctx.fiber = rb_fiber_current();
   VALUE underlying_io = rb_iv_get(io, "@io");
 
@@ -399,7 +437,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
     iov[0].iov_base = buf;
     iov[0].iov_len = len;
     io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -433,6 +471,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   struct iovec *iov_ptr = 0;
   int iov_count = argc;
   op_context_t ctx;
+  ctx.type = OP_WRITEV;
   ctx.fiber = rb_fiber_current();
 
   underlying_io = rb_iv_get(io, "@io");
@@ -453,7 +492,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_writev(sqe, fptr->fd, iov_ptr, iov_count, -1);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -509,6 +548,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   VALUE exception = Qnil;
   op_context_t ctx;
   VALUE underlying_io = rb_iv_get(io, "@io");
+  ctx.type = OP_RECV;
   ctx.fiber = rb_fiber_current();
 
   GetBackend(self, backend);
@@ -521,7 +561,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_recv(sqe, fptr->fd, buf, len - total, 0);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -557,6 +597,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
   char *buf;
   VALUE exception = Qnil;
   op_context_t ctx;
+  ctx.type = OP_RECV;
   ctx.fiber = rb_fiber_current();
   VALUE underlying_io = rb_iv_get(io, "@io");
 
@@ -571,7 +612,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_recv(sqe, fptr->fd, buf, len, 0);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -600,6 +641,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   VALUE exception = Qnil;
   VALUE underlying_io;
   op_context_t ctx;
+  ctx.type = OP_SEND;
   ctx.fiber = rb_fiber_current();
 
   underlying_io = rb_iv_get(io, "@io");
@@ -615,7 +657,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   while (left > 0) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_send(sqe, fptr->fd, buf, left, 0);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
+    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
     if (exception != Qnil) goto error;
 
     ssize_t n = ctx.result;
@@ -646,12 +688,13 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
   op_context_t ctx;
   if (underlying_sock != Qnil) sock = underlying_sock;
 
+  ctx.type = OP_ACCEPT;
   ctx.fiber = rb_fiber_current();
   GetOpenFile(sock, fptr);
   while (1) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_accept(sqe, fptr->fd, &addr, &len, 0);
-    fd = io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
+    fd = io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
     if (exception != Qnil) goto error;
     if (fd < 0)
       rb_syserr_fail(-fd, strerror(-fd));
@@ -705,6 +748,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   VALUE exception = Qnil;
   VALUE underlying_sock = rb_iv_get(sock, "@io");
   op_context_t ctx;
+  ctx.type = OP_CONNECT;
   ctx.fiber = rb_fiber_current();
   if (underlying_sock != Qnil) sock = underlying_sock;
 
@@ -717,7 +761,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_connect(sqe, fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
-  int result = io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception);
+  int result = io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
   if (exception != Qnil) goto error;
   if (result < 0) rb_syserr_fail(-result, strerror(-result));
   
@@ -742,11 +786,13 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 VALUE Backend_sleep(VALUE self, VALUE duration) {
   Backend_t *backend;
   op_context_t ctx;
+  ctx.type = OP_TIMEOUT;
   ctx.fiber = rb_fiber_current();
   struct io_uring_sqe *sqe;
   double duration_integral;
   double duration_fraction = modf(NUM2DBL(duration), &duration_integral);
   struct __kernel_timespec ts;
+  VALUE resumed_value = Qnil;
 
   GetBackend(self, backend);
   sqe = io_uring_get_sqe(&backend->ring);
@@ -754,8 +800,8 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
 	ts.tv_nsec = floor(duration_fraction * 1000000000);
   
   io_uring_prep_timeout(sqe, &ts, 0, 0);
-  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, 0);
-  return self;
+  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, NULL, &resumed_value);
+  return resumed_value;
 }
 
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
