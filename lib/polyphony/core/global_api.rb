@@ -32,7 +32,7 @@ module Polyphony
     end
 
     def cancel_after_wrap_block(canceller, &block)
-      block.call
+      block.call(canceller)
     ensure
       canceller.stop
     end
@@ -81,7 +81,7 @@ module Polyphony
         sleep interval
         fiber.schedule Polyphony::MoveOn.new(with_value)
       end
-      block.call
+      block.call(canceller)
     rescue Polyphony::MoveOn => e
       e.value
     ensure
