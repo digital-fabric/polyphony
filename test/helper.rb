@@ -38,7 +38,7 @@ end
 
 class MiniTest::Test
   def setup
-    # puts "* setup #{self.name}"
+    puts "* setup #{self.name}"
     if Fiber.current.children.size > 0
       puts "Children left: #{Fiber.current.children.inspect}"
       exit!
@@ -50,14 +50,19 @@ class MiniTest::Test
   end
 
   def teardown
-    # puts "* teardown #{self.name.inspect} Fiber.current: #{Fiber.current.inspect}"
+    puts "* teardown #{self.name.inspect} Fiber.current: #{Fiber.current.inspect}"
+    p fiber_tree(Fiber.current)
     Fiber.current.terminate_all_children
     Fiber.current.await_all_children
-    Fiber.current.auto_watcher = nil
+    Fiber.current.instance_variable_set(:@auto_watcher, nil)
   rescue => e
     puts e
     puts e.backtrace.join("\n")
     exit!
+  end
+
+  def fiber_tree(fiber)
+    { fiber: fiber, children: fiber.children.map { |f| fiber_tree(f) } }
   end
 end
 
