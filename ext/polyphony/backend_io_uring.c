@@ -11,6 +11,7 @@
 #include "polyphony.h"
 #include "../liburing/liburing.h"
 #include "ruby/thread.h"
+#include "backend_io_uring_context.h"
 
 #include <poll.h>
 #include <sys/types.h>
@@ -29,51 +30,17 @@ static int pidfd_open(pid_t pid, unsigned int flags) {
 VALUE cTCPSocket;
 
 typedef struct Backend_t {
-  struct io_uring ring;
-  int             waiting_for_cqe;
-  unsigned int    ref_count;
-  unsigned int    run_no_wait_count;
-  unsigned int    pending_submit_count;
-  unsigned int    prepared_limit;
-  int             event_fd;
+  struct io_uring     ring;
+  op_context_store_t  store;
+  int                 waiting_for_cqe;
+  unsigned int        ref_count;
+  unsigned int        run_no_wait_count;
+  unsigned int        pending_submit_count;
+  unsigned int        prepared_limit;
+  int                 event_fd;
 } Backend_t;
 
 #include "backend_common.h"
-
-enum op_type {
-  OP_NONE,
-  OP_READV,
-  OP_WRITEV,
-  OP_RECV,
-  OP_SEND,
-  OP_TIMEOUT,
-  OP_POLL,
-  OP_ACCEPT,
-  OP_CONNECT
-};
-
-const char *op_type_to_str(enum op_type type) {
-  switch (type) {
-  case OP_READV: return "READV";
-  case OP_WRITEV: return "WRITEV";
-  case OP_RECV: return "RECV";
-  case OP_SEND: return "SEND";
-  case OP_TIMEOUT: return "TIMEOUT";
-  case OP_POLL: return "POLL";
-  case OP_ACCEPT: return "ACCEPT";
-  case OP_CONNECT: return "CONNECT";
-  default: return "";
-  };
-}
-
-typedef struct op_context {
-  enum op_type  type : 16;
-  int           completed : 16;
-  __s32         result;
-  VALUE         fiber;
-} op_context_t;
-
-#define OP_CONTEXT(op_type) {.type = op_type, .fiber = rb_fiber_current()}
 
 static size_t Backend_size(const void *ptr) {
   return sizeof(Backend_t);
@@ -104,6 +71,7 @@ static VALUE Backend_initialize(VALUE self) {
   backend->pending_submit_count = 0;
   backend->prepared_limit = 1024;
 
+  context_store_initialize(&backend->store);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
   backend->event_fd = -1;
 
@@ -116,6 +84,7 @@ VALUE Backend_finalize(VALUE self) {
 
   io_uring_queue_exit(&backend->ring);
   if (backend->event_fd != -1) close(backend->event_fd);
+  context_store_free(&backend->store);
   return self;
 }
 
@@ -123,7 +92,7 @@ VALUE Backend_post_fork(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  io_uring_queue_exit(&backend->ring);  
+  io_uring_queue_exit(&backend->ring);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
   backend->pending_submit_count = 0;
 
@@ -189,9 +158,12 @@ void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *bac
   if (op_ctx == 0 || cqe->res == -ECANCELED) return;
 
   op_ctx->result = cqe->res;
-  op_ctx->completed = 1;
-  // INSPECT("resume fiber", op_ctx->fiber);
-  Fiber_make_runnable(op_ctx->fiber, Qnil);
+  if (op_ctx->completed)
+    context_store_return(&backend->store, op_ctx);
+  else {
+    op_ctx->completed = 1;
+    Fiber_make_runnable(op_ctx->fiber, Qnil);
+  }
 }
 
 // adapted from io_uring_peek_batch_cqe in queue.c 
@@ -291,29 +263,25 @@ void io_uring_backend_defer_submit(Backend_t *backend) {
   }
 }
 
-// submits and awaits completion of an async op if waiting is interrupted with
-// an exception, the async op is cancelled if the exception argument is not
-// null, it is set to the resumed exception otherwise, the exception is raised.
-// If the resumed value is not an exception and the value_ptr argument is not
-// null, it is set to the resumed value.
 int io_uring_backend_defer_submit_and_await(
   Backend_t *backend,
   struct io_uring_sqe *sqe,
   op_context_t *ctx,
-  VALUE *exception,
   VALUE *value_ptr
 )
 {
   VALUE switchpoint_result = Qnil;
-  ctx->completed = 0;
 
   // INSPECT("io_uring_backend_defer_submit_and_await fiber", ctx->fiber);
   // TRACE_CALLER();
-  // printf("submit ctx %p (%s)\n", ctx, op_type_to_str(ctx->type));
   io_uring_sqe_set_data(sqe, ctx);
   io_uring_backend_defer_submit(backend);
   
+  backend->ref_count++;
+  printf("submit ctx %p (%s) ref_count: %d\n", ctx, op_type_to_str(ctx->type), backend->ref_count);
   switchpoint_result = backend_await(backend);
+  backend->ref_count--;
+  printf("resume ctx %p (%s) ref_count: %d\n", ctx, op_type_to_str(ctx->type), backend->ref_count);
 
   if (!ctx->completed) {
     // op was not completed, so we need to cancel it
@@ -321,36 +289,20 @@ int io_uring_backend_defer_submit_and_await(
     io_uring_prep_cancel(sqe, ctx, 0);
     io_uring_submit(&backend->ring);
   }
-  
-  if (TEST_EXCEPTION(switchpoint_result)) {
-    // INSPECT("got exception", switchpoint_result);
-    // printf("backend->pending_submit_count: %d\n", backend->pending_submit_count);
-    // if (backend->pending_submit_count) {
-    //   // TODO: the original sqe might not have been submitted yet, so maybe we
-    //   // can can set its user data to null instead of submitting twice?
-    //   backend->pending_submit_count = 0;
-    //   io_uring_submit(&backend->ring);
-    // }
-    if (exception)
-      (*exception) = switchpoint_result;
-    else
-      RAISE_EXCEPTION(switchpoint_result);
-  }
-  else if (value_ptr)
-    (*value_ptr) = switchpoint_result;
 
+  if (value_ptr) (*value_ptr) = switchpoint_result;
   RB_GC_GUARD(switchpoint_result);
   return ctx->result;
 }
 
-VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write, VALUE *exception) {
-  op_context_t ctx = OP_CONTEXT(OP_POLL);
+VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
+  op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_POLL);
   VALUE resumed_value = Qnil;
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_poll_add(sqe, fd, write ? POLLOUT : POLLIN);
 
-  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, exception, &resumed_value);
+  io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resumed_value);
   RB_GC_GUARD(resumed_value);
   return resumed_value;
 }
@@ -363,8 +315,6 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   int shrinkable = io_setstrbuf(&str, len);
   char *buf = RSTRING_PTR(str);
   long total = 0;
-  VALUE exception = Qnil;
-  op_context_t ctx = OP_CONTEXT(OP_READV);
   int read_to_eof = RTEST(to_eof);
   VALUE underlying_io = rb_iv_get(io, "@io");
   struct iovec iov[1];
@@ -377,17 +327,23 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   OBJ_TAINT(str);
 
   while (1) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_READV);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     iov[0].iov_base = buf;
     iov[0].iov_len = len - total;
     io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
-    if (exception != Qnil) goto error;
-
-    ssize_t n = ctx.result;
-    if (n < 0) {
-      rb_syserr_fail(-n, strerror(-n));
+    io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    if (TEST_EXCEPTION(resume_value)) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      RAISE_EXCEPTION(resume_value);
     }
+    RB_GC_GUARD(resume_value);
+
+    ssize_t n = ctx->result;
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+    if (n < 0)
+      rb_syserr_fail(-n, strerror(-n));
     else {
       if (n == 0) break; // EOF
       total = total + n;
@@ -411,12 +367,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
 
   if (total == 0) return Qnil;
 
-  RB_GC_GUARD(ctx.fiber);
-  RB_GC_GUARD(exception);
-
   return str;
-error:
-  return RAISE_EXCEPTION(exception);
 }
 
 VALUE Backend_read_loop(VALUE self, VALUE io) {
@@ -427,8 +378,6 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   long len = 8192;
   int shrinkable;
   char *buf;
-  VALUE exception = Qnil;
-  op_context_t ctx = OP_CONTEXT(OP_READV);
   struct iovec iov[1];
   VALUE underlying_io = rb_iv_get(io, "@io");
 
@@ -441,16 +390,25 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   rectify_io_file_pos(fptr);
 
   while (1) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_READV);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     iov[0].iov_base = buf;
     iov[0].iov_len = len;
     io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
-    if (exception != Qnil) goto error;
+    io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    if (TEST_EXCEPTION(resume_value)) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      RAISE_EXCEPTION(resume_value);
+    }
+    RB_GC_GUARD(resume_value);
 
-    ssize_t n = ctx.result;
-    if (n < 0)
+    ssize_t n = ctx->result;
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+    ctx = NULL;
+    if (n < 0) {
       rb_syserr_fail(-n, strerror(-n));
+    }
     else if (n == 0)
       break; // EOF
     else {
@@ -460,25 +418,19 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   }
 
   RB_GC_GUARD(str);
-  RB_GC_GUARD(ctx.fiber);
-  RB_GC_GUARD(exception);
 
   return io;
-error:
-  return RAISE_EXCEPTION(exception);
 }
 
 VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   Backend_t *backend;
   rb_io_t *fptr;
-  VALUE exception = Qnil;
   VALUE underlying_io;
   long total_length = 0;
   long total_written = 0;
   struct iovec *iov = 0;
   struct iovec *iov_ptr = 0;
   int iov_count = argc;
-  op_context_t ctx = OP_CONTEXT(OP_WRITEV);
 
   underlying_io = rb_iv_get(io, "@io");
   if (underlying_io != Qnil) io = underlying_io;
@@ -496,12 +448,21 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   iov_ptr = iov;
 
   while (1) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_WRITEV);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_writev(sqe, fptr->fd, iov_ptr, iov_count, -1);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
-    if (exception != Qnil) goto error;
+    io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    if (TEST_EXCEPTION(resume_value)) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      free(iov);
+      RAISE_EXCEPTION(resume_value);
+    }
+    RB_GC_GUARD(resume_value);
+    
+    ssize_t n = ctx->result;
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
 
-    ssize_t n = ctx.result;
     if (n < 0) {
       free(iov);
       rb_syserr_fail(-n, strerror(-n));
@@ -525,14 +486,8 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     }
   }
 
-  RB_GC_GUARD(ctx.fiber);
-  RB_GC_GUARD(exception);
-
   free(iov);
   return INT2NUM(total_written);
-error:
-  free(iov);
-  return RAISE_EXCEPTION(exception);
 }
 
 VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
@@ -551,8 +506,6 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   int shrinkable = io_setstrbuf(&str, len);
   char *buf = RSTRING_PTR(str);
   long total = 0;
-  VALUE exception = Qnil;
-  op_context_t ctx = OP_CONTEXT(OP_RECV);
   VALUE underlying_io = rb_iv_get(io, "@io");
 
   GetBackend(self, backend);
@@ -563,15 +516,22 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   OBJ_TAINT(str);
 
   while (1) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_RECV);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_recv(sqe, fptr->fd, buf, len - total, 0);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
-    if (exception != Qnil) goto error;
-
-    ssize_t n = ctx.result;
-    if (n < 0) {
-      rb_syserr_fail(-n, strerror(-n));
+    io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    if (TEST_EXCEPTION(resume_value)) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      RAISE_EXCEPTION(resume_value);
     }
+    RB_GC_GUARD(resume_value);
+
+    ssize_t n = ctx->result;
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+
+    if (n < 0)
+      rb_syserr_fail(-n, strerror(-n));
     else {
       total = total + n;
       break;
@@ -583,12 +543,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
 
   if (total == 0) return Qnil;
 
-  RB_GC_GUARD(ctx.fiber);
-  RB_GC_GUARD(exception);
-
   return str;
-error:
-  return RAISE_EXCEPTION(exception);
 }
 
 VALUE Backend_recv_loop(VALUE self, VALUE io) {
@@ -599,8 +554,6 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
   long len = 8192;
   int shrinkable;
   char *buf;
-  VALUE exception = Qnil;
-  op_context_t ctx = OP_CONTEXT(OP_RECV);
   VALUE underlying_io = rb_iv_get(io, "@io");
 
   READ_LOOP_PREPARE_STR();
@@ -612,12 +565,20 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
   rectify_io_file_pos(fptr);
 
   while (1) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_RECV);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_recv(sqe, fptr->fd, buf, len, 0);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
-    if (exception != Qnil) goto error;
+    io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    if (TEST_EXCEPTION(resume_value)) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      RAISE_EXCEPTION(resume_value);
+    }
+    RB_GC_GUARD(resume_value);
 
-    ssize_t n = ctx.result;
+    ssize_t n = ctx->result;
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+
     if (n < 0)
       rb_syserr_fail(-n, strerror(-n));
     else if (n == 0)
@@ -629,20 +590,13 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
   }
 
   RB_GC_GUARD(str);
-  RB_GC_GUARD(ctx.fiber);
-  RB_GC_GUARD(exception);
-
   return io;
-error:
-  return RAISE_EXCEPTION(exception);
 }
 
 VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   Backend_t *backend;
   rb_io_t *fptr;
-  VALUE exception = Qnil;
   VALUE underlying_io;
-  op_context_t ctx = OP_CONTEXT(OP_SEND);
 
   underlying_io = rb_iv_get(io, "@io");
   if (underlying_io != Qnil) io = underlying_io;
@@ -655,12 +609,20 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   long left = len;
 
   while (left > 0) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_SEND);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_send(sqe, fptr->fd, buf, left, 0);
-    io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
-    if (exception != Qnil) goto error;
+    io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    if (TEST_EXCEPTION(resume_value)) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      RAISE_EXCEPTION(resume_value);
+    }
+    RB_GC_GUARD(resume_value);
 
-    ssize_t n = ctx.result;
+    ssize_t n = ctx->result;
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+
     if (n < 0)
       rb_syserr_fail(-n, strerror(-n));
     else {
@@ -669,12 +631,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
     }
   }
 
-  RB_GC_GUARD(ctx.fiber);
-  RB_GC_GUARD(exception);
-
   return INT2NUM(len);
-error:
-  return RAISE_EXCEPTION(exception);
 }
 
 VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
@@ -682,18 +639,21 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
   int fd;
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
-  VALUE exception = Qnil;
   VALUE underlying_sock = rb_iv_get(sock, "@io");
   VALUE socket = Qnil;
-  op_context_t ctx = OP_CONTEXT(OP_ACCEPT);
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetOpenFile(sock, fptr);
   while (1) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_ACCEPT);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_accept(sqe, fptr->fd, &addr, &len, 0);
-    fd = io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
-    if (exception != Qnil) goto error;
+    fd = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+    RAISE_IF_EXCEPTION(resume_value);
+    RB_GC_GUARD(resume_value);
+
     if (fd < 0)
       rb_syserr_fail(-fd, strerror(-fd));
     else {
@@ -719,10 +679,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
     }
   }
   RB_GC_GUARD(socket);
-  RB_GC_GUARD(exception);
   return Qnil;
-error:
-  return RAISE_EXCEPTION(exception);
 }
 
 VALUE Backend_accept(VALUE self, VALUE sock) {
@@ -743,9 +700,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   rb_io_t *fptr;
   struct sockaddr_in addr;
   char *host_buf = StringValueCStr(host);
-  VALUE exception = Qnil;
   VALUE underlying_sock = rb_iv_get(sock, "@io");
-  op_context_t ctx = OP_CONTEXT(OP_CONNECT);
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
@@ -755,16 +710,16 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   addr.sin_addr.s_addr = inet_addr(host_buf);
   addr.sin_port = htons(NUM2INT(port));
 
+  VALUE resume_value = Qnil;
+  op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_CONNECT);
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_connect(sqe, fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
-  int result = io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, &exception, NULL);
-  if (exception != Qnil) goto error;
+  int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+  OP_CONTEXT_RELEASE(&backend->store, ctx);
+  RAISE_IF_EXCEPTION(resume_value);
+  RB_GC_GUARD(resume_value);
   if (result < 0) rb_syserr_fail(-result, strerror(-result));
-  
-  RB_GC_GUARD(exception);
   return sock;
-error:
-  return RAISE_EXCEPTION(exception);
 }
 
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
@@ -775,41 +730,45 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   GetBackend(self, backend);
   GetOpenFile(io, fptr);
 
-  io_uring_backend_wait_fd(backend, fptr->fd, RTEST(write), NULL);
+  VALUE resume_value = io_uring_backend_wait_fd(backend, fptr->fd, RTEST(write));
+  RAISE_IF_EXCEPTION(resume_value);
+  RB_GC_GUARD(resume_value);
   return self;
 }
 
 VALUE Backend_sleep(VALUE self, VALUE duration) {
   Backend_t *backend;
-  op_context_t ctx = OP_CONTEXT(OP_TIMEOUT);
   struct io_uring_sqe *sqe;
   double duration_integral;
   double duration_fraction = modf(NUM2DBL(duration), &duration_integral);
   struct __kernel_timespec ts;
-  VALUE resumed_value = Qnil;
 
   GetBackend(self, backend);
   sqe = io_uring_get_sqe(&backend->ring);
   ts.tv_sec = duration_integral;
 	ts.tv_nsec = floor(duration_fraction * 1000000000);
   
+  VALUE resume_value = Qnil;
+  op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_TIMEOUT);
   io_uring_prep_timeout(sqe, &ts, 0, 0);
-  io_uring_backend_defer_submit_and_await(backend, sqe, &ctx, NULL, &resumed_value);
-  return resumed_value;
+  io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+  OP_CONTEXT_RELEASE(&backend->store, ctx);
+  RAISE_IF_EXCEPTION(resume_value);
+  RB_GC_GUARD(resume_value);
+  return resume_value;
 }
 
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
   Backend_t *backend;
-  VALUE exception = Qnil;
   int pid_int = NUM2INT(pid);
   int fd = pidfd_open(pid_int, 0);
   GetBackend(self, backend);
   
-  io_uring_backend_wait_fd(backend, fd, 0, &exception);
+  VALUE resume_value = io_uring_backend_wait_fd(backend, fd, 0);
   close(fd);
 
-  RAISE_IF_NOT_NIL(exception);
-  RB_GC_GUARD(exception);
+  RAISE_IF_EXCEPTION(resume_value);
+  RB_GC_GUARD(resume_value);
 
   int status;
   pid_t ret = waitpid(pid_int, &status, WNOHANG);
@@ -828,7 +787,10 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
     }
   }
 
-  return io_uring_backend_wait_fd(backend, backend->event_fd, 0, NULL);
+  VALUE resume_value = io_uring_backend_wait_fd(backend, backend->event_fd, 0);
+  if (RTEST(raise)) RAISE_IF_EXCEPTION(resume_value);
+  RB_GC_GUARD(resume_value);
+  return resume_value;
 }
 
 void Init_Backend() {
