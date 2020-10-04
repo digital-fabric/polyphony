@@ -155,14 +155,19 @@ extern int __sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complet
 void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
   op_context_t *op_ctx = io_uring_cqe_get_data(cqe);
   // printf("complete ctx %p (%s) res: %d\n", op_ctx, op_type_to_str(op_ctx ? op_ctx->type : OP_NONE), cqe->res);
-  if (op_ctx == 0 || cqe->res == -ECANCELED) return;
+  if (op_ctx == 0) return;
 
   op_ctx->result = cqe->res;
   if (op_ctx->completed)
-    context_store_return(&backend->store, op_ctx);
+    // if the context is already marked as completed, this means the fiber has
+    // already moved on and we can safely release the context
+    context_store_release(&backend->store, op_ctx);
   else {
+    // otherwise, we mark it as completed, schedule the fiber and let it deal
+    // with releasing the context
     op_ctx->completed = 1;
-    Fiber_make_runnable(op_ctx->fiber, Qnil);
+    if (op_ctx->result != -ECANCELED)
+      Fiber_make_runnable(op_ctx->fiber, Qnil);
   }
 }
 
@@ -199,9 +204,9 @@ void io_uring_backend_poll(Backend_t *backend) {
   poll_context_t poll_ctx;
   poll_ctx.ring = &backend->ring;
   backend->waiting_for_cqe = 1;
-  printf("poll > %d\n", backend->ref_count);
+  // printf("poll > %d\n", backend->ref_count);
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
-  printf("poll <\n");
+  // printf("poll <\n");
   backend->waiting_for_cqe = 0;
   if (poll_ctx.result < 0) return;
 
@@ -232,7 +237,7 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
     backend->pending_submit_count = 0;
   }
   if (!is_nowait) io_uring_backend_poll(backend);
-  io_uring_backend_handle_ready_cqes(backend);
+  // io_uring_backend_handle_ready_cqes(backend);
   COND_TRACE(2, SYM_backend_poll_leave, current_fiber);
   
   return self;
@@ -278,10 +283,10 @@ int io_uring_backend_defer_submit_and_await(
   io_uring_backend_defer_submit(backend);
   
   backend->ref_count++;
-  printf("submit ctx %p (%s) ref_count: %d\n", ctx, op_type_to_str(ctx->type), backend->ref_count);
+  // printf("submit ctx %p (%s) ref_count: %d\n", ctx, op_type_to_str(ctx->type), backend->ref_count);
   switchpoint_result = backend_await(backend);
   backend->ref_count--;
-  printf("resume ctx %p (%s) ref_count: %d\n", ctx, op_type_to_str(ctx->type), backend->ref_count);
+  // printf("resume ctx %p (%s) ref_count: %d\n", ctx, op_type_to_str(ctx->type), backend->ref_count);
 
   if (!ctx->completed) {
     // op was not completed, so we need to cancel it

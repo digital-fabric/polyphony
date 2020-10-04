@@ -31,14 +31,14 @@ typedef struct op_context_store {
 const char *op_type_to_str(enum op_type type);
 
 void context_store_initialize(op_context_store_t *store);
-op_context_t *context_store_borrow(op_context_store_t *store, enum op_type type);
-void context_store_return(op_context_store_t *store, op_context_t *ctx);
+op_context_t *context_store_acquire(op_context_store_t *store, enum op_type type);
+void context_store_release(op_context_store_t *store, op_context_t *ctx);
 void context_store_free(op_context_store_t *store);
 
-#define OP_CONTEXT_ACQUIRE(store, op_type) context_store_borrow(store, op_type)
+#define OP_CONTEXT_ACQUIRE(store, op_type) context_store_acquire(store, op_type)
 #define OP_CONTEXT_RELEASE(store, ctx) { \
   if (ctx->completed) \
-    context_store_return(store, ctx); \
+    context_store_release(store, ctx); \
   else \
     ctx->completed = 1; \
 }
