@@ -1,11 +1,6 @@
-(
-  io_uring: some work has been done on an io_uring based scheduler here:
-    https://github.com/dsh0416/evt
-  
-  This can serve as a starting point for doing stuff with io_uring
-)
+- io_uring
 
-0.45.4
+0.46
 
 - Adapter for io/console (what does `IO#raw` do?)
 - Adapter for Pry and IRB (Which fixes #5 and #6)
@@ -14,7 +9,7 @@
 - Fix backtrace for `Timeout.timeout` API (see timeout example).
 - Check why worker-thread example doesn't work.
 
-0.46.0
+0.47
 
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
@@ -128,8 +123,6 @@
   - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
 
 
-## 0.47
-
 ### Some more API work, more docs
 
 - sintra app with database access (postgresql)
@@ -141,13 +134,9 @@
   - proceed from there
 
 
-## 0.48
-
 ### Sinatra / Sidekiq
 
 - Pull out redis/postgres code, put into new `polyphony-xxx` gems
-
-## 0.49
 
 ### Testing && Docs
 
@@ -158,8 +147,6 @@
   - `IO#read` (read to EOF)
   - `IO.foreach`
   - `Process.waitpid`
-
-## 0.50 DNS
 
 ### DNS client
 

@@ -1,3 +1,12 @@
+## 0.45.5
+
+* Fix compilation error (#43)
+* Add support for resetting move_on_after, cancel_after timeouts
+* Optimize anti-event starvation polling
+* Implement optimized runqueue for better performance
+* Schedule parent with priority on uncaught exception
+* Fix race condition in `Mutex#synchronize` (#41)
+
 ## 0.45.4
 
 * Improve signal trapping mechanism
