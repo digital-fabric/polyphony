@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include "ruby.h"
+#include "polyphony.h"
 #include "backend_io_uring_context.h"
 
 const char *op_type_to_str(enum op_type type) {
@@ -21,7 +22,7 @@ void context_store_initialize(op_context_store_t *store) {
   store->taken = NULL;
 }
 
-inline op_context_t *context_store_borrow(op_context_store_t *store, enum op_type type) {
+inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_type type) {
   op_context_t *ctx = store->available;
   if (ctx)
     store->available = ctx->next;
@@ -31,16 +32,22 @@ inline op_context_t *context_store_borrow(op_context_store_t *store, enum op_typ
   ctx->next = store->taken;
   store->taken = ctx;
 
+  // INSPECT("thread", rb_thread_current());
+  // printf("context_store_acquire  ctx: %p (%p) available: %p taken: %p\n", ctx, ctx->next, store->available, store->taken);
+
   ctx->type = type;
   ctx->fiber = rb_fiber_current();
   ctx->completed = 0;
   return ctx;
 }
 
-inline void context_store_return(op_context_store_t *store, op_context_t *ctx) {
+inline void context_store_release(op_context_store_t *store, op_context_t *ctx) {
   store->taken = ctx->next;
   ctx->next = store->available;
   store->available = ctx;
+
+  // INSPECT("thread", rb_thread_current());
+  // printf("context_store_release  ctx: %p (%p) available: %p taken: %p\n", ctx, ctx->next, store->available, store->taken);
 }
 
 void context_store_free(op_context_store_t *store) {
