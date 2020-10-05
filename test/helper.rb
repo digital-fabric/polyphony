@@ -28,8 +28,12 @@ module ::Kernel
   end
 
   def format_trace(args)
-    if args.size > 1 && args.first.is_a?(String)
-      format("%s: %p\n", args.shift, args.size == 1 ? args.first : args)
+    if args.first.is_a?(String)
+      if args.size > 1
+        format("%s: %p\n", args.shift, args)
+      else
+        format("%s\n", args.first)
+      end
     else
       format("%p\n", args.size == 1 ? args.first : args)
     end
@@ -38,20 +42,20 @@ end
 
 class MiniTest::Test
   def setup
-    puts "* setup #{self.name}"
+    # puts "* setup #{self.name}"
     if Fiber.current.children.size > 0
       puts "Children left: #{Fiber.current.children.inspect}"
       exit!
     end
     Fiber.current.setup_main_fiber
     Fiber.current.instance_variable_set(:@auto_watcher, nil)
+    Thread.current.backend.finalize
     Thread.current.backend = Polyphony::Backend.new
-    sleep 0 # apparently this helps with timer accuracy
+    # sleep 0 # apparently this helps with timer accuracy
   end
 
   def teardown
-    puts "* teardown #{self.name.inspect} Fiber.current: #{Fiber.current.inspect}"
-    p fiber_tree(Fiber.current)
+    # puts "* teardown #{self.name.inspect} Fiber.current: #{Fiber.current.inspect}"
     Fiber.current.terminate_all_children
     Fiber.current.await_all_children
     Fiber.current.instance_variable_set(:@auto_watcher, nil)
