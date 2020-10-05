@@ -153,21 +153,25 @@ static inline bool cq_ring_needs_flush(struct io_uring *ring) {
 extern int __sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complete, unsigned flags, sigset_t *sig);
 
 void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
-  op_context_t *op_ctx = io_uring_cqe_get_data(cqe);
-  // printf("complete ctx %p (%s) res: %d\n", op_ctx, op_type_to_str(op_ctx ? op_ctx->type : OP_NONE), cqe->res);
-  if (op_ctx == 0) return;
+  op_context_t *ctx = io_uring_cqe_get_data(cqe);
+  printf("io_uring_backend_handle_completion ctx %p res: %d\n", ctx, cqe->res);
+  if (ctx == 0) return;
 
-  op_ctx->result = cqe->res;
-  if (op_ctx->completed)
+  printf("  ctx id %d (%s)\n", ctx->id, op_type_to_str(ctx->type));
+  ctx->result = cqe->res;
+  if (ctx->completed) {
+    printf("  already marked as completed\n");
     // if the context is already marked as completed, this means the fiber has
     // already moved on and we can safely release the context
-    context_store_release(&backend->store, op_ctx);
+    context_store_release(&backend->store, ctx);
+  }
   else {
     // otherwise, we mark it as completed, schedule the fiber and let it deal
     // with releasing the context
-    op_ctx->completed = 1;
-    if (op_ctx->result != -ECANCELED)
-      Fiber_make_runnable(op_ctx->fiber, Qnil);
+    printf("  marking as completed\n");
+    ctx->completed = 1;
+    if (ctx->result != -ECANCELED)
+      Fiber_make_runnable(ctx->fiber, Qnil);
   }
 }
 
@@ -261,11 +265,12 @@ VALUE Backend_wakeup(VALUE self) {
 }
 
 void io_uring_backend_defer_submit(Backend_t *backend) {
-  backend->pending_submit_count += 1;
-  if (backend->pending_submit_count >= backend->prepared_limit) {
-    backend->pending_submit_count = 0;
-    io_uring_submit(&backend->ring);
-  }
+  io_uring_submit(&backend->ring);
+  // backend->pending_submit_count += 1;
+  // if (backend->pending_submit_count >= backend->prepared_limit) {
+  //   backend->pending_submit_count = 0;
+  //   io_uring_submit(&backend->ring);
+  // }
 }
 
 int io_uring_backend_defer_submit_and_await(
@@ -279,8 +284,24 @@ int io_uring_backend_defer_submit_and_await(
 
   // INSPECT("io_uring_backend_defer_submit_and_await fiber", ctx->fiber);
   // TRACE_CALLER();
+  
+  // TODO: compare performance with IOSQE_ASYNC flag
+  // io_uring_sqe_set_data(sqe, IOSQE_ASYNC);
+
   io_uring_sqe_set_data(sqe, ctx);
+  printf("submit ctx %p id %d (%s)\n", ctx, ctx->id, op_type_to_str(ctx->type));
   io_uring_backend_defer_submit(backend);
+
+  if (ctx->type != OP_POLL) {
+    struct io_uring_cqe *cqe;
+    int res = io_uring_wait_cqe(&backend->ring, &cqe);
+    if (res) { printf("res: %d\n", res); exit(1); }
+
+    ctx->result = cqe->res;
+    io_uring_cqe_seen(&backend->ring, cqe);
+    ctx->completed = 1;
+    return ctx->result;
+  }
   
   backend->ref_count++;
   // printf("submit ctx %p (%s) ref_count: %d\n", ctx, op_type_to_str(ctx->type), backend->ref_count);
@@ -427,6 +448,52 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   return io;
 }
 
+VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
+  Backend_t *backend;
+  rb_io_t *fptr;
+  VALUE underlying_io;
+
+  underlying_io = rb_iv_get(io, "@io");
+  if (underlying_io != Qnil) io = underlying_io;
+  GetBackend(self, backend);
+  io = rb_io_get_write_io(io);
+  GetOpenFile(io, fptr);
+
+  char *buf = StringValuePtr(str);
+  long len = RSTRING_LEN(str);
+  long left = len;
+  printf("write len %ld\n", len);
+  INSPECT("  str", str);
+
+  while (left > 0) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_WRITE);
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    printf("  ctx %p id: %d left: %ld\n", ctx, ctx->id, left);
+    io_uring_prep_write(sqe, fptr->fd, buf, left, -1);
+    io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    if (TEST_EXCEPTION(resume_value)) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      RAISE_EXCEPTION(resume_value);
+    }
+    RB_GC_GUARD(resume_value);
+    
+    ssize_t n = ctx->result;
+
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+
+    if (n < 0) {
+      rb_syserr_fail(-n, strerror(-n));
+    }
+    else {
+      buf += n;
+      left -= n;
+    }
+  }
+
+  return INT2NUM(len);
+}
+
 VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   Backend_t *backend;
   rb_io_t *fptr;
@@ -443,19 +510,26 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
 
+  printf("writev argc: %d\n", argc);
+
   iov = malloc(iov_count * sizeof(struct iovec));
   for (int i = 0; i < argc; i++) {
     VALUE str = argv[i];
+    INSPECT("  str", str);
     iov[i].iov_base = StringValuePtr(str);
     iov[i].iov_len = RSTRING_LEN(str);
     total_length += iov[i].iov_len;
   }
   iov_ptr = iov;
+  printf("  total_length %ld\n", total_length);
 
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_WRITEV);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    printf("  ctx %p id: %d iov_count: %d\n", ctx, ctx->id, iov_count);
+    for (int i = 0; i < iov_count; i++)
+      printf("  %d => %p, %lu\n", i, iov_ptr[i].iov_base, iov_ptr[i].iov_len);
     io_uring_prep_writev(sqe, fptr->fd, iov_ptr, iov_count, -1);
     io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     if (TEST_EXCEPTION(resume_value)) {
@@ -466,6 +540,8 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     RB_GC_GUARD(resume_value);
     
     ssize_t n = ctx->result;
+    // if (n == 0) { printf("n = 0!\n"); exit(1); }
+
     OP_CONTEXT_RELEASE(&backend->store, ctx);
 
     if (n < 0) {
@@ -474,7 +550,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     }
     else {
       total_written += n;
-      if (total_written == total_length) break;
+      if (total_written >= total_length) break;
 
       while (n > 0) {
         if ((size_t) n < iov_ptr[0].iov_len) {
@@ -500,7 +576,9 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
     // TODO: raise ArgumentError
     rb_raise(rb_eRuntimeError, "(wrong number of arguments (expected 2 or more))");
 
-  return Backend_writev(self, argv[0], argc - 1, argv + 1);
+  return (argc == 2) ?
+    Backend_write(self, argv[0], argv[1]) :
+    Backend_writev(self, argv[0], argc - 1, argv + 1);
 }
 
 VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {

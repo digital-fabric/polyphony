@@ -17,7 +17,6 @@ trap('INT') { exit! }
 t0 = Time.now
 count.times do |i|
   run_test(i + 1)
-  sleep 1
 end
 elapsed = Time.now - t0
 puts format(
