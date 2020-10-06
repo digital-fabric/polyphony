@@ -665,7 +665,7 @@ class FiberTest < MiniTest::Test
         o.close
       end
     end
-    sleep 0.2
+    sleep 0.1
     f = spin { Thread.current.backend.waitpid(pid) }
     o.close
     Process.kill('TERM', pid)
@@ -690,7 +690,7 @@ class FiberTest < MiniTest::Test
     end
     o.close
     spin do
-      sleep 0.2
+      sleep 0.1
       Process.kill('TERM', pid)
     end
     Thread.current.backend.waitpid(pid)
@@ -706,6 +706,7 @@ class FiberTest < MiniTest::Test
     assert_nil f.thread
     snooze
     f.setup_raw
+
     assert_equal Thread.current, f.thread
     assert_nil f.parent
 
@@ -714,6 +715,7 @@ class FiberTest < MiniTest::Test
     f << 'bar'
     snooze
     assert_equal ['bar'], buffer
+    snooze
   end
 end
 

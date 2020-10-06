@@ -158,6 +158,7 @@ void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *bac
   if (ctx == 0) return;
 
   ctx->result = cqe->res;
+
   if (ctx->completed)
     // already marked as deleted as result of fiber resuming before op
     // completion, so we can release the context
@@ -286,6 +287,8 @@ int io_uring_backend_defer_submit_and_await(
   backend->ref_count--;
 
   if (!ctx->completed) {
+    ctx->result = -ECANCELED;
+
     // op was not completed, so we need to cancel it
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_cancel(sqe, ctx, 0);
@@ -337,18 +340,20 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
     iov[0].iov_len = len - total;
     io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
     io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
-    if (TEST_EXCEPTION(resume_value)) {
+    if (!ctx->completed) {
       OP_CONTEXT_RELEASE(&backend->store, ctx);
-      RAISE_EXCEPTION(resume_value);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
     ssize_t n = ctx->result;
     OP_CONTEXT_RELEASE(&backend->store, ctx);
-    if (n < 0)
+    if (n == 0)
+      break; // EOF
+    else if (n < 0)
       rb_syserr_fail(-n, strerror(-n));
     else {
-      if (n == 0) break; // EOF
       total = total + n;
       if (!read_to_eof) break;
 
@@ -400,9 +405,10 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
     iov[0].iov_len = len;
     io_uring_prep_readv(sqe, fptr->fd, iov, 1, -1);
     io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
-    if (TEST_EXCEPTION(resume_value)) {
+    if (!ctx->completed) {
       OP_CONTEXT_RELEASE(&backend->store, ctx);
-      RAISE_EXCEPTION(resume_value);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
@@ -447,16 +453,15 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
     io_uring_prep_write(sqe, fptr->fd, buf, left, -1);
     io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
 
-    if (TEST_EXCEPTION(resume_value)) {
+    if (!ctx->completed) {
       OP_CONTEXT_RELEASE(&backend->store, ctx);
-      RAISE_EXCEPTION(resume_value);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
     }
     RB_GC_GUARD(resume_value);
     
     ssize_t n = ctx->result;
-
     OP_CONTEXT_RELEASE(&backend->store, ctx);
-
     if (n < 0) {
       rb_syserr_fail(-n, strerror(-n));
     }
@@ -501,13 +506,14 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     io_uring_prep_writev(sqe, fptr->fd, iov_ptr, iov_count, -1);
     io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     
-    if (TEST_EXCEPTION(resume_value)) {
+    if (!ctx->completed) {
       OP_CONTEXT_RELEASE(&backend->store, ctx);
       free(iov);
-      RAISE_EXCEPTION(resume_value);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
     }
     RB_GC_GUARD(resume_value);
-    
+
     ssize_t n = ctx->result;
     OP_CONTEXT_RELEASE(&backend->store, ctx);
     if (n < 0) {
@@ -570,9 +576,10 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_recv(sqe, fptr->fd, buf, len - total, 0);
     io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
-    if (TEST_EXCEPTION(resume_value)) {
+    if (!ctx->completed) {
       OP_CONTEXT_RELEASE(&backend->store, ctx);
-      RAISE_EXCEPTION(resume_value);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
@@ -619,9 +626,10 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_recv(sqe, fptr->fd, buf, len, 0);
     io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
-    if (TEST_EXCEPTION(resume_value)) {
+    if (!ctx->completed) {
       OP_CONTEXT_RELEASE(&backend->store, ctx);
-      RAISE_EXCEPTION(resume_value);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
@@ -667,6 +675,10 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
       OP_CONTEXT_RELEASE(&backend->store, ctx);
       RAISE_EXCEPTION(resume_value);
     }
+    if (!ctx->completed) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
 
     ssize_t n = ctx->result;
@@ -699,9 +711,16 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_accept(sqe, fptr->fd, &addr, &len, 0);
     fd = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
-    OP_CONTEXT_RELEASE(&backend->store, ctx);
-    RAISE_IF_EXCEPTION(resume_value);
+    if (TEST_EXCEPTION(resume_value)) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      RAISE_EXCEPTION(resume_value);
+    }
+    if (!ctx->completed) {
+      OP_CONTEXT_RELEASE(&backend->store, ctx);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
 
     if (fd < 0)
       rb_syserr_fail(-fd, strerror(-fd));
@@ -764,9 +783,17 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_connect(sqe, fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
   int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
-  OP_CONTEXT_RELEASE(&backend->store, ctx);
-  RAISE_IF_EXCEPTION(resume_value);
+  if (TEST_EXCEPTION(resume_value)) {
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+    RAISE_EXCEPTION(resume_value);
+  }
+  if (!ctx->completed) {
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+    return resume_value;
+  }
   RB_GC_GUARD(resume_value);
+  
+  OP_CONTEXT_RELEASE(&backend->store, ctx);
   if (result < 0) rb_syserr_fail(-result, strerror(-result));
   return sock;
 }
@@ -801,8 +828,11 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
   op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_TIMEOUT);
   io_uring_prep_timeout(sqe, &ts, 0, 0);
   io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+  if (TEST_EXCEPTION(resume_value)) {
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+    RAISE_EXCEPTION(resume_value);
+  }
   OP_CONTEXT_RELEASE(&backend->store, ctx);
-  RAISE_IF_EXCEPTION(resume_value);
   RB_GC_GUARD(resume_value);
   return resume_value;
 }
