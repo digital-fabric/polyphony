@@ -17,6 +17,7 @@ enum op_type {
 };
 
 typedef struct op_context {
+  struct op_context *prev;
   struct op_context *next;
   enum op_type      type: 16;
   int               completed : 16;
@@ -39,13 +40,10 @@ void context_store_free(op_context_store_t *store);
 
 #define OP_CONTEXT_ACQUIRE(store, op_type) context_store_acquire(store, op_type)
 #define OP_CONTEXT_RELEASE(store, ctx) { \
-  printf("OP_CONTEXT_RELEASE ctx %d completed: %d\n", ctx->id, ctx->completed); \
   if (ctx->completed) {\
-    printf("  already completed\n"); \
     context_store_release(store, ctx); \
   } \
   else { \
-    printf("  marking as completed\n"); \
     ctx->completed = 1; \
   } \
 }
