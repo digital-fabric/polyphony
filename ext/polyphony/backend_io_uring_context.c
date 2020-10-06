@@ -27,14 +27,18 @@ static int last_id = 0;
 
 inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_type type) {
   op_context_t *ctx = store->available;
-  if (ctx)
+  if (ctx) {
+    if (ctx->next) ctx->next->prev = NULL;
     store->available = ctx->next;
+  }
   else {
     ctx = malloc(sizeof(op_context_t));
     ctx->id = (++last_id);
   }
   
+  ctx->prev = NULL;
   ctx->next = store->taken;
+  if (store->taken) store->taken->prev = ctx;
   store->taken = ctx;
 
   ctx->type = type;
@@ -45,8 +49,13 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
 }
 
 inline void context_store_release(op_context_store_t *store, op_context_t *ctx) {
-  store->taken = ctx->next;
+  if (ctx->next) ctx->next->prev = ctx->prev;
+  if (ctx->prev) ctx->prev->next = ctx->next;
+  if (store->taken == ctx) store->taken = ctx->next;
+
+  ctx->prev = NULL;
   ctx->next = store->available;
+  if (ctx->next) ctx->next->prev = ctx;
   store->available = ctx;
 }
 
