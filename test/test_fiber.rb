@@ -4,7 +4,6 @@ require_relative 'helper'
 
 class FiberTest < MiniTest::Test
   def test_spin_initial_state
-    skip
     result = nil
     f = Fiber.current.spin { result = 42 }
     assert_nil result
@@ -15,7 +14,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_children_parent
-    skip
     assert_nil Fiber.current.parent
 
     f1 = spin {}
@@ -27,7 +25,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_spin_from_different_fiber
-    skip
     f1 = spin { sleep }
     f2 = f1.spin { sleep }
     assert_equal f1, f2.parent
@@ -35,7 +32,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_await
-    skip
     result = nil
     f = Fiber.current.spin do
       snooze
@@ -48,7 +44,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_await_from_multiple_fibers
-    skip
     buffer = []
     f1 = spin {
       sleep 0.02
@@ -68,7 +63,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_await_from_multiple_fibers_with_interruption=
-    skip
     buffer = []
     f1 = spin {
       sleep 0.02
@@ -93,7 +87,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_schedule
-    skip
     values = []
     fibers = (0..2).map { |i| spin { suspend; values << i } }
     snooze
@@ -115,7 +108,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_cross_thread_schedule
-    skip
     buffer = []
     worker_fiber = nil
     async = Polyphony::Event.new
@@ -137,8 +129,8 @@ class FiberTest < MiniTest::Test
   end
 
   def test_backend_wakeup_mechanism
-    skip
     event = Polyphony::Event.new
+
     t = Thread.new do
       f = spin_loop { snooze }
       sleep 0.001
@@ -154,7 +146,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_tag
-    skip
     assert_equal :main, Fiber.current.tag
     Fiber.current.tag = :foo
     assert_equal :foo, Fiber.current.tag
@@ -164,7 +155,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_await_return_value
-    skip
     f = Fiber.current.spin { %i[foo bar] }
     assert_equal %i[foo bar], f.await
   ensure
@@ -172,7 +162,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_await_with_error
-    skip
     result = nil
     f = Fiber.current.spin { raise 'foo' }
     begin
@@ -188,7 +177,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_raise
-    skip
     result = []
     error = nil
     f = Fiber.current.spin do
@@ -215,7 +203,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_raise_with_error_class
-    skip
     result = []
     error = nil
     f = Fiber.current.spin do
@@ -238,7 +225,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_raise_with_error_class_and_message
-    skip
     result = []
     error = nil
     f = Fiber.current.spin do
@@ -262,7 +248,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_raise_with_message
-    skip
     result = []
     error = nil
     f = Fiber.current.spin do
@@ -287,7 +272,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_raise_with_exception
-    skip
     result = []
     error = nil
     f = Fiber.current.spin do
@@ -311,7 +295,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_cancel
-    skip
     result = []
     error = nil
     f = Fiber.current.spin do
@@ -334,7 +317,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_interrupt
-    skip
     # that is, stopped without exception
     result = []
     f = Fiber.current.spin do
@@ -353,7 +335,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_terminate
-    skip
     buffer = []
     f = spin do
       buffer << :foo
@@ -369,7 +350,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_interrupt_timer
-    skip
     result = []
     f = Fiber.current.spin do
       result << :start
@@ -383,7 +363,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_stop
-    skip
     # that is, stopped without exception
     result = []
     f = Fiber.current.spin do
@@ -402,7 +381,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_interrupt_before_start
-    skip
     result = []
     f = Fiber.current.spin do
       result << 1
@@ -416,7 +394,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_interrupt_nested_fiber
-    skip
     result = nil
     f2 = nil
     f1 = spin do
@@ -438,7 +415,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_interject
-    skip
     buf = []
     f = spin_loop { sleep }
     snooze
@@ -455,7 +431,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_state
-    skip
     counter = 0
     f = spin do
       3.times do
@@ -479,7 +454,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_main?
-    skip
     f = spin {
       sleep
     }
@@ -488,7 +462,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_exception_propagation
-    skip
     # error is propagated to calling fiber
     raised_error = nil
     spin do
@@ -508,7 +481,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_await_multiple_fibers
-    skip
     f1 = spin { sleep 0.01; :foo }
     f2 = spin { sleep 0.01; :bar }
     f3 = spin { sleep 0.01; :baz }
@@ -518,7 +490,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_join_multiple_fibers
-    skip
     f1 = spin { sleep 0.01; :foo }
     f2 = spin { sleep 0.01; :bar }
     f3 = spin { sleep 0.01; :baz }
@@ -528,7 +499,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_select_from_multiple_fibers
-    skip
     sleep 0
     buffer = []
     f1 = spin { sleep 0.1; buffer << :foo; :foo }
@@ -542,7 +512,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_caller
-    skip
     location = /^#{__FILE__}:#{__LINE__ + 1}/
     f = spin do
       sleep 0.01
@@ -554,7 +523,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_location
-    skip
     location = /^#{__FILE__}:#{__LINE__ + 1}/
     f = spin do
       sleep 0.01
@@ -565,7 +533,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_when_done
-    skip
     flag = nil
     values = []
     f = spin do
@@ -586,7 +553,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_children
-    skip
     assert_equal [], Fiber.current.children
 
     f = spin { sleep 1 }
@@ -599,7 +565,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_inspect
-    skip
     expected = format('#<Fiber:%s (root) (running)>', Fiber.current.object_id)
     assert_equal expected, Fiber.current.inspect
 
@@ -625,7 +590,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_system_exit_in_fiber
-    skip
     error = nil
     spin do
       spin { raise SystemExit }.await
@@ -640,7 +604,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_interrupt_in_fiber
-    skip
     error = nil
     spin do
       spin { raise Interrupt }.await
@@ -655,7 +618,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_signal_exception_in_fiber
-    skip
     error = nil
     spin do
       spin { raise SignalException.new('HUP') }.await
@@ -670,7 +632,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_signal_handling_int
-    skip
     i, o = IO.pipe
     pid = Polyphony.fork do
       f = spin { sleep 100 }
@@ -693,7 +654,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_signal_handling_term
-    skip
     i, o = IO.pipe
     pid = Polyphony.fork do
       f = spin { sleep 100 }
@@ -716,7 +676,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_main_fiber_child_termination_after_fork
-    skip
     i, o = IO.pipe
     pid = Polyphony.fork do
       i.close
@@ -741,7 +700,6 @@ class FiberTest < MiniTest::Test
   end
 
   def test_setup_raw
-    skip
     buffer = []
     f = Fiber.new { buffer << receive }
     
@@ -761,7 +719,6 @@ end
 
 class MailboxTest < MiniTest::Test
   def test_that_fiber_can_receive_messages
-    skip
     msgs = []
     f = spin { loop { msgs << receive } }
 
@@ -779,7 +736,6 @@ class MailboxTest < MiniTest::Test
   end
 
   def test_that_multiple_messages_sent_at_once_arrive_in_order
-    skip
     msgs = []
     f = spin { loop { msgs << receive } }
 
@@ -795,7 +751,6 @@ class MailboxTest < MiniTest::Test
   end
 
   def test_that_sent_message_are_queued_before_calling_receive
-    skip
     buffer = []
     receiver = spin { suspend; 3.times { buffer << receive } }
     sender = spin { 3.times { |i| receiver << (i * 10) } }
@@ -808,7 +763,6 @@ class MailboxTest < MiniTest::Test
   end
 
   def test_cross_thread_send_receive
-    skip
     ping_receive_buffer = []
     pong_receive_buffer = []
 
@@ -844,7 +798,6 @@ class MailboxTest < MiniTest::Test
   end
 
   def test_message_queueing
-    skip
     messages = []
     f = spin do
       loop {
@@ -863,7 +816,6 @@ class MailboxTest < MiniTest::Test
   end
 
   def test_receive_all_pending
-    skip
     assert_equal [], receive_all_pending
 
     (1..5).each { |i| Fiber.current << i }
@@ -872,7 +824,6 @@ class MailboxTest < MiniTest::Test
   end
 
   def test_receive_all_pending_on_termination
-    skip
     buffer = []
     worker = spin do
       loop { buffer << receive }
@@ -897,7 +848,6 @@ end
 
 class FiberControlTest < MiniTest::Test
   def test_await_multiple
-    skip
     f1 = spin {
       snooze
       :foo
@@ -911,7 +861,6 @@ class FiberControlTest < MiniTest::Test
   end
 
   def test_await_multiple_with_raised_error
-    skip
     f1 = spin {
       snooze
       raise 'foo'
@@ -938,7 +887,6 @@ class FiberControlTest < MiniTest::Test
   end
 
   def test_await_multiple_with_interruption
-    skip
     f1 = spin { sleep 0.01; :foo }
     f2 = spin { sleep 1; :bar }
     spin { snooze; f2.interrupt(:baz) }
@@ -947,7 +895,6 @@ class FiberControlTest < MiniTest::Test
   end
 
   def test_select
-    skip
     buffer = []
     f1 = spin { snooze; buffer << :foo; :foo }
     f2 = spin { :bar }
@@ -958,7 +905,6 @@ class FiberControlTest < MiniTest::Test
   end
 
   def test_select_with_raised_error
-    skip
     f1 = spin { snooze; raise 'foo' }
     f2 = spin { sleep 3 }
 
@@ -976,7 +922,6 @@ class FiberControlTest < MiniTest::Test
   end
 
   def test_select_with_interruption
-    skip
     f1 = spin { sleep 0.01; :foo }
     f2 = spin { sleep 1; :bar }
     spin { snooze; f2.interrupt(:baz) }
@@ -987,7 +932,6 @@ end
 
 class SupervisionTest < MiniTest::Test
   def test_exception_during_termination
-    skip
     f2 = nil
     f = spin do
       f2 = spin do
@@ -1014,7 +958,6 @@ end
 
 class RestartTest < MiniTest::Test
   def test_restart
-    skip
     buffer = []
     f = spin {
       buffer << 1
@@ -1035,7 +978,6 @@ class RestartTest < MiniTest::Test
   end
 
   def test_restart_after_finalization
-    skip
     buffer = []
     parent = spin {
       sleep

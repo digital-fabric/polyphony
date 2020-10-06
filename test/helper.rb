@@ -51,7 +51,6 @@ class MiniTest::Test
     Fiber.current.instance_variable_set(:@auto_watcher, nil)
     Thread.current.backend.finalize
     Thread.current.backend = Polyphony::Backend.new
-    # sleep 0 # apparently this helps with timer accuracy
   end
 
   def teardown
