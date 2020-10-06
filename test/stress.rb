@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-count = ARGV[0] ? ARGV[0].to_i : 100
+count = ARGV[0] ? ARGV[0].to_i : 1000
 
-TEST_CMD = 'ruby test/test_global_api.rb' #'ruby test/run.rb'
+TEST_CMD = 'ruby test/io_uring_test.rb' #'ruby test/run.rb'
 
 def run_test(count)
   puts "#{count}: running tests..."
