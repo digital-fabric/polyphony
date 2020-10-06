@@ -35,7 +35,7 @@ typedef struct Backend_t {
   int                 waiting_for_cqe;
   unsigned int        ref_count;
   unsigned int        run_no_wait_count;
-  unsigned int        pending_submit_count;
+  unsigned int        pending_sqes;
   unsigned int        prepared_limit;
   int                 event_fd;
 } Backend_t;
@@ -68,7 +68,7 @@ static VALUE Backend_initialize(VALUE self) {
   backend->waiting_for_cqe = 0;
   backend->ref_count = 0;
   backend->run_no_wait_count = 0;
-  backend->pending_submit_count = 0;
+  backend->pending_sqes = 0;
   backend->prepared_limit = 1024;
 
   context_store_initialize(&backend->store);
@@ -94,7 +94,7 @@ VALUE Backend_post_fork(VALUE self) {
 
   io_uring_queue_exit(&backend->ring);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
-  backend->pending_submit_count = 0;
+  backend->pending_sqes = 0;
 
   return self;
 }
@@ -136,12 +136,13 @@ VALUE Backend_pending_count(VALUE self) {
 typedef struct poll_context {
   struct io_uring     *ring;
   struct io_uring_cqe *cqe;
+  int                 pending_sqes;
   int                 result;
 } poll_context_t;
 
 void *io_uring_backend_poll_without_gvl(void *ptr) {
   poll_context_t *ctx = (poll_context_t *)ptr;
-  ctx->result = __io_uring_get_cqe(ctx->ring, &ctx->cqe, 0, 1, 0);
+  ctx->result = __io_uring_get_cqe(ctx->ring, &ctx->cqe, ctx->pending_sqes, 1, 0);
   return 0;
 }
 
@@ -154,24 +155,18 @@ extern int __sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complet
 
 void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
   op_context_t *ctx = io_uring_cqe_get_data(cqe);
-  printf("io_uring_backend_handle_completion ctx %p res: %d\n", ctx, cqe->res);
   if (ctx == 0) return;
 
-  printf("  ctx id %d (%s)\n", ctx->id, op_type_to_str(ctx->type));
   ctx->result = cqe->res;
-  if (ctx->completed) {
-    printf("  already marked as completed\n");
-    // if the context is already marked as completed, this means the fiber has
-    // already moved on and we can safely release the context
+  if (ctx->completed)
+    // already marked as deleted as result of fiber resuming before op
+    // completion, so we can release the context
     context_store_release(&backend->store, ctx);
-  }
   else {
     // otherwise, we mark it as completed, schedule the fiber and let it deal
     // with releasing the context
-    printf("  marking as completed\n");
     ctx->completed = 1;
-    if (ctx->result != -ECANCELED)
-      Fiber_make_runnable(ctx->fiber, Qnil);
+    if (ctx->result != -ECANCELED) Fiber_make_runnable(ctx->fiber, Qnil);
   }
 }
 
@@ -207,10 +202,9 @@ done:
 void io_uring_backend_poll(Backend_t *backend) {
   poll_context_t poll_ctx;
   poll_ctx.ring = &backend->ring;
+  poll_ctx.pending_sqes = 0; // TODO: perform submission in same syscall
   backend->waiting_for_cqe = 1;
-  // printf("poll > %d\n", backend->ref_count);
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
-  // printf("poll <\n");
   backend->waiting_for_cqe = 0;
   if (poll_ctx.result < 0) return;
 
@@ -235,13 +229,14 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
 
   backend->run_no_wait_count = 0;
 
-  COND_TRACE(2, SYM_backend_poll_enter, current_fiber);
-  if (backend->pending_submit_count) {
+  if (backend->pending_sqes) {
+    backend->pending_sqes = 0;
     io_uring_submit(&backend->ring);
-    backend->pending_submit_count = 0;
   }
+
+  COND_TRACE(2, SYM_backend_poll_enter, current_fiber);
   if (!is_nowait) io_uring_backend_poll(backend);
-  // io_uring_backend_handle_ready_cqes(backend);
+  io_uring_backend_handle_ready_cqes(backend);
   COND_TRACE(2, SYM_backend_poll_leave, current_fiber);
   
   return self;
@@ -256,6 +251,7 @@ VALUE Backend_wakeup(VALUE self) {
     // NOP which would case the io_uring_enter syscall to return
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_nop(sqe);
+    backend->pending_sqes = 0;
     io_uring_submit(&backend->ring);
     
     return Qtrue;
@@ -264,13 +260,12 @@ VALUE Backend_wakeup(VALUE self) {
   return Qnil;
 }
 
-void io_uring_backend_defer_submit(Backend_t *backend) {
-  io_uring_submit(&backend->ring);
-  // backend->pending_submit_count += 1;
-  // if (backend->pending_submit_count >= backend->prepared_limit) {
-  //   backend->pending_submit_count = 0;
-  //   io_uring_submit(&backend->ring);
-  // }
+inline void io_uring_backend_defer_submit(Backend_t *backend) {
+  backend->pending_sqes += 1;
+  if (backend->pending_sqes >= backend->prepared_limit) {
+    backend->pending_sqes = 0;
+    io_uring_submit(&backend->ring);
+  }
 }
 
 int io_uring_backend_defer_submit_and_await(
@@ -282,37 +277,19 @@ int io_uring_backend_defer_submit_and_await(
 {
   VALUE switchpoint_result = Qnil;
 
-  // INSPECT("io_uring_backend_defer_submit_and_await fiber", ctx->fiber);
-  // TRACE_CALLER();
-  
-  // TODO: compare performance with IOSQE_ASYNC flag
-  // io_uring_sqe_set_data(sqe, IOSQE_ASYNC);
-
   io_uring_sqe_set_data(sqe, ctx);
-  printf("submit ctx %p id %d (%s)\n", ctx, ctx->id, op_type_to_str(ctx->type));
+  io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
   io_uring_backend_defer_submit(backend);
 
-  if (ctx->type != OP_POLL) {
-    struct io_uring_cqe *cqe;
-    int res = io_uring_wait_cqe(&backend->ring, &cqe);
-    if (res) { printf("res: %d\n", res); exit(1); }
-
-    ctx->result = cqe->res;
-    io_uring_cqe_seen(&backend->ring, cqe);
-    ctx->completed = 1;
-    return ctx->result;
-  }
-  
   backend->ref_count++;
-  // printf("submit ctx %p (%s) ref_count: %d\n", ctx, op_type_to_str(ctx->type), backend->ref_count);
   switchpoint_result = backend_await(backend);
   backend->ref_count--;
-  // printf("resume ctx %p (%s) ref_count: %d\n", ctx, op_type_to_str(ctx->type), backend->ref_count);
 
   if (!ctx->completed) {
     // op was not completed, so we need to cancel it
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_cancel(sqe, ctx, 0);
+    backend->pending_sqes = 0;
     io_uring_submit(&backend->ring);
   }
 
@@ -462,16 +439,14 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   char *buf = StringValuePtr(str);
   long len = RSTRING_LEN(str);
   long left = len;
-  printf("write len %ld\n", len);
-  INSPECT("  str", str);
 
   while (left > 0) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_WRITE);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
-    printf("  ctx %p id: %d left: %ld\n", ctx, ctx->id, left);
     io_uring_prep_write(sqe, fptr->fd, buf, left, -1);
     io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+
     if (TEST_EXCEPTION(resume_value)) {
       OP_CONTEXT_RELEASE(&backend->store, ctx);
       RAISE_EXCEPTION(resume_value);
@@ -510,28 +485,22 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
 
-  printf("writev argc: %d\n", argc);
-
   iov = malloc(iov_count * sizeof(struct iovec));
   for (int i = 0; i < argc; i++) {
     VALUE str = argv[i];
-    INSPECT("  str", str);
     iov[i].iov_base = StringValuePtr(str);
     iov[i].iov_len = RSTRING_LEN(str);
     total_length += iov[i].iov_len;
   }
   iov_ptr = iov;
-  printf("  total_length %ld\n", total_length);
 
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_WRITEV);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
-    printf("  ctx %p id: %d iov_count: %d\n", ctx, ctx->id, iov_count);
-    for (int i = 0; i < iov_count; i++)
-      printf("  %d => %p, %lu\n", i, iov_ptr[i].iov_base, iov_ptr[i].iov_len);
     io_uring_prep_writev(sqe, fptr->fd, iov_ptr, iov_count, -1);
     io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    
     if (TEST_EXCEPTION(resume_value)) {
       OP_CONTEXT_RELEASE(&backend->store, ctx);
       free(iov);
@@ -540,10 +509,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     RB_GC_GUARD(resume_value);
     
     ssize_t n = ctx->result;
-    // if (n == 0) { printf("n = 0!\n"); exit(1); }
-
     OP_CONTEXT_RELEASE(&backend->store, ctx);
-
     if (n < 0) {
       free(iov);
       rb_syserr_fail(-n, strerror(-n));
