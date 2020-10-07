@@ -55,7 +55,7 @@ class MiniTest::Test
   end
 
   def teardown
-    # trace "* teardown #{self.name.inspect} Fiber.current: #{Fiber.current.inspect}"
+    # trace "* teardown #{self.name}"
     Fiber.current.terminate_all_children
     Fiber.current.await_all_children
     Fiber.current.instance_variable_set(:@auto_watcher, nil)
@@ -79,8 +79,10 @@ module Kernel
 end
 
 module Minitest::Assertions
-def assert_in_range exp_range, act
-  msg = message(msg) { "Expected #{mu_pp(act)} to be in range #{mu_pp(exp_range)}" }
-  assert exp_range.include?(act), msg
+  def assert_in_range exp_range, act
+    msg = message(msg) { "Expected #{mu_pp(act)} to be in range #{mu_pp(exp_range)}" }
+    assert exp_range.include?(act), msg
+  end
 end
-end
+
+puts "Polyphony backend: #{Thread.current.backend.kind}"

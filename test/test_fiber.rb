@@ -634,7 +634,7 @@ class FiberTest < MiniTest::Test
   def test_signal_handling_int
     i, o = IO.pipe
     pid = Polyphony.fork do
-      f = spin { sleep 100 }
+      f = spin { sleep 3 }
       begin
         i.close
         f.await
@@ -657,7 +657,7 @@ class FiberTest < MiniTest::Test
   def test_signal_handling_term
     i, o = IO.pipe
     pid = Polyphony.fork do
-      f = spin { sleep 100 }
+      f = spin { sleep 3 }
       begin
         i.close
         f.await
@@ -681,7 +681,7 @@ class FiberTest < MiniTest::Test
     pid = Polyphony.fork do
       i.close
       spin do
-        sleep 100
+        sleep 3
       rescue Exception => e
         o << e.class.to_s
         o.close

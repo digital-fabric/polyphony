@@ -157,13 +157,14 @@ void Init_Thread() {
 
   rb_define_method(rb_cThread, "debug!", Thread_debug, 0);
 
-  ID_deactivate_all_watchers_post_fork = rb_intern("deactivate_all_watchers_post_fork");
-  ID_ivar_backend               = rb_intern("@backend");
-  ID_ivar_join_wait_queue     = rb_intern("@join_wait_queue");
-  ID_ivar_main_fiber          = rb_intern("@main_fiber");
-  ID_ivar_runqueue            = rb_intern("@runqueue");
-  ID_ivar_terminated          = rb_intern("@terminated");
-  ID_stop                     = rb_intern("stop");
+  ID_deactivate_all_watchers_post_fork  = rb_intern("deactivate_all_watchers_post_fork");
+  ID_ivar_backend                       = rb_intern("@backend");
+  ID_ivar_join_wait_queue               = rb_intern("@join_wait_queue");
+  ID_ivar_main_fiber                    = rb_intern("@main_fiber");
+  ID_ivar_result                        = rb_intern("@result");
+  ID_ivar_terminated                    = rb_intern("@terminated");
+  ID_ivar_runqueue                      = rb_intern("@runqueue");
+  ID_stop                               = rb_intern("stop");
 
   SYM_scheduled_fibers = ID2SYM(rb_intern("scheduled_fibers"));
   SYM_pending_watchers = ID2SYM(rb_intern("pending_watchers"));

@@ -28,6 +28,7 @@ static int pidfd_open(pid_t pid, unsigned int flags) {
 }
 
 VALUE cTCPSocket;
+VALUE SYM_io_uring;
 
 typedef struct Backend_t {
   struct io_uring     ring;
@@ -140,22 +141,21 @@ VALUE Backend_pending_count(VALUE self) {
 typedef struct poll_context {
   struct io_uring     *ring;
   struct io_uring_cqe *cqe;
-  int                 pending_sqes;
   int                 result;
 } poll_context_t;
 
+extern int __sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complete, unsigned flags, sigset_t *sig);
+
 void *io_uring_backend_poll_without_gvl(void *ptr) {
   poll_context_t *ctx = (poll_context_t *)ptr;
-  ctx->result = __io_uring_get_cqe(ctx->ring, &ctx->cqe, ctx->pending_sqes, 1, NULL);
-  return 0;
+  ctx->result = io_uring_wait_cqe(ctx->ring, &ctx->cqe);
+  return NULL;
 }
 
 // copied from queue.c
 static inline bool cq_ring_needs_flush(struct io_uring *ring) {
 	return IO_URING_READ_ONCE(*ring->sq.kflags) & IORING_SQ_CQ_OVERFLOW;
 }
-
-extern int __sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complete, unsigned flags, sigset_t *sig);
 
 void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
   op_context_t *ctx = io_uring_cqe_get_data(cqe);
@@ -207,7 +207,11 @@ done:
 void io_uring_backend_poll(Backend_t *backend) {
   poll_context_t poll_ctx;
   poll_ctx.ring = &backend->ring;
-  poll_ctx.pending_sqes = 0; // TODO: perform submission in same syscall
+  if (backend->pending_sqes) {
+    backend->pending_sqes = 0;
+    io_uring_submit(&backend->ring);
+  }
+
   backend->waiting_for_cqe = 1;
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
   backend->waiting_for_cqe = 0;
@@ -216,8 +220,6 @@ void io_uring_backend_poll(Backend_t *backend) {
   io_uring_backend_handle_completion(poll_ctx.cqe, backend);
   io_uring_cqe_seen(&backend->ring, poll_ctx.cqe);
 }
-
-extern int __io_uring_flush_sq(struct io_uring *ring);
 
 VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
   int is_nowait = nowait == Qtrue;
@@ -234,7 +236,7 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
 
   backend->run_no_wait_count = 0;
 
-  if (backend->pending_sqes) {
+  if (is_nowait && backend->pending_sqes) {
     backend->pending_sqes = 0;
     io_uring_submit(&backend->ring);
   }
@@ -253,7 +255,7 @@ VALUE Backend_wakeup(VALUE self) {
 
   if (backend->waiting_for_cqe) {
     // Since we're currently blocking while waiting for a completion, we add a
-    // NOP which would case the io_uring_enter syscall to return
+    // NOP which would cause the io_uring_enter syscall to return
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_nop(sqe);
     backend->pending_sqes = 0;
@@ -326,7 +328,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   char *buf = RSTRING_PTR(str);
   long total = 0;
   int read_to_eof = RTEST(to_eof);
-  VALUE underlying_io = rb_iv_get(io, "@io");
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
@@ -384,7 +386,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   long len = 8192;
   int shrinkable;
   char *buf;
-  VALUE underlying_io = rb_iv_get(io, "@io");
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   READ_LOOP_PREPARE_STR();
 
@@ -426,7 +428,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   rb_io_t *fptr;
   VALUE underlying_io;
 
-  underlying_io = rb_iv_get(io, "@io");
+  underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
@@ -469,7 +471,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   struct iovec *iov_ptr = 0;
   int iov_count = argc;
 
-  underlying_io = rb_iv_get(io, "@io");
+  underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
@@ -547,7 +549,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   int shrinkable = io_setstrbuf(&str, len);
   char *buf = RSTRING_PTR(str);
   long total = 0;
-  VALUE underlying_io = rb_iv_get(io, "@io");
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
@@ -592,7 +594,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
   long len = 8192;
   int shrinkable;
   char *buf;
-  VALUE underlying_io = rb_iv_get(io, "@io");
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   READ_LOOP_PREPARE_STR();
 
@@ -633,7 +635,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   rb_io_t *fptr;
   VALUE underlying_io;
 
-  underlying_io = rb_iv_get(io, "@io");
+  underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
@@ -670,7 +672,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
   rb_io_t *fptr;
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
-  VALUE underlying_sock = rb_iv_get(sock, "@io");
+  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
   VALUE socket = Qnil;
   if (underlying_sock != Qnil) sock = underlying_sock;
 
@@ -733,7 +735,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   rb_io_t *fptr;
   struct sockaddr_in addr;
   char *host_buf = StringValueCStr(host);
-  VALUE underlying_sock = rb_iv_get(sock, "@io");
+  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
@@ -760,7 +762,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
   rb_io_t *fptr;
-  VALUE underlying_io = rb_iv_get(io, "@io");
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
   GetOpenFile(io, fptr);
@@ -829,6 +831,10 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   return resume_value;
 }
 
+VALUE Backend_kind(VALUE self) {
+  return SYM_io_uring;
+}
+
 void Init_Backend() {
   rb_require("socket");
   cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
@@ -860,6 +866,10 @@ void Init_Backend() {
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
+
+  rb_define_method(cBackend, "kind", Backend_kind, 0);
+
+  SYM_io_uring = ID2SYM(rb_intern("io_uring"));
 
   __BACKEND__.pending_count   = Backend_pending_count;
   __BACKEND__.poll            = Backend_poll;
