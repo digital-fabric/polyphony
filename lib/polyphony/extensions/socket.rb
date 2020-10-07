@@ -58,8 +58,8 @@ class ::Socket
   end
   alias_method :<<, :write
 
-  def readpartial(len, str = nil)
-    Thread.current.backend.recv(self, str || +'', maxlen)
+  def readpartial(maxlen, str = +'')
+    Thread.current.backend.recv(self, str, maxlen)
   end
 
   ZERO_LINGER = [0, 0].pack('ii').freeze
@@ -154,6 +154,20 @@ class ::TCPSocket
     Thread.current.backend.send(self, str)
   end
   alias_method :<<, :write
+
+  def readpartial(maxlen, str = nil)
+    @read_buffer ||= +''
+    result = Thread.current.backend.recv(self, @read_buffer, maxlen)
+    raise EOFError unless result
+
+    if str
+      str << @read_buffer
+    else
+      str = @read_buffer
+    end
+    @read_buffer = +''
+    str
+  end
 
   def read_nonblock(len, str = nil, exception: true)
     @io.read_nonblock(len, str, exception: exception)
