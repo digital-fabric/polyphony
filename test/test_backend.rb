@@ -85,7 +85,7 @@ class BackendTest < MiniTest::Test
     i, o = IO.pipe
 
     buf = []
-    spin do
+    f = spin do
       buf << :ready
       @backend.read_loop(i) { |d| buf << d }
       buf << :done
@@ -96,9 +96,7 @@ class BackendTest < MiniTest::Test
     o << 'bar'
     o.close
 
-    # read_loop will snooze after every read
-    6.times { snooze }
-
+    f.await
     assert_equal [:ready, 'foo', 'bar', :done], buf
   end
 
@@ -111,12 +109,12 @@ class BackendTest < MiniTest::Test
     end
 
     c1 = TCPSocket.new('127.0.0.1', 1234)
-    10.times { snooze }
+    sleep 0.01
 
     assert_equal 1, clients.size
 
     c2 = TCPSocket.new('127.0.0.1', 1234)
-    10.times { snooze }
+    sleep 0.01
 
     assert_equal 2, clients.size
 

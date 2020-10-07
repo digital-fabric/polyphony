@@ -5,7 +5,7 @@
 
 enum op_type {
   OP_NONE,
-  OP_READV,
+  OP_READ,
   OP_WRITEV,
   OP_WRITE,
   OP_RECV,
@@ -27,6 +27,7 @@ typedef struct op_context {
 } op_context_t;
 
 typedef struct op_context_store {
+  int           last_id;
   op_context_t *available;
   op_context_t *taken;
 } op_context_store_t;
