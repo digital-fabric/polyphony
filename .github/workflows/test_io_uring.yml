@@ -24,7 +24,7 @@ jobs:
         gem install bundler
         bundle install
     - name: Upgrade kernel
-      run: bin/upgrade-kernel
+      run: sudo bin/upgrade-kernel.sh
     - name: Compile C-extension
       run: bundle exec rake compile
     - name: Run tests
