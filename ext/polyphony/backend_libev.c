@@ -13,6 +13,7 @@
 #include "ruby/io.h"
 
 VALUE cTCPSocket;
+VALUE SYM_libev;
 
 ID ID_ivar_is_nonblocking;
 
@@ -248,7 +249,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   long total = 0;
   VALUE switchpoint_result = Qnil;
   int read_to_eof = RTEST(to_eof);
-  VALUE underlying_io = rb_iv_get(io, "@io");
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
@@ -318,7 +319,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   int shrinkable;
   char *buf;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io = rb_iv_get(io, "@io");
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   READ_LOOP_PREPARE_STR();
 
@@ -369,7 +370,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   long len = RSTRING_LEN(str);
   long left = len;
 
-  underlying_io = rb_iv_get(io, "@io");
+  underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
@@ -419,7 +420,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   struct iovec *iov_ptr = 0;
   int iov_count = argc;
 
-  underlying_io = rb_iv_get(io, "@io");
+  underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
@@ -500,7 +501,7 @@ VALUE Backend_accept(VALUE self, VALUE sock) {
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_sock = rb_iv_get(sock, "@io");
+  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
@@ -557,7 +558,7 @@ VALUE Backend_accept_loop(VALUE self, VALUE sock) {
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
   VALUE socket = Qnil;
-  VALUE underlying_sock = rb_iv_get(sock, "@io");
+  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
@@ -613,7 +614,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   struct sockaddr_in addr;
   char *host_buf = StringValueCStr(host);
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_sock = rb_iv_get(sock, "@io");
+  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
@@ -649,7 +650,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
   rb_io_t *fptr;
   int events = RTEST(write) ? EV_WRITE : EV_READ;
-  VALUE underlying_io = rb_iv_get(io, "@io");
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
   GetOpenFile(io, fptr);
@@ -741,6 +742,10 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   return switchpoint_result;
 }
 
+VALUE Backend_kind(VALUE self) {
+  return SYM_libev;
+}
+
 void Init_Backend() {
   ev_set_allocator(xrealloc);
 
@@ -776,6 +781,8 @@ void Init_Backend() {
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
 
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
+
+  SYM_libev = ID2SYM(rb_intern("libev"));
 
   __BACKEND__.pending_count   = Backend_pending_count;
   __BACKEND__.poll            = Backend_poll;
