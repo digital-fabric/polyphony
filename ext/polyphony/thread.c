@@ -125,7 +125,7 @@ VALUE Thread_reset_fiber_scheduling(VALUE self) {
   return self;
 }
 
-VALUE Thread_fiber_break_out_of_ev_loop(VALUE self, VALUE fiber, VALUE resume_obj) {
+VALUE Thread_fiber_schedule_and_wakeup(VALUE self, VALUE fiber, VALUE resume_obj) {
   VALUE backend = rb_ivar_get(self, ID_ivar_backend);
   if (fiber != Qnil) {
     Thread_schedule_fiber_with_priority(self, fiber, resume_obj);
@@ -148,7 +148,7 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
-  rb_define_method(rb_cThread, "break_out_of_ev_loop", Thread_fiber_break_out_of_ev_loop, 2);
+  rb_define_method(rb_cThread, "schedule_and_wakeup", Thread_fiber_schedule_and_wakeup, 2);
 
   rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 2);
   rb_define_method(rb_cThread, "schedule_fiber_with_priority",
