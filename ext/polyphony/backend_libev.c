@@ -780,8 +780,9 @@ void Init_Backend() {
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
 
-  ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
+  rb_define_method(cBackend, "kind", Backend_kind, 0);
 
+  ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
   SYM_libev = ID2SYM(rb_intern("libev"));
 
   __BACKEND__.pending_count   = Backend_pending_count;
