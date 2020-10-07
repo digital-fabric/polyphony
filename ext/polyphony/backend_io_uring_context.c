@@ -5,7 +5,7 @@
 
 const char *op_type_to_str(enum op_type type) {
   switch (type) {
-  case OP_READV: return "READV";
+  case OP_READ: return "READ";
   case OP_WRITEV: return "WRITEV";
   case OP_WRITE: return "WRITE";
   case OP_RECV: return "RECV";
@@ -19,11 +19,10 @@ const char *op_type_to_str(enum op_type type) {
 }
 
 void context_store_initialize(op_context_store_t *store) {
+  store->last_id = 0;
   store->available = NULL;
   store->taken = NULL;
 }
-
-static int last_id = 0;
 
 inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_type type) {
   op_context_t *ctx = store->available;
@@ -33,8 +32,8 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
   }
   else {
     ctx = malloc(sizeof(op_context_t));
-    ctx->id = (++last_id);
   }
+  ctx->id = (++store->last_id);
   
   ctx->prev = NULL;
   ctx->next = store->taken;
@@ -44,6 +43,7 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
   ctx->type = type;
   ctx->fiber = rb_fiber_current();
   ctx->completed = 0;
+  ctx->result = 0;
 
   return ctx;
 }
