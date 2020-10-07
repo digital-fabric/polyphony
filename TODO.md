@@ -1,5 +1,8 @@
 - io_uring
-  - solve problem with cancellation
+  - cleanup code
+  - change fiber_trace method to return nil, change trace logic to use provided
+    arguments instead of return values for fiber events
+  - check HTTP server performance
 
 0.46.0
 
