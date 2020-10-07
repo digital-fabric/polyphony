@@ -11,8 +11,8 @@ VALUE SYM_runnable;
 VALUE SYM_waiting;
 
 VALUE SYM_fiber_create;
-VALUE SYM_backend_poll_enter;
-VALUE SYM_backend_poll_leave;
+VALUE SYM_fiber_event_poll_enter;
+VALUE SYM_fiber_event_poll_leave;
 VALUE SYM_fiber_run;
 VALUE SYM_fiber_schedule;
 VALUE SYM_fiber_switchpoint;
@@ -168,17 +168,17 @@ void Init_Fiber() {
   ID_ivar_mailbox         = rb_intern("@mailbox");
   ID_ivar_waiting_fibers  = rb_intern("@waiting_fibers");
 
-  SYM_fiber_create        = ID2SYM(rb_intern("fiber_create"));
-  SYM_backend_poll_enter  = ID2SYM(rb_intern("backend_poll_enter"));
-  SYM_backend_poll_leave  = ID2SYM(rb_intern("backend_poll_leave"));
-  SYM_fiber_run           = ID2SYM(rb_intern("fiber_run"));
-  SYM_fiber_schedule      = ID2SYM(rb_intern("fiber_schedule"));
-  SYM_fiber_switchpoint   = ID2SYM(rb_intern("fiber_switchpoint"));
-  SYM_fiber_terminate     = ID2SYM(rb_intern("fiber_terminate"));
+  SYM_fiber_create            = ID2SYM(rb_intern("fiber_create"));
+  SYM_fiber_event_poll_enter  = ID2SYM(rb_intern("fiber_event_poll_enter"));
+  SYM_fiber_event_poll_leave  = ID2SYM(rb_intern("fiber_event_poll_leave"));
+  SYM_fiber_run               = ID2SYM(rb_intern("fiber_run"));
+  SYM_fiber_schedule          = ID2SYM(rb_intern("fiber_schedule"));
+  SYM_fiber_switchpoint       = ID2SYM(rb_intern("fiber_switchpoint"));
+  SYM_fiber_terminate         = ID2SYM(rb_intern("fiber_terminate"));
 
   rb_global_variable(&SYM_fiber_create);
-  rb_global_variable(&SYM_backend_poll_enter);
-  rb_global_variable(&SYM_backend_poll_leave);
+  rb_global_variable(&SYM_fiber_event_poll_enter);
+  rb_global_variable(&SYM_fiber_event_poll_leave);
   rb_global_variable(&SYM_fiber_run);
   rb_global_variable(&SYM_fiber_schedule);
   rb_global_variable(&SYM_fiber_switchpoint);

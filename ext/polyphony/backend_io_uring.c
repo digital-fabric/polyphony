@@ -235,10 +235,10 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
     io_uring_submit(&backend->ring);
   }
 
-  COND_TRACE(2, SYM_backend_poll_enter, current_fiber);
+  COND_TRACE(2, SYM_fiber_event_poll_enter, current_fiber);
   if (!is_nowait) io_uring_backend_poll(backend);
   io_uring_backend_handle_ready_cqes(backend);
-  COND_TRACE(2, SYM_backend_poll_leave, current_fiber);
+  COND_TRACE(2, SYM_fiber_event_poll_leave, current_fiber);
   
   return self;
 }
