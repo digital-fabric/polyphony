@@ -5,8 +5,8 @@ set -e
 echo Kernel version: $(uname -r)
 echo Updating...
 
-wget https://raw.githubusercontent.com/pimlie/ubuntu-mainline-kernel.sh/master/ubuntu-mainline-kernel.sh
-chmod +x ubuntu-mainline-kernel.sh
-./ubuntu-mainline-kernel.sh -i --yes
+wget https://ksplice.oracle.com/uptrack/dist/focal/uptrack.deb
+sudo apt install ./uptrack.deb
+sudo uptrack-upgrade -y
 
 echo Kernel version: $(uname -r)
