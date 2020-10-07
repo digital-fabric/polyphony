@@ -3,6 +3,7 @@
 ID ID_fiber_trace;
 ID ID_ivar_auto_watcher;
 ID ID_ivar_mailbox;
+ID ID_ivar_result;
 ID ID_ivar_waiting_fibers;
 
 VALUE SYM_dead;
@@ -163,10 +164,11 @@ void Init_Fiber() {
   rb_global_variable(&SYM_runnable);
   rb_global_variable(&SYM_waiting);
 
-  ID_fiber_trace          = rb_intern("__fiber_trace__");
-  ID_ivar_auto_watcher    = rb_intern("@auto_watcher");
-  ID_ivar_mailbox         = rb_intern("@mailbox");
-  ID_ivar_waiting_fibers  = rb_intern("@waiting_fibers");
+  ID_fiber_trace              = rb_intern("__fiber_trace__");
+  ID_ivar_auto_watcher        = rb_intern("@auto_watcher");
+  ID_ivar_mailbox             = rb_intern("@mailbox");
+  ID_ivar_result              = rb_intern("@result");
+  ID_ivar_waiting_fibers      = rb_intern("@waiting_fibers");
 
   SYM_fiber_create            = ID2SYM(rb_intern("fiber_create"));
   SYM_fiber_event_poll_enter  = ID2SYM(rb_intern("fiber_event_poll_enter"));

@@ -4,6 +4,7 @@ ID ID_deactivate_all_watchers_post_fork;
 ID ID_ivar_backend;
 ID ID_ivar_join_wait_queue;
 ID ID_ivar_main_fiber;
+ID ID_ivar_result;
 ID ID_ivar_terminated;
 ID ID_ivar_runqueue;
 ID ID_stop;
