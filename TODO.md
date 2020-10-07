@@ -1,7 +1,13 @@
 - io_uring
+  - cleanup code
+  - change fiber_trace method to return nil, change trace logic to use provided
+    arguments instead of return values for fiber events
+  - allow backend selection at runtime
+  - add backend type inspection
 
 0.46
 
+- add Backend#timer_loop that does what throttled_loop does, on lower level
 - Adapter for io/console (what does `IO#raw` do?)
 - Adapter for Pry and IRB (Which fixes #5 and #6)
 - Improve `#supervise`. It does not work as advertised, and seems to exhibit an

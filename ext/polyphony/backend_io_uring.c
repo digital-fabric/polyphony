@@ -94,6 +94,10 @@ VALUE Backend_post_fork(VALUE self) {
 
   io_uring_queue_exit(&backend->ring);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
+  context_store_free(&backend->store);
+  backend->waiting_for_cqe = 0;
+  backend->ref_count = 0;
+  backend->run_no_wait_count = 0;
   backend->pending_sqes = 0;
 
   return self;
@@ -142,7 +146,7 @@ typedef struct poll_context {
 
 void *io_uring_backend_poll_without_gvl(void *ptr) {
   poll_context_t *ctx = (poll_context_t *)ptr;
-  ctx->result = __io_uring_get_cqe(ctx->ring, &ctx->cqe, ctx->pending_sqes, 1, 0);
+  ctx->result = __io_uring_get_cqe(ctx->ring, &ctx->cqe, ctx->pending_sqes, 1, NULL);
   return 0;
 }
 

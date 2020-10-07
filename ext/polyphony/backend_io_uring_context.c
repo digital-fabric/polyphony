@@ -60,16 +60,14 @@ inline void context_store_release(op_context_store_t *store, op_context_t *ctx) 
 }
 
 void context_store_free(op_context_store_t *store) {
-  op_context_t *ptr = store->available;
-  while (ptr) {
-    op_context_t *next = ptr->next;
-    free(ptr);
-    ptr = next;
+  while (store->available) {
+    op_context_t *next = store->available->next;
+    free(store->available);
+    store->available = next;
   }
-  ptr = store->taken;
-  while (ptr) {
-    op_context_t *next = ptr->next;
-    free(ptr);
-    ptr = next;
+  while (store->taken) {
+    op_context_t *next = store->taken->next;
+    free(store->taken);
+    store->taken = next;
   }
 }
