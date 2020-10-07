@@ -168,11 +168,11 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
 
   backend->run_no_wait_count = 0;
 
-  COND_TRACE(2, SYM_event_poll_poll_enter, current_fiber);
+  COND_TRACE(2, SYM_fiber_event_poll_enter, current_fiber);
   backend->running = 1;
   ev_run(backend->ev_loop, is_nowait ? EVRUN_NOWAIT : EVRUN_ONCE);
   backend->running = 0;
-  COND_TRACE(2, SYM_event_poll_poll_leave, current_fiber);
+  COND_TRACE(2, SYM_fiber_event_poll_leave, current_fiber);
 
   return self;
 }
@@ -302,6 +302,10 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   return str;
 error:
   return RAISE_EXCEPTION(switchpoint_result);
+}
+
+VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
+  return Backend_read(self, io, str, length, Qnil);
 }
 
 VALUE Backend_read_loop(VALUE self, VALUE io) {
@@ -763,7 +767,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "accept", Backend_accept, 1);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 1);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
-  rb_define_method(cBackend, "recv", Backend_read, 4);
+  rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_loop", Backend_read_loop, 1);
   rb_define_method(cBackend, "send", Backend_write, 2);
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
