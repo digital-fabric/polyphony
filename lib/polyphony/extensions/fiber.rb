@@ -175,9 +175,9 @@ module Polyphony
       f = Fiber.new do
         block.call
       rescue Exception => e
-        Thread.current.break_out_of_ev_loop(Thread.main.main_fiber, e)
+        Thread.current.schedule_and_wakeup(Thread.main.main_fiber, e)
       end
-      Thread.current.break_out_of_ev_loop(f, nil)
+      Thread.current.schedule_and_wakeup(f, nil)
     end
   end
 
