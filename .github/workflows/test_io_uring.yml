@@ -16,6 +16,8 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
     - uses: actions/checkout@v1
+    - name: Upgrade kernel
+      run: sudo bin/upgrade-kernel.sh
     - uses: actions/setup-ruby@v1
       with:
         ruby-version: ${{matrix.ruby}}
@@ -23,8 +25,6 @@ jobs:
       run: |
         gem install bundler
         bundle install
-    - name: Upgrade kernel
-      run: sudo bin/upgrade-kernel.sh
     - name: Compile C-extension
       run: bundle exec rake compile
     - name: Run tests
