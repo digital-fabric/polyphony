@@ -19,16 +19,21 @@ class ::Socket
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
-    outbuf ||= +''
-    loop do
-      result = recv_nonblock(maxlen, flags, outbuf, **NO_EXCEPTION)
-      case result
-      when nil then raise IOError
-      when :wait_readable then Thread.current.backend.wait_io(self, false)
-      else
-        return result
-      end
-    end
+    Thread.current.backend.recv(self, buf || +'', maxlen)
+    # outbuf ||= +''
+    # loop do
+    #   result = recv_nonblock(maxlen, flags, outbuf, **NO_EXCEPTION)
+    #   case result
+    #   when nil then raise IOError
+    #   when :wait_readable then Thread.current.backend.wait_io(self, false)
+    #   else
+    #     return result
+    #   end
+    # end
+  end
+
+  def recv_loop(&block)
+    Thread.current.backend.recv_loop(self, &block)
   end
 
   def recvfrom(maxlen, flags = 0)
@@ -42,6 +47,19 @@ class ::Socket
         return result
       end
     end
+  end
+
+  def send(mesg, flags = 0)
+    Thread.current.backend.send(self, mesg)
+  end
+
+  def write(str)
+    Thread.current.backend.send(self, str)
+  end
+  alias_method :<<, :write
+
+  def readpartial(maxlen, str = +'')
+    Thread.current.backend.recv(self, str, maxlen)
   end
 
   ZERO_LINGER = [0, 0].pack('ii').freeze
@@ -118,6 +136,37 @@ class ::TCPSocket
 
   def reuse_port
     setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_REUSEPORT, 1)
+  end
+
+  def recv(maxlen, flags = 0, outbuf = nil)
+    Thread.current.backend.recv(self, buf || +'', maxlen)
+  end
+
+  def recv_loop(&block)
+    Thread.current.backend.recv_loop(self, &block)
+  end
+
+  def send(mesg, flags = 0)
+    Thread.current.backend.send(self, mesg)
+  end
+
+  def write(str)
+    Thread.current.backend.send(self, str)
+  end
+  alias_method :<<, :write
+
+  def readpartial(maxlen, str = nil)
+    @read_buffer ||= +''
+    result = Thread.current.backend.recv(self, @read_buffer, maxlen)
+    raise EOFError unless result
+
+    if str
+      str << @read_buffer
+    else
+      str = @read_buffer
+    end
+    @read_buffer = +''
+    str
   end
 
   def read_nonblock(len, str = nil, exception: true)

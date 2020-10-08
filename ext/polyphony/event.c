@@ -69,7 +69,7 @@ VALUE Event_await(VALUE self) {
   VALUE switchpoint_result = __BACKEND__.wait_event(backend, Qnil);
   event->waiting_fiber = Qnil;
 
-  TEST_RESUME_EXCEPTION(switchpoint_result);
+  RAISE_IF_EXCEPTION(switchpoint_result);
   RB_GC_GUARD(backend);
   RB_GC_GUARD(switchpoint_result);
 

@@ -89,7 +89,7 @@ VALUE Queue_shift(VALUE self) {
     VALUE switchpoint_result = __BACKEND__.wait_event(backend, Qnil);
     ring_buffer_delete(&queue->shift_queue, fiber);
 
-    TEST_RESUME_EXCEPTION(switchpoint_result);
+    RAISE_IF_EXCEPTION(switchpoint_result);
     RB_GC_GUARD(switchpoint_result);
 
     if (queue->values.count > 0)

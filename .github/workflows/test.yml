@@ -23,6 +23,8 @@ jobs:
       run: |
         gem install bundler
         bundle install
+    - name: Show Linux kernel version
+      run: uname -r
     - name: Compile C-extension
       run: bundle exec rake compile
     - name: Run tests

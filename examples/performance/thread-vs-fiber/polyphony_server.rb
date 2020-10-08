@@ -13,12 +13,11 @@ def handle_client(socket)
   parser.on_message_complete = proc do |env|
     reqs << Object.new # parser
   end
-  socket.read_loop do |data|
+  socket.recv_loop do |data|
     parser << data
     while (req = reqs.shift)
       handle_request(socket, req)
       req = nil
-      snooze
     end
   end
 rescue IOError, SystemCallError => e

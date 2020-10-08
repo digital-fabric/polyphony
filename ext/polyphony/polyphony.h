@@ -1,29 +1,33 @@
 #ifndef POLYPHONY_H
 #define POLYPHONY_H
 
+#include <execinfo.h>
+
 #include "ruby.h"
-#include "ruby/io.h"
-#include "libev.h"
 #include "backend.h"
 #include "runqueue_ring_buffer.h"
 
 // debugging
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
-#define INSPECT(str, obj) { printf(str); VALUE s = rb_funcall(obj, rb_intern("inspect"), 0); printf("%s\n", StringValueCStr(s)); }
+#define INSPECT(str, obj) { printf(str); VALUE s = rb_funcall(obj, rb_intern("inspect"), 0); printf(": %s\n", StringValueCStr(s)); }
 #define TRACE_CALLER() { VALUE c = rb_funcall(rb_mKernel, rb_intern("caller"), 0); INSPECT("caller: ", c); }
+#define TRACE_C_STACK() { \
+  void *entries[10]; \
+  size_t size = backtrace(entries, 10); \
+  char **strings = backtrace_symbols(entries, size); \
+  for (unsigned long i = 0; i < size; i++) printf("%s\n", strings[i]); \
+  free(strings); \
+}
 
 // tracing
 #define TRACE(...)  rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__)
-#define COND_TRACE(...) if (__tracing_enabled__) { \
-  TRACE(__VA_ARGS__); \
-}
+#define COND_TRACE(...) if (__tracing_enabled__) { TRACE(__VA_ARGS__); }
 
 #define TEST_EXCEPTION(ret) (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
 
 #define RAISE_EXCEPTION(e) rb_funcall(e, ID_invoke, 0);
-#define TEST_RESUME_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { \
-  return RAISE_EXCEPTION(ret); \
-}
+#define RAISE_IF_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { RAISE_EXCEPTION(ret); }
+#define RAISE_IF_NOT_NIL(ret) if (ret != Qnil) { RAISE_EXCEPTION(ret); }
 
 extern backend_interface_t backend_interface;
 #define __BACKEND__ (backend_interface)
@@ -41,7 +45,7 @@ extern ID ID_fiber_trace;
 extern ID ID_inspect;
 extern ID ID_invoke;
 extern ID ID_ivar_backend;
-extern ID ID_ivar_result;
+extern ID ID_ivar_io;
 extern ID ID_ivar_runnable;
 extern ID ID_ivar_running;
 extern ID ID_ivar_thread;
@@ -53,8 +57,8 @@ extern ID ID_switch_fiber;
 extern ID ID_transfer;
 
 extern VALUE SYM_fiber_create;
-extern VALUE SYM_fiber_ev_loop_enter;
-extern VALUE SYM_fiber_ev_loop_leave;
+extern VALUE SYM_fiber_event_poll_enter;
+extern VALUE SYM_fiber_event_poll_leave;
 extern VALUE SYM_fiber_run;
 extern VALUE SYM_fiber_schedule;
 extern VALUE SYM_fiber_switchpoint;

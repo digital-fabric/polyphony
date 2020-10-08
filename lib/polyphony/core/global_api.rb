@@ -107,10 +107,7 @@ module Polyphony
     end
 
     def sleep_forever
-      Thread.current.backend.ref
-      loop { sleep 60 }
-    ensure
-      Thread.current.backend.unref
+      Thread.current.backend.wait_event(true)
     end
 
     def throttled_loop(rate = nil, **opts, &block)

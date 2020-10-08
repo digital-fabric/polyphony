@@ -23,4 +23,4 @@ task :docs do
   exec 'RUBYOPT=-W0 jekyll serve -s docs -H ec2-18-156-117-172.eu-central-1.compute.amazonaws.com'
 end
 
-CLEAN.include "**/*.o", "**/*.so", "**/*.bundle", "**/*.jar", "pkg", "tmp"
+CLEAN.include "**/*.o", "**/*.so", "**/*.so.*", "**/*.a", "**/*.bundle", "**/*.jar", "pkg", "tmp"

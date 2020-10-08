@@ -9,7 +9,7 @@ ID ID_each;
 ID ID_inspect;
 ID ID_invoke;
 ID ID_new;
-ID ID_ivar_result;
+ID ID_ivar_io;
 ID ID_ivar_runnable;
 ID ID_ivar_running;
 ID ID_ivar_thread;
@@ -29,7 +29,7 @@ VALUE Polyphony_snooze(VALUE self) {
 
   Fiber_make_runnable(fiber, Qnil);
   ret = Thread_switch_fiber(rb_thread_current());
-  TEST_RESUME_EXCEPTION(ret);
+  RAISE_IF_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
 }
@@ -37,7 +37,7 @@ VALUE Polyphony_snooze(VALUE self) {
 static VALUE Polyphony_suspend(VALUE self) {
   VALUE ret = Thread_switch_fiber(rb_thread_current());
 
-  TEST_RESUME_EXCEPTION(ret);
+  RAISE_IF_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
 }
@@ -61,8 +61,8 @@ void Init_Polyphony() {
   ID_each           = rb_intern("each");
   ID_inspect        = rb_intern("inspect");
   ID_invoke         = rb_intern("invoke");
-  ID_ivar_result    = rb_intern("@result");
-  ID_ivar_runnable  = rb_intern("runnable");
+  ID_ivar_io        = rb_intern("@io");
+  ID_ivar_runnable  = rb_intern("@runnable");
   ID_ivar_running   = rb_intern("@running");
   ID_ivar_thread    = rb_intern("@thread");
   ID_new            = rb_intern("new");

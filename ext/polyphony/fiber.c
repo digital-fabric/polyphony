@@ -3,6 +3,7 @@
 ID ID_fiber_trace;
 ID ID_ivar_auto_watcher;
 ID ID_ivar_mailbox;
+ID ID_ivar_result;
 ID ID_ivar_waiting_fibers;
 
 VALUE SYM_dead;
@@ -11,8 +12,8 @@ VALUE SYM_runnable;
 VALUE SYM_waiting;
 
 VALUE SYM_fiber_create;
-VALUE SYM_fiber_ev_loop_enter;
-VALUE SYM_fiber_ev_loop_leave;
+VALUE SYM_fiber_event_poll_enter;
+VALUE SYM_fiber_event_poll_leave;
 VALUE SYM_fiber_run;
 VALUE SYM_fiber_schedule;
 VALUE SYM_fiber_switchpoint;
@@ -22,7 +23,7 @@ static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
   VALUE arg = (argc == 0) ? Qnil : argv[0];
   VALUE ret = rb_funcall(self, ID_transfer, 1, arg);
 
-  TEST_RESUME_EXCEPTION(ret);
+  RAISE_IF_EXCEPTION(ret);
   RB_GC_GUARD(ret);
   return ret;
 }
@@ -41,8 +42,12 @@ inline VALUE Fiber_auto_watcher(VALUE self) {
 void Fiber_make_runnable(VALUE fiber, VALUE value) {
   VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
   if (thread == Qnil) {
-    // rb_raise(rb_eRuntimeError, "No thread set for fiber");
-    rb_warn("No thread set for fiber");
+    INSPECT("Fiber with no thread", fiber);
+    TRACE_CALLER();
+    TRACE_C_STACK();
+    exit(-1);
+    rb_raise(rb_eRuntimeError, "No thread set for fiber");
+    // rb_warn("No thread set for fiber");
     return;
   }
 
@@ -52,8 +57,9 @@ void Fiber_make_runnable(VALUE fiber, VALUE value) {
 void Fiber_make_runnable_with_priority(VALUE fiber, VALUE value) {
   VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
   if (thread == Qnil) {
-    // rb_raise(rb_eRuntimeError, "No thread set for fiber");
-    rb_warn("No thread set for fiber");
+    INSPECT("Fiber with no thread", fiber);
+    rb_raise(rb_eRuntimeError, "No thread set for fiber");
+    // rb_warn("No thread set for fiber");
     return;
   }
 
@@ -88,7 +94,7 @@ VALUE Fiber_await(VALUE self) {
   // @running set to nil
   if (rb_ivar_get(self, ID_ivar_running) == Qfalse) {
     result = rb_ivar_get(self, ID_ivar_result);
-    TEST_RESUME_EXCEPTION(result);
+    RAISE_IF_EXCEPTION(result);
     return result;
   }
 
@@ -103,7 +109,7 @@ VALUE Fiber_await(VALUE self) {
   result = Thread_switch_fiber(rb_thread_current());
 
   rb_hash_delete(waiting_fibers, fiber);
-  TEST_RESUME_EXCEPTION(result);
+  RAISE_IF_EXCEPTION(result);
   RB_GC_GUARD(result);
   return result;
 }
@@ -158,22 +164,23 @@ void Init_Fiber() {
   rb_global_variable(&SYM_runnable);
   rb_global_variable(&SYM_waiting);
 
-  ID_fiber_trace          = rb_intern("__fiber_trace__");
-  ID_ivar_auto_watcher    = rb_intern("@auto_watcher");
-  ID_ivar_mailbox         = rb_intern("@mailbox");
-  ID_ivar_waiting_fibers  = rb_intern("@waiting_fibers");
+  ID_fiber_trace              = rb_intern("__fiber_trace__");
+  ID_ivar_auto_watcher        = rb_intern("@auto_watcher");
+  ID_ivar_mailbox             = rb_intern("@mailbox");
+  ID_ivar_result              = rb_intern("@result");
+  ID_ivar_waiting_fibers      = rb_intern("@waiting_fibers");
 
-  SYM_fiber_create        = ID2SYM(rb_intern("fiber_create"));
-  SYM_fiber_ev_loop_enter = ID2SYM(rb_intern("fiber_ev_loop_enter"));
-  SYM_fiber_ev_loop_leave = ID2SYM(rb_intern("fiber_ev_loop_leave"));
-  SYM_fiber_run           = ID2SYM(rb_intern("fiber_run"));
-  SYM_fiber_schedule      = ID2SYM(rb_intern("fiber_schedule"));
-  SYM_fiber_switchpoint   = ID2SYM(rb_intern("fiber_switchpoint"));
-  SYM_fiber_terminate     = ID2SYM(rb_intern("fiber_terminate"));
+  SYM_fiber_create            = ID2SYM(rb_intern("fiber_create"));
+  SYM_fiber_event_poll_enter  = ID2SYM(rb_intern("fiber_event_poll_enter"));
+  SYM_fiber_event_poll_leave  = ID2SYM(rb_intern("fiber_event_poll_leave"));
+  SYM_fiber_run               = ID2SYM(rb_intern("fiber_run"));
+  SYM_fiber_schedule          = ID2SYM(rb_intern("fiber_schedule"));
+  SYM_fiber_switchpoint       = ID2SYM(rb_intern("fiber_switchpoint"));
+  SYM_fiber_terminate         = ID2SYM(rb_intern("fiber_terminate"));
 
   rb_global_variable(&SYM_fiber_create);
-  rb_global_variable(&SYM_fiber_ev_loop_enter);
-  rb_global_variable(&SYM_fiber_ev_loop_leave);
+  rb_global_variable(&SYM_fiber_event_poll_enter);
+  rb_global_variable(&SYM_fiber_event_poll_leave);
   rb_global_variable(&SYM_fiber_run);
   rb_global_variable(&SYM_fiber_schedule);
   rb_global_variable(&SYM_fiber_switchpoint);

@@ -72,28 +72,32 @@ class ExceptionTest < MiniTest::Test
     rescue Exception => e
       frames << 3
       raise e
-    end#.await
-    5.times { snooze }
-  rescue Exception => e
-    error = e
-  ensure
-    assert_kind_of RuntimeError, error
-    assert_equal [2, 3], frames
+    end
+    begin
+      5.times { snooze }
+    rescue Exception => e
+      error = e
+    ensure
+      assert_kind_of RuntimeError, error
+      assert_equal [2, 3], frames
+    end
   end
 
   def test_cross_fiber_backtrace_with_dead_calling_fiber
     error = nil
-    spin do
+    begin
       spin do
         spin do
-          raise 'foo'
+          spin do
+            raise 'foo'
+          end.await
         end.await
       end.await
-    end.await
-  rescue Exception => e
-    error = e
-  ensure
-    assert_kind_of RuntimeError, error
+    rescue Exception => e
+      error = e
+    ensure
+      assert_kind_of RuntimeError, error
+    end
   end
 end
 
@@ -133,8 +137,7 @@ class MoveOnAfterTest < MiniTest::Test
     t1 = Time.now
 
     assert_nil v
-    assert t1 - t0 >= 0.014
-    assert t1 - t0 < 0.02
+    assert_in_range 0.014..0.02, t1 - t0
   end
 
   def test_move_on_after_without_block
@@ -185,8 +188,7 @@ class CancelAfterTest < MiniTest::Test
       sleep 0.007
     end
     t1 = Time.now
-    assert t1 - t0 >= 0.014
-    assert t1 - t0 < 0.02
+    assert_in_range 0.014..0.02, t1 - t0
   end
 
   class CustomException < Exception
@@ -255,12 +257,10 @@ class SpinLoopTest < MiniTest::Test
     buffer = []
     counter = 0
     t0 = Time.now
-    f = spin_loop(rate: 10) { buffer << (counter += 1) }
-    sleep 0.2
+    f = spin_loop(rate: 100) { buffer << (counter += 1) }
+    sleep 0.02
     f.stop
-    elapsed = Time.now - t0
-    expected = (elapsed * 10).to_i
-    assert counter >= expected - 1 && counter <= expected + 1
+    assert_in_range 1..3, counter
   end
 end
 
@@ -270,22 +270,22 @@ class ThrottledLoopTest < MiniTest::Test
     counter = 0
     t0 = Time.now
     f = spin do
-      throttled_loop(10) { buffer << (counter += 1) }
+      throttled_loop(100) { buffer << (counter += 1) }
     end
-    sleep 0.3
-    f.stop
-    elapsed = Time.now - t0
-    expected = (elapsed * 10).to_i
-    assert counter >= expected - 1 && counter <= expected + 1
+    sleep 0.03
+    assert_in_range 2..4, counter
   end
 
   def test_throttled_loop_with_count
     buffer = []
     counter = 0
+    t0 = Time.now
     f = spin do
       throttled_loop(50, count: 5) { buffer << (counter += 1) }
     end
     f.await
+    t1 = Time.now
+    assert_in_range 0.075..0.15, t1 - t0
     assert_equal [1, 2, 3, 4, 5], buffer    
   end
 end
@@ -304,13 +304,11 @@ class GlobalAPIEtcTest < MiniTest::Test
     buffer = []
     t0 = Time.now
     f = spin do
-      every(0.1) { buffer << 1 }
+      every(0.01) { buffer << 1 }
     end
-    sleep 0.5
+    sleep 0.05
     f.stop
-    elapsed = Time.now - t0
-    expected = (elapsed / 0.1).to_i
-    assert buffer.size >= expected - 2 && buffer.size <= expected + 2
+    assert_in_range 4..6, buffer.size
   end
 
   def test_sleep

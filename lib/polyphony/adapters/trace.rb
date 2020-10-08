@@ -118,13 +118,13 @@ module Polyphony
 
         ALL_FIBER_EVENTS = %i[
           fiber_create fiber_terminate fiber_schedule fiber_switchpoint fiber_run
-          fiber_ev_loop_enter fiber_ev_loop_leave
+          fiber_event_poll_enter fiber_event_poll_leave
         ].freeze
 
         def event_masks(events)
           events.each_with_object([[], []]) do |e, masks|
             case e
-            when /fiber_/
+            when /^fiber_/
               masks[1] += e == :fiber_all ? ALL_FIBER_EVENTS : [e]
               masks[0] << :c_return unless masks[0].include?(:c_return)
             else

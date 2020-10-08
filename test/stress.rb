@@ -2,10 +2,11 @@
 
 count = ARGV[0] ? ARGV[0].to_i : 100
 
-TEST_CMD = 'ruby test/run.rb'
+TEST_CMD = 'ruby test/test_backend.rb' #'ruby test/run.rb'
 
 def run_test(count)
   puts "#{count}: running tests..."
+  # sleep 1
   system(TEST_CMD)
   return if $?.exitstatus == 0
 
@@ -15,7 +16,9 @@ end
 
 trap('INT') { exit! }
 t0 = Time.now
-count.times { |i| run_test(i + 1) }
+count.times do |i|
+  run_test(i + 1)
+end
 elapsed = Time.now - t0
 puts format(
   "Successfully ran %d tests in %f seconds (%f per test)",

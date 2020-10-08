@@ -183,8 +183,7 @@ class TimeoutTest < MiniTest::Test
   end
 
   def test_that_timeout_method_accepts_custom_error_class_and_message
-    buffer = []
-    spin { 3.times { |i| buffer << i; snooze } }
+    e = nil
     begin
       Timeout.timeout(0.05, MyTimeout, 'foo') { sleep 1 }
     rescue Exception => e

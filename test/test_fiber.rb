@@ -62,7 +62,7 @@ class FiberTest < MiniTest::Test
     assert_equal 0, Fiber.current.children.size
   end
 
-  def test_await_from_multiple_fibers_with_interruption
+  def test_await_from_multiple_fibers_with_interruption=
     buffer = []
     f1 = spin {
       sleep 0.02
@@ -128,15 +128,16 @@ class FiberTest < MiniTest::Test
     worker&.join
   end
 
-  def test_ev_loop_anti_starve_mechanism
-    async = Polyphony::Event.new
+  def test_backend_wakeup_mechanism
+    event = Polyphony::Event.new
+
     t = Thread.new do
       f = spin_loop { snooze }
       sleep 0.001
-      async.signal(:foo)
+      event.signal(:foo)
     end
 
-    result = move_on_after(1) { async.await }
+    result = move_on_after(1) { event.await }
 
     assert_equal :foo, result
   ensure
@@ -469,12 +470,14 @@ class FiberTest < MiniTest::Test
       end
       snooze # allow nested fiber to run before finishing
     end
-    suspend
-  rescue Exception => e
-    raised_error = e
-  ensure
-    assert raised_error
-    assert_equal 'foo', raised_error.message
+    begin
+      suspend
+    rescue Exception => e
+      raised_error = e
+    ensure
+      assert raised_error
+      assert_equal 'foo', raised_error.message
+    end
   end
 
   def test_await_multiple_fibers
@@ -631,11 +634,12 @@ class FiberTest < MiniTest::Test
   def test_signal_handling_int
     i, o = IO.pipe
     pid = Polyphony.fork do
-      f = spin { sleep 100 }
+      f = spin { sleep 3 }
       begin
         i.close
         f.await
       rescue Exception => e
+        trace e
         o << e.class.name
         o.close
       end
@@ -653,7 +657,7 @@ class FiberTest < MiniTest::Test
   def test_signal_handling_term
     i, o = IO.pipe
     pid = Polyphony.fork do
-      f = spin { sleep 100 }
+      f = spin { sleep 3 }
       begin
         i.close
         f.await
@@ -662,7 +666,7 @@ class FiberTest < MiniTest::Test
         o.close
       end
     end
-    sleep 0.2
+    sleep 0.1
     f = spin { Thread.current.backend.waitpid(pid) }
     o.close
     Process.kill('TERM', pid)
@@ -677,7 +681,7 @@ class FiberTest < MiniTest::Test
     pid = Polyphony.fork do
       i.close
       spin do
-        sleep 100
+        sleep 3
       rescue Exception => e
         o << e.class.to_s
         o.close
@@ -687,7 +691,7 @@ class FiberTest < MiniTest::Test
     end
     o.close
     spin do
-      sleep 0.2
+      sleep 0.1
       Process.kill('TERM', pid)
     end
     Thread.current.backend.waitpid(pid)
@@ -703,6 +707,7 @@ class FiberTest < MiniTest::Test
     assert_nil f.thread
     snooze
     f.setup_raw
+
     assert_equal Thread.current, f.thread
     assert_nil f.parent
 
@@ -711,6 +716,7 @@ class FiberTest < MiniTest::Test
     f << 'bar'
     snooze
     assert_equal ['bar'], buffer
+    snooze
   end
 end
 
