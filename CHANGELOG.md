@@ -1,3 +1,7 @@
+## 0.46.0
+
+* Implement [io_uring backend](https://github.com/digital-fabric/polyphony/pull/44)
+
 ## 0.45.5
 
 * Fix compilation error (#43)
