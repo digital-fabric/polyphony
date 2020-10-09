@@ -1,16 +1,17 @@
-- change fiber_trace method to return nil, change trace logic to use provided
-  arguments instead of return values for fiber events
-- allow backend selection at runtime
+## Roadmap for Polyphony 1.0
+
+- change libev backend to use common eventfd in `#wait_event`
 - add Backend#timer_loop that does what throttled_loop does, on lower level
-- Adapter for io/console (what does `IO#raw` do?)
-- Adapter for Pry and IRB (Which fixes #5 and #6)
 - Improve `#supervise`. It does not work as advertised, and seems to exhibit an
   inconsistent behaviour (see supervisor example).
 - Fix backtrace for `Timeout.timeout` API (see timeout example).
 - Check why worker-thread example doesn't work.
 
-0.47
+-----------------------------------------------------
 
+- Adapter for io/console (what does `IO#raw` do?)
+- Adapter for Pry and IRB (Which fixes #5 and #6)
+- allow backend selection at runtime
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
     test fails
