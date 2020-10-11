@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <stdnoreturn.h>
 
 #include "polyphony.h"
 #include "../libev/ev.h"
@@ -688,6 +689,39 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
   return switchpoint_result;
 }
 
+noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
+  Backend_t *backend;
+  struct libev_timer watcher;
+  double interval_d = NUM2DBL(interval);
+
+  GetBackend(self, backend);
+  watcher.fiber = rb_fiber_current();
+
+  double next_time = 0.;
+
+  while (1) {
+    double now = current_time();
+    if (next_time == 0.) next_time = current_time() + interval_d;
+    double sleep_duration = next_time - now;
+    if (sleep_duration < 0) sleep_duration = 0;
+    
+    VALUE switchpoint_result = Qnil;    
+    ev_timer_init(&watcher.timer, Backend_timer_callback, sleep_duration, 0.);
+    ev_timer_start(backend->ev_loop, &watcher.timer);
+    switchpoint_result = backend_await(backend);
+    ev_timer_stop(backend->ev_loop, &watcher.timer);
+    RAISE_IF_EXCEPTION(switchpoint_result);
+    RB_GC_GUARD(switchpoint_result);
+
+    rb_yield(Qnil);
+
+    while (1) {
+      next_time += interval_d;
+      if (next_time > now) break;
+    }
+  }
+}
+
 struct libev_child {
   struct ev_child child;
   VALUE fiber;
@@ -777,6 +811,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "send", Backend_write, 2);
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
+  rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
 

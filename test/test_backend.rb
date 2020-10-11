@@ -125,4 +125,14 @@ class BackendTest < MiniTest::Test
     snooze
     server&.close
   end
+
+  def test_timer_loop
+    i = 0
+    f = spin do
+      @backend.timer_loop(0.01) { i += 1 }
+    end
+    sleep(0.05)
+    f.stop
+    assert_in_range 4..6, i
+  end
 end
