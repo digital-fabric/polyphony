@@ -42,10 +42,6 @@ inline VALUE Fiber_auto_watcher(VALUE self) {
 void Fiber_make_runnable(VALUE fiber, VALUE value) {
   VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
   if (thread == Qnil) {
-    INSPECT("Fiber with no thread", fiber);
-    TRACE_CALLER();
-    TRACE_C_STACK();
-    exit(-1);
     rb_raise(rb_eRuntimeError, "No thread set for fiber");
     // rb_warn("No thread set for fiber");
     return;
@@ -57,7 +53,6 @@ void Fiber_make_runnable(VALUE fiber, VALUE value) {
 void Fiber_make_runnable_with_priority(VALUE fiber, VALUE value) {
   VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
   if (thread == Qnil) {
-    INSPECT("Fiber with no thread", fiber);
     rb_raise(rb_eRuntimeError, "No thread set for fiber");
     // rb_warn("No thread set for fiber");
     return;
