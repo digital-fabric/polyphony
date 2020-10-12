@@ -2,7 +2,7 @@
 
 count = ARGV[0] ? ARGV[0].to_i : 100
 
-TEST_CMD = 'ruby test/test_backend.rb' #'ruby test/run.rb'
+TEST_CMD = 'ruby test/run.rb'
 
 def run_test(count)
   puts "#{count}: running tests..."

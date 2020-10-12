@@ -7,17 +7,17 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include "polyphony.h"
-#include "../liburing/liburing.h"
-#include "ruby/thread.h"
-#include "backend_io_uring_context.h"
-
+#include <stdnoreturn.h>
 #include <poll.h>
 #include <sys/types.h>
 #include <sys/eventfd.h>
 #include <sys/wait.h>
 #include <errno.h>
+
+#include "polyphony.h"
+#include "../liburing/liburing.h"
+#include "ruby/thread.h"
+#include "backend_io_uring_context.h"
 
 #ifndef __NR_pidfd_open
 #define __NR_pidfd_open 434   /* System call # on most architectures */
@@ -304,6 +304,7 @@ int io_uring_backend_defer_submit_and_await(
 
   if (value_ptr) (*value_ptr) = switchpoint_result;
   RB_GC_GUARD(switchpoint_result);
+  RB_GC_GUARD(ctx->fiber);
   return ctx->result;
 }
 
@@ -773,27 +774,60 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   return self;
 }
 
-VALUE Backend_sleep(VALUE self, VALUE duration) {
-  Backend_t *backend;
-  struct io_uring_sqe *sqe;
+// returns true if completed, 0 otherwise
+int io_uring_backend_submit_timeout_and_await(Backend_t *backend, double duration, VALUE *resume_value) {
   double duration_integral;
-  double duration_fraction = modf(NUM2DBL(duration), &duration_integral);
+  double duration_fraction = modf(duration, &duration_integral);
   struct __kernel_timespec ts;
 
-  GetBackend(self, backend);
-  sqe = io_uring_get_sqe(&backend->ring);
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   ts.tv_sec = duration_integral;
 	ts.tv_nsec = floor(duration_fraction * 1000000000);
   
-  VALUE resume_value = Qnil;
   op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_TIMEOUT);
   io_uring_prep_timeout(sqe, &ts, 0, 0);
 
-  io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+  io_uring_backend_defer_submit_and_await(backend, sqe, ctx, resume_value);
   OP_CONTEXT_RELEASE(&backend->store, ctx);
+  return ctx->completed;
+}
+
+VALUE Backend_sleep(VALUE self, VALUE duration) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  VALUE resume_value = Qnil;
+  io_uring_backend_submit_timeout_and_await(backend, NUM2DBL(duration), &resume_value);
   RAISE_IF_EXCEPTION(resume_value);
   RB_GC_GUARD(resume_value);
   return resume_value;
+}
+
+VALUE Backend_timer_loop(VALUE self, VALUE interval) {
+  Backend_t *backend;
+  double interval_d = NUM2DBL(interval);
+  GetBackend(self, backend);
+  double next_time = 0.;
+
+  while (1) {
+    double now = current_time();
+    if (next_time == 0.) next_time = current_time() + interval_d;
+    double sleep_duration = next_time - now;
+    if (sleep_duration < 0) sleep_duration = 0;
+    
+    VALUE resume_value = Qnil;
+    int completed = io_uring_backend_submit_timeout_and_await(backend, sleep_duration, &resume_value);
+    RAISE_IF_EXCEPTION(resume_value);
+    if (!completed) return resume_value;
+    RB_GC_GUARD(resume_value);
+
+    rb_yield(Qnil);
+
+    while (1) {
+      next_time += interval_d;
+      if (next_time > now) break;
+    }
+  }
 }
 
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
@@ -864,6 +898,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "connect", Backend_connect, 3);
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
+  rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
 

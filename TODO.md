@@ -1,7 +1,6 @@
 ## Roadmap for Polyphony 1.0
 
 - change libev backend to use common eventfd in `#wait_event`
-- add Backend#timer_loop that does what throttled_loop does, on lower level
 - Improve `#supervise`. It does not work as advertised, and seems to exhibit an
   inconsistent behaviour (see supervisor example).
 - Fix backtrace for `Timeout.timeout` API (see timeout example).

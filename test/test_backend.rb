@@ -131,8 +131,9 @@ class BackendTest < MiniTest::Test
     f = spin do
       @backend.timer_loop(0.01) { i += 1 }
     end
-    sleep(0.05)
+    @backend.sleep(0.05)
     f.stop
+    f.await # TODO: check why this test sometimes segfaults if we don't a<wait fiber
     assert_in_range 4..6, i
   end
 end
