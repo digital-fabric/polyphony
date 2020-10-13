@@ -23,11 +23,14 @@
 #define TRACE(...)  rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__)
 #define COND_TRACE(...) if (__tracing_enabled__) { TRACE(__VA_ARGS__); }
 
+// exceptions
 #define TEST_EXCEPTION(ret) (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
-
 #define RAISE_EXCEPTION(e) rb_funcall(e, ID_invoke, 0);
 #define RAISE_IF_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { RAISE_EXCEPTION(ret); }
 #define RAISE_IF_NOT_NIL(ret) if (ret != Qnil) { RAISE_EXCEPTION(ret); }
+
+// Fiber#transfer
+#define FIBER_TRANSFER(fiber, value) rb_funcall(fiber, ID_transfer, 1, value)
 
 extern backend_interface_t backend_interface;
 #define __BACKEND__ (backend_interface)

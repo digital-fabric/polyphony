@@ -21,7 +21,7 @@ VALUE SYM_fiber_terminate;
 
 static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
   VALUE arg = (argc == 0) ? Qnil : argv[0];
-  VALUE ret = rb_funcall(self, ID_transfer, 1, arg);
+  VALUE ret = FIBER_TRANSFER(self, arg);
 
   RAISE_IF_EXCEPTION(ret);
   RB_GC_GUARD(ret);

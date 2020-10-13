@@ -116,7 +116,7 @@ VALUE Thread_switch_fiber(VALUE self) {
   RB_GC_GUARD(next.fiber);
   RB_GC_GUARD(next.value);
   return (next.fiber == current_fiber) ?
-    next.value : rb_funcall(next.fiber, ID_transfer, 1, next.value);
+    next.value : FIBER_TRANSFER(next.fiber, next.value);
 }
 
 VALUE Thread_reset_fiber_scheduling(VALUE self) {
