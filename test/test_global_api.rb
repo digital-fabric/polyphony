@@ -203,6 +203,19 @@ class CancelAfterTest < MiniTest::Test
     end
 
     begin
+      err = nil
+      cancel_after(0.01, with_exception: [CustomException, 'custom message']) do
+        sleep 1
+        :foo
+      end
+    rescue Exception => err
+    ensure
+      assert_kind_of CustomException, err
+      assert_equal 'custom message', err.message
+    end
+
+
+    begin
       e = nil
       cancel_after(0.01, with_exception: 'foo') do
         sleep 1

@@ -1,13 +1,21 @@
 ## Roadmap for Polyphony 1.0
 
-- change libev backend to use common eventfd in `#wait_event`
+- Check why worker-thread example doesn't work.
+- Add test that mimics the original design for Monocrono:
+  - 256 fibers each waiting for a message
+  - When message received do some blocking work using a `ThreadPool`
+  - Send messages, collect responses, check for correctness
 - Improve `#supervise`. It does not work as advertised, and seems to exhibit an
   inconsistent behaviour (see supervisor example).
-- Fix backtrace for `Timeout.timeout` API (see timeout example).
-- Check why worker-thread example doesn't work.
+
+- io_uring
+  - Use playground.c to find out why we when submitting and waiting for
+    completion in single syscall signals seem to be blocked until the syscall
+    returns. Is this a bug in io_uring/liburing?
 
 -----------------------------------------------------
 
+- Add `Backend#splice(in, out, nbytes)` API
 - Adapter for io/console (what does `IO#raw` do?)
 - Adapter for Pry and IRB (Which fixes #5 and #6)
 - allow backend selection at runtime

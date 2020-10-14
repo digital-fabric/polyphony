@@ -14,10 +14,6 @@ module Polyphony
       @caller_backtrace = caller
       @value = value
     end
-
-    def backtrace
-      sanitize(@caller_backtrace)
-    end
   end
 
   # MoveOn is used to interrupt a long-running blocking operation, while

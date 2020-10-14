@@ -20,15 +20,20 @@ module Polyphony
       canceller = spin do
         sleep interval
         exception = cancel_exception(with_exception)
+        # we don't want the cancelling fiber caller location as part of the
+        # exception backtrace
+        exception.__raising_fiber__ = nil
         fiber.schedule exception
       end
       block ? cancel_after_wrap_block(canceller, &block) : canceller
     end
 
     def cancel_exception(exception)
-      return exception.new if exception.is_a?(Class)
-
-      RuntimeError.new(exception)
+      case exception
+      when Class then exception.new
+      when Array then exception[0].new(exception[1])
+      else RuntimeError.new(exception)
+      end
     end
 
     def cancel_after_wrap_block(canceller, &block)

@@ -12,7 +12,7 @@ class ::Exception
     attr_accessor :__disable_sanitized_backtrace__
   end
 
-  attr_accessor :source_fiber
+  attr_accessor :source_fiber, :__raising_fiber__
 
   alias_method :orig_initialize, :initialize
   def initialize(*args)
@@ -22,8 +22,8 @@ class ::Exception
 
   alias_method :orig_backtrace, :backtrace
   def backtrace
-    unless @first_backtrace_call
-      @first_backtrace_call = true
+    unless @backtrace_called
+      @backtrace_called = true
       return orig_backtrace
     end
 
@@ -31,12 +31,10 @@ class ::Exception
   end
 
   def sanitized_backtrace
-    if @__raising_fiber__
-      backtrace = orig_backtrace || []
-      sanitize(backtrace + @__raising_fiber__.caller)
-    else
-      sanitize(orig_backtrace)
-    end
+    return sanitize(orig_backtrace) unless @__raising_fiber__
+
+    backtrace = orig_backtrace || []
+    sanitize(backtrace + @__raising_fiber__.caller)
   end
 
   POLYPHONY_DIR = File.expand_path(File.join(__dir__, '..'))
@@ -164,11 +162,7 @@ end
 
 # Override Timeout to use cancel scope
 module ::Timeout
-  def self.timeout(sec, klass = nil, message = nil, &block)
-    cancel_after(sec, &block)
-  rescue Polyphony::Cancel => e
-    error = klass ? klass.new(message) : ::Timeout::Error.new
-    error.set_backtrace(e.backtrace)
-    raise error
+  def self.timeout(sec, klass = Timeout::Error, message = 'execution expired', &block)
+    cancel_after(sec, with_exception: [klass, message], &block)
   end
 end
