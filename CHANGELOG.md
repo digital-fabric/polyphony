@@ -1,3 +1,10 @@
+## 0.46.1
+
+* Add `TCPServer#accept_loop`, `OpenSSL::SSL::SSLSocket#accept_loop` method
+* Fix compilation error on MacOS (#43)
+* Fix backtrace for `Timeout.timeout`
+* Add `Backend#timer_loop`
+
 ## 0.46.0
 
 * Implement [io_uring backend](https://github.com/digital-fabric/polyphony/pull/44)
