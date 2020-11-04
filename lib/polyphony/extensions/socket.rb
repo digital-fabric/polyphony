@@ -191,6 +191,10 @@ class ::TCPServer
     @io.accept
   end
 
+  def accept_loop(&block)
+    Thread.current.backend.accept_loop(@io, &block)
+  end
+
   alias_method :orig_close, :close
   def close
     @io.close

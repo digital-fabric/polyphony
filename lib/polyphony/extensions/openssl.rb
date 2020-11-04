@@ -36,6 +36,12 @@ class ::OpenSSL::SSL::SSLSocket
     end
   end
 
+  def accept_loop
+    loop do
+      yield accept
+    end
+  end
+
   alias_method :orig_sysread, :sysread
   def sysread(maxlen, buf = +'')
     loop do
