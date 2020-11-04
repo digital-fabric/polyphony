@@ -156,6 +156,11 @@
   - `IO.foreach`
   - `Process.waitpid`
 
+### Quic / HTTP/3
+
+- Python impl: https://github.com/aiortc/aioquic/
+- Go impl: https://github.com/lucas-clemente/quic-go
+
 ### DNS client
 
 ```ruby
