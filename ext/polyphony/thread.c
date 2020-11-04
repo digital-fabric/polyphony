@@ -4,7 +4,6 @@ ID ID_deactivate_all_watchers_post_fork;
 ID ID_ivar_backend;
 ID ID_ivar_join_wait_queue;
 ID ID_ivar_main_fiber;
-ID ID_ivar_result;
 ID ID_ivar_terminated;
 ID ID_ivar_runqueue;
 ID ID_stop;
@@ -162,7 +161,6 @@ void Init_Thread() {
   ID_ivar_backend                       = rb_intern("@backend");
   ID_ivar_join_wait_queue               = rb_intern("@join_wait_queue");
   ID_ivar_main_fiber                    = rb_intern("@main_fiber");
-  ID_ivar_result                        = rb_intern("@result");
   ID_ivar_terminated                    = rb_intern("@terminated");
   ID_ivar_runqueue                      = rb_intern("@runqueue");
   ID_stop                               = rb_intern("stop");
