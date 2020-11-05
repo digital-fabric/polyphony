@@ -192,17 +192,3 @@ Prior art:
 
 - https://github.com/socketry/async-dns
 
-## Work on API
-
-- Add option for setting the exception raised on cancelling using `#cancel_after`:
-
-```ruby
-cancel_after(3, with_error: MyErrorClass) do
-  do_my_thing
-end
-# or a RuntimeError with message
-cancel_after(3, with_error: 'Cancelled due to timeout') do
-  do_my_thing
-end
-```
-

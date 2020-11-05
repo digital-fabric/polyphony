@@ -130,3 +130,120 @@ class QueueTest < MiniTest::Test
     assert_equal 0, @queue.size
   end
 end
+
+class CappedQueueTest < MiniTest::Test
+  def setup
+    super
+    @queue = Polyphony::Queue.new
+    @queue.cap(3)
+  end
+
+  def test_capped?
+    q = Polyphony::Queue.new
+    assert_nil q.capped?
+
+    q.cap(3)
+    assert_equal 3, q.capped?
+  end
+
+  def test_initalize_with_cap
+    q = Polyphony::Queue.new(42)
+    assert_equal 42, q.capped?
+  end
+
+  def test_capped_push
+    buffer = []
+    a = spin do
+      (1..5).each do |i|
+        @queue.push(i)
+        buffer << :"p#{i}"
+      end
+      @queue.push :stop
+    end
+
+    snooze
+
+    b = spin_loop do
+      i = @queue.shift
+      raise Polyphony::Terminate if i == :stop
+      buffer << :"s#{i}"
+    end
+
+    Fiber.join(a, b)
+    assert_equal [:p1, :p2, :s1, :p3, :s2, :p4, :s3, :p5, :s4, :s5], buffer
+  end
+
+  def test_capped_multi_push
+    buffer = []
+    a = spin(:a) do
+      (1..3).each do |i|
+        @queue.push(i)
+        buffer << :"p#{i}"
+      end
+    end
+
+    buffer = []
+    b = spin(:b) do
+      (4..6).each do |i|
+        @queue.push(i)
+        buffer << :"p#{i}"
+      end
+      @queue.push :stop
+    end
+
+    c = spin_loop do
+      i = @queue.shift
+      raise Polyphony::Terminate if i == :stop
+      buffer << :"s#{i}"
+      snooze
+    end
+
+    Fiber.join(a, b, c)
+    assert_equal [:p1, :p4, :s1, :p5, :p2, :s4, :p3, :s5, :p6, :s2, :s3, :s6], buffer
+  end
+
+  def test_capped_clear
+    buffer = []
+    a = spin(:a) do
+      (1..5).each do |i|
+        @queue.push(i)
+        buffer << i
+      end
+    end
+
+    snooze while buffer.size < 3
+    @queue.clear
+    buffer << :clear
+
+    a.join
+    assert_equal [1, 2, 3, :clear, 4, 5], buffer
+  end
+
+  def test_capped_delete
+    buffer = []
+    a = spin(:a) do
+      (1..5).each do |i|
+        @queue.push(i)
+        buffer << i
+      end
+    end
+
+    i = 0
+    spin_loop do
+      i += 1
+      snooze 
+    end
+
+    5.times { snooze }
+    assert_equal 5, i
+    @queue.delete 1
+    buffer << :"d#{i}"
+    3.times { snooze }
+    assert_equal 8, i
+    @queue.delete 2
+    buffer << :"d#{i}"
+
+    a.join
+    assert_equal [1, 2, 3, :d5, 4, :d8, 5], buffer
+  end
+end

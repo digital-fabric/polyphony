@@ -82,12 +82,6 @@ VALUE Queue_push(VALUE self, VALUE value);
 VALUE Queue_unshift(VALUE self, VALUE value);
 VALUE Queue_shift(VALUE self);
 VALUE Queue_shift_all(VALUE self);
-VALUE Queue_shift_no_wait(VALUE self);
-VALUE Queue_clear(VALUE self);
-VALUE Queue_delete(VALUE self, VALUE value);
-long Queue_len(VALUE self);
-void Queue_trace(VALUE self);
-
 
 void Runqueue_push(VALUE self, VALUE fiber, VALUE value, int reschedule);
 void Runqueue_unshift(VALUE self, VALUE fiber, VALUE value, int reschedule);
@@ -100,5 +94,7 @@ int Runqueue_empty_p(VALUE self);
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_switch_fiber(VALUE thread);
+
+VALUE Polyphony_snooze(VALUE self);
 
 #endif /* POLYPHONY_H */

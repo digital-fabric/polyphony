@@ -1,3 +1,5 @@
+* Implemented capped queues
+
 ## 0.46.1
 
 * Add `TCPServer#accept_loop`, `OpenSSL::SSL::SSLSocket#accept_loop` method
