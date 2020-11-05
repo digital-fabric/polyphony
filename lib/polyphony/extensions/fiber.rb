@@ -335,7 +335,11 @@ class ::Fiber
   end
 
   def inspect
-    "#<Fiber:#{object_id} #{location} (#{state})>"
+    if @tag
+      "#<Fiber #{tag}:#{object_id} #{location} (#{state})>"
+    else
+      "#<Fiber:#{object_id} #{location} (#{state})>"
+    end
   end
   alias_method :to_s, :inspect
 

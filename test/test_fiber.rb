@@ -565,14 +565,14 @@ class FiberTest < MiniTest::Test
   end
 
   def test_inspect
-    expected = format('#<Fiber:%s (root) (running)>', Fiber.current.object_id)
+    expected = format('#<Fiber main:%s (root) (running)>', Fiber.current.object_id)
     assert_equal expected, Fiber.current.inspect
 
     spin_line_no = __LINE__ + 1
-    f = spin { :foo }
+    f = spin(:baz) { :foo }
 
     expected = format(
-      '#<Fiber:%s %s:%d:in `test_inspect\' (runnable)>',
+      '#<Fiber baz:%s %s:%d:in `test_inspect\' (runnable)>',
       f.object_id,
       __FILE__,
       spin_line_no
@@ -581,7 +581,7 @@ class FiberTest < MiniTest::Test
 
     f.await
     expected = format(
-      '#<Fiber:%s %s:%d:in `test_inspect\' (dead)>',
+      '#<Fiber baz:%s %s:%d:in `test_inspect\' (dead)>',
       f.object_id,
       __FILE__,
       spin_line_no
