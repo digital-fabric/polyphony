@@ -738,6 +738,35 @@ class MailboxTest < MiniTest::Test
     f&.stop
   end
 
+  def test_capped_fiber_mailbox
+    buffer = []
+    a = spin_loop do
+      3.times { snooze }
+      buffer << [:receive, receive]
+    end
+    a.mailbox.cap(1)
+
+    b = spin do
+      (1..3).each do |i|
+        a << i
+        buffer << [:send, i]
+      end
+    end
+
+    (1..10).each do |i|
+      snooze
+      buffer << [:snooze, i]
+    end
+
+    b.join
+
+    assert_equal [
+      [:snooze, 1], [:send, 1], [:snooze, 2], [:snooze, 3], [:snooze, 4],
+      [:receive, 1], [:snooze, 5], [:send, 2], [:snooze, 6], [:snooze, 7],
+      [:snooze, 8], [:receive, 2], [:snooze, 9], [:send, 3], [:snooze, 10]
+    ], buffer
+  end
+
   def test_that_multiple_messages_sent_at_once_arrive_in_order
     msgs = []
     f = spin { loop { msgs << receive } }

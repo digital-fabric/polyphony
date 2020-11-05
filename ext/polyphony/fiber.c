@@ -128,6 +128,15 @@ VALUE Fiber_receive(VALUE self) {
   return Queue_shift(mailbox);  
 }
 
+VALUE Fiber_mailbox(VALUE self) {
+  VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
+  if (mailbox == Qnil) {
+    mailbox = rb_funcall(cQueue, ID_new, 0);
+    rb_ivar_set(self, ID_ivar_mailbox, mailbox);
+  }
+  return mailbox;
+}
+
 VALUE Fiber_receive_all_pending(VALUE self) {
   VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
   return (mailbox == Qnil) ? rb_ary_new() : Queue_shift_all(mailbox);
@@ -146,9 +155,9 @@ void Init_Fiber() {
 
   rb_define_method(cFiber, "<<", Fiber_send, 1);
   rb_define_method(cFiber, "send", Fiber_send, 1);
-
   rb_define_method(cFiber, "receive", Fiber_receive, 0);
   rb_define_method(cFiber, "receive_all_pending", Fiber_receive_all_pending, 0);
+  rb_define_method(cFiber, "mailbox", Fiber_mailbox, 0);
 
   SYM_dead = ID2SYM(rb_intern("dead"));
   SYM_running = ID2SYM(rb_intern("running"));
