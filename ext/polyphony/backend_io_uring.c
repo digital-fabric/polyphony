@@ -846,14 +846,14 @@ VALUE Backend_timeout_rescue(VALUE arg, VALUE exception) {
   return exception;
 }
 
+VALUE Backend_timeout_ensure_safe(VALUE arg) {
+  return rb_rescue2(Backend_timeout_safe, Qnil, Backend_timeout_rescue, Qnil, rb_eException, (VALUE)0);
+}
+
 struct Backend_timeout_ctx {
   Backend_t *backend;
   op_context_t *ctx;
 };
-
-VALUE Backend_timeout_ensure_safe(VALUE arg) {
-  return rb_rescue2(Backend_timeout_safe, Qnil, Backend_timeout_rescue, Qnil, rb_eException, (VALUE)0);
-}
 
 VALUE Backend_timeout_ensure(VALUE arg) {
     struct Backend_timeout_ctx *timeout_ctx = (struct Backend_timeout_ctx *)arg;
@@ -874,7 +874,6 @@ VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
   VALUE duration;
   VALUE exception_class;
   VALUE move_on_value = Qnil;
-
   rb_scan_args(argc, argv, "21", &duration, &exception_class, &move_on_value);
   
   struct __kernel_timespec ts = duration_to_timespec(duration);

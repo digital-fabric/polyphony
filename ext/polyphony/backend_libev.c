@@ -722,6 +722,73 @@ noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
   }
 }
 
+VALUE Backend_timeout_safe(VALUE arg) {
+  return rb_yield(arg);
+}
+
+VALUE Backend_timeout_rescue(VALUE arg, VALUE exception) {
+  return exception;
+}
+
+VALUE Backend_timeout_ensure_safe(VALUE arg) {
+  return rb_rescue2(Backend_timeout_safe, Qnil, Backend_timeout_rescue, Qnil, rb_eException, (VALUE)0);
+}
+
+struct libev_timeout {
+  struct ev_timer timer;
+  VALUE fiber;
+  VALUE resume_value;
+};
+
+struct Backend_timeout_ctx {
+  Backend_t *backend;
+  struct libev_timeout *watcher;
+};
+
+VALUE Backend_timeout_ensure(VALUE arg) {
+  struct Backend_timeout_ctx *timeout_ctx = (struct Backend_timeout_ctx *)arg;
+  ev_timer_stop(timeout_ctx->backend->ev_loop, &(timeout_ctx->watcher->timer));
+  return Qnil;
+}
+
+void Backend_timeout_callback(EV_P_ ev_timer *w, int revents)
+{
+  struct libev_timeout *watcher = (struct libev_timeout *)w;
+  Fiber_make_runnable(watcher->fiber, watcher->resume_value);
+}
+
+VALUE Backend_timeout(int argc,VALUE *argv, VALUE self) {
+  VALUE duration;
+  VALUE exception_class;
+  VALUE move_on_value = Qnil;
+  rb_scan_args(argc, argv, "21", &duration, &exception_class, &move_on_value);
+
+  Backend_t *backend;
+  struct libev_timeout watcher;
+  VALUE result = Qnil;
+  VALUE timeout = rb_funcall(cTimeoutException, ID_new, 0);
+
+  GetBackend(self, backend);
+  watcher.fiber = rb_fiber_current();
+  watcher.resume_value = timeout;
+  ev_timer_init(&watcher.timer, Backend_timeout_callback, NUM2DBL(duration), 0.);
+  ev_timer_start(backend->ev_loop, &watcher.timer);
+
+  struct Backend_timeout_ctx timeout_ctx = {backend, &watcher};
+  result = rb_ensure(Backend_timeout_ensure_safe, Qnil, Backend_timeout_ensure, (VALUE)&timeout_ctx);
+  
+  if (result == timeout) {
+    if (exception_class == Qnil) return move_on_value;
+    VALUE exception = rb_funcall(exception_class, ID_new, 0);
+    RAISE_EXCEPTION(exception);
+  }
+
+  RAISE_IF_EXCEPTION(result);
+  RB_GC_GUARD(result);
+  RB_GC_GUARD(timeout);
+  return result;
+}
+
 struct libev_child {
   struct ev_child child;
   VALUE fiber;
@@ -812,6 +879,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
+  rb_define_method(cBackend, "timeout", Backend_timeout, -1);
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
 
