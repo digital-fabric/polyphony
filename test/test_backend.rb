@@ -136,4 +136,52 @@ class BackendTest < MiniTest::Test
     f.await # TODO: check why this test sometimes segfaults if we don't a<wait fiber
     assert_in_range 4..6, i
   end
+
+  class MyTimeoutException < Exception
+  end
+
+  def test_timeout
+    buffer = []
+    assert_raises(Polyphony::TimeoutException) do
+      @backend.timeout(0.01, Polyphony::TimeoutException) do
+        buffer << 1
+        sleep 0.02
+        buffer << 2
+      end
+    end
+    assert_equal [1], buffer
+
+    buffer = []
+    assert_raises(MyTimeoutException) do
+      @backend.timeout(0.01, MyTimeoutException) do
+        buffer << 1
+        sleep 1
+        buffer << 2
+      end
+    end
+    assert_equal [1], buffer
+
+    buffer = []
+    result = @backend.timeout(0.01, nil, 42) do
+      buffer << 1
+      sleep 1
+      buffer << 2
+    end
+    assert_equal 42, result
+    assert_equal [1], buffer
+  end
+
+  def test_nested_timeout
+    buffer = []
+    assert_raises(MyTimeoutException) do
+      @backend.timeout(0.01, MyTimeoutException) do
+        @backend.timeout(0.02, nil) do
+          buffer << 1
+          sleep 1
+          buffer << 2
+        end
+      end
+    end
+    assert_equal [1], buffer
+  end
 end

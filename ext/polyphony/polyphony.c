@@ -1,6 +1,7 @@
 #include "polyphony.h"
 
 VALUE mPolyphony;
+VALUE cTimeoutException;
 
 ID ID_call;
 ID ID_caller;
@@ -54,6 +55,8 @@ void Init_Polyphony() {
 
   rb_define_global_function("snooze", Polyphony_snooze, 0);
   rb_define_global_function("suspend", Polyphony_suspend, 0);
+
+  cTimeoutException = rb_define_class_under(mPolyphony, "TimeoutException", rb_eException);
 
   ID_call           = rb_intern("call");
   ID_caller         = rb_intern("caller");

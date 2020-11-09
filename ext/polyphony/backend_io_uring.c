@@ -774,15 +774,23 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   return self;
 }
 
-// returns true if completed, 0 otherwise
-int io_uring_backend_submit_timeout_and_await(Backend_t *backend, double duration, VALUE *resume_value) {
+inline struct __kernel_timespec double_to_timespec(double duration) {
   double duration_integral;
   double duration_fraction = modf(duration, &duration_integral);
   struct __kernel_timespec ts;
-
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   ts.tv_sec = duration_integral;
 	ts.tv_nsec = floor(duration_fraction * 1000000000);
+  return ts;
+}
+
+inline struct __kernel_timespec duration_to_timespec(VALUE duration) {
+  return double_to_timespec(NUM2DBL(duration));
+}
+
+// returns true if completed, 0 otherwise
+int io_uring_backend_submit_timeout_and_await(Backend_t *backend, double duration, VALUE *resume_value) {
+  struct __kernel_timespec ts = double_to_timespec(duration);
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
   
   op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_TIMEOUT);
   io_uring_prep_timeout(sqe, &ts, 0, 0);
@@ -828,6 +836,75 @@ VALUE Backend_timer_loop(VALUE self, VALUE interval) {
       if (next_time > now) break;
     }
   }
+}
+
+VALUE Backend_timeout_safe(VALUE arg) {
+  return rb_yield(arg);
+}
+
+VALUE Backend_timeout_rescue(VALUE arg, VALUE exception) {
+  return exception;
+}
+
+struct Backend_timeout_ctx {
+  Backend_t *backend;
+  op_context_t *ctx;
+};
+
+VALUE Backend_timeout_ensure_safe(VALUE arg) {
+  return rb_rescue2(Backend_timeout_safe, Qnil, Backend_timeout_rescue, Qnil, rb_eException, (VALUE)0);
+}
+
+VALUE Backend_timeout_ensure(VALUE arg) {
+    struct Backend_timeout_ctx *timeout_ctx = (struct Backend_timeout_ctx *)arg;
+    if (!timeout_ctx->ctx->completed) {
+    timeout_ctx->ctx->result = -ECANCELED;
+
+    // op was not completed, so we need to cancel it
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&timeout_ctx->backend->ring);
+    io_uring_prep_cancel(sqe, timeout_ctx->ctx, 0);
+    timeout_ctx->backend->pending_sqes = 0;
+    io_uring_submit(&timeout_ctx->backend->ring);
+  }
+  OP_CONTEXT_RELEASE(&timeout_ctx->backend->store, timeout_ctx->ctx);
+  return Qnil;
+}
+
+VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
+  VALUE duration;
+  VALUE exception_class;
+  VALUE move_on_value = Qnil;
+
+  rb_scan_args(argc, argv, "21", &duration, &exception_class, &move_on_value);
+  
+  struct __kernel_timespec ts = duration_to_timespec(duration);
+  Backend_t *backend;
+  GetBackend(self, backend);
+  VALUE result = Qnil;
+  VALUE timeout = rb_funcall(cTimeoutException, ID_new, 0);
+
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+  
+  op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_TIMEOUT);
+  ctx->resume_value = timeout;
+  io_uring_prep_timeout(sqe, &ts, 0, 0);
+  io_uring_sqe_set_data(sqe, ctx);
+  io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
+  io_uring_backend_defer_submit(backend);
+
+  struct Backend_timeout_ctx timeout_ctx = {backend, ctx};
+  result = rb_ensure(Backend_timeout_ensure_safe, Qnil, Backend_timeout_ensure, (VALUE)&timeout_ctx);
+
+  if (result == timeout) {
+    if (exception_class == Qnil) return move_on_value;
+    VALUE exception = rb_funcall(exception_class, ID_new, 0);
+    RAISE_EXCEPTION(exception);
+  }
+
+  RAISE_IF_EXCEPTION(result);
+  RB_GC_GUARD(result);
+  RB_GC_GUARD(timeout);
+  return result;
 }
 
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
@@ -899,6 +976,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
+  rb_define_method(cBackend, "timeout", Backend_timeout, -1);
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
 
