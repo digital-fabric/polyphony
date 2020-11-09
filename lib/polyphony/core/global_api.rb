@@ -70,15 +70,20 @@ module Polyphony
     end
 
     def move_on_after(interval, with_value: nil, &block)
-      fiber = ::Fiber.current
-      unless block
-        return spin do
-          sleep interval
-          fiber.schedule with_value
-        end
+      if !block
+        move_on_blockless_canceller_fiber(Fiber.current, interval, with_value)
+      elsif block.arity > 0
+        move_on_after_with_block(Fiber.current, interval, with_value, &block)
+      else
+        Thread.current.backend.timeout(interval, nil, with_value, &block)
       end
+    end
 
-      move_on_after_with_block(fiber, interval, with_value, &block)
+    def move_on_blockless_canceller_fiber(fiber, interval, with_value)
+      spin do
+        sleep interval
+        fiber.schedule with_value
+      end
     end
 
     def move_on_after_with_block(fiber, interval, with_value, &block)
