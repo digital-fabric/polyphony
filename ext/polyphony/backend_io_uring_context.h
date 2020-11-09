@@ -24,6 +24,7 @@ typedef struct op_context {
   int               id;
   int               result;
   VALUE             fiber;
+  VALUE             resume_value;
 } op_context_t;
 
 typedef struct op_context_store {

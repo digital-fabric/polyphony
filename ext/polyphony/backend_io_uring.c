@@ -171,7 +171,7 @@ void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *bac
     // otherwise, we mark it as completed, schedule the fiber and let it deal
     // with releasing the context
     ctx->completed = 1;
-    if (ctx->result != -ECANCELED) Fiber_make_runnable(ctx->fiber, Qnil);
+    if (ctx->result != -ECANCELED) Fiber_make_runnable(ctx->fiber, ctx->resume_value);
   }
 }
 
