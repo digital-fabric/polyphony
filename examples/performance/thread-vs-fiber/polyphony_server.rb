@@ -4,41 +4,31 @@ require 'bundler/setup'
 require 'polyphony'
 require 'http/parser'
 
-$connection_count = 0
-
 def handle_client(socket)
-  $connection_count += 1
+  pending_requests = []
   parser = Http::Parser.new
-  reqs = []
-  parser.on_message_complete = proc do |env|
-    reqs << Object.new # parser
-  end
+  parser.on_message_complete = proc { pending_requests << parser }
+
   socket.recv_loop do |data|
     parser << data
-    while (req = reqs.shift)
-      handle_request(socket, req)
-      req = nil
-    end
+    write_response(socket) while pending_requests.shift
   end
 rescue IOError, SystemCallError => e
   # do nothing
 ensure
-  $connection_count -= 1
   socket&.close
 end
 
-def handle_request(client, parser)
+def write_response(socket)
   status_code = "200 OK"
   data = "Hello world!\n"
   headers = "Content-Type: text/plain\r\nContent-Length: #{data.bytesize}\r\n"
-  client.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
+  socket.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
 end
 
 server = TCPServer.open('0.0.0.0', 1234)
-puts "pid #{Process.pid}"
-puts "listening on port 1234"
+puts "pid #{Process.pid} Polyphony (#{Thread.current.backend.kind}) listening on port 1234"
 
-loop do
-  client = server.accept
-  spin { handle_client(client) }
+server.accept_loop do |c|
+  spin { handle_client(c) }
 end

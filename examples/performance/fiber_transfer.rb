@@ -12,6 +12,7 @@ end
 def run(num_fibers)
   count = 0
 
+  GC.start
   GC.disable
 
   first = nil
@@ -36,13 +37,21 @@ def run(num_fibers)
   last.next = first
   
   t0 = Time.now
+  puts "start transfer..."
   first.transfer
   elapsed = Time.now - t0
 
-  puts "fibers: #{num_fibers} count: #{count} rate: #{count / elapsed}"
-  GC.start
+  rss = `ps -o rss= -p #{Process.pid}`.to_i
+
+  puts "fibers: #{num_fibers} rss: #{rss} count: #{count} rate: #{count / elapsed}"
+rescue Exception => e
+  puts "Stopped at #{count} fibers"
+  p e
 end
 
+puts "pid: #{Process.pid}"
 run(100)
-run(1000)
-run(10000)
+# run(1000)
+# run(10000)
+# run(100000)
+# run(400000)
