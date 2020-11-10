@@ -1,4 +1,4 @@
-## 0.47.1
+## 0.47.2
 
 * Fix API compatibility between TCPSocket and IO
 
