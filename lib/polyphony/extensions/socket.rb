@@ -35,6 +35,7 @@ class ::Socket
   def recv_loop(&block)
     Thread.current.backend.recv_loop(self, &block)
   end
+  alias_method :read_loop, :recv_loop
 
   def recvfrom(maxlen, flags = 0)
     @read_buffer ||= +''
@@ -53,8 +54,12 @@ class ::Socket
     Thread.current.backend.send(self, mesg)
   end
 
-  def write(str)
-    Thread.current.backend.send(self, str)
+  def write(str, *args)
+    if args.empty?
+      Thread.current.backend.send(self, str)
+    else
+      Thread.current.backend.send(self, str + args.join)
+    end
   end
   alias_method :<<, :write
 
