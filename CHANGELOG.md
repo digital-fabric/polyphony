@@ -1,3 +1,7 @@
+## 0.47.1
+
+* Fix API compatibility between TCPSocket and IO
+
 ## 0.47.0
 
 * Implement `#spin_scope` used for creating blocking fiber scopes 
