@@ -1,3 +1,5 @@
+## 0.47.0
+
 * Implement `#spin_scope` used for creating blocking fiber scopes 
 * Reimplement `move_on_after`, `cancel_after`, `Timeout.timeout` using
   `Backend#timeout` (avoids creating canceller fiber for most common use case)
