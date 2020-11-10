@@ -150,13 +150,18 @@ class ::TCPSocket
   def recv_loop(&block)
     Thread.current.backend.recv_loop(self, &block)
   end
+  alias_method :read_loop, :recv_loop
 
   def send(mesg, flags = 0)
     Thread.current.backend.send(self, mesg)
   end
 
-  def write(str)
-    Thread.current.backend.send(self, str)
+  def write(str, *args)
+    if args.empty?
+      Thread.current.backend.send(self, str)
+    else
+      Thread.current.backend.send(self, str + args.join)
+    end
   end
   alias_method :<<, :write
 
