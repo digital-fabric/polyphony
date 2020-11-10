@@ -118,3 +118,12 @@ inline double current_time() {
   double t = ns;
   return t / 1e9;
 }
+
+inline VALUE backend_timeout_exception(VALUE exception) {
+  if (RTEST(rb_obj_is_kind_of(exception, rb_cArray)))
+    return rb_funcall(rb_ary_entry(exception, 0), ID_new, 1, rb_ary_entry(exception, 1));
+  else if (RTEST(rb_obj_is_kind_of(exception, rb_cClass)))
+    return rb_funcall(exception, ID_new, 0);
+  else
+    return rb_funcall(rb_eRuntimeError, ID_new, 1, exception);
+}

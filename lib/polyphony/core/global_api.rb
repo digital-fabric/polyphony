@@ -16,16 +16,29 @@ module Polyphony
     end
 
     def cancel_after(interval, with_exception: Polyphony::Cancel, &block)
-      fiber = ::Fiber.current
-      canceller = spin do
+      if !block
+        cancel_after_blockless_canceller(Fiber.current, interval, with_exception)
+      elsif block.arity > 0
+        cancel_after_with_block(Fiber.current, interval, with_exception, &block)
+      else
+        Thread.current.backend.timeout(interval, with_exception, &block)
+      end
+    end
+
+    def cancel_after_blockless_canceller(fiber, interval, with_exception)
+      spin do
         sleep interval
         exception = cancel_exception(with_exception)
-        # we don't want the cancelling fiber caller location as part of the
-        # exception backtrace
         exception.__raising_fiber__ = nil
         fiber.schedule exception
       end
-      block ? cancel_after_wrap_block(canceller, &block) : canceller
+    end
+
+    def cancel_after_with_block(fiber, interval, with_exception, &block)
+      canceller = cancel_after_blockless_canceller(fiber, interval, with_exception)
+      block.call(canceller)
+    ensure
+      canceller.stop
     end
 
     def cancel_exception(exception)
@@ -34,12 +47,6 @@ module Polyphony
       when Array then exception[0].new(exception[1])
       else RuntimeError.new(exception)
       end
-    end
-
-    def cancel_after_wrap_block(canceller, &block)
-      block.call(canceller)
-    ensure
-      canceller.stop
     end
 
     def spin(tag = nil, &block)
@@ -71,7 +78,7 @@ module Polyphony
 
     def move_on_after(interval, with_value: nil, &block)
       if !block
-        move_on_blockless_canceller_fiber(Fiber.current, interval, with_value)
+        move_on_blockless_canceller(Fiber.current, interval, with_value)
       elsif block.arity > 0
         move_on_after_with_block(Fiber.current, interval, with_value, &block)
       else
@@ -79,7 +86,7 @@ module Polyphony
       end
     end
 
-    def move_on_blockless_canceller_fiber(fiber, interval, with_value)
+    def move_on_blockless_canceller(fiber, interval, with_value)
       spin do
         sleep interval
         fiber.schedule with_value

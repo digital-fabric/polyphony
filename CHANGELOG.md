@@ -1,3 +1,6 @@
+* Reimplement `move_on_after`, `cancel_after`, `Timeout.timeout` using
+  `Backend#timeout` (avoids creating canceller fiber for most common use case)
+* Implement `Backend#timeout` API
 * Implemented capped queues
 
 ## 0.46.1

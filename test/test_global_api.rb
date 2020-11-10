@@ -150,6 +150,28 @@ class MoveOnAfterTest < MiniTest::Test
     assert t1 - t0 < 0.1
     assert_equal 'foo', v
   end
+
+  def test_nested_move_on_after
+    t0 = Time.now
+    o = move_on_after(0.01, with_value: 1) do
+      move_on_after(0.02, with_value: 2) do
+        sleep 1
+      end
+    end
+    t1 = Time.now
+    assert_equal 1, o
+    assert_in_range 0.008..0.013, t1 - t0
+
+    t0 = Time.now
+    o = move_on_after(0.02, with_value: 1) do
+      move_on_after(0.01, with_value: 2) do
+        sleep 1
+      end
+    end
+    t1 = Time.now
+    assert_equal 2, o
+    assert_in_range 0.008..0.013, t1 - t0
+  end
 end
 
 class CancelAfterTest < MiniTest::Test

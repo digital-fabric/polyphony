@@ -872,9 +872,9 @@ VALUE Backend_timeout_ensure(VALUE arg) {
 
 VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
   VALUE duration;
-  VALUE exception_class;
+  VALUE exception;
   VALUE move_on_value = Qnil;
-  rb_scan_args(argc, argv, "21", &duration, &exception_class, &move_on_value);
+  rb_scan_args(argc, argv, "21", &duration, &exception, &move_on_value);
   
   struct __kernel_timespec ts = duration_to_timespec(duration);
   Backend_t *backend;
@@ -895,9 +895,8 @@ VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
   result = rb_ensure(Backend_timeout_ensure_safe, Qnil, Backend_timeout_ensure, (VALUE)&timeout_ctx);
 
   if (result == timeout) {
-    if (exception_class == Qnil) return move_on_value;
-    VALUE exception = rb_funcall(exception_class, ID_new, 0);
-    RAISE_EXCEPTION(exception);
+    if (exception == Qnil) return move_on_value;
+    RAISE_EXCEPTION(backend_timeout_exception(exception));
   }
 
   RAISE_IF_EXCEPTION(result);
