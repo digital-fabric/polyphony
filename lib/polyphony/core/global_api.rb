@@ -63,6 +63,16 @@ module Polyphony
       end
     end
 
+    def spin_scope
+      raise unless block_given?
+    
+      spin do
+        result = yield
+        Fiber.current.await_all_children
+        result
+      end.await
+    end
+
     def every(interval)
       next_time = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC) + interval
       loop do

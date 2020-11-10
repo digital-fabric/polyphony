@@ -299,6 +299,45 @@ class SpinLoopTest < MiniTest::Test
   end
 end
 
+class SpinScopeTest < MiniTest::Test
+  def test_spin_scope
+    queue = Queue.new
+    buffer = {}
+    spin do
+      queue << 1
+      snooze
+      queue << 2
+    end
+    f = nil
+    result = spin_scope do
+      f = Fiber.current
+      spin { buffer[:a] = queue.shift }
+      spin { buffer[:b] = queue.shift }
+      :foo
+    end
+    assert_equal :foo, result
+    assert_kind_of Fiber, f
+    assert_equal :dead, f.state
+    assert_equal ({a: 1, b: 2}), buffer
+  end
+
+  def test_spin_scope_with_exception
+    queue = Queue.new
+    buffer = []
+    spin do
+      spin_scope do
+        spin { buffer << queue.shift }
+        spin { raise 'foobar' }
+      end
+    rescue => e
+      buffer << e.message
+    end
+    6.times { snooze }
+    assert_equal 0, Fiber.current.children.size
+    assert_equal ['foobar'], buffer
+  end
+end
+
 class ThrottledLoopTest < MiniTest::Test
   def test_throttled_loop
     buffer = []
