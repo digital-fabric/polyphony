@@ -210,7 +210,7 @@ class CancelAfterTest < MiniTest::Test
       sleep 0.007
     end
     t1 = Time.now
-    assert_in_range 0.014..0.02, t1 - t0
+    assert_in_range 0.014..0.024, t1 - t0
   end
 
   class CustomException < Exception
