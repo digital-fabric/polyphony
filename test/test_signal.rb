@@ -76,4 +76,22 @@ class SignalTrapTest < Minitest::Test
     buffer = i.read
     assert_equal "3-interrupt\n", buffer
   end
+
+  def test_io_in_signal_handler
+    i, o = IO.pipe
+    pid = Polyphony.fork do
+      trap('INT') { o.puts 'INT'; o.close; exit! }
+      i.close
+      sleep
+    ensure
+      o.close
+    end
+
+    o.close
+    sleep 0.1
+    Process.kill('INT', pid)
+    Thread.current.backend.waitpid(pid)
+    buffer = i.read
+    assert_equal "INT\n", buffer
+  end
 end

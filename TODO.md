@@ -1,3 +1,35 @@
+Graceful shutdown again:
+
+- Add `Polyphony::GracefulShutdown` exception
+- Two exceptions for stopping fibers:
+  - `Polyphony::GracefulShutdown` - graceful shutdown
+  - `Polyphony::Terminate` - ungraceful shutdown
+- Fiber API:
+  - `Fiber#shutdown_children` - graceful shutdown of all children
+  - `Fiber#terminate_children` - ungraceful shutdown of all children
+
+- Add `Fiber#graceful_shutdown?` method
+  - Returns false unless a `Polyphony::GracefulShutdown` was raised
+- Override `Polyphony::Terminate#invoke` to reset the `@graceful_shutdown` fiber
+  flag
+
+And then we have:
+
+```ruby
+spin do
+  loop { do_some_stuff }
+ensure
+  return unless Fiber.current.graceful_shutdown?
+
+shutdown_gracefully
+end
+```
+
+- When a fiber is stopped it should use `Polyphony::Terminate` to stop child
+  fibers, *unless* it was stopped with a `Polyphony::GracefulShutdown` (which it
+  can check with `@graceful_shutdown`).
+
+
 ## Roadmap for Polyphony 1.0
 
 - Check why worker-thread example doesn't work.

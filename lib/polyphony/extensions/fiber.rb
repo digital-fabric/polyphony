@@ -173,6 +173,7 @@ module Polyphony
     # signals (see also the patched `Kernel#trap`)
     def schedule_priority_oob_fiber(&block)
       f = Fiber.new do
+        Fiber.current.setup_raw
         block.call
       rescue Exception => e
         Thread.current.schedule_and_wakeup(Thread.main.main_fiber, e)
@@ -262,6 +263,7 @@ module Polyphony
     # allows the fiber to be scheduled and to receive messages.
     def setup_raw
       @thread = Thread.current
+      @running = true
     end
 
     def setup_main_fiber
