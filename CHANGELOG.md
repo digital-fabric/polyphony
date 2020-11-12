@@ -1,3 +1,8 @@
+## 0.47.3
+
+* Enable I/O in signal handlers (#45)
+* Accept `:interval` argument in `#spin_loop`
+
 ## 0.47.2
 
 * Fix API compatibility between TCPSocket and IO
