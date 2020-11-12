@@ -297,6 +297,16 @@ class SpinLoopTest < MiniTest::Test
     f.stop
     assert_in_range 1..3, counter
   end
+
+  def test_spin_loop_with_interval
+    buffer = []
+    counter = 0
+    t0 = Time.now
+    f = spin_loop(interval: 0.01) { buffer << (counter += 1) }
+    sleep 0.02
+    f.stop
+    assert_in_range 1..3, counter
+  end
 end
 
 class SpinScopeTest < MiniTest::Test

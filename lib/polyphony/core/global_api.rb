@@ -53,10 +53,10 @@ module Polyphony
       Fiber.current.spin(tag, caller, &block)
     end
 
-    def spin_loop(tag = nil, rate: nil, &block)
-      if rate
+    def spin_loop(tag = nil, rate: nil, interval: nil, &block)
+      if rate || interval
         Fiber.current.spin(tag, caller) do
-          throttled_loop(rate, &block)
+          throttled_loop(rate: rate, interval: interval, &block)
         end
       else
         Fiber.current.spin(tag, caller) { loop(&block) }
@@ -73,17 +73,8 @@ module Polyphony
       end.await
     end
 
-    def every(interval)
-      next_time = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC) + interval
-      loop do
-        now = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
-        Thread.current.backend.sleep(next_time - now)
-        yield
-        loop do
-          next_time += interval
-          break if next_time > now
-        end
-      end
+    def every(interval, &block)
+      Thread.current.backend.timer_loop(interval, &block)
     end
 
     def move_on_after(interval, with_value: nil, &block)
