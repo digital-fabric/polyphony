@@ -27,7 +27,6 @@ static int pidfd_open(pid_t pid, unsigned int flags) {
   return syscall(__NR_pidfd_open, pid, flags);
 }
 
-VALUE cTCPSocket;
 VALUE SYM_io_uring;
 
 typedef struct Backend_t {
@@ -669,15 +668,16 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   return INT2NUM(len);
 }
 
-VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
+VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, int loop) {
   rb_io_t *fptr;
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
-  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
   VALUE socket = Qnil;
-  if (underlying_sock != Qnil) sock = underlying_sock;
+  VALUE socket_class = ConnectionSocketClass(server_socket);
+  VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
+  if (underlying_sock != Qnil) server_socket = underlying_sock;
 
-  GetOpenFile(sock, fptr);
+  GetOpenFile(server_socket, fptr);
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_ACCEPT);
@@ -695,7 +695,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE sock, int loop) {
     else {
       rb_io_t *fp;
 
-      socket = rb_obj_alloc(cTCPSocket);
+      socket = rb_obj_alloc(socket_class);
       MakeOpenFile(socket, fp);
       rb_update_max_fd(fd);
       fp->fd = fd;
@@ -945,8 +945,7 @@ VALUE Backend_kind(VALUE self) {
 }
 
 void Init_Backend() {
-  rb_require("socket");
-  cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
+  Init_SocketClasses();
 
   VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cData);
   rb_define_alloc_func(cBackend, Backend_allocate);

@@ -1,36 +1,41 @@
-Graceful shutdown again:
+- Graceful shutdown again:
 
-- Add `Polyphony::GracefulShutdown` exception
-- Two exceptions for stopping fibers:
-  - `Polyphony::GracefulShutdown` - graceful shutdown
-  - `Polyphony::Terminate` - ungraceful shutdown
-- Fiber API:
-  - `Fiber#shutdown_children` - graceful shutdown of all children
-  - `Fiber#terminate_children` - ungraceful shutdown of all children
+  - Add `Polyphony::GracefulShutdown` exception
+  - Two exceptions for stopping fibers:
+    - `Polyphony::GracefulShutdown` - graceful shutdown
+    - `Polyphony::Terminate` - ungraceful shutdown
+  - Fiber API:
+    - `Fiber#shutdown_children` - graceful shutdown of all children
+    - `Fiber#terminate_children` - ungraceful shutdown of all children
 
-- Add `Fiber#graceful_shutdown?` method
-  - Returns false unless a `Polyphony::GracefulShutdown` was raised
-- Override `Polyphony::Terminate#invoke` to reset the `@graceful_shutdown` fiber
-  flag
+  - Add `Fiber#graceful_shutdown?` method
+    - Returns false unless a `Polyphony::GracefulShutdown` was raised
+  - Override `Polyphony::Terminate#invoke` to reset the `@graceful_shutdown` fiber
+    flag
 
-And then we have:
+  And then we have:
 
-```ruby
-spin do
-  loop { do_some_stuff }
-ensure
-  return unless Fiber.current.graceful_shutdown?
+  ```ruby
+  spin do
+    loop { do_some_stuff }
+  ensure
+    return unless Fiber.current.graceful_shutdown?
 
-shutdown_gracefully
-end
-```
+  shutdown_gracefully
+  end
+  ```
 
-- When a fiber is stopped it should use `Polyphony::Terminate` to stop child
-  fibers, *unless* it was stopped with a `Polyphony::GracefulShutdown` (which it
-  can check with `@graceful_shutdown`).
+  - When a fiber is stopped it should use `Polyphony::Terminate` to stop child
+    fibers, *unless* it was stopped with a `Polyphony::GracefulShutdown` (which it
+    can check with `@graceful_shutdown`).
 
+- More tight loops
+  - IO#gets_loop, Socket#gets_loop, OpenSSL::Socket#gets_loop (medium effort)
+  - Fiber#receive_loop (very little effort, should be implemented in C)
 
 ## Roadmap for Polyphony 1.0
+
+- check integration with rb-inotify
 
 - Check why worker-thread example doesn't work.
 - Add test that mimics the original design for Monocrono:

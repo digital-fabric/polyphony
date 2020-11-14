@@ -13,7 +13,6 @@
 #include "../libev/ev.h"
 #include "ruby/io.h"
 
-VALUE cTCPSocket;
 VALUE SYM_libev;
 
 ID ID_ivar_is_nonblocking;
@@ -494,7 +493,7 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
     Backend_writev(self, argv[0], argc - 1, argv + 1);
 }
 
-VALUE Backend_accept(VALUE self, VALUE sock) {
+VALUE Backend_accept(VALUE self, VALUE server_socket) {
   Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
@@ -502,12 +501,13 @@ VALUE Backend_accept(VALUE self, VALUE sock) {
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
-  if (underlying_sock != Qnil) sock = underlying_sock;
+  VALUE socket_class = ConnectionSocketClass(server_socket);
+  VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
+  if (underlying_sock != Qnil) server_socket = underlying_sock;
 
   GetBackend(self, backend);
-  GetOpenFile(sock, fptr);
-  io_set_nonblock(fptr, sock);
+  GetOpenFile(server_socket, fptr);
+  io_set_nonblock(fptr, server_socket);
   watcher.fiber = Qnil;
   while (1) {
     fd = accept(fptr->fd, &addr, &len);
@@ -529,7 +529,7 @@ VALUE Backend_accept(VALUE self, VALUE sock) {
         goto error;
       }
 
-      socket = rb_obj_alloc(cTCPSocket);
+      socket = rb_obj_alloc(socket_class);
       MakeOpenFile(socket, fp);
       rb_update_max_fd(fd);
       fp->fd = fd;
@@ -550,7 +550,7 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE Backend_accept_loop(VALUE self, VALUE sock) {
+VALUE Backend_accept_loop(VALUE self, VALUE server_socket) {
   Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
@@ -559,12 +559,13 @@ VALUE Backend_accept_loop(VALUE self, VALUE sock) {
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
   VALUE socket = Qnil;
-  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
-  if (underlying_sock != Qnil) sock = underlying_sock;
+  VALUE socket_class = ConnectionSocketClass(server_socket);
+  VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
+  if (underlying_sock != Qnil) server_socket = underlying_sock;
 
   GetBackend(self, backend);
-  GetOpenFile(sock, fptr);
-  io_set_nonblock(fptr, sock);
+  GetOpenFile(server_socket, fptr);
+  io_set_nonblock(fptr, server_socket);
   watcher.fiber = Qnil;
 
   while (1) {
@@ -586,7 +587,7 @@ VALUE Backend_accept_loop(VALUE self, VALUE sock) {
         goto error;
       }
 
-      socket = rb_obj_alloc(cTCPSocket);
+      socket = rb_obj_alloc(socket_class);
       MakeOpenFile(socket, fp);
       rb_update_max_fd(fd);
       fp->fd = fd;
@@ -849,8 +850,7 @@ VALUE Backend_kind(VALUE self) {
 void Init_Backend() {
   ev_set_allocator(xrealloc);
 
-  rb_require("socket");
-  cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
+  Init_SocketClasses();
 
   VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cData);
   rb_define_alloc_func(cBackend, Backend_allocate);

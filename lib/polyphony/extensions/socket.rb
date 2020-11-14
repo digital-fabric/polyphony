@@ -19,17 +19,7 @@ class ::Socket
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
-    Thread.current.backend.recv(self, buf || +'', maxlen)
-    # outbuf ||= +''
-    # loop do
-    #   result = recv_nonblock(maxlen, flags, outbuf, **NO_EXCEPTION)
-    #   case result
-    #   when nil then raise IOError
-    #   when :wait_readable then Thread.current.backend.wait_io(self, false)
-    #   else
-    #     return result
-    #   end
-    # end
+    Thread.current.backend.recv(self, outbuf || +'', maxlen)
   end
 
   def recv_loop(&block)
@@ -208,5 +198,64 @@ class ::TCPServer
   alias_method :orig_close, :close
   def close
     @io.close
+  end
+end
+
+class ::UNIXServer
+  alias_method :orig_accept, :accept
+ def accept
+    Thread.current.backend.accept(self)
+  end
+
+  def accept_loop(&block)
+    Thread.current.backend.accept_loop(self, &block)
+  end
+
+
+end
+
+class ::UNIXSocket
+  def recv(maxlen, flags = 0, outbuf = nil)
+    Thread.current.backend.recv(self, buf || +'', maxlen)
+  end
+
+  def recv_loop(&block)
+    Thread.current.backend.recv_loop(self, &block)
+  end
+  alias_method :read_loop, :recv_loop
+
+  def send(mesg, flags = 0)
+    Thread.current.backend.send(self, mesg)
+  end
+
+  def write(str, *args)
+    if args.empty?
+      Thread.current.backend.send(self, str)
+    else
+      Thread.current.backend.send(self, str + args.join)
+    end
+  end
+  alias_method :<<, :write
+
+  def readpartial(maxlen, str = nil)
+    @read_buffer ||= +''
+    result = Thread.current.backend.recv(self, @read_buffer, maxlen)
+    raise EOFError unless result
+
+    if str
+      str << @read_buffer
+    else
+      str = @read_buffer
+    end
+    @read_buffer = +''
+    str
+  end
+
+  def read_nonblock(len, str = nil, exception: true)
+    @io.read_nonblock(len, str, exception: exception)
+  end
+
+  def write_nonblock(buf, exception: true)
+    @io.write_nonblock(buf, exception: exception)
   end
 end
