@@ -1,3 +1,7 @@
+## 0.47.4
+
+* Add support for Unix sockets
+
 ## 0.47.3
 
 * Enable I/O in signal handlers (#45)
