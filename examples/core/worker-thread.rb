@@ -13,11 +13,9 @@ end
 $worker = Thread.new do
   Fiber.current.tag = :worker
   loop do
-    client, block = receive
+    (client, block) = receive
     do_work(client, &block)
   end
-rescue Exception => e
-  p e
 end
 
 def process(&block)
@@ -28,3 +26,4 @@ end
 sleep 0.1
 
 p process { 1 + 1 }
+p process { 42 ** 2 }

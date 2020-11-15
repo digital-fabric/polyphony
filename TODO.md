@@ -1,17 +1,13 @@
 - Graceful shutdown again:
 
-  - Add `Polyphony::GracefulShutdown` exception
-  - Two exceptions for stopping fibers:
-    - `Polyphony::GracefulShutdown` - graceful shutdown
-    - `Polyphony::Terminate` - ungraceful shutdown
   - Fiber API:
-    - `Fiber#shutdown_children` - graceful shutdown of all children
-    - `Fiber#terminate_children` - ungraceful shutdown of all children
+    - `Fiber#terminate(graceul)` - with a graceful flag
+    - `Fiber#terminate_all_children(graceful)` - with a graceful flag
+    - `Fiber#shutdown_all_children(graceful)` - with a graceful flag
 
+  - Set graceful termination in `@graceful_shutdown`
   - Add `Fiber#graceful_shutdown?` method
-    - Returns false unless a `Polyphony::GracefulShutdown` was raised
-  - Override `Polyphony::Terminate#invoke` to reset the `@graceful_shutdown` fiber
-    flag
+    - Returns `@graceful_shutdown`
 
   And then we have:
 
@@ -19,15 +15,11 @@
   spin do
     loop { do_some_stuff }
   ensure
-    return unless Fiber.current.graceful_shutdown?
-
-  shutdown_gracefully
+    shutdown_gracefully if Fiber.current.graceful_shutdown?
   end
   ```
 
-  - When a fiber is stopped it should use `Polyphony::Terminate` to stop child
-    fibers, *unless* it was stopped with a `Polyphony::GracefulShutdown` (which it
-    can check with `@graceful_shutdown`).
+  - `Fiber#finalize_children` should pass graceful shutdown flag to children
 
 - More tight loops
   - IO#gets_loop, Socket#gets_loop, OpenSSL::Socket#gets_loop (medium effort)
@@ -37,13 +29,13 @@
 
 - check integration with rb-inotify
 
-- Check why worker-thread example doesn't work.
+- Improve `#supervise`. It does not work as advertised, and seems to exhibit an
+  inconsistent behaviour (see supervisor example).
+
 - Add test that mimics the original design for Monocrono:
   - 256 fibers each waiting for a message
   - When message received do some blocking work using a `ThreadPool`
   - Send messages, collect responses, check for correctness
-- Improve `#supervise`. It does not work as advertised, and seems to exhibit an
-  inconsistent behaviour (see supervisor example).
 
 - io_uring
   - Use playground.c to find out why we when submitting and waiting for
