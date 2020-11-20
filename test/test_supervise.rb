@@ -20,9 +20,10 @@ class SuperviseTest < MiniTest::Test
 
     f2 << 'bar'
     f2.await
+    assert_equal :waiting, p.state
     snooze
 
-    assert_equal :waiting, p.state
+    assert_equal :dead, p.state
   end
 
   def test_supervise_with_restart

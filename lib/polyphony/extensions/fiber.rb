@@ -67,19 +67,29 @@ module Polyphony
         self << fiber unless result.is_a?(Exception)
       end
       loop { supervise_perform(opts) }
+    rescue Polyphony::MoveOn
+      # generated in #supervise_perform to stop supervisor
     ensure
       @on_child_done = nil
     end
 
     def supervise_perform(opts)
       fiber = receive
-      restart_fiber(fiber, opts) if fiber
+      if fiber && opts[:restart]
+        restart_fiber(fiber, opts)
+      elsif Fiber.current.children.empty?
+        Fiber.current.stop
+      end
     rescue Polyphony::Restart
       restart_all_children
     rescue Exception => e
       Kernel.raise e if e.source_fiber.nil? || e.source_fiber == self
 
-      restart_fiber(e.source_fiber, opts)
+      if opts[:restart]
+        restart_fiber(e.source_fiber, opts)
+      elsif Fiber.current.children.empty?
+        Fiber.current.stop
+      end
     end
 
     def restart_fiber(fiber, opts)

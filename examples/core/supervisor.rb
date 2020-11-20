@@ -9,9 +9,9 @@ def my_sleep(t)
   puts "#{t} done"
 end
 
-spin { my_sleep(1) }
-spin { my_sleep(2) }
-spin { my_sleep(3) }
+spin { my_sleep(0.1) }
+spin { my_sleep(0.2) }
+spin { my_sleep(0.3) }
 spin { puts "fiber count: #{Fiber.current.children.count}" }
 snooze
 
