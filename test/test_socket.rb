@@ -60,7 +60,6 @@ class SocketTest < MiniTest::Test
 end
 
 class HTTPClientTest < MiniTest::Test
-  require 'httparty'
   require 'json'
 
   def test_http

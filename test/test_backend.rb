@@ -105,7 +105,7 @@ class BackendTest < MiniTest::Test
 
     clients = []
     server_fiber = spin do
-      @backend.accept_loop(server) { |c| clients << c }
+      @backend.accept_loop(server, TCPSocket) { |c| clients << c }
     end
 
     c1 = TCPSocket.new('127.0.0.1', 1234)

@@ -4,6 +4,7 @@ require 'bundler/setup'
 
 require_relative './coverage' if ENV['COVERAGE']
 
+require 'httparty'
 require 'polyphony'
 
 require 'fileutils'
