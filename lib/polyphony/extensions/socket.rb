@@ -134,7 +134,7 @@ class ::TCPSocket
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
-    Thread.current.backend.recv(self, buf || +'', maxlen)
+    Thread.current.backend.recv(self, outbuf || +'', maxlen)
   end
 
   def recv_loop(&block)
@@ -215,7 +215,7 @@ end
 
 class ::UNIXSocket
   def recv(maxlen, flags = 0, outbuf = nil)
-    Thread.current.backend.recv(self, buf || +'', maxlen)
+    Thread.current.backend.recv(self, outbuf || +'', maxlen)
   end
 
   def recv_loop(&block)

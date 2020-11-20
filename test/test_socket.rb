@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'helper'
+require 'fileutils'
 
 class SocketTest < MiniTest::Test
   def setup
@@ -24,7 +25,32 @@ class SocketTest < MiniTest::Test
     snooze
     client = TCPSocket.new('127.0.0.1', port)
     client.write("1234\n")
-    assert_equal "1234\n", client.readpartial(8192)
+    assert_equal "1234\n", client.recv(8192)
+    client.close
+  ensure
+    server_fiber&.stop
+    server_fiber&.await
+    server&.close
+  end
+
+  def test_unix_socket
+    path = '/tmp/test_unix_socket'
+    FileUtils.rm(path) rescue nil
+    server = UNIXServer.new(path)
+    server_fiber = spin do
+      server.accept_loop do |socket|
+        spin do
+          while (data = socket.gets(8192))
+            socket << data
+          end
+        end
+      end
+    end
+
+    snooze
+    client = UNIXSocket.new(path)
+    client.write("1234\n")
+    assert_equal "1234\n", client.recv(8192)
     client.close
   ensure
     server_fiber&.stop
