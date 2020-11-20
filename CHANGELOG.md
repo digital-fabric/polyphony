@@ -1,3 +1,7 @@
+## 0.47.5.1
+
+- Add missing `Socket#accept_loop` method
+
 ## 0.47.5
 
 - Add `socket_class` argument to `Backend#accept`, `Backend#accept_loop`
