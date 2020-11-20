@@ -8,7 +8,7 @@ require_relative '../core/thread_pool'
 # Socket overrides (eventually rewritten in C)
 class ::Socket
   def accept
-    Thread.current.backend.accept(self)
+    Thread.current.backend.accept(self, TCPSocket)
   end
 
   NO_EXCEPTION = { exception: false }.freeze
@@ -188,11 +188,12 @@ class ::TCPServer
 
   alias_method :orig_accept, :accept
   def accept
-    @io.accept
+    Thread.current.backend.accept(@io, TCPSocket)
+    # @io.accept
   end
 
   def accept_loop(&block)
-    Thread.current.backend.accept_loop(@io, &block)
+    Thread.current.backend.accept_loop(@io, TCPSocket, &block)
   end
 
   alias_method :orig_close, :close
@@ -204,14 +205,12 @@ end
 class ::UNIXServer
   alias_method :orig_accept, :accept
  def accept
-    Thread.current.backend.accept(self)
+    Thread.current.backend.accept(self, UNIXSocket)
   end
 
   def accept_loop(&block)
-    Thread.current.backend.accept_loop(self, &block)
+    Thread.current.backend.accept_loop(self, UNIXSocket, &block)
   end
-
-
 end
 
 class ::UNIXSocket

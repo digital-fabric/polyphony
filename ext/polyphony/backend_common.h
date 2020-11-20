@@ -3,26 +3,6 @@
 #include "ruby.h"
 #include "ruby/io.h"
 
-VALUE cTCPSocket;
-VALUE cTCPServer;
-VALUE cUNIXSocket;
-VALUE cUNIXServer;
-
-void Init_SocketClasses() {
-  rb_require("socket");
-  cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
-  cTCPServer = rb_const_get(rb_cObject, rb_intern("TCPServer"));
-  cUNIXSocket = rb_const_get(rb_cObject, rb_intern("UNIXSocket"));
-  cUNIXServer = rb_const_get(rb_cObject, rb_intern("UNIXServer"));
-}
-
-VALUE ConnectionSocketClass(VALUE server) {
-  if (RTEST(rb_obj_is_kind_of(server, cTCPServer))) return cTCPSocket;
-  if (RTEST(rb_obj_is_kind_of(server, cUNIXServer))) return cUNIXSocket;
-
-  rb_raise(rb_eRuntimeError, "Invalid server class");
-}
-
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 // the following is copied verbatim from the Ruby source code (io.c)

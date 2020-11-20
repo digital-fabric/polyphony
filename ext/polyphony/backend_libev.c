@@ -493,7 +493,7 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
     Backend_writev(self, argv[0], argc - 1, argv + 1);
 }
 
-VALUE Backend_accept(VALUE self, VALUE server_socket) {
+VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
   Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
@@ -501,7 +501,6 @@ VALUE Backend_accept(VALUE self, VALUE server_socket) {
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
-  VALUE socket_class = ConnectionSocketClass(server_socket);
   VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
   if (underlying_sock != Qnil) server_socket = underlying_sock;
 
@@ -550,7 +549,7 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE Backend_accept_loop(VALUE self, VALUE server_socket) {
+VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
@@ -559,7 +558,6 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket) {
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
   VALUE socket = Qnil;
-  VALUE socket_class = ConnectionSocketClass(server_socket);
   VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
   if (underlying_sock != Qnil) server_socket = underlying_sock;
 
@@ -850,8 +848,6 @@ VALUE Backend_kind(VALUE self) {
 void Init_Backend() {
   ev_set_allocator(xrealloc);
 
-  Init_SocketClasses();
-
   VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cData);
   rb_define_alloc_func(cBackend, Backend_allocate);
 
@@ -869,8 +865,8 @@ void Init_Backend() {
   rb_define_method(cBackend, "read", Backend_read, 4);
   rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
   rb_define_method(cBackend, "write", Backend_write_m, -1);
-  rb_define_method(cBackend, "accept", Backend_accept, 1);
-  rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 1);
+  rb_define_method(cBackend, "accept", Backend_accept, 2);
+  rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
   rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_loop", Backend_read_loop, 1);

@@ -668,12 +668,11 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   return INT2NUM(len);
 }
 
-VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, int loop) {
+VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE socket_class, int loop) {
   rb_io_t *fptr;
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE socket = Qnil;
-  VALUE socket_class = ConnectionSocketClass(server_socket);
   VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
   if (underlying_sock != Qnil) server_socket = underlying_sock;
 
@@ -718,16 +717,16 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, int loop)
   return Qnil;
 }
 
-VALUE Backend_accept(VALUE self, VALUE sock) {
+VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
   Backend_t *backend;
   GetBackend(self, backend);
-  return io_uring_backend_accept(backend, sock, 0);
+  return io_uring_backend_accept(backend, server_socket, socket_class, 0);
 }
 
-VALUE Backend_accept_loop(VALUE self, VALUE sock) {
+VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   Backend_t *backend;
   GetBackend(self, backend);
-  io_uring_backend_accept(backend, sock, 1);
+  io_uring_backend_accept(backend, server_socket, socket_class, 1);
   return self;
 }
 
@@ -945,8 +944,6 @@ VALUE Backend_kind(VALUE self) {
 }
 
 void Init_Backend() {
-  Init_SocketClasses();
-
   VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cData);
   rb_define_alloc_func(cBackend, Backend_allocate);
 
@@ -967,8 +964,8 @@ void Init_Backend() {
   rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 1);
   rb_define_method(cBackend, "send", Backend_send, 2);
-  rb_define_method(cBackend, "accept", Backend_accept, 1);
-  rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 1);
+  rb_define_method(cBackend, "accept", Backend_accept, 2);
+  rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
