@@ -11,6 +11,10 @@ class ::Socket
     Thread.current.backend.accept(self, TCPSocket)
   end
 
+  def accept_loop(&block)
+    Thread.current.backend.accept_loop(self, TCPSocket, &block)
+  end
+
   NO_EXCEPTION = { exception: false }.freeze
 
   def connect(addr)
