@@ -17,16 +17,6 @@ static VALUE Thread_setup_fiber_scheduling(VALUE self) {
   return self;
 }
 
-int Thread_fiber_ref_count(VALUE self) {
-  VALUE backend = rb_ivar_get(self, ID_ivar_backend);
-  return NUM2INT(__BACKEND__.ref_count(backend));
-}
-
-inline void Thread_fiber_reset_ref_count(VALUE self) {
-  VALUE backend = rb_ivar_get(self, ID_ivar_backend);
-  __BACKEND__.reset_ref_count(backend);
-}
-
 static VALUE SYM_scheduled_fibers;
 static VALUE SYM_pending_watchers;
 
@@ -84,23 +74,22 @@ VALUE Thread_switch_fiber(VALUE self) {
   VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
   runqueue_entry next;
   VALUE backend = rb_ivar_get(self, ID_ivar_backend);
-  int ref_count;
-  int backend_was_polled = 0;
+  unsigned int pending_count = __BACKEND__.pending_count(backend);
+  unsigned int backend_was_polled = 0;
 
   if (__tracing_enabled__ && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
     TRACE(2, SYM_fiber_switchpoint, current_fiber);
 
-  ref_count = __BACKEND__.ref_count(backend);
   while (1) {
     next = Runqueue_shift(runqueue);
     if (next.fiber != Qnil) {
-      if (backend_was_polled == 0 && ref_count > 0) {
+      if (!backend_was_polled && pending_count) {
         // this prevents event starvation in case the run queue never empties
         __BACKEND__.poll(backend, Qtrue, current_fiber, runqueue);
       }
       break;
     }
-    if (ref_count == 0) break;
+    if (pending_count == 0) break;
 
     __BACKEND__.poll(backend, Qnil, current_fiber, runqueue);
     backend_was_polled = 1;
@@ -116,13 +105,6 @@ VALUE Thread_switch_fiber(VALUE self) {
   RB_GC_GUARD(next.value);
   return (next.fiber == current_fiber) ?
     next.value : FIBER_TRANSFER(next.fiber, next.value);
-}
-
-VALUE Thread_reset_fiber_scheduling(VALUE self) {
-  VALUE queue = rb_ivar_get(self, ID_ivar_runqueue);
-  Runqueue_clear(queue);
-  Thread_fiber_reset_ref_count(self);
-  return self;
 }
 
 VALUE Thread_fiber_schedule_and_wakeup(VALUE self, VALUE fiber, VALUE resume_obj) {
@@ -146,7 +128,6 @@ VALUE Thread_debug(VALUE self) {
 
 void Init_Thread() {
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
-  rb_define_method(rb_cThread, "reset_fiber_scheduling", Thread_reset_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
   rb_define_method(rb_cThread, "schedule_and_wakeup", Thread_fiber_schedule_and_wakeup, 2);
 

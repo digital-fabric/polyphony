@@ -40,11 +40,14 @@ inline void io_set_nonblock(rb_io_t *fptr, VALUE io) {
 }
 
 typedef struct Backend_t {
+  // common fields
+  unsigned int        currently_polling;
+  unsigned int        pending_count;
+  unsigned int        poll_no_wait_count;
+
+  // implementation-specific fields
   struct ev_loop *ev_loop;
   struct ev_async break_async;
-  int running;
-  int ref_count;
-  int run_no_wait_count;
 } Backend_t;
 
 static size_t Backend_size(const void *ptr) {
@@ -83,9 +86,9 @@ static VALUE Backend_initialize(VALUE self) {
   ev_async_start(backend->ev_loop, &backend->break_async);
   ev_unref(backend->ev_loop); // don't count the break_async watcher
 
-  backend->running = 0;
-  backend->ref_count = 0;
-  backend->run_no_wait_count = 0;
+  backend->currently_polling = 0;
+  backend->pending_count = 0;
+  backend->poll_no_wait_count = 0;
 
   return Qnil;
 }
@@ -120,7 +123,7 @@ VALUE Backend_ref(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  backend->ref_count++;
+  backend->pending_count++;
   return self;
 }
 
@@ -128,30 +131,15 @@ VALUE Backend_unref(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  backend->ref_count--;
+  backend->pending_count--;
   return self;
 }
 
-int Backend_ref_count(VALUE self) {
+unsigned int Backend_pending_count(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  return backend->ref_count;
-}
-
-void Backend_reset_ref_count(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  backend->ref_count = 0;
-}
-
-VALUE Backend_pending_count(VALUE self) {
-  int count;
-  Backend_t *backend;
-  GetBackend(self, backend);
-  count = ev_pending_count(backend->ev_loop);
-  return INT2NUM(count);
+  return backend->pending_count;
 }
 
 VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
@@ -160,19 +148,19 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
   GetBackend(self, backend);
 
   if (is_nowait) {
-    backend->run_no_wait_count++;
-    if (backend->run_no_wait_count < 10) return self;
+    backend->poll_no_wait_count++;
+    if (backend->poll_no_wait_count < 10) return self;
 
     long runnable_count = Runqueue_len(runqueue);
-    if (backend->run_no_wait_count < runnable_count) return self;
+    if (backend->poll_no_wait_count < runnable_count) return self;
   }
 
-  backend->run_no_wait_count = 0;
+  backend->poll_no_wait_count = 0;
 
   COND_TRACE(2, SYM_fiber_event_poll_enter, current_fiber);
-  backend->running = 1;
+  backend->currently_polling = 1;
   ev_run(backend->ev_loop, is_nowait ? EVRUN_NOWAIT : EVRUN_ONCE);
-  backend->running = 0;
+  backend->currently_polling = 0;
   COND_TRACE(2, SYM_fiber_event_poll_leave, current_fiber);
 
   return self;
@@ -182,7 +170,7 @@ VALUE Backend_wakeup(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  if (backend->running) {
+  if (backend->currently_polling) {
     // Since the loop will run until at least one event has occurred, we signal
     // the selector's associated async watcher, which will cause the ev loop to
     // return. In contrast to using `ev_break` to break out of the loop, which
@@ -854,7 +842,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "initialize", Backend_initialize, 0);
   rb_define_method(cBackend, "finalize", Backend_finalize, 0);
   rb_define_method(cBackend, "post_fork", Backend_post_fork, 0);
-  rb_define_method(cBackend, "pending_count", Backend_pending_count, 0);
 
   rb_define_method(cBackend, "ref", Backend_ref, 0);
   rb_define_method(cBackend, "unref", Backend_unref, 0);
@@ -886,8 +873,6 @@ void Init_Backend() {
   __BACKEND__.pending_count   = Backend_pending_count;
   __BACKEND__.poll            = Backend_poll;
   __BACKEND__.ref             = Backend_ref;
-  __BACKEND__.ref_count       = Backend_ref_count;
-  __BACKEND__.reset_ref_count = Backend_reset_ref_count;
   __BACKEND__.unref           = Backend_unref;
   __BACKEND__.wait_event      = Backend_wait_event;
   __BACKEND__.wakeup          = Backend_wakeup;

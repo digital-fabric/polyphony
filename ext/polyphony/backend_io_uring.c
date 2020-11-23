@@ -30,11 +30,14 @@ static int pidfd_open(pid_t pid, unsigned int flags) {
 VALUE SYM_io_uring;
 
 typedef struct Backend_t {
+  // common fields
+  unsigned int        currently_polling;
+  unsigned int        pending_count;
+  unsigned int        poll_no_wait_count;
+
+  // implementation-specific fields
   struct io_uring     ring;
   op_context_store_t  store;
-  int                 waiting_for_cqe;
-  unsigned int        ref_count;
-  unsigned int        run_no_wait_count;
   unsigned int        pending_sqes;
   unsigned int        prepared_limit;
   int                 event_fd;
@@ -65,9 +68,9 @@ static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  backend->waiting_for_cqe = 0;
-  backend->ref_count = 0;
-  backend->run_no_wait_count = 0;
+  backend->currently_polling = 0;
+  backend->pending_count = 0;
+  backend->poll_no_wait_count = 0;
   backend->pending_sqes = 0;
   backend->prepared_limit = 1024;
 
@@ -95,9 +98,9 @@ VALUE Backend_post_fork(VALUE self) {
   io_uring_queue_exit(&backend->ring);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
   context_store_free(&backend->store);
-  backend->waiting_for_cqe = 0;
-  backend->ref_count = 0;
-  backend->run_no_wait_count = 0;
+  backend->currently_polling = 0;
+  backend->pending_count = 0;
+  backend->poll_no_wait_count = 0;
   backend->pending_sqes = 0;
 
   return self;
@@ -107,7 +110,7 @@ VALUE Backend_ref(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  backend->ref_count++;
+  backend->pending_count++;
   return self;
 }
 
@@ -115,26 +118,15 @@ VALUE Backend_unref(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  backend->ref_count--;
+  backend->pending_count--;
   return self;
 }
 
-int Backend_ref_count(VALUE self) {
+unsigned int Backend_pending_count(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  return backend->ref_count;
-}
-
-void Backend_reset_ref_count(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  backend->ref_count = 0;
-}
-
-VALUE Backend_pending_count(VALUE self) {
-  return INT2NUM(0);
+  return backend->pending_count;
 }
 
 typedef struct poll_context {
@@ -158,7 +150,7 @@ static inline bool cq_ring_needs_flush(struct io_uring *ring) {
 
 void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
   op_context_t *ctx = io_uring_cqe_get_data(cqe);
-  if (ctx == 0) return;
+  if (!ctx) return;
 
   ctx->result = cqe->res;
 
@@ -211,9 +203,9 @@ void io_uring_backend_poll(Backend_t *backend) {
     io_uring_submit(&backend->ring);
   }
 
-  backend->waiting_for_cqe = 1;
+  backend->currently_polling = 1;
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
-  backend->waiting_for_cqe = 0;
+  backend->currently_polling = 0;
   if (poll_ctx.result < 0) return;
 
   io_uring_backend_handle_completion(poll_ctx.cqe, backend);
@@ -226,14 +218,14 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
   GetBackend(self, backend);
 
   if (is_nowait) {
-    backend->run_no_wait_count++;
-    if (backend->run_no_wait_count < 10) return self;
+    backend->poll_no_wait_count++;
+    if (backend->poll_no_wait_count < 10) return self;
 
     long runnable_count = Runqueue_len(runqueue);
-    if (backend->run_no_wait_count < runnable_count) return self;
+    if (backend->poll_no_wait_count < runnable_count) return self;
   }
 
-  backend->run_no_wait_count = 0;
+  backend->poll_no_wait_count = 0;
 
   if (is_nowait && backend->pending_sqes) {
     backend->pending_sqes = 0;
@@ -252,7 +244,7 @@ VALUE Backend_wakeup(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  if (backend->waiting_for_cqe) {
+  if (backend->currently_polling) {
     // Since we're currently blocking while waiting for a completion, we add a
     // NOP which would cause the io_uring_enter syscall to return
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
@@ -287,9 +279,9 @@ int io_uring_backend_defer_submit_and_await(
   io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
   io_uring_backend_defer_submit(backend);
 
-  backend->ref_count++;
+  backend->pending_count++;
   switchpoint_result = backend_await(backend);
-  backend->ref_count--;
+  backend->pending_count--;
 
   if (!ctx->completed) {
     ctx->result = -ECANCELED;
@@ -351,7 +343,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
 
     if (result < 0)
       rb_syserr_fail(-result, strerror(-result));
-    else if (result == 0)
+    else if (!result)
       break; // EOF
     else {
       total += result;
@@ -373,7 +365,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   io_set_read_length(str, total, shrinkable);
   io_enc_str(str, fptr);
 
-  if (total == 0) return Qnil;
+  if (!total) return Qnil;
 
   return str;
 }
@@ -410,7 +402,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
 
     if (result < 0)
       rb_syserr_fail(-result, strerror(-result));
-    else if (result == 0)
+    else if (!result)
       break; // EOF
     else {
       total = result;
@@ -581,7 +573,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   io_set_read_length(str, total, shrinkable);
   io_enc_str(str, fptr);
 
-  if (total == 0) return Qnil;
+  if (!total) return Qnil;
 
   return str;
 }
@@ -618,7 +610,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
 
     if (result < 0)
       rb_syserr_fail(-result, strerror(-result));
-    else if (result == 0)
+    else if (!result)
       break; // EOF
     else {
       total = result;
@@ -950,7 +942,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "initialize", Backend_initialize, 0);
   rb_define_method(cBackend, "finalize", Backend_finalize, 0);
   rb_define_method(cBackend, "post_fork", Backend_post_fork, 0);
-  rb_define_method(cBackend, "pending_count", Backend_pending_count, 0);
 
   rb_define_method(cBackend, "ref", Backend_ref, 0);
   rb_define_method(cBackend, "unref", Backend_unref, 0);
@@ -981,8 +972,6 @@ void Init_Backend() {
   __BACKEND__.pending_count   = Backend_pending_count;
   __BACKEND__.poll            = Backend_poll;
   __BACKEND__.ref             = Backend_ref;
-  __BACKEND__.ref_count       = Backend_ref_count;
-  __BACKEND__.reset_ref_count = Backend_reset_ref_count;
   __BACKEND__.unref           = Backend_unref;
   __BACKEND__.wait_event      = Backend_wait_event;
   __BACKEND__.wakeup          = Backend_wakeup;

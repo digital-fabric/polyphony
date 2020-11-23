@@ -70,9 +70,9 @@ inline VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
 
 inline VALUE backend_await(Backend_t *backend) {
   VALUE ret;
-  backend->ref_count++;
+  backend->pending_count++;
   ret = Thread_switch_fiber(rb_thread_current());
-  backend->ref_count--;
+  backend->pending_count--;
   RB_GC_GUARD(ret);
   return ret;
 }
