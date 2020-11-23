@@ -92,6 +92,32 @@ class IOTest < MiniTest::Test
     assert_raises(EOFError) { i.readpartial(1) }    
   end
 
+  def test_gets
+    i, o = IO.pipe
+
+    buf = []
+    f = spin do
+      while (l = i.gets)
+        buf << l
+      end
+    end
+
+    snooze
+    assert_equal [], buf
+
+    o << 'fab'
+    snooze
+    assert_equal [], buf
+    
+    o << "ulous\n"
+    10.times { snooze }
+    assert_equal ["fabulous\n"], buf
+
+    o.close
+    f.await
+    assert_equal ["fabulous\n"], buf
+  end
+
   def test_getc
     i, o = IO.pipe
 

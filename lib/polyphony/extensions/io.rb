@@ -119,18 +119,11 @@ class ::IO
   end
 
   alias_method :orig_readpartial, :read
-  def readpartial(len, str = nil)
-    @read_buffer ||= +''
-    result = Thread.current.backend.read(self, @read_buffer, len, false)
+  def readpartial(len, str = +'')
+    result = Thread.current.backend.read(self, str, len, false)
     raise EOFError unless result
 
-    if str
-      str << @read_buffer
-    else
-      str = @read_buffer
-    end
-    @read_buffer = +''
-    str
+    result
   end
 
   alias_method :orig_write, :write
@@ -154,15 +147,16 @@ class ::IO
 
     @read_buffer ||= +''
 
-    loop do
+    while true
       idx = @read_buffer.index(sep)
       return @read_buffer.slice!(0, idx + sep_size) if idx
 
-      data = readpartial(8192)
+      data = readpartial(8192, +'')
+      return nil unless data
       @read_buffer << data
-    rescue EOFError
-      return nil
     end
+  rescue EOFError
+    return nil
   end
 
   # def print(*args)
