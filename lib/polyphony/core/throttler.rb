@@ -15,7 +15,7 @@ module Polyphony
       Thread.current.backend.sleep(delta) if delta > 0
       yield self
 
-      loop do
+      while true
         @next_time += @min_dt
         break if @next_time > now
       end

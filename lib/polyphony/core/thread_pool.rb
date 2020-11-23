@@ -45,7 +45,9 @@ module Polyphony
     end
 
     def thread_loop
-      loop { run_queued_task }
+      while true
+        run_queued_task
+      end
     end
 
     def run_queued_task

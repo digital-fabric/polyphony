@@ -11,7 +11,7 @@ module ::PG
 
   def self.connect_async(conn)
     socket_io = conn.socket_io
-    loop do
+    while true
       res = conn.connect_poll
       case res
       when PGRES_POLLING_FAILED   then raise Error, conn.error_message
@@ -23,7 +23,7 @@ module ::PG
   end
 
   def self.connect_sync(conn)
-    loop do
+    while true
       res = conn.connect_poll
       case res
       when PGRES_POLLING_FAILED
@@ -96,7 +96,7 @@ class ::PG::Connection
   def wait_for_notify(timeout = nil, &block)
     return move_on_after(timeout) { wait_for_notify(&block) } if timeout
 
-    loop do
+    while true
       Thread.current.backend.wait_io(socket_io, false)
       consume_input
       notice = notifies

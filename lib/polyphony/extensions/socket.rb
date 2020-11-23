@@ -33,7 +33,7 @@ class ::Socket
 
   def recvfrom(maxlen, flags = 0)
     @read_buffer ||= +''
-    loop do
+    while true
       result = recvfrom_nonblock(maxlen, flags, @read_buffer, **NO_EXCEPTION)
       case result
       when nil then raise IOError

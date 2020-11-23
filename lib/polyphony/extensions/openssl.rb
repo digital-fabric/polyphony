@@ -25,7 +25,7 @@ class ::OpenSSL::SSL::SSLSocket
 
   alias_method :orig_accept, :accept
   def accept
-    loop do
+    while true
       result = accept_nonblock(exception: false)
       case result
       when :wait_readable then Thread.current.backend.wait_io(io, false)
@@ -37,14 +37,14 @@ class ::OpenSSL::SSL::SSLSocket
   end
 
   def accept_loop
-    loop do
+    while true
       yield accept
     end
   end
 
   alias_method :orig_sysread, :sysread
   def sysread(maxlen, buf = +'')
-    loop do
+    while true
       case (result = read_nonblock(maxlen, buf, exception: false))
       when :wait_readable then Thread.current.backend.wait_io(io, false)
       when :wait_writable then Thread.current.backend.wait_io(io, true)
@@ -55,7 +55,7 @@ class ::OpenSSL::SSL::SSLSocket
 
   alias_method :orig_syswrite, :syswrite
   def syswrite(buf)
-    loop do
+    while true
       case (result = write_nonblock(buf, exception: false))
       when :wait_readable then Thread.current.backend.wait_io(io, false)
       when :wait_writable then Thread.current.backend.wait_io(io, true)

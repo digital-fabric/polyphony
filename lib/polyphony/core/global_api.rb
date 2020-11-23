@@ -133,7 +133,9 @@ module Polyphony
       if opts[:count]
         opts[:count].times { |_i| throttler.(&block) }
       else
-        loop { throttler.(&block) }
+        while true
+          throttler.(&block)
+        end
       end
     ensure
       throttler&.stop

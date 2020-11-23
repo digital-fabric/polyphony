@@ -66,7 +66,9 @@ module Polyphony
       @on_child_done = proc do |fiber, result|
         self << fiber unless result.is_a?(Exception)
       end
-      loop { supervise_perform(opts) }
+      while true
+        supervise_perform(opts)
+      end
     rescue Polyphony::MoveOn
       # generated in #supervise_perform to stop supervisor
     ensure
