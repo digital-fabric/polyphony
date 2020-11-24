@@ -72,7 +72,7 @@ static VALUE Backend_initialize(VALUE self) {
   backend->pending_count = 0;
   backend->poll_no_wait_count = 0;
   backend->pending_sqes = 0;
-  backend->prepared_limit = 1024;
+  backend->prepared_limit = 256;
 
   context_store_initialize(&backend->store);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
@@ -103,22 +103,6 @@ VALUE Backend_post_fork(VALUE self) {
   backend->poll_no_wait_count = 0;
   backend->pending_sqes = 0;
 
-  return self;
-}
-
-VALUE Backend_ref(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  backend->pending_count++;
-  return self;
-}
-
-VALUE Backend_unref(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  backend->pending_count--;
   return self;
 }
 
@@ -276,7 +260,7 @@ int io_uring_backend_defer_submit_and_await(
   VALUE switchpoint_result = Qnil;
 
   io_uring_sqe_set_data(sqe, ctx);
-  io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
+  // io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
   io_uring_backend_defer_submit(backend);
 
   backend->pending_count++;
@@ -943,9 +927,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "finalize", Backend_finalize, 0);
   rb_define_method(cBackend, "post_fork", Backend_post_fork, 0);
 
-  rb_define_method(cBackend, "ref", Backend_ref, 0);
-  rb_define_method(cBackend, "unref", Backend_unref, 0);
-
   rb_define_method(cBackend, "poll", Backend_poll, 3);
   rb_define_method(cBackend, "break", Backend_wakeup, 0);
 
@@ -968,13 +949,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "kind", Backend_kind, 0);
 
   SYM_io_uring = ID2SYM(rb_intern("io_uring"));
-
-  __BACKEND__.pending_count   = Backend_pending_count;
-  __BACKEND__.poll            = Backend_poll;
-  __BACKEND__.ref             = Backend_ref;
-  __BACKEND__.unref           = Backend_unref;
-  __BACKEND__.wait_event      = Backend_wait_event;
-  __BACKEND__.wakeup          = Backend_wakeup;
 }
 
 #endif // POLYPHONY_BACKEND_LIBURING

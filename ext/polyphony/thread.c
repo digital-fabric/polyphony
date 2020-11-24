@@ -29,7 +29,7 @@ static VALUE Thread_fiber_scheduling_stats(VALUE self) {
   long scheduled_count = Runqueue_len(runqueue);
   rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(scheduled_count));
 
-  pending_count = __BACKEND__.pending_count(backend);
+  pending_count = Backend_pending_count(backend);
   rb_hash_aset(stats, SYM_pending_watchers, INT2NUM(pending_count));
 
   return stats;
@@ -54,7 +54,7 @@ void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize) {
       // happen, not knowing that it there's already a fiber ready to run in its
       // run queue.
       VALUE backend = rb_ivar_get(self,ID_ivar_backend);
-      __BACKEND__.wakeup(backend);
+      Backend_wakeup(backend);
     }
   }
 }
@@ -74,7 +74,7 @@ VALUE Thread_switch_fiber(VALUE self) {
   VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
   runqueue_entry next;
   VALUE backend = rb_ivar_get(self, ID_ivar_backend);
-  unsigned int pending_count = __BACKEND__.pending_count(backend);
+  unsigned int pending_count = Backend_pending_count(backend);
   unsigned int backend_was_polled = 0;
 
   if (__tracing_enabled__ && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
@@ -85,13 +85,13 @@ VALUE Thread_switch_fiber(VALUE self) {
     if (next.fiber != Qnil) {
       if (!backend_was_polled && pending_count) {
         // this prevents event starvation in case the run queue never empties
-        __BACKEND__.poll(backend, Qtrue, current_fiber, runqueue);
+        Backend_poll(backend, Qtrue, current_fiber, runqueue);
       }
       break;
     }
     if (pending_count == 0) break;
 
-    __BACKEND__.poll(backend, Qnil, current_fiber, runqueue);
+    Backend_poll(backend, Qnil, current_fiber, runqueue);
     backend_was_polled = 1;
   }
 
@@ -113,7 +113,7 @@ VALUE Thread_fiber_schedule_and_wakeup(VALUE self, VALUE fiber, VALUE resume_obj
     Thread_schedule_fiber_with_priority(self, fiber, resume_obj);
   }
 
-  if (__BACKEND__.wakeup(backend) == Qnil) {
+  if (Backend_wakeup(backend) == Qnil) {
     // we're not inside the ev_loop, so we just do a switchpoint
     Thread_switch_fiber(self);
   }

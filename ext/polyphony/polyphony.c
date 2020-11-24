@@ -22,8 +22,6 @@ ID ID_R;
 ID ID_W;
 ID ID_RW;
 
-backend_interface_t backend_interface;
-
 VALUE Polyphony_snooze(VALUE self) {
   VALUE ret;
   VALUE fiber = rb_fiber_current();

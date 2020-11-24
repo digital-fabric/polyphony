@@ -119,22 +119,6 @@ VALUE Backend_post_fork(VALUE self) {
   return self;
 }
 
-VALUE Backend_ref(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  backend->pending_count++;
-  return self;
-}
-
-VALUE Backend_unref(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  backend->pending_count--;
-  return self;
-}
-
 unsigned int Backend_pending_count(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -843,9 +827,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "finalize", Backend_finalize, 0);
   rb_define_method(cBackend, "post_fork", Backend_post_fork, 0);
 
-  rb_define_method(cBackend, "ref", Backend_ref, 0);
-  rb_define_method(cBackend, "unref", Backend_unref, 0);
-
   rb_define_method(cBackend, "poll", Backend_poll, 3);
   rb_define_method(cBackend, "break", Backend_wakeup, 0);
 
@@ -869,13 +850,6 @@ void Init_Backend() {
 
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
   SYM_libev = ID2SYM(rb_intern("libev"));
-
-  __BACKEND__.pending_count   = Backend_pending_count;
-  __BACKEND__.poll            = Backend_poll;
-  __BACKEND__.ref             = Backend_ref;
-  __BACKEND__.unref           = Backend_unref;
-  __BACKEND__.wait_event      = Backend_wait_event;
-  __BACKEND__.wakeup          = Backend_wakeup;
 }
 
 #endif // POLYPHONY_BACKEND_LIBEV

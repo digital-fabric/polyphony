@@ -66,7 +66,7 @@ VALUE Event_await(VALUE self) {
 
   VALUE backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
   event->waiting_fiber = rb_fiber_current();
-  VALUE switchpoint_result = __BACKEND__.wait_event(backend, Qnil);
+  VALUE switchpoint_result = Backend_wait_event(backend, Qnil);
   event->waiting_fiber = Qnil;
 
   RAISE_IF_EXCEPTION(switchpoint_result);

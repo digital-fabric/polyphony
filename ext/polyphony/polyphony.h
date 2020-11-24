@@ -4,7 +4,6 @@
 #include <execinfo.h>
 
 #include "ruby.h"
-#include "backend.h"
 #include "runqueue_ring_buffer.h"
 
 // debugging
@@ -31,9 +30,6 @@
 
 // Fiber#transfer
 #define FIBER_TRANSFER(fiber, value) rb_funcall(fiber, ID_transfer, 1, value)
-
-extern backend_interface_t backend_interface;
-#define __BACKEND__ (backend_interface)
 
 extern VALUE mPolyphony;
 extern VALUE cQueue;
@@ -91,6 +87,11 @@ void Runqueue_delete(VALUE self, VALUE fiber);
 void Runqueue_clear(VALUE self);
 long Runqueue_len(VALUE self);
 int Runqueue_empty_p(VALUE self);
+
+unsigned int Backend_pending_count(VALUE self);
+VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue);
+VALUE Backend_wait_event(VALUE self, VALUE raise_on_exception);
+VALUE Backend_wakeup(VALUE self);
 
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);

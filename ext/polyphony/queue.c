@@ -86,7 +86,7 @@ inline void capped_queue_block_push(Queue_t *queue) {
     if (queue->capacity > queue->values.count) Fiber_make_runnable(fiber, Qnil);
 
     ring_buffer_push(&queue->push_queue, fiber);
-    switchpoint_result = __BACKEND__.wait_event(backend, Qnil);
+    switchpoint_result = Backend_wait_event(backend, Qnil);
     ring_buffer_delete(&queue->push_queue, fiber);
 
     RAISE_IF_EXCEPTION(switchpoint_result);
@@ -131,7 +131,7 @@ VALUE Queue_shift(VALUE self) {
     if (queue->values.count) Fiber_make_runnable(fiber, Qnil);
 
     ring_buffer_push(&queue->shift_queue, fiber);
-    VALUE switchpoint_result = __BACKEND__.wait_event(backend, Qnil);
+    VALUE switchpoint_result = Backend_wait_event(backend, Qnil);
     ring_buffer_delete(&queue->shift_queue, fiber);
 
     RAISE_IF_EXCEPTION(switchpoint_result);
