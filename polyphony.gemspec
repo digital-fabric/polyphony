@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.licenses    = ['MIT']
   s.summary     = 'Fine grained concurrency for Ruby'
   s.author      = 'Sharon Rosner'
-  s.email       = 'ciconia@gmail.com'
+  s.email       = 'sharon@noteflakes.com'
   s.files       = `git ls-files`.split
   s.homepage    = 'https://digital-fabric.github.io/polyphony'
   s.metadata    = {
