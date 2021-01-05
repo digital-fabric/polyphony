@@ -1,3 +1,9 @@
+## 0.48.0
+
+- Implement graceful shutdown
+- Add support for `break` / `StopIteration` in `spin_loop`
+- Fix `IO#gets`, `IO#readpartial`
+
 ## 0.47.5.1
 
 - Add missing `Socket#accept_loop` method

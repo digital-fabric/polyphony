@@ -1,29 +1,43 @@
-- Graceful shutdown again:
+- Override stock `SizedQueue` impl with Queue with capacity
 
-  - Fiber API:
-    - `Fiber#terminate(graceul)` - with a graceful flag
-    - `Fiber#terminate_all_children(graceful)` - with a graceful flag
-    - `Fiber#shutdown_all_children(graceful)` - with a graceful flag
+- Add support for `break` and `StopIteration` in all loops (with tests)
 
-  - Set graceful termination in `@graceful_shutdown`
-  - Add `Fiber#graceful_shutdown?` method
-    - Returns `@graceful_shutdown`
+- Change `IO#gets` to use `String#split` to cut into lines, much faster (see
+  examples/performance/line_splitting.rb)
 
-  And then we have:
+- More tight loops
+  - `IO#gets_loop`, `Socket#gets_loop`, `OpenSSL::Socket#gets_loop` (medium effort)
+  - `Fiber#receive_loop` (very little effort, should be implemented in C)
+
+
+- Add `Backend#splice`, `Backend#splice_loop` for implementing stuff like proxying:
 
   ```ruby
-  spin do
-    loop { do_some_stuff }
-  ensure
-    shutdown_gracefully if Fiber.current.graceful_shutdown?
+  def two_way_proxy(socket1, socket2)
+    backend = Thread.current.backend
+    f1 = spin { backend.splice_loop(socket1, socket2) }
+    f2 = spin { backend.splice_loop(socket2, socket1) }
+    Fiber.await(f1, f2)
   end
   ```
 
+- Graceful shutdown again:
+  - What happens to children when doing a graceful shutdown?
+  - What are the implications of passing graceful shutdown flag to children?
+  - What about errors while doing a graceful shutdown?
+  - What about graceful restarts?
+  - Some interesting discussions:
+    - https://trio.discourse.group/search?q=graceful%20shutdown
+    - https://github.com/python-trio/trio/issues/147
+    - https://github.com/python-trio/trio/issues/143
+    - https://trio.discourse.group/t/graceful-shutdown/93/2
+    - https://250bpm.com/blog:146/
+    - https://www.rodrigoaraujo.me/posts/golang-pattern-graceful-shutdown-of-concurrent-events/
+    - https://github.com/tj/go-gracefully
   - `Fiber#finalize_children` should pass graceful shutdown flag to children
-
-- More tight loops
-  - IO#gets_loop, Socket#gets_loop, OpenSSL::Socket#gets_loop (medium effort)
-  - Fiber#receive_loop (very little effort, should be implemented in C)
+  - A good use case is an HTTP server that on graceful shutdown:
+    - stops listening
+    - waits for all ongoing requests to finish, optionally with a timeout
 
 ## Roadmap for Polyphony 1.0
 
