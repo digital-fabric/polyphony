@@ -1038,3 +1038,67 @@ class RestartTest < MiniTest::Test
     assert_equal [f, 'foo', 'bar', :done, f2, 'baz', 42, :done], buffer
   end
 end
+
+class GracefulTerminationTest < MiniTest::Test
+  def test_graceful_termination
+    buffer = []
+    f = spin do
+      buffer << 1
+      snooze
+      buffer << 2
+      sleep 3
+      buffer << 3
+    ensure
+      buffer << 4 if Fiber.current.graceful_shutdown?
+    end
+
+    3.times { snooze }
+    f.terminate(false)
+    f.await
+    assert_equal [1, 2], buffer
+
+    buffer = []
+    f = spin do
+      buffer << 1
+      snooze
+      buffer << 2
+      sleep 3
+      buffer << 3
+    ensure
+      buffer << 4 if Fiber.current.graceful_shutdown?
+    end
+
+    3.times { snooze }
+    f.terminate(true)
+    f.await
+    assert_equal [1, 2, 4], buffer
+  end
+
+  def test_graceful_child_shutdown
+    buffer = []
+    f0 = spin do
+      f1 = spin do
+        sleep
+      ensure
+        buffer << 1 if Fiber.current.graceful_shutdown?
+      end
+
+      f2 = spin do
+        sleep
+      ensure
+        buffer << 2 if Fiber.current.graceful_shutdown?
+      end
+
+      sleep
+    ensure
+      Fiber.current.terminate_all_children(true) if Fiber.current.graceful_shutdown?
+      Fiber.current.await_all_children
+    end
+
+    3.times { snooze }
+    f0.terminate(true)
+    f0.await
+
+    assert_equal [1, 2], buffer
+  end
+end

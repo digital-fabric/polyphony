@@ -34,9 +34,18 @@ module Polyphony
       schedule Polyphony::Cancel.new
     end
 
-    def terminate
+    def graceful_shutdown=(graceful)
+      @graceful_shutdown = graceful
+    end
+
+    def graceful_shutdown?
+      @graceful_shutdown
+    end
+
+    def terminate(graceful = false)
       return if @running == false
 
+      @graceful_shutdown = graceful
       schedule Polyphony::Terminate.new
     end
 
@@ -212,11 +221,14 @@ module Polyphony
       @on_child_done&.(child_fiber, result)
     end
 
-    def terminate_all_children
+    def terminate_all_children(graceful = false)
       return unless @children
 
       e = Polyphony::Terminate.new
-      @children.each_key { |c| c.raise e }
+      @children.each_key do |c|
+        c.graceful_shutdown = true if graceful
+        c.raise e
+      end
     end
 
     def await_all_children
@@ -232,8 +244,8 @@ module Polyphony
       results.values
     end
 
-    def shutdown_all_children
-      terminate_all_children
+    def shutdown_all_children(graceful = false)
+      terminate_all_children(graceful)
       await_all_children
     end
   end
