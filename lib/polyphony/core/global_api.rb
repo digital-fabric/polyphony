@@ -59,7 +59,15 @@ module Polyphony
           throttled_loop(rate: rate, interval: interval, &block)
         end
       else
-        Fiber.current.spin(tag, caller) { loop(&block) }
+        spin_looped_block(tag, caller, block)
+      end
+    end
+
+    def spin_looped_block(tag, caller, block)
+      Fiber.current.spin(tag, caller) do
+        block.call while true
+      rescue LocalJumpError, StopIteration
+        # break called or StopIteration raised
       end
     end
 
@@ -137,6 +145,8 @@ module Polyphony
           throttler.(&block)
         end
       end
+    rescue LocalJumpError, StopIteration
+      # break called or StopIteration raised
     ensure
       throttler&.stop
     end

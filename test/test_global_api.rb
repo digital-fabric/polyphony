@@ -307,6 +307,36 @@ class SpinLoopTest < MiniTest::Test
     f.stop
     assert_in_range 1..3, counter
   end
+
+  def test_spin_loop_break
+    i = 0
+    f = spin_loop do
+      i += 1
+      snooze
+      break if i >= 5
+    end
+    f.await
+    assert_equal 5, i
+
+    i = 0
+    f = spin_loop do
+      i += 1
+      snooze
+      raise StopIteration if i >= 5
+    end
+    f.await
+    assert_equal 5, i
+  end
+
+  def test_throttled_spin_loop_break
+    i = 0
+    f = spin_loop(rate: 100) do
+      i += 1
+      break if i >= 5
+    end
+    f.await
+    assert_equal 5, i
+  end
 end
 
 class SpinScopeTest < MiniTest::Test
