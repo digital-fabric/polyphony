@@ -63,14 +63,15 @@ class HTTPClientTest < MiniTest::Test
   require 'json'
 
   def test_http
-    res = HTTParty.get('http://worldtimeapi.org/api/timezone/Europe/Paris')
+    res = HTTParty.get('http://ipinfo.io/')
+
     response = JSON.load(res.body)
-    assert_equal "CET", response['abbreviation']
+    assert_equal 'https://ipinfo.io/missingauth', response['readme']
   end
 
   def test_https
-    res = HTTParty.get('https://worldtimeapi.org/api/timezone/Europe/Paris')
+    res = HTTParty.get('https://ipinfo.io/')
     response = JSON.load(res.body)
-    assert_equal "CET", response['abbreviation']
+    assert_equal 'https://ipinfo.io/missingauth', response['readme']
   end
 end
