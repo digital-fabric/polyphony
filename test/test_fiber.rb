@@ -639,7 +639,6 @@ class FiberTest < MiniTest::Test
         i.close
         f.await
       rescue Exception => e
-        trace e
         o << e.class.name
         o.close
       end
