@@ -31,7 +31,7 @@ class TimerMoveOnAfterTest < MiniTest::Test
     end
     t1 = Time.now
 
-    assert_in_range 0.01..0.02, t1 - t0
+    assert_in_range 0.01..0.025, t1 - t0
     assert_equal :bar, v
   end
 

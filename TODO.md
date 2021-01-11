@@ -1,6 +1,7 @@
-- Check segfault when doing lots of `cancel_after` calls
+- Check segfault when resetting a `cancel_after` timeout lots of times at very high rate
+- Check why `throttled_loop` inside of `move_on_after` fails to stop
 
-- Override stock `SizedQueue` impl with Queue with capacity
+- Override stock `::SizedQueue` impl with Queue with capacity
 
 - Add support for `break` and `StopIteration` in all loops (with tests)
 
