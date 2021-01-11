@@ -14,6 +14,7 @@ Thread.current.backend = Polyphony::Backend.new
 require_relative './polyphony/core/global_api'
 require_relative './polyphony/core/resource_pool'
 require_relative './polyphony/core/sync'
+require_relative './polyphony/core/timer'
 require_relative './polyphony/net'
 require_relative './polyphony/adapters/process'
 

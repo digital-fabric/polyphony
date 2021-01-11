@@ -1,3 +1,5 @@
+- Check segfault when doing lots of `cancel_after` calls
+
 - Override stock `SizedQueue` impl with Queue with capacity
 
 - Add support for `break` and `StopIteration` in all loops (with tests)

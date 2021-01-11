@@ -1,3 +1,7 @@
+## 0.49.0
+
+- Implement `Polyphony::Timer` for performant timeouts
+
 ## 0.48.0
 
 - Implement graceful shutdown
