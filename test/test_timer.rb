@@ -41,12 +41,14 @@ class TimerMoveOnAfterTest < MiniTest::Test
       sleep 0.007
       @timer.reset
       sleep 0.007
+      @timer.reset
+      sleep 0.007
       nil
     end
     t1 = Time.now
 
     assert_nil v
-    assert_in_range 0.014..0.02, t1 - t0
+    assert_in_range 0.02..0.03, t1 - t0
   end
 end
 
