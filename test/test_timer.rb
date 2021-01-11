@@ -71,7 +71,7 @@ class TimerCancelAfterTest < MiniTest::Test
       end
     end
     t1 = Time.now
-    assert_in_range 0.01..0.02, t1 - t0
+    assert_in_range 0.01..0.03, t1 - t0
   end
 
   def test_cancel_after_with_reset
