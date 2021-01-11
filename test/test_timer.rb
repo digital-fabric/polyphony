@@ -50,7 +50,7 @@ class TimerMoveOnAfterTest < MiniTest::Test
   end
 end
 
-class CancelAfterTest < MiniTest::Test
+class TimerCancelAfterTest < MiniTest::Test
   def setup
     @timer = Polyphony::Timer.new(resolution: 0.01)
   end
