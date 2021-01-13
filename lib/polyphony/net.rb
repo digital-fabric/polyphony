@@ -8,10 +8,7 @@ module Polyphony
   module Net
     class << self
       def tcp_connect(host, port, opts = {})
-        socket = ::Socket.new(:INET, :STREAM).tap do |s|
-          addr = ::Socket.sockaddr_in(port, host)
-          s.connect(addr)
-        end
+        socket = TCPSocket.new(host, port)
         if opts[:secure_context] || opts[:secure]
           secure_socket(socket, opts[:secure_context], opts.merge(host: host))
         else
@@ -23,7 +20,7 @@ module Polyphony
         host ||= '0.0.0.0'
         raise 'Port number not specified' unless port
 
-        socket = socket_from_options(host, port, opts)
+        socket = listening_socket_from_options(host, port, opts)
         if opts[:secure_context] || opts[:secure]
           secure_server(socket, opts[:secure_context], opts)
         else
@@ -31,7 +28,7 @@ module Polyphony
         end
       end
 
-      def socket_from_options(host, port, opts)
+      def listening_socket_from_options(host, port, opts)
         ::Socket.new(:INET, :STREAM).tap do |s|
           s.reuse_addr if opts[:reuse_addr]
           s.dont_linger if opts[:dont_linger]
