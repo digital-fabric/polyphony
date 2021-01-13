@@ -72,7 +72,7 @@ static VALUE Backend_initialize(VALUE self) {
   backend->pending_count = 0;
   backend->poll_no_wait_count = 0;
   backend->pending_sqes = 0;
-  backend->prepared_limit = 256;
+  backend->prepared_limit = 2048;
 
   context_store_initialize(&backend->store);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
