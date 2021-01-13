@@ -44,7 +44,7 @@ module Polyphony
       rescue SystemExit
         # fall through to ensure
       rescue Exception => e
-        warn e.full_message
+        STDERR << e.full_message
         exit!
       ensure
         exit_forked_process
