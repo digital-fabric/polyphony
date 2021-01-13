@@ -24,6 +24,8 @@ module Polyphony
       def kill_and_await(sig, pid)
         ::Process.kill(sig, pid)
         Thread.current.backend.waitpid(pid)
+      rescue Errno::ERSCH
+        # ignore
       end
     end
   end
