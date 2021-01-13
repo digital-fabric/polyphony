@@ -1,3 +1,9 @@
+## 0.49.1
+
+- Use `TCPSocket` instead of `Socket` in `Net.tcp_connect`
+- Catch `Errno::ERSCH` in `Process.kill_and_await`
+- Set io_uring queue size to 2048
+
 ## 0.49.0
 
 - Implement `Polyphony::Timer` for performant timeouts
