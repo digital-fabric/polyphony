@@ -100,6 +100,31 @@ class BackendTest < MiniTest::Test
     assert_equal [:ready, 'foo', 'bar', :done], buf
   end
 
+  def test_read_loop_terminate
+    i, o = IO.pipe
+
+    buf = []
+    parent = spin do
+      f = spin do
+        buf << :ready
+        @backend.read_loop(i) { |d| buf << d }
+        buf << :done
+      end
+      suspend
+    end
+
+    # writing always causes snoozing
+    o << 'foo'
+    sleep 0.01
+    o << 'bar'
+    sleep 0.01
+
+    parent.stop
+
+    parent.await
+    assert_equal [:ready, 'foo', 'bar'], buf
+  end
+
   def test_accept_loop
     server = TCPServer.new('127.0.0.1', 1234)
 
