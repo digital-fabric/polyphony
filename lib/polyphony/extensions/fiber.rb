@@ -245,8 +245,12 @@ module Polyphony
     end
 
     def shutdown_all_children(graceful = false)
-      terminate_all_children(graceful)
-      await_all_children
+      return unless @children
+
+      @children.keys.each do |c|
+        c.terminate(graceful)
+        c.await
+      end
     end
   end
 
@@ -319,13 +323,10 @@ module Polyphony
     # the children are shut down, it is returned along with the uncaught_exception
     # flag set. Otherwise, it returns the given arguments.
     def finalize_children(result, uncaught_exception)
-      begin
-        shutdown_all_children
-      rescue Exception => e
-        result = e
-        uncaught_exception = true
-      end
+      shutdown_all_children
       [result, uncaught_exception]
+    rescue Exception => e
+      [e, true]
     end
 
     def inform_dependants(result, uncaught_exception)

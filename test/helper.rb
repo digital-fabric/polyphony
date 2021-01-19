@@ -57,8 +57,7 @@ class MiniTest::Test
 
   def teardown
     # trace "* teardown #{self.name}"
-    Fiber.current.terminate_all_children
-    Fiber.current.await_all_children
+    Fiber.current.shutdown_all_children
     Fiber.current.instance_variable_set(:@auto_watcher, nil)
   rescue => e
     puts e

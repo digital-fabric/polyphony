@@ -41,8 +41,7 @@ class ::Thread
 
   def finalize(result)
     unless Fiber.current.children.empty?
-      Fiber.current.terminate_all_children
-      Fiber.current.await_all_children
+      Fiber.current.shutdown_all_children
     end
     @finalization_mutex.synchronize do
       @terminated = true

@@ -46,8 +46,7 @@ class SignalTrapTest < Minitest::Test
       end.await
     rescue Interrupt
       o.puts "3 - interrupted"
-      Fiber.current.terminate_all_children
-      Fiber.current.await_all_children
+      Fiber.current.shutdown_all_children
     ensure
       o.close
     end

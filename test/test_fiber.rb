@@ -1038,6 +1038,21 @@ class RestartTest < MiniTest::Test
   end
 end
 
+class ChildrenTerminationTest < MiniTest::Test
+  def test_shutdown_all_children
+    f = spin do
+      1000.times { spin { suspend } }
+      suspend
+    end
+
+    snooze
+    assert_equal 1000, f.children.size
+
+    f.shutdown_all_children
+    assert_equal 0, f.children.size
+  end
+end
+
 class GracefulTerminationTest < MiniTest::Test
   def test_graceful_termination
     buffer = []

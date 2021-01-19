@@ -26,14 +26,12 @@ def write_response(socket)
   socket.write "HTTP/1.1 #{status_code}\r\n#{headers}\r\n#{data}"
 end
 
-server = TCPServer.open('0.0.0.0', 1234)
-puts "pid #{Process.pid} Polyphony (#{Thread.current.backend.kind}) listening on port 1234"
+server = TCPServer.open('0.0.0.0', 4411)
+puts "pid #{Process.pid} Polyphony (#{Thread.current.backend.kind}) listening on port 4411"
 
 spin_loop(interval: 10) do
   p Thread.current.fiber_scheduling_stats
 end
-
-GC.disable
 
 server.accept_loop do |c|
   spin { handle_client(c) }
