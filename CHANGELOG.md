@@ -1,3 +1,8 @@
+## 0.49.2
+
+- Fix hang with 100s or more child fibers when terminating
+- Fix double pending_count increment in io_uring backend
+
 ## 0.49.1
 
 - Use `TCPSocket` instead of `Socket` in `Net.tcp_connect`
