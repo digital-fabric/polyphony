@@ -263,9 +263,7 @@ int io_uring_backend_defer_submit_and_await(
   // io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
   io_uring_backend_defer_submit(backend);
 
-  backend->pending_count++;
   switchpoint_result = backend_await(backend);
-  backend->pending_count--;
 
   if (!ctx->completed) {
     ctx->result = -ECANCELED;
