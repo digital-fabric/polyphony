@@ -114,7 +114,7 @@ inline double current_time() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   long long ns = ts.tv_sec;
-  ns = ns * 1000000000 + ts.tv_nsec;
+  ns = ns * 1e9 + ts.tv_nsec;
   double t = ns;
   return t / 1e9;
 }
