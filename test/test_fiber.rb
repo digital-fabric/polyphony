@@ -349,6 +349,22 @@ class FiberTest < MiniTest::Test
     assert_equal [:foo, :terminate], buffer
   end
 
+  CMD_TERMINATE_MAIN_FIBER = <<~BASH
+    ruby -rbundler/setup -rpolyphony -e"spin { sleep 0.1; Thread.current.main_fiber.terminate }; begin; sleep; rescue Polyphony::Terminate; STDOUT << 'terminated'; end" 2>&1
+  BASH
+
+  CMD_TERMINATE_CHILD_FIBER = <<~BASH
+    ruby -rbundler/setup -rpolyphony -e"f = spin { sleep }; spin { sleep 0.1; f.terminate }; f.await" 2>&1
+  BASH
+
+  def test_terminate_main_fiber
+    output = `#{CMD_TERMINATE_CHILD_FIBER}`
+    assert_equal '', output
+
+    output = `#{CMD_TERMINATE_MAIN_FIBER}`
+    assert_equal 'terminated', output
+  end
+
   def test_interrupt_timer
     result = []
     f = Fiber.current.spin do
