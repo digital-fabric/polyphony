@@ -65,6 +65,12 @@ VALUE Thread_fiber_scheduling_index(VALUE self, VALUE fiber) {
   return INT2NUM(Runqueue_index_of(runqueue, fiber));
 }
 
+VALUE Thread_fiber_unschedule(VALUE self, VALUE fiber) {
+  VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
+  Runqueue_delete(runqueue, fiber);
+  return self;
+}
+
 VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   schedule_fiber(self, fiber, value, 0);
   return self;
@@ -142,6 +148,7 @@ void Init_Thread() {
     Thread_schedule_fiber_with_priority, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_index", Thread_fiber_scheduling_index, 1);
+  rb_define_method(rb_cThread, "fiber_unschedule", Thread_fiber_unschedule, 1);
 
   rb_define_method(rb_cThread, "debug!", Thread_debug, 0);
 
