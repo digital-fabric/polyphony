@@ -80,6 +80,15 @@ void runqueue_ring_buffer_delete(runqueue_ring_buffer *buffer, VALUE fiber) {
   }
 }
 
+int runqueue_ring_buffer_index_of(runqueue_ring_buffer *buffer, VALUE fiber) {
+  for (unsigned int i = 0; i < buffer->count; i++) {
+    unsigned int idx = (buffer->head + i) % buffer->size;
+    if (buffer->entries[idx].fiber == fiber)
+      return i;
+  }
+  return -1;
+}
+
 void runqueue_ring_buffer_clear(runqueue_ring_buffer *buffer) {
   buffer->count = buffer->head = buffer->tail = 0;
 }

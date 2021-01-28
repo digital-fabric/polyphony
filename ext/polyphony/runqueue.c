@@ -74,6 +74,12 @@ void Runqueue_delete(VALUE self, VALUE fiber) {
   runqueue_ring_buffer_delete(&runqueue->entries, fiber);
 }
 
+int Runqueue_index_of(VALUE self, VALUE fiber) {
+  Runqueue_t *runqueue;
+  GetRunqueue(self, runqueue);
+  return runqueue_ring_buffer_index_of(&runqueue->entries, fiber);
+}
+
 void Runqueue_clear(VALUE self) {
   Runqueue_t *runqueue;
   GetRunqueue(self, runqueue);
