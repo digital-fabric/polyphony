@@ -13,6 +13,7 @@ module Polyphony
     def initialize(value = nil)
       @caller_backtrace = caller
       @value = value
+      super
     end
   end
 

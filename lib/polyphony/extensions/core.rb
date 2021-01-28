@@ -12,11 +12,11 @@ class ::Exception
     attr_accessor :__disable_sanitized_backtrace__
   end
 
-  attr_accessor :source_fiber, :__raising_fiber__
+  attr_accessor :source_fiber, :raising_fiber
 
   alias_method :orig_initialize, :initialize
   def initialize(*args)
-    @__raising_fiber__ = Fiber.current
+    @raising_fiber = Fiber.current
     orig_initialize(*args)
   end
 
@@ -31,10 +31,10 @@ class ::Exception
   end
 
   def sanitized_backtrace
-    return sanitize(orig_backtrace) unless @__raising_fiber__
+    return sanitize(orig_backtrace) unless @raising_fiber
 
     backtrace = orig_backtrace || []
-    sanitize(backtrace + @__raising_fiber__.caller)
+    sanitize(backtrace + @raising_fiber.caller)
   end
 
   POLYPHONY_DIR = File.expand_path(File.join(__dir__, '..'))

@@ -29,7 +29,7 @@ module Polyphony
       spin do
         sleep interval
         exception = cancel_exception(with_exception)
-        exception.__raising_fiber__ = nil
+        exception.raising_fiber = nil
         fiber.schedule exception
       end
     end
