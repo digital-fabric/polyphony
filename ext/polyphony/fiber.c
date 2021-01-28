@@ -101,7 +101,8 @@ VALUE Fiber_await(VALUE self) {
   }
   rb_hash_aset(waiting_fibers, fiber, Qtrue);
 
-  result = Thread_switch_fiber(rb_thread_current());
+  VALUE backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
+  result = Backend_wait_event(backend, Qnil);
 
   rb_hash_delete(waiting_fibers, fiber);
   RAISE_IF_EXCEPTION(result);
