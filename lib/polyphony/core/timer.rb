@@ -11,12 +11,45 @@ module Polyphony
     def stop
       @fiber.stop
     end
-  
-    def cancel_after(duration, with_exception: Polyphony::Cancel)
+
+    def sleep(duration)
       fiber = Fiber.current
       @timeouts[fiber] = {
-        duration: duration,
-        target_stamp: Time.now + duration,
+        interval: duration,
+        target_stamp: Time.now + duration
+      }
+      Thread.current.backend.wait_event(true)
+    ensure
+      @timeouts.delete(fiber)
+    end
+
+    def after(interval, &block)
+      spin do
+        self.sleep interval
+        block.()
+      end
+    end
+
+    def every(interval)
+      fiber = Fiber.current
+      @timeouts[fiber] = {
+        interval: interval,
+        target_stamp: Time.now + interval,
+        recurring: true
+      }
+      while true
+        Thread.current.backend.wait_event(true)
+        yield
+      end
+    ensure
+      @timeouts.delete(fiber)
+    end
+  
+    def cancel_after(interval, with_exception: Polyphony::Cancel)
+      fiber = Fiber.current
+      @timeouts[fiber] = {
+        interval: interval,
+        target_stamp: Time.now + interval,
         exception: with_exception
       }
       yield
@@ -24,12 +57,12 @@ module Polyphony
       @timeouts.delete(fiber)
     end
 
-    def move_on_after(duration, with_value: nil)
+    def move_on_after(interval, with_value: nil)
       fiber = Fiber.current
       @timeouts[fiber] = {
-        duration: duration,
-        target_stamp: Time.now + duration,
-        value: with_value
+        interval: interval,
+        target_stamp: Time.now + interval,
+        exception: [Polyphony::MoveOn, with_value]
       }
       yield
     rescue Polyphony::MoveOn => e
@@ -37,36 +70,43 @@ module Polyphony
     ensure
       @timeouts.delete(fiber)
     end
-  
+
     def reset
       record = @timeouts[Fiber.current]
       return unless record
   
-      record[:target_stamp] = Time.now + record[:duration]
+      record[:target_stamp] = Time.now + record[:interval]
     end
-  
+
     private
 
     def timeout_exception(record)
       case (exception = record[:exception])
-      when Class then exception.new
-      when Array then exception[0].new(exception[1])
-      when nil then Polyphony::MoveOn.new(record[:value])
-      else RuntimeError.new(exception)
+      when Array
+        exception[0].new(exception[1])
+      when Class
+        exception.new
+      else
+        RuntimeError.new(exception)
       end
     end
 
     def update
+      return if @timeouts.empty?
+
       now = Time.now
-      # elapsed = nil
       @timeouts.each do |fiber, record|
         next if record[:target_stamp] > now
 
-        exception = timeout_exception(record)
-        # (elapsed ||= []) << fiber
-        fiber.schedule exception
+        value = record[:exception] ? timeout_exception(record) : record[:value]
+        fiber.schedule value
+
+        if record[:recurring]
+          while record[:target_stamp] <= now
+            record[:target_stamp] += record[:interval]
+          end
+        end
       end
-      # elapsed&.each { |f| @timeouts.delete(f) }
     end
   end
 end

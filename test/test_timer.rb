@@ -11,7 +11,7 @@ class TimerMoveOnAfterTest < MiniTest::Test
     @timer.stop
   end
 
-  def test_move_on_after
+  def test_timer_move_on_after
     t0 = Time.now
     v = @timer.move_on_after(0.1) do
       sleep 1
@@ -23,7 +23,7 @@ class TimerMoveOnAfterTest < MiniTest::Test
     assert_nil v
   end
 
-  def test_move_on_after_with_value
+  def test_timer_move_on_after_with_value
     t0 = Time.now
     v = @timer.move_on_after(0.01, with_value: :bar) do
       sleep 1
@@ -35,7 +35,7 @@ class TimerMoveOnAfterTest < MiniTest::Test
     assert_equal :bar, v
   end
 
-  def test_move_on_after_with_reset
+  def test_timer_move_on_after_with_reset
     t0 = Time.now
     v = @timer.move_on_after(0.01, with_value: :moved_on) do
       sleep 0.007
@@ -61,7 +61,7 @@ class TimerCancelAfterTest < MiniTest::Test
     @timer.stop
   end
 
-  def test_cancel_after
+  def test_timer_cancel_after
     t0 = Time.now
 
     assert_raises Polyphony::Cancel do
@@ -74,7 +74,7 @@ class TimerCancelAfterTest < MiniTest::Test
     assert_in_range 0.01..0.03, t1 - t0
   end
 
-  def test_cancel_after_with_reset
+  def test_timer_cancel_after_with_reset
     t0 = Time.now
     @timer.cancel_after(0.01) do
       sleep 0.007
@@ -82,13 +82,13 @@ class TimerCancelAfterTest < MiniTest::Test
       sleep 0.007
     end
     t1 = Time.now
-    assert_in_range 0.014..0.024, t1 - t0
+    assert_in_range 0.013..0.024, t1 - t0
   end
 
   class CustomException < Exception
   end
 
-  def test_cancel_after_with_custom_exception
+  def test_timer_cancel_after_with_custom_exception
     assert_raises CustomException do
       @timer.cancel_after(0.01, with_exception: CustomException) do
         sleep 1
@@ -120,5 +120,38 @@ class TimerCancelAfterTest < MiniTest::Test
       assert_kind_of RuntimeError, e
       assert_equal 'foo', e.message
     end
+  end
+end
+
+class TimerMiscTest < MiniTest::Test
+  def setup
+    @timer = Polyphony::Timer.new(resolution: 0.001)
+    sleep 0
+  end
+  
+  def teardown
+    @timer.stop
+  end
+    
+  def test_timer_after
+    buffer = []
+    f = @timer.after(0.01) { buffer << 2 }
+    assert_kind_of Fiber, f
+    snooze
+    assert_equal [], buffer
+    sleep 0.1
+    p :post_sleep
+    assert_equal [2], buffer
+  end
+
+  def test_timer_every
+    buffer = []
+    t0 = Time.now
+    f = spin do
+      @timer.every(0.01) { buffer << 1 }
+    end
+    sleep 0.05
+    f.stop
+    assert_in_range 4..6, buffer.size
   end
 end
