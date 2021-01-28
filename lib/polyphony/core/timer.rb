@@ -16,7 +16,7 @@ module Polyphony
       fiber = Fiber.current
       @timeouts[fiber] = {
         interval: duration,
-        target_stamp: Time.now + duration
+        target_stamp: now + duration
       }
       Thread.current.backend.wait_event(true)
     ensure
@@ -34,7 +34,7 @@ module Polyphony
       fiber = Fiber.current
       @timeouts[fiber] = {
         interval: interval,
-        target_stamp: Time.now + interval,
+        target_stamp: now + interval,
         recurring: true
       }
       while true
@@ -49,7 +49,7 @@ module Polyphony
       fiber = Fiber.current
       @timeouts[fiber] = {
         interval: interval,
-        target_stamp: Time.now + interval,
+        target_stamp: now + interval,
         exception: with_exception
       }
       yield
@@ -61,7 +61,7 @@ module Polyphony
       fiber = Fiber.current
       @timeouts[fiber] = {
         interval: interval,
-        target_stamp: Time.now + interval,
+        target_stamp: now + interval,
         exception: [Polyphony::MoveOn, with_value]
       }
       yield
@@ -75,10 +75,14 @@ module Polyphony
       record = @timeouts[Fiber.current]
       return unless record
   
-      record[:target_stamp] = Time.now + record[:interval]
+      record[:target_stamp] = now + record[:interval]
     end
 
     private
+
+    def now
+      ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
+    end
 
     def timeout_exception(record)
       case (exception = record[:exception])
@@ -94,17 +98,16 @@ module Polyphony
     def update
       return if @timeouts.empty?
 
-      now = Time.now
       @timeouts.each do |fiber, record|
         next if record[:target_stamp] > now
 
         value = record[:exception] ? timeout_exception(record) : record[:value]
         fiber.schedule value
 
-        if record[:recurring]
-          while record[:target_stamp] <= now
-            record[:target_stamp] += record[:interval]
-          end
+        next unless record[:recurring]
+
+        while record[:target_stamp] <= now
+          record[:target_stamp] += record[:interval]
         end
       end
     end
