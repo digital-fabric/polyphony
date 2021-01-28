@@ -1,3 +1,11 @@
+## 0.50.0
+
+- Use `Process::CLOCK_MONOTONIC` in Timer
+- Add `Timer#sleep`, `Timer#after`, `Timer#every`
+- Prevent fiber from being resumed after terminating
+- Add `Thread#fiber_index_of` method
+- Use `Backend#wait_event` in `Fiber#await`
+
 ## 0.49.2
 
 - Fix hang with 100s or more child fibers when terminating
