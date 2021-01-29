@@ -3,6 +3,14 @@
 #include "ruby.h"
 #include "ruby/io.h"
 
+#ifndef __NR_pidfd_open
+#define __NR_pidfd_open 434   /* System call # on most architectures */
+#endif
+
+static int pidfd_open(pid_t pid, unsigned int flags) {
+  return syscall(__NR_pidfd_open, pid, flags);
+}
+
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 // the following is copied verbatim from the Ruby source code (io.c)

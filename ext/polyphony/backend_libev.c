@@ -8,6 +8,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdnoreturn.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "polyphony.h"
 #include "../libev/ev.h"
@@ -757,38 +759,29 @@ VALUE Backend_timeout(int argc,VALUE *argv, VALUE self) {
   return result;
 }
 
-struct libev_child {
-  struct ev_child child;
-  VALUE fiber;
-};
-
-void Backend_child_callback(EV_P_ ev_child *w, int revents)
-{
-  struct libev_child *watcher = (struct libev_child *)w;
-  int exit_status = WEXITSTATUS(w->rstatus);
-  VALUE status;
-
-  status = rb_ary_new_from_args(2, INT2NUM(w->rpid), INT2NUM(exit_status));
-  Fiber_make_runnable(watcher->fiber, status);
-}
-
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
-  Backend_t *backend;
-  struct libev_child watcher;
-  VALUE switchpoint_result = Qnil;
-  GetBackend(self, backend);
+  int pid_int = NUM2INT(pid);
+  int fd = pidfd_open(pid_int, 0);
+  if (fd >= 0) {
+    Backend_t *backend;
+    GetBackend(self, backend);
 
-  watcher.fiber = rb_fiber_current();
-  ev_child_init(&watcher.child, Backend_child_callback, NUM2INT(pid), 0);
-  ev_child_start(backend->ev_loop, &watcher.child);
+    VALUE resume_value = libev_wait_fd(backend, fd, EV_READ, 0);
+    close(fd);
+    RAISE_IF_EXCEPTION(resume_value);
+    RB_GC_GUARD(resume_value);
+  }
 
-  switchpoint_result = backend_await(backend);
-
-  ev_child_stop(backend->ev_loop, &watcher.child);
-  RAISE_IF_EXCEPTION(switchpoint_result);
-  RB_GC_GUARD(watcher.fiber);
-  RB_GC_GUARD(switchpoint_result);
-  return switchpoint_result;
+  int status = 0;
+  pid_t ret = waitpid(pid_int, &status, WNOHANG);
+  if (ret < 0) {
+    int e = errno;
+    if (e == ECHILD)
+      ret = pid_int;
+    else
+      rb_syserr_fail(e, strerror(e));
+  }
+  return rb_ary_new_from_args(2, INT2NUM(ret), INT2NUM(WEXITSTATUS(status)));
 }
 
 void Backend_async_callback(EV_P_ ev_async *w, int revents) { }

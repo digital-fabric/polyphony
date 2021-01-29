@@ -19,14 +19,6 @@
 #include "ruby/thread.h"
 #include "backend_io_uring_context.h"
 
-#ifndef __NR_pidfd_open
-#define __NR_pidfd_open 434   /* System call # on most architectures */
-#endif
-
-static int pidfd_open(pid_t pid, unsigned int flags) {
-  return syscall(__NR_pidfd_open, pid, flags);
-}
-
 VALUE SYM_io_uring;
 
 typedef struct Backend_t {
@@ -879,19 +871,28 @@ VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
 }
 
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
-  Backend_t *backend;
   int pid_int = NUM2INT(pid);
   int fd = pidfd_open(pid_int, 0);
-  GetBackend(self, backend);
+
+  if (fd >= 0) {
+    Backend_t *backend;
+    GetBackend(self, backend);
+
+    VALUE resume_value = io_uring_backend_wait_fd(backend, fd, 0);
+    close(fd);
+    RAISE_IF_EXCEPTION(resume_value);
+    RB_GC_GUARD(resume_value);
+  }
   
-  VALUE resume_value = io_uring_backend_wait_fd(backend, fd, 0);
-  close(fd);
-
-  RAISE_IF_EXCEPTION(resume_value);
-  RB_GC_GUARD(resume_value);
-
   int status;
   pid_t ret = waitpid(pid_int, &status, WNOHANG);
+  if (ret < 0) {
+    int e = errno;
+    if (e == ECHILD)
+      ret = pid_int;
+    else
+      rb_syserr_fail(e, strerror(e));
+  }
   return rb_ary_new_from_args(2, INT2NUM(ret), INT2NUM(WEXITSTATUS(status)));
 }
 
