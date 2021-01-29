@@ -685,11 +685,9 @@ noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
     RB_GC_GUARD(switchpoint_result);
 
     rb_yield(Qnil);
-
-    while (1) {
+    do {
       next_time += interval_d;
-      if (next_time > now) break;
-    }
+    } while (next_time <= now);
   }
 }
 
