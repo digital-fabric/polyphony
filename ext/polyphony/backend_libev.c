@@ -693,18 +693,6 @@ noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
   }
 }
 
-VALUE Backend_timeout_safe(VALUE arg) {
-  return rb_yield(arg);
-}
-
-VALUE Backend_timeout_rescue(VALUE arg, VALUE exception) {
-  return exception;
-}
-
-VALUE Backend_timeout_ensure_safe(VALUE arg) {
-  return rb_rescue2(Backend_timeout_safe, Qnil, Backend_timeout_rescue, Qnil, rb_eException, (VALUE)0);
-}
-
 struct libev_timeout {
   struct ev_timer timer;
   VALUE fiber;

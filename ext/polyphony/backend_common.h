@@ -135,3 +135,15 @@ inline VALUE backend_timeout_exception(VALUE exception) {
   else
     return rb_funcall(rb_eRuntimeError, ID_new, 1, exception);
 }
+
+VALUE Backend_timeout_safe(VALUE arg) {
+  return rb_yield(arg);
+}
+
+VALUE Backend_timeout_rescue(VALUE arg, VALUE exception) {
+  return exception;
+}
+
+VALUE Backend_timeout_ensure_safe(VALUE arg) {
+  return rb_rescue2(Backend_timeout_safe, Qnil, Backend_timeout_rescue, Qnil, rb_eException, (VALUE)0);
+}

@@ -803,18 +803,6 @@ VALUE Backend_timer_loop(VALUE self, VALUE interval) {
   }
 }
 
-VALUE Backend_timeout_safe(VALUE arg) {
-  return rb_yield(arg);
-}
-
-VALUE Backend_timeout_rescue(VALUE arg, VALUE exception) {
-  return exception;
-}
-
-VALUE Backend_timeout_ensure_safe(VALUE arg) {
-  return rb_rescue2(Backend_timeout_safe, Qnil, Backend_timeout_rescue, Qnil, rb_eException, (VALUE)0);
-}
-
 struct Backend_timeout_ctx {
   Backend_t *backend;
   op_context_t *ctx;
@@ -853,7 +841,7 @@ VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
   ctx->resume_value = timeout;
   io_uring_prep_timeout(sqe, &ts, 0, 0);
   io_uring_sqe_set_data(sqe, ctx);
-  io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
+  // io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
   io_uring_backend_defer_submit(backend);
 
   struct Backend_timeout_ctx timeout_ctx = {backend, ctx};
