@@ -252,7 +252,7 @@ int io_uring_backend_defer_submit_and_await(
   VALUE switchpoint_result = Qnil;
 
   io_uring_sqe_set_data(sqe, ctx);
-  // io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
+  io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
   io_uring_backend_defer_submit(backend);
 
   switchpoint_result = backend_await(backend);
@@ -841,7 +841,6 @@ VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
   ctx->resume_value = timeout;
   io_uring_prep_timeout(sqe, &ts, 0, 0);
   io_uring_sqe_set_data(sqe, ctx);
-  // io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
   io_uring_backend_defer_submit(backend);
 
   struct Backend_timeout_ctx timeout_ctx = {backend, ctx};
