@@ -110,7 +110,7 @@ class IOTest < MiniTest::Test
     assert_equal [], buf
     
     o << "ulous\n"
-    10.times { snooze }
+    15.times { snooze }
     assert_equal ["fabulous\n"], buf
 
     o.close
