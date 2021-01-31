@@ -1,3 +1,10 @@
+## 0.50.1
+
+- Set `IOSQE_ASYNC` flag in io_uring backend
+- Fix error handling in `Backend#waitpid`
+- Reimplement libev backend's `#waitpid` by using pidfd_open (in similar manner
+  to the io_uring backend)
+
 ## 0.50.0
 
 - Use `Process::CLOCK_MONOTONIC` in Timer
