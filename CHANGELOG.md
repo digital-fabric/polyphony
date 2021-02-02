@@ -1,3 +1,8 @@
+## 0.51.0
+
+- Implement `IO#feed_loop`, `Socket#feed_loop`
+- Fix error handling in `Process.kill_and_await`
+
 ## 0.50.1
 
 - Set `IOSQE_ASYNC` flag in io_uring backend
