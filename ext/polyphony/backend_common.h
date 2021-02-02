@@ -107,6 +107,13 @@ inline VALUE backend_snooze() {
   READ_LOOP_PREPARE_STR(); \
 }
 
+#define READ_LOOP_PASS_STR_TO_RECEIVER(receiver, method_id) { \
+  io_set_read_length(str, total, shrinkable); \
+  io_enc_str(str, fptr); \
+  rb_funcall_passing_block(receiver, method_id, 1, &str); \
+  READ_LOOP_PREPARE_STR(); \
+}
+
 inline void rectify_io_file_pos(rb_io_t *fptr) {
   // Apparently after reopening a closed file, the file position is not reset,
   // which causes the read to fail. Fortunately we can use fptr->rbuf.len to

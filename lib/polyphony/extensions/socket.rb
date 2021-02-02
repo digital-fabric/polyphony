@@ -31,6 +31,10 @@ class ::Socket
   end
   alias_method :read_loop, :recv_loop
 
+  def feed_loop(receiver, method, &block)
+    Thread.current.backend.recv_feed_loop(self, receiver, method, &block)
+  end
+
   def recvfrom(maxlen, flags = 0)
     @read_buffer ||= +''
     while true
@@ -146,6 +150,10 @@ class ::TCPSocket
   end
   alias_method :read_loop, :recv_loop
 
+  def feed_loop(receiver, method, &block)
+    Thread.current.backend.recv_feed_loop(self, receiver, method, &block)
+  end
+
   def send(mesg, flags = 0)
     Thread.current.backend.send(self, mesg)
   end
@@ -226,6 +234,10 @@ class ::UNIXSocket
     Thread.current.backend.recv_loop(self, &block)
   end
   alias_method :read_loop, :recv_loop
+
+  def feed_loop(receiver, method, &block)
+    Thread.current.backend.recv_feed_loop(self, receiver, method, &block)
+  end
 
   def send(mesg, flags = 0)
     Thread.current.backend.send(self, mesg)

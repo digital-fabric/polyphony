@@ -28,6 +28,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'rubocop',              '0.85.1'
   s.add_development_dependency  'pry',                  '0.13.1'
   
+  s.add_development_dependency  'msgpack',              '1.4.2'
   s.add_development_dependency  'pg',                   '1.1.4'
   s.add_development_dependency  'redis',                '4.1.0'
   s.add_development_dependency  'hiredis',              '0.6.3'

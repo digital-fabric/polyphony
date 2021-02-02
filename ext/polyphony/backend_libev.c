@@ -334,6 +334,58 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
+VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
+  Backend_t *backend;
+  struct libev_io watcher;
+  rb_io_t *fptr;
+  VALUE str;
+  long total;
+  long len = 8192;
+  int shrinkable;
+  char *buf;
+  VALUE switchpoint_result = Qnil;
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
+  ID method_id = SYM2ID(method);
+
+  READ_LOOP_PREPARE_STR();
+
+  GetBackend(self, backend);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetOpenFile(io, fptr);
+  rb_io_check_byte_readable(fptr);
+  io_set_nonblock(fptr, io);
+  rectify_io_file_pos(fptr);
+  watcher.fiber = Qnil;
+
+  while (1) {
+    ssize_t n = read(fptr->fd, buf, len);
+    if (n < 0) {
+      int e = errno;
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_READ);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      switchpoint_result = backend_snooze();
+
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+
+      if (n == 0) break; // EOF
+      total = n;
+      READ_LOOP_PASS_STR_TO_RECEIVER(receiver, method_id);
+    }
+  }
+
+  RB_GC_GUARD(str);
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return io;
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
 VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   Backend_t *backend;
   struct libev_io watcher;
@@ -811,12 +863,14 @@ void Init_Backend() {
 
   rb_define_method(cBackend, "read", Backend_read, 4);
   rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
+  rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
   rb_define_method(cBackend, "write", Backend_write_m, -1);
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
   rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_loop", Backend_read_loop, 1);
+  rb_define_method(cBackend, "recv_feed_loop", Backend_feed_loop, 3);
   rb_define_method(cBackend, "send", Backend_write, 2);
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);

@@ -220,6 +220,10 @@ class ::IO
     Thread.current.backend.read_loop(self, &block)
   end
 
+  def feed_loop(receiver, method, &block)
+    Thread.current.backend.feed_loop(self, receiver, method, &block)
+  end
+
   # alias_method :orig_read, :read
   # def read(length = nil, outbuf = nil)
   #   if length

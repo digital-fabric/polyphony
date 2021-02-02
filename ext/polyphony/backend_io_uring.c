@@ -389,6 +389,52 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   return io;
 }
 
+VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
+  Backend_t *backend;
+  rb_io_t *fptr;
+  VALUE str;
+  long total;
+  long len = 8192;
+  int shrinkable;
+  char *buf;
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
+  ID method_id = SYM2ID(method);
+
+  READ_LOOP_PREPARE_STR();
+
+  GetBackend(self, backend);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetOpenFile(io, fptr);
+  rb_io_check_byte_readable(fptr);
+  rectify_io_file_pos(fptr);
+
+  while (1) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_READ);
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_read(sqe, fptr->fd, buf, len, -1);
+    
+    ssize_t result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+    RAISE_IF_EXCEPTION(resume_value);
+    if (!ctx->completed) return resume_value;
+    RB_GC_GUARD(resume_value);
+
+    if (result < 0)
+      rb_syserr_fail(-result, strerror(-result));
+    else if (!result)
+      break; // EOF
+    else {
+      total = result;
+      READ_LOOP_PASS_STR_TO_RECEIVER(receiver, method_id);
+    }
+  }
+
+  RB_GC_GUARD(str);
+
+  return io;
+}
+
 VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   Backend_t *backend;
   rb_io_t *fptr;
@@ -589,6 +635,51 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
     else {
       total = result;
       READ_LOOP_YIELD_STR();
+    }
+  }
+
+  RB_GC_GUARD(str);
+  return io;
+}
+
+VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
+  Backend_t *backend;
+  rb_io_t *fptr;
+  VALUE str;
+  long total;
+  long len = 8192;
+  int shrinkable;
+  char *buf;
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
+  ID method_id = SYM2ID(method);
+
+  READ_LOOP_PREPARE_STR();
+
+  GetBackend(self, backend);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetOpenFile(io, fptr);
+  rb_io_check_byte_readable(fptr);
+  rectify_io_file_pos(fptr);
+
+  while (1) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_RECV);
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_recv(sqe, fptr->fd, buf, len, 0);
+    
+    int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+    RAISE_IF_EXCEPTION(resume_value);
+    if (!ctx->completed) return resume_value;
+    RB_GC_GUARD(resume_value);
+
+    if (result < 0)
+      rb_syserr_fail(-result, strerror(-result));
+    else if (!result)
+      break; // EOF
+    else {
+      total = result;
+      READ_LOOP_PASS_STR_TO_RECEIVER(receiver, method_id);
     }
   }
 
@@ -918,9 +1009,11 @@ void Init_Backend() {
 
   rb_define_method(cBackend, "read", Backend_read, 4);
   rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
+  rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
   rb_define_method(cBackend, "write", Backend_write_m, -1);
   rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 1);
+  rb_define_method(cBackend, "recv_feed_loop", Backend_recv_feed_loop, 3);
   rb_define_method(cBackend, "send", Backend_send, 2);
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);

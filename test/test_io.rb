@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'helper'
+require 'msgpack'
 
 class IOTest < MiniTest::Test
   def setup
@@ -110,7 +111,7 @@ class IOTest < MiniTest::Test
     assert_equal [], buf
     
     o << "ulous\n"
-    15.times { snooze }
+    sleep 0.01
     assert_equal ["fabulous\n"], buf
 
     o.close
@@ -172,6 +173,57 @@ class IOTest < MiniTest::Test
     end
 
     assert_equal 'hello: world', buf
+  end
+
+  def test_feed_loop_with_block
+    i, o = IO.pipe
+    unpacker = MessagePack::Unpacker.new
+    buffer = []
+    reader = spin do
+      i.feed_loop(unpacker, :feed_each) { |msg| buffer << msg }
+    end
+    o << 'foo'.to_msgpack
+    sleep 0.01
+    assert_equal ['foo'], buffer
+
+    o << 'bar'.to_msgpack
+    sleep 0.01
+    assert_equal ['foo', 'bar'], buffer
+
+    o << 'baz'.to_msgpack
+    sleep 0.01
+    assert_equal ['foo', 'bar', 'baz'], buffer
+  end
+
+  class Receiver
+    attr_reader :buffer
+
+    def initialize
+      @buffer = []
+    end
+
+    def recv(obj)
+      @buffer << obj
+    end
+  end
+
+  def test_feed_loop_without_block
+    i, o = IO.pipe
+    receiver = Receiver.new
+    reader = spin do
+      i.feed_loop(receiver, :recv)
+    end
+    o << 'foo'
+    sleep 0.01
+    assert_equal ['foo'], receiver.buffer
+
+    o << 'bar'
+    sleep 0.01
+    assert_equal ['foo', 'bar'], receiver.buffer
+
+    o << 'baz'
+    sleep 0.01
+    assert_equal ['foo', 'bar', 'baz'], receiver.buffer
   end
 end
 

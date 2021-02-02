@@ -72,6 +72,7 @@ GEM
       builder
       minitest (>= 5.0)
       ruby-progressbar
+    msgpack (1.4.2)
     multi_xml (0.6.0)
     mysql2 (0.5.3)
     parallel (1.19.1)
@@ -136,6 +137,7 @@ DEPENDENCIES
   just-the-docs (~> 0.3.0)
   minitest (= 5.13.0)
   minitest-reporters (= 1.4.2)
+  msgpack (= 1.4.2)
   mysql2 (= 0.5.3)
   pg (= 1.1.4)
   polyphony!

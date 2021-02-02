@@ -2,6 +2,7 @@
 
 require_relative 'helper'
 require 'fileutils'
+require 'msgpack'
 
 class SocketTest < MiniTest::Test
   def setup
@@ -26,6 +27,39 @@ class SocketTest < MiniTest::Test
     client = TCPSocket.new('127.0.0.1', port)
     client.write("1234\n")
     assert_equal "1234\n", client.recv(8192)
+    client.close
+  ensure
+    server_fiber&.stop
+    server_fiber&.await
+    server&.close
+  end
+
+  def test_feed_loop
+    port = rand(1234..5678)
+    server = TCPServer.new('127.0.0.1', port)
+
+    server_fiber = spin do
+      reader = MessagePack::Unpacker.new
+      while (socket = server.accept)
+        spin do
+          socket.feed_loop(reader, :feed_each) do |msg|
+            msg = { 'result' => msg['x'] + msg['y'] }
+            socket << msg.to_msgpack
+          end
+        end
+      end
+    end
+
+    snooze
+    client = TCPSocket.new('127.0.0.1', port)
+    reader = MessagePack::Unpacker.new
+    client << { 'x' => 13, 'y' => 14 }.to_msgpack
+    result = nil
+    client.feed_loop(reader, :feed_each) do |msg|
+      result = msg
+      break
+    end
+    assert_equal({ 'result' => 27}, result)
     client.close
   ensure
     server_fiber&.stop
