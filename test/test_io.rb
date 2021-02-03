@@ -195,7 +195,7 @@ class IOTest < MiniTest::Test
     assert_equal ['foo', 'bar', 'baz'], buffer
   end
 
-  class Receiver
+  class Receiver1
     attr_reader :buffer
 
     def initialize
@@ -209,9 +209,40 @@ class IOTest < MiniTest::Test
 
   def test_feed_loop_without_block
     i, o = IO.pipe
-    receiver = Receiver.new
+    receiver = Receiver1.new
     reader = spin do
       i.feed_loop(receiver, :recv)
+    end
+    o << 'foo'
+    sleep 0.01
+    assert_equal ['foo'], receiver.buffer
+
+    o << 'bar'
+    sleep 0.01
+    assert_equal ['foo', 'bar'], receiver.buffer
+
+    o << 'baz'
+    sleep 0.01
+    assert_equal ['foo', 'bar', 'baz'], receiver.buffer
+  end
+
+  class Receiver2
+    attr_reader :buffer
+
+    def initialize
+      @buffer = []
+    end
+
+    def call(obj)
+      @buffer << obj
+    end
+  end
+
+  def test_feed_loop_without_method
+    i, o = IO.pipe
+    receiver = Receiver2.new
+    reader = spin do
+      i.feed_loop(receiver)
     end
     o << 'foo'
     sleep 0.01

@@ -220,22 +220,9 @@ class ::IO
     Thread.current.backend.read_loop(self, &block)
   end
 
-  def feed_loop(receiver, method, &block)
+  def feed_loop(receiver, method = :call, &block)
     Thread.current.backend.feed_loop(self, receiver, method, &block)
   end
-
-  # alias_method :orig_read, :read
-  # def read(length = nil, outbuf = nil)
-  #   if length
-  #     return outbuf ? readpartial(length) : readpartial(length, outbuf)
-  #   end
-
-  #   until eof?
-  #     outbuf ||= +''
-  #     outbuf << readpartial(8192)
-  #   end
-  #   outbuf
-  # end
 
   def wait_readable(timeout = nil)
     if timeout

@@ -31,7 +31,7 @@ class ::Socket
   end
   alias_method :read_loop, :recv_loop
 
-  def feed_loop(receiver, method, &block)
+  def feed_loop(receiver, method = :call, &block)
     Thread.current.backend.recv_feed_loop(self, receiver, method, &block)
   end
 
@@ -150,7 +150,7 @@ class ::TCPSocket
   end
   alias_method :read_loop, :recv_loop
 
-  def feed_loop(receiver, method, &block)
+  def feed_loop(receiver, method = :call, &block)
     Thread.current.backend.recv_feed_loop(self, receiver, method, &block)
   end
 
@@ -235,7 +235,7 @@ class ::UNIXSocket
   end
   alias_method :read_loop, :recv_loop
 
-  def feed_loop(receiver, method, &block)
+  def feed_loop(receiver, method = :call, &block)
     Thread.current.backend.recv_feed_loop(self, receiver, method, &block)
   end
 
