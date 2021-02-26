@@ -92,7 +92,7 @@ int Runqueue_empty_p(VALUE self);
 #ifdef POLYPHONY_BACKEND_LIBEV
 #define Backend_recv_loop Backend_read_loop
 #define Backend_recv_feed_loop Backend_feed_loop
-#define Backend_send Backend_write
+#define Backend_send_m Backend_write_m
 #endif
 
 VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class);
@@ -104,7 +104,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io);
 VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length);
 VALUE Backend_recv_loop(VALUE self, VALUE io);
 VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method);
-VALUE Backend_send(VALUE self, VALUE io, VALUE str);
+VALUE Backend_send_m(int argc, VALUE *argv, VALUE self);
 VALUE Backend_sleep(VALUE self, VALUE duration);
 VALUE Backend_timeout(int argc,VALUE *argv, VALUE self);
 VALUE Backend_timer_loop(VALUE self, VALUE interval);

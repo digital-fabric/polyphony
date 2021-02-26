@@ -1,5 +1,4 @@
-- Implement class methods on `Polyphony` that call `Thread.current.backend`,
-  e.g. `Polyphony._waitpid`
+- Implement Backend_send with variable arity.
 
 - Check segfault when resetting a `cancel_after` timeout lots of times at very high rate
 - Check why `throttled_loop` inside of `move_on_after` fails to stop

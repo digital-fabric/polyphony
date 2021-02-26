@@ -52,12 +52,8 @@ class ::Socket
     Polyphony.backend_send(self, mesg)
   end
 
-  def write(str, *args)
-    if args.empty?
-      Polyphony.backend_send(self, str)
-    else
-      Polyphony.backend_send(self, str + args.join)
-    end
+  def write(*args)
+    Polyphony.backend_send(self, *args)
   end
   alias_method :<<, :write
 
@@ -158,12 +154,8 @@ class ::TCPSocket
     Polyphony.backend_send(self, mesg)
   end
 
-  def write(str, *args)
-    if args.empty?
-      Polyphony.backend_send(self, str)
-    else
-      Polyphony.backend_send(self, str + args.join)
-    end
+  def write(*args)
+    Polyphony.backend_send(self, *args)
   end
   alias_method :<<, :write
 
@@ -243,12 +235,8 @@ class ::UNIXSocket
     Polyphony.backend_send(self, mesg)
   end
 
-  def write(str, *args)
-    if args.empty?
-      Polyphony.backend_send(self, str)
-    else
-      Polyphony.backend_send(self, str + args.join)
-    end
+  def write(*args)
+    Polyphony.backend_send(self, *args)
   end
   alias_method :<<, :write
 

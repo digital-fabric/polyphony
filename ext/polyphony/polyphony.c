@@ -84,8 +84,8 @@ VALUE Polyphony_backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VAL
   return Backend_recv_feed_loop(BACKEND(), io, receiver, method);
 }
 
-VALUE Polyphony_backend_send(VALUE self, VALUE io, VALUE str) {
-  return Backend_send(BACKEND(), io, str);
+VALUE Polyphony_backend_send(int argc, VALUE *argv, VALUE self) {
+  return Backend_send_m(argc, argv, BACKEND());
 }
 
 VALUE Polyphony_backend_sleep(VALUE self, VALUE duration) {
@@ -131,7 +131,7 @@ void Init_Polyphony() {
   rb_define_singleton_method(mPolyphony, "backend_recv", Polyphony_backend_recv, 3);
   rb_define_singleton_method(mPolyphony, "backend_recv_loop", Polyphony_backend_recv_loop, 1);
   rb_define_singleton_method(mPolyphony, "backend_recv_feed_loop", Polyphony_backend_recv_feed_loop, 3);
-  rb_define_singleton_method(mPolyphony, "backend_send", Polyphony_backend_send, 2);
+  rb_define_singleton_method(mPolyphony, "backend_send", Polyphony_backend_send, -1);
   rb_define_singleton_method(mPolyphony, "backend_sleep", Polyphony_backend_sleep, 1);
   rb_define_singleton_method(mPolyphony, "backend_timeout", Polyphony_backend_timeout, -1);
   rb_define_singleton_method(mPolyphony, "backend_timer_loop", Polyphony_backend_timer_loop, 1);

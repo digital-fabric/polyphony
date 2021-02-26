@@ -840,9 +840,7 @@ VALUE Backend_timeout(int argc,VALUE *argv, VALUE self) {
 #ifdef POLYPHONY_USE_PIDFD_OPEN
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
   int pid_int = NUM2INT(pid);
-  printf("Backend_waitpid pid: %d\n", pid_int);
   int fd = pidfd_open(pid_int, 0);
-  printf("  pidfd: %d\n", fd);
   if (fd >= 0) {
     Backend_t *backend;
     GetBackend(self, backend);
@@ -859,16 +857,13 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
 
   int status = 0;
   pid_t ret = waitpid(pid_int, &status, WNOHANG);
-  printf("  waitpid ret: %d\n", ret);
   if (ret < 0) {
     int e = errno;
-    printf("  errno: %d\n", e);
     if (e == ECHILD)
       ret = pid_int;
     else
       rb_syserr_fail(e, strerror(e));
   }
-  printf("  status: %d\n", status);
   return rb_ary_new_from_args(2, INT2NUM(ret), INT2NUM(WEXITSTATUS(status)));
 }
 #else
@@ -953,7 +948,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_loop", Backend_read_loop, 1);
   rb_define_method(cBackend, "recv_feed_loop", Backend_feed_loop, 3);
-  rb_define_method(cBackend, "send", Backend_write, 2);
+  rb_define_method(cBackend, "send", Backend_write_m, -1);
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
