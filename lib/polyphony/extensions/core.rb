@@ -55,7 +55,7 @@ module ::Process
   class << self
     alias_method :orig_detach, :detach
     def detach(pid)
-      fiber = spin { Thread.current.backend.waitpid(pid) }
+      fiber = spin { Polyphony.backend_waitpid(pid) }
       fiber.define_singleton_method(:pid) { pid }
       fiber
     end

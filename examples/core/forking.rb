@@ -20,5 +20,5 @@ end
 puts "got child pid #{pid}"
 
 puts 'parent waiting for child'
-Thread.current.backend.waitpid(pid)
+Polyphony.backend_waitpid(pid)
 puts 'parent done waiting'

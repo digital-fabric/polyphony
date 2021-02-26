@@ -46,7 +46,7 @@ module Polyphony
     def wait(mutex, _timeout = nil)
       mutex.conditional_release
       @queue << Fiber.current
-      Thread.current.backend.wait_event(true)
+      Polyphony.backend_wait_event(true)
       mutex.conditional_reacquire
     end
 

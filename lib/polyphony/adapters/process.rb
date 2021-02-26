@@ -7,7 +7,7 @@ module Polyphony
       def watch(cmd = nil, &block)
         terminated = nil
         pid = cmd ? Kernel.spawn(cmd) : Polyphony.fork(&block)
-        Thread.current.backend.waitpid(pid)
+        Polyphony.backend_waitpid(pid)
         terminated = true
       ensure
         kill_process(pid) unless terminated || pid.nil?
@@ -23,7 +23,7 @@ module Polyphony
 
       def kill_and_await(sig, pid)
         ::Process.kill(sig, pid)
-        Thread.current.backend.waitpid(pid)
+        Polyphony.backend_waitpid(pid)
       rescue Errno::ESRCH
         # process doesn't exist
       end

@@ -28,8 +28,8 @@ class ::OpenSSL::SSL::SSLSocket
     while true
       result = accept_nonblock(exception: false)
       case result
-      when :wait_readable then Thread.current.backend.wait_io(io, false)
-      when :wait_writable then Thread.current.backend.wait_io(io, true)
+      when :wait_readable then Polyphony.backend_wait_io(io, false)
+      when :wait_writable then Polyphony.backend_wait_io(io, true)
       else
         return result
       end
@@ -46,8 +46,8 @@ class ::OpenSSL::SSL::SSLSocket
   def sysread(maxlen, buf = +'')
     while true
       case (result = read_nonblock(maxlen, buf, exception: false))
-      when :wait_readable then Thread.current.backend.wait_io(io, false)
-      when :wait_writable then Thread.current.backend.wait_io(io, true)
+      when :wait_readable then Polyphony.backend_wait_io(io, false)
+      when :wait_writable then Polyphony.backend_wait_io(io, true)
       else return result
       end
     end
@@ -57,8 +57,8 @@ class ::OpenSSL::SSL::SSLSocket
   def syswrite(buf)
     while true
       case (result = write_nonblock(buf, exception: false))
-      when :wait_readable then Thread.current.backend.wait_io(io, false)
-      when :wait_writable then Thread.current.backend.wait_io(io, true)
+      when :wait_readable then Polyphony.backend_wait_io(io, false)
+      when :wait_writable then Polyphony.backend_wait_io(io, true)
       else
         return result
       end

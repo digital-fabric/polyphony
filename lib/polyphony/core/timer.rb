@@ -18,7 +18,7 @@ module Polyphony
         interval: duration,
         target_stamp: now + duration
       }
-      Thread.current.backend.wait_event(true)
+      Polyphony.backend_wait_event(true)
     ensure
       @timeouts.delete(fiber)
     end
@@ -38,7 +38,7 @@ module Polyphony
         recurring: true
       }
       while true
-        Thread.current.backend.wait_event(true)
+        Polyphony.backend_wait_event(true)
         yield
       end
     ensure

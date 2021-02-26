@@ -21,7 +21,7 @@ module Polyphony
       elsif block.arity > 0
         cancel_after_with_block(Fiber.current, interval, with_exception, &block)
       else
-        Thread.current.backend.timeout(interval, with_exception, &block)
+        Polyphony.backend_timeout(interval, with_exception, &block)
       end
     end
 
@@ -82,7 +82,7 @@ module Polyphony
     end
 
     def every(interval, &block)
-      Thread.current.backend.timer_loop(interval, &block)
+      Polyphony.backend_timer_loop(interval, &block)
     end
 
     def move_on_after(interval, with_value: nil, &block)
@@ -91,7 +91,7 @@ module Polyphony
       elsif block.arity > 0
         move_on_after_with_block(Fiber.current, interval, with_value, &block)
       else
-        Thread.current.backend.timeout(interval, nil, with_value, &block)
+        Polyphony.backend_timeout(interval, nil, with_value, &block)
       end
     end
 
@@ -129,11 +129,11 @@ module Polyphony
     def sleep(duration = nil)
       return sleep_forever unless duration
 
-      Thread.current.backend.sleep duration
+      Polyphony.backend_sleep duration
     end
 
     def sleep_forever
-      Thread.current.backend.wait_event(true)
+      Polyphony.backend_wait_event(true)
     end
 
     def throttled_loop(rate = nil, **opts, &block)

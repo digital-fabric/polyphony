@@ -101,7 +101,7 @@ class ::IO
     return @read_buffer.slice!(0) if @read_buffer && !@read_buffer.empty?
     
     @read_buffer ||= +''
-    Thread.current.backend.read(self, @read_buffer, 8192, false)
+    Polyphony.backend_read(self, @read_buffer, 8192, false)
     return @read_buffer.slice!(0) if !@read_buffer.empty?
 
     nil
@@ -110,7 +110,7 @@ class ::IO
   alias_method :orig_read, :read
   def read(len = nil)
     @read_buffer ||= +''
-    result = Thread.current.backend.read(self, @read_buffer, len, true)
+    result = Polyphony.backend_read(self, @read_buffer, len, true)
     return nil unless result
 
     already_read = @read_buffer
@@ -120,7 +120,7 @@ class ::IO
 
   alias_method :orig_readpartial, :read
   def readpartial(len, str = +'')
-    result = Thread.current.backend.read(self, str, len, false)
+    result = Polyphony.backend_read(self, str, len, false)
     raise EOFError unless result
 
     result
@@ -128,12 +128,12 @@ class ::IO
 
   alias_method :orig_write, :write
   def write(str, *args)
-    Thread.current.backend.write(self, str, *args)
+    Polyphony.backend_write(self, str, *args)
   end
 
   alias_method :orig_write_chevron, :<<
   def <<(str)
-    Thread.current.backend.write(self, str)
+    Polyphony.backend_write(self, str)
     self
   end
 
@@ -217,21 +217,21 @@ class ::IO
   end
 
   def read_loop(&block)
-    Thread.current.backend.read_loop(self, &block)
+    Polyphony.backend_read_loop(self, &block)
   end
 
   def feed_loop(receiver, method = :call, &block)
-    Thread.current.backend.feed_loop(self, receiver, method, &block)
+    Polyphony.backend_feed_loop(self, receiver, method, &block)
   end
 
   def wait_readable(timeout = nil)
     if timeout
       move_on_after(timeout) do
-        Thread.current.backend.wait_io(self, false)
+        Polyphony.backend_wait_io(self, false)
         self
       end
     else
-      Thread.current.backend.wait_io(self, false)
+      Polyphony.backend_wait_io(self, false)
       self
     end
   end
@@ -239,11 +239,11 @@ class ::IO
   def wait_writable(timeout = nil)
     if timeout
       move_on_after(timeout) do
-        Thread.current.backend.wait_io(self, true)
+        Polyphony.backend_wait_io(self, true)
         self
       end
     else
-      Thread.current.backend.wait_io(self, true)
+      Polyphony.backend_wait_io(self, true)
       self
     end
   end

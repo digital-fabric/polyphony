@@ -8,31 +8,31 @@ require_relative '../core/thread_pool'
 # Socket overrides (eventually rewritten in C)
 class ::Socket
   def accept
-    Thread.current.backend.accept(self, TCPSocket)
+    Polyphony.backend_accept(self, TCPSocket)
   end
 
   def accept_loop(&block)
-    Thread.current.backend.accept_loop(self, TCPSocket, &block)
+    Polyphony.backend_accept_loop(self, TCPSocket, &block)
   end
 
   NO_EXCEPTION = { exception: false }.freeze
 
   def connect(addr)
     addr = Addrinfo.new(addr) if addr.is_a?(String)
-    Thread.current.backend.connect(self, addr.ip_address, addr.ip_port)
+    Polyphony.backend_connect(self, addr.ip_address, addr.ip_port)
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
-    Thread.current.backend.recv(self, outbuf || +'', maxlen)
+    Polyphony.backend_recv(self, outbuf || +'', maxlen)
   end
 
   def recv_loop(&block)
-    Thread.current.backend.recv_loop(self, &block)
+    Polyphony.backend_recv_loop(self, &block)
   end
   alias_method :read_loop, :recv_loop
 
   def feed_loop(receiver, method = :call, &block)
-    Thread.current.backend.recv_feed_loop(self, receiver, method, &block)
+    Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
 
   def recvfrom(maxlen, flags = 0)
@@ -41,7 +41,7 @@ class ::Socket
       result = recvfrom_nonblock(maxlen, flags, @read_buffer, **NO_EXCEPTION)
       case result
       when nil then raise IOError
-      when :wait_readable then Thread.current.backend.wait_io(self, false)
+      when :wait_readable then Polyphony.backend_wait_io(self, false)
       else
         return result
       end
@@ -49,20 +49,20 @@ class ::Socket
   end
 
   def send(mesg, flags = 0)
-    Thread.current.backend.send(self, mesg)
+    Polyphony.backend_send(self, mesg)
   end
 
   def write(str, *args)
     if args.empty?
-      Thread.current.backend.send(self, str)
+      Polyphony.backend_send(self, str)
     else
-      Thread.current.backend.send(self, str + args.join)
+      Polyphony.backend_send(self, str + args.join)
     end
   end
   alias_method :<<, :write
 
   def readpartial(maxlen, str = +'')
-    Thread.current.backend.recv(self, str, maxlen)
+    Polyphony.backend_recv(self, str, maxlen)
   end
 
   ZERO_LINGER = [0, 0].pack('ii').freeze
@@ -142,34 +142,34 @@ class ::TCPSocket
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
-    Thread.current.backend.recv(self, outbuf || +'', maxlen)
+    Polyphony.backend_recv(self, outbuf || +'', maxlen)
   end
 
   def recv_loop(&block)
-    Thread.current.backend.recv_loop(self, &block)
+    Polyphony.backend_recv_loop(self, &block)
   end
   alias_method :read_loop, :recv_loop
 
   def feed_loop(receiver, method = :call, &block)
-    Thread.current.backend.recv_feed_loop(self, receiver, method, &block)
+    Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
 
   def send(mesg, flags = 0)
-    Thread.current.backend.send(self, mesg)
+    Polyphony.backend_send(self, mesg)
   end
 
   def write(str, *args)
     if args.empty?
-      Thread.current.backend.send(self, str)
+      Polyphony.backend_send(self, str)
     else
-      Thread.current.backend.send(self, str + args.join)
+      Polyphony.backend_send(self, str + args.join)
     end
   end
   alias_method :<<, :write
 
   def readpartial(maxlen, str = nil)
     @read_buffer ||= +''
-    result = Thread.current.backend.recv(self, @read_buffer, maxlen)
+    result = Polyphony.backend_recv(self, @read_buffer, maxlen)
     raise EOFError unless result
 
     if str
@@ -200,12 +200,12 @@ class ::TCPServer
 
   alias_method :orig_accept, :accept
   def accept
-    Thread.current.backend.accept(@io, TCPSocket)
+    Polyphony.backend_accept(@io, TCPSocket)
     # @io.accept
   end
 
   def accept_loop(&block)
-    Thread.current.backend.accept_loop(@io, TCPSocket, &block)
+    Polyphony.backend_accept_loop(@io, TCPSocket, &block)
   end
 
   alias_method :orig_close, :close
@@ -217,44 +217,44 @@ end
 class ::UNIXServer
   alias_method :orig_accept, :accept
  def accept
-    Thread.current.backend.accept(self, UNIXSocket)
+    Polyphony.backend_accept(self, UNIXSocket)
   end
 
   def accept_loop(&block)
-    Thread.current.backend.accept_loop(self, UNIXSocket, &block)
+    Polyphony.backend_accept_loop(self, UNIXSocket, &block)
   end
 end
 
 class ::UNIXSocket
   def recv(maxlen, flags = 0, outbuf = nil)
-    Thread.current.backend.recv(self, outbuf || +'', maxlen)
+    Polyphony.backend_recv(self, outbuf || +'', maxlen)
   end
 
   def recv_loop(&block)
-    Thread.current.backend.recv_loop(self, &block)
+    Polyphony.backend_recv_loop(self, &block)
   end
   alias_method :read_loop, :recv_loop
 
   def feed_loop(receiver, method = :call, &block)
-    Thread.current.backend.recv_feed_loop(self, receiver, method, &block)
+    Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
 
   def send(mesg, flags = 0)
-    Thread.current.backend.send(self, mesg)
+    Polyphony.backend_send(self, mesg)
   end
 
   def write(str, *args)
     if args.empty?
-      Thread.current.backend.send(self, str)
+      Polyphony.backend_send(self, str)
     else
-      Thread.current.backend.send(self, str + args.join)
+      Polyphony.backend_send(self, str + args.join)
     end
   end
   alias_method :<<, :write
 
   def readpartial(maxlen, str = nil)
     @read_buffer ||= +''
-    result = Thread.current.backend.recv(self, @read_buffer, maxlen)
+    result = Polyphony.backend_recv(self, @read_buffer, maxlen)
     raise EOFError unless result
 
     if str

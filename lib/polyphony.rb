@@ -108,6 +108,74 @@ module Polyphony
         Fiber.current.shutdown_all_children
       end
     end
+
+    def backend_waitpid(pid)
+      Thread.current.backend.waitpid(pid)
+    end
+
+    def backend_wait_io(io, rw)
+      Thread.current.backend.wait_io(io, rw)
+    end
+
+    def backend_timeout(*args, &block)
+      Thread.current.backend.timeout(*args, &block)
+    end
+
+    def backend_timer_loop(interval, &block)
+      Thread.current.backend.timer_loop(interval, &block)
+    end
+
+    def backend_sleep(duration)
+      Thread.current.backend.sleep(duration)
+    end
+
+    def backend_wait_event(raise)
+      Thread.current.backend.wait_event(raise)
+    end
+
+    def backend_read(io, buf, maxlen, to_eof)
+      Thread.current.backend.read(io, buf, maxlen, to_eof)
+    end
+
+    def backend_write(io, *args)
+      Thread.current.backend.write(io, *args)
+    end
+
+    def backend_read_loop(io, &block)
+      Thread.current.backend.read_loop(io, &block)
+    end
+
+    def backend_feed_loop(io, receiver, method, &block)
+      Thread.current.backend.feed_loop(io, receiver, method, &block)
+    end
+
+    def backend_accept(io, socket_class)
+      Thread.current.backend.accept(io, socket_class)
+    end
+
+    def backend_accept_loop(io, socket_class, &block)
+      Thread.current.backend.accept_loop(io, socket_class, &block)
+    end
+
+    def backend_connect(io, addr, port)
+      Thread.current.backend.connect(io, addr, port)
+    end
+
+    def backend_recv(io, buf, maxlen)
+      Thread.current.backend.recv(io, buf, maxlen)
+    end
+
+    def backend_recv_loop(io, &block)
+      Thread.current.backend.recv_loop(io, &block)
+    end
+
+    def backend_recv_feed_loop(io, receiver, method, &block)
+      Thread.current.backend.recv_feed_loop(io, receiver, method, &block)
+    end
+
+    def backend_send(io, buf)
+      Thread.current.backend.send(io, buf)
+    end
   end
 
   # replace core Queue class with our own

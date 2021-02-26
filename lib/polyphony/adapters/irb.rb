@@ -16,7 +16,7 @@ if Object.constants.include?(:Reline)
         fiber.cancel
       end
       read_ios.each do |io|
-        Thread.current.backend.wait_io(io, false)
+        Polyphony.backend_wait_io(io, false)
         return [io]
       end
     rescue Polyphony::Cancel
