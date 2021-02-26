@@ -160,10 +160,10 @@ class MoveOnAfterTest < MiniTest::Test
     end
     t1 = Time.now
     assert_equal 1, o
-    assert_in_range 0.008..0.013, t1 - t0
+    assert_in_range 0.008..0.015, t1 - t0
 
     t0 = Time.now
-    o = move_on_after(0.02, with_value: 1) do
+    o = move_on_after(0.05, with_value: 1) do
       move_on_after(0.01, with_value: 2) do
         sleep 1
       end

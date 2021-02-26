@@ -8,6 +8,8 @@ def run_test(count)
   puts "#{count}: running tests..."
   # sleep 1
   system(TEST_CMD)
+  puts
+
   return if $?.exitstatus == 0
 
   puts "Failure after #{count} tests"
