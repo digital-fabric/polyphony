@@ -5,7 +5,7 @@ require 'polyphony'
 
 puts "parent pid: #{Process.pid}"
 
-pid = Polyphony.fork do
+pid = fork do
   puts "child pid: #{Process.pid}"
 
   spin do

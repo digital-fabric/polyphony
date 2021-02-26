@@ -1,3 +1,41 @@
+/*
+# Libev-based blocking ops backend for Polyphony
+
+## Backend initialization
+
+The backend is initialized by creating an event loop. For the main thread the
+default event loop is used, but we since we don't need to handle any signals
+(see the waitpid implementation below) we might as well use a non-default event
+loop for the main thread at some time in the future.
+
+In addition, we create an async watcher that is used for interrupting the #poll
+method from another thread.
+
+## Blocking operations
+
+I/O operations start by making sure the io has been set to non-blocking
+operation (O_NONBLOCK). That way, if the syscall would block, we'd get an
+EWOULDBLOCK or EAGAIN instead of blocking.
+
+Once the OS has indicated that the operation would block, we start a watcher
+(its type corresponding to the desired operation), and call ev_xxxx_start. in We
+then call Thread_switch_fiber and switch to another fiber while waiting for the
+watcher to be triggered.
+
+## Polling for events
+
+Backend_poll is called either once the corresponding thread has no more work to
+do (no runnable fibers) or periodically while the thread is scheduling fibers in
+order to prevent event starvation.
+
+## Behaviour of waitpid
+
+On Linux 5.3+, pidfd_open will be used, otherwise a libev child watcher will be
+used. Note that if a child watcher is used, waitpid will only work from the main
+thread.
+
+*/
+
 #ifdef POLYPHONY_BACKEND_LIBEV
 
 #include <netdb.h>
@@ -799,9 +837,12 @@ VALUE Backend_timeout(int argc,VALUE *argv, VALUE self) {
   return result;
 }
 
+#ifdef POLYPHONY_USE_PIDFD_OPEN
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
   int pid_int = NUM2INT(pid);
+  printf("Backend_waitpid pid: %d\n", pid_int);
   int fd = pidfd_open(pid_int, 0);
+  printf("  pidfd: %d\n", fd);
   if (fd >= 0) {
     Backend_t *backend;
     GetBackend(self, backend);
@@ -811,18 +852,59 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
     RAISE_IF_EXCEPTION(resume_value);
     RB_GC_GUARD(resume_value);
   }
+  else {
+    int e = errno;
+    printf("  errno: %d\n", e);
+  }
 
   int status = 0;
   pid_t ret = waitpid(pid_int, &status, WNOHANG);
+  printf("  waitpid ret: %d\n", ret);
   if (ret < 0) {
     int e = errno;
+    printf("  errno: %d\n", e);
     if (e == ECHILD)
       ret = pid_int;
     else
       rb_syserr_fail(e, strerror(e));
   }
+  printf("  status: %d\n", status);
   return rb_ary_new_from_args(2, INT2NUM(ret), INT2NUM(WEXITSTATUS(status)));
 }
+#else
+struct libev_child {
+  struct ev_child child;
+  VALUE fiber;
+};
+
+void Backend_child_callback(EV_P_ ev_child *w, int revents) {
+  struct libev_child *watcher = (struct libev_child *)w;
+  int exit_status = WEXITSTATUS(w->rstatus);
+  VALUE status;
+
+  status = rb_ary_new_from_args(2, INT2NUM(w->rpid), INT2NUM(exit_status));
+  Fiber_make_runnable(watcher->fiber, status);
+}
+
+VALUE Backend_waitpid(VALUE self, VALUE pid) {
+  Backend_t *backend;
+  struct libev_child watcher;
+  VALUE switchpoint_result = Qnil;
+  GetBackend(self, backend);
+
+  watcher.fiber = rb_fiber_current();
+  ev_child_init(&watcher.child, Backend_child_callback, NUM2INT(pid), 0);
+  ev_child_start(backend->ev_loop, &watcher.child);
+
+  switchpoint_result = backend_await(backend);
+
+  ev_child_stop(backend->ev_loop, &watcher.child);
+  RAISE_IF_EXCEPTION(switchpoint_result);
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+  return switchpoint_result;
+}
+#endif
 
 void Backend_async_callback(EV_P_ ev_async *w, int revents) { }
 
