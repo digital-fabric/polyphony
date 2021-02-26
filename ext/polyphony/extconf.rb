@@ -7,12 +7,13 @@ use_liburing = false
 use_pidfd_open = false
 force_use_libev = ENV['POLYPHONY_USE_LIBEV'] != nil
 
-if !force_use_libev && RUBY_PLATFORM =~ /linux/ && `uname -sr` =~ /Linux 5\.([\d+])/
+if RUBY_PLATFORM =~ /linux/ && `uname -sr` =~ /Linux 5\.([\d+])/
   kernel_minor_version = $1.gsub('.', '').to_i
-  use_liburing = kernel_minor_version >= 6
+  use_liburing = !force_use_libev && kernel_minor_version >= 6
   use_pidfd_open = kernel_minor_version >= 3
 end
 
+$defs << '-DPOLYPHONY_USE_PIDFD_OPEN' if use_pidfd_open
 if use_liburing
   $defs << "-DPOLYPHONY_BACKEND_LIBURING"
   $CFLAGS << " -Wno-pointer-arith"
@@ -25,7 +26,6 @@ else
   $defs << '-DEV_USE_KQUEUE'       if have_header('sys/event.h') && have_header('sys/queue.h')
   $defs << '-DEV_USE_PORT'         if have_type('port_event_t', 'port.h')
   $defs << '-DHAVE_SYS_RESOURCE_H' if have_header('sys/resource.h')  
-  $defs << '-DPOLYPHONY_USE_PIDFD_OPEN' if use_pidfd_open
 
   $CFLAGS << " -Wno-comment"
   $CFLAGS << " -Wno-unused-result"

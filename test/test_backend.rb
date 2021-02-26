@@ -125,12 +125,15 @@ class BackendTest < MiniTest::Test
     assert_equal [:ready, 'foo', 'bar'], buf
   end
 
-  def test_accept_loop
-    server = TCPServer.new('127.0.0.1', 1234)
+  Net = Polyphony::Net
+
+  def test_accept
+    server = Net.listening_socket_from_options('127.0.0.1', 1234, reuse_addr: true)
 
     clients = []
-    server_fiber = spin do
-      @backend.accept_loop(server, TCPSocket) { |c| clients << c }
+    server_fiber = spin_loop do
+      c = @backend.accept(server, TCPSocket)
+      clients << c
     end
 
     c1 = TCPSocket.new('127.0.0.1', 1234)
@@ -146,7 +149,32 @@ class BackendTest < MiniTest::Test
   ensure
     c1&.close
     c2&.close
-    server_fiber.stop
+    server_fiber&.stop
+    snooze
+    server&.close
+  end
+
+  def test_accept_loop
+    server = Net.listening_socket_from_options('127.0.0.1', 1234, reuse_addr: true)
+
+    clients = []
+    server_fiber = spin do
+      @backend.accept_loop(server, TCPSocket) { |c| clients << c }
+    end
+
+    c1 = TCPSocket.new('127.0.0.1', 1234)
+    sleep 0.01
+
+    assert_equal 1, clients.size
+
+    c2 = TCPSocket.new('127.0.0.1', 1234)
+    sleep 0.01
+
+    assert_equal 2, clients.size
+  ensure
+    c1&.close
+    c2&.close
+    server_fiber&.stop
     snooze
     server&.close
   end

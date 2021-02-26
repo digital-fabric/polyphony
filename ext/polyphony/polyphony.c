@@ -46,10 +46,99 @@ VALUE Polyphony_trace(VALUE self, VALUE enabled) {
   return Qnil;
 }
 
+#define BACKEND() (rb_ivar_get(rb_thread_current(), ID_ivar_backend))
+
+VALUE Polyphony_backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
+  return Backend_accept(BACKEND(), server_socket, socket_class);
+}
+
+VALUE Polyphony_backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
+  return Backend_accept_loop(BACKEND(), server_socket, socket_class);
+}
+
+VALUE Polyphony_backend_connect(VALUE self, VALUE io, VALUE addr, VALUE port) {
+  return Backend_connect(BACKEND(), io, addr, port);
+}
+
+VALUE Polyphony_backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
+  return Backend_feed_loop(BACKEND(), io, receiver, method);
+}
+
+VALUE Polyphony_backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
+  return Backend_read(BACKEND(), io, str, length, to_eof);
+}
+
+VALUE Polyphony_backend_read_loop(VALUE self, VALUE io) {
+  return Backend_read_loop(BACKEND(), io);
+}
+
+VALUE Polyphony_backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
+  return Backend_recv(BACKEND(), io, str, length);
+}
+
+VALUE Polyphony_backend_recv_loop(VALUE self, VALUE io) {
+  return Backend_recv_loop(BACKEND(), io);
+}
+
+VALUE Polyphony_backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
+  return Backend_recv_feed_loop(BACKEND(), io, receiver, method);
+}
+
+VALUE Polyphony_backend_send(VALUE self, VALUE io, VALUE str) {
+  return Backend_send(BACKEND(), io, str);
+}
+
+VALUE Polyphony_backend_sleep(VALUE self, VALUE duration) {
+  return Backend_sleep(BACKEND(), duration);
+}
+
+VALUE Polyphony_backend_timeout(int argc,VALUE *argv, VALUE self) {
+  return Backend_timeout(argc, argv, BACKEND());
+}
+
+VALUE Polyphony_backend_timer_loop(VALUE self, VALUE interval) {
+  return Backend_timer_loop(BACKEND(), interval);
+}
+
+VALUE Polyphony_backend_wait_event(VALUE self, VALUE raise) {
+  return Backend_wait_event(BACKEND(), raise);
+}
+
+VALUE Polyphony_backend_wait_io(VALUE self, VALUE io, VALUE write) {
+  return Backend_wait_io(BACKEND(), io, write);
+}
+
+VALUE Polyphony_backend_waitpid(VALUE self, VALUE pid) {
+  return Backend_waitpid(BACKEND(), pid);
+}
+
+VALUE Polyphony_backend_write(int argc, VALUE *argv, VALUE self) {
+  return Backend_write_m(argc, argv, BACKEND());
+}
+
 void Init_Polyphony() {
   mPolyphony = rb_define_module("Polyphony");
 
   rb_define_singleton_method(mPolyphony, "trace", Polyphony_trace, 1);
+
+  // backend methods
+  rb_define_singleton_method(mPolyphony, "backend_accept", Polyphony_backend_accept, 2);
+  rb_define_singleton_method(mPolyphony, "backend_accept_loop", Polyphony_backend_accept_loop, 2);
+  rb_define_singleton_method(mPolyphony, "backend_connect", Polyphony_backend_connect, 3);
+  rb_define_singleton_method(mPolyphony, "backend_feed_loop", Polyphony_backend_feed_loop, 3);
+  rb_define_singleton_method(mPolyphony, "backend_read", Polyphony_backend_read, 4);
+  rb_define_singleton_method(mPolyphony, "backend_read_loop", Polyphony_backend_read_loop, 1);
+  rb_define_singleton_method(mPolyphony, "backend_recv", Polyphony_backend_recv, 3);
+  rb_define_singleton_method(mPolyphony, "backend_recv_loop", Polyphony_backend_recv_loop, 1);
+  rb_define_singleton_method(mPolyphony, "backend_recv_feed_loop", Polyphony_backend_recv_feed_loop, 3);
+  rb_define_singleton_method(mPolyphony, "backend_send", Polyphony_backend_send, 2);
+  rb_define_singleton_method(mPolyphony, "backend_sleep", Polyphony_backend_sleep, 1);
+  rb_define_singleton_method(mPolyphony, "backend_timeout", Polyphony_backend_timeout, -1);
+  rb_define_singleton_method(mPolyphony, "backend_timer_loop", Polyphony_backend_timer_loop, 1);
+  rb_define_singleton_method(mPolyphony, "backend_wait_event", Polyphony_backend_wait_event, 1);
+  rb_define_singleton_method(mPolyphony, "backend_wait_io", Polyphony_backend_wait_io, 2);
+  rb_define_singleton_method(mPolyphony, "backend_waitpid", Polyphony_backend_waitpid, 1);
+  rb_define_singleton_method(mPolyphony, "backend_write", Polyphony_backend_write, -1);
 
   rb_define_global_function("snooze", Polyphony_snooze, 0);
   rb_define_global_function("suspend", Polyphony_suspend, 0);

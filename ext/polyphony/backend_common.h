@@ -3,6 +3,8 @@
 #include "ruby.h"
 #include "ruby/io.h"
 
+
+#ifdef POLYPHONY_USE_PIDFD_OPEN
 #ifndef __NR_pidfd_open
 #define __NR_pidfd_open 434   /* System call # on most architectures */
 #endif
@@ -10,6 +12,7 @@
 static int pidfd_open(pid_t pid, unsigned int flags) {
   return syscall(__NR_pidfd_open, pid, flags);
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
