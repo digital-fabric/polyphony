@@ -48,12 +48,12 @@ class ::Socket
     end
   end
 
-  def send(mesg, flags = 0)
-    Polyphony.backend_send(self, mesg)
+  def send(mesg, flags)
+    Polyphony.backend_send(self, mesg, flags)
   end
 
   def write(*args)
-    Polyphony.backend_send(self, *args)
+    Polyphony.backend_sendv(self, args, 0)
   end
   alias_method :<<, :write
 
@@ -150,12 +150,12 @@ class ::TCPSocket
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
 
-  def send(mesg, flags = 0)
-    Polyphony.backend_send(self, mesg)
+  def send(mesg, flags)
+    Polyphony.backend_send(self, mesg, flags)
   end
 
   def write(*args)
-    Polyphony.backend_send(self, *args)
+    Polyphony.backend_sendv(self, args, 0)
   end
   alias_method :<<, :write
 
@@ -231,12 +231,12 @@ class ::UNIXSocket
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
 
-  def send(mesg, flags = 0)
-    Polyphony.backend_send(self, mesg)
+  def send(mesg, flags)
+    Polyphony.backend_send(self, mesg, flags)
   end
 
   def write(*args)
-    Polyphony.backend_send(self, *args)
+    Polyphony.backend_sendv(self, args, 0)
   end
   alias_method :<<, :write
 

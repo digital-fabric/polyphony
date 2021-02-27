@@ -710,6 +710,55 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
+VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
+  Backend_t *backend;
+  struct libev_io watcher;
+  rb_io_t *fptr;
+  VALUE switchpoint_result = Qnil;
+  VALUE underlying_io;
+  char *buf = StringValuePtr(str);
+  long len = RSTRING_LEN(str);
+  long left = len;
+  int flags_int = NUM2INT(flags);
+
+  underlying_io = rb_ivar_get(io, ID_ivar_io);
+  if (underlying_io != Qnil) io = underlying_io;
+  GetBackend(self, backend);
+  io = rb_io_get_write_io(io);
+  GetOpenFile(io, fptr);
+  io_set_nonblock(fptr, io);
+  watcher.fiber = Qnil;
+
+  while (left > 0) {
+    ssize_t n = send(fptr->fd, buf, left, flags_int);
+    if (n < 0) {
+      int e = errno;
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_WRITE);
+
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      buf += n;
+      left -= n;
+    }
+  }
+
+  if (watcher.fiber == Qnil) {
+    switchpoint_result = backend_snooze();
+
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
+
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return INT2NUM(len);
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
   rb_io_t *fptr;
@@ -948,7 +997,8 @@ void Init_Backend() {
   rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_loop", Backend_read_loop, 1);
   rb_define_method(cBackend, "recv_feed_loop", Backend_feed_loop, 3);
-  rb_define_method(cBackend, "send", Backend_write_m, -1);
+  rb_define_method(cBackend, "send", Backend_send, 3);
+  rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);

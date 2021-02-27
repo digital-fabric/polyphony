@@ -21,7 +21,7 @@ class KernelTest < MiniTest::Test
 
   def test_Kernel_system_singleton_method
     assert_equal true, Kernel.system("which ruby > /dev/null 2>&1")
-    assert_equal false, Kernel.system("which rruubbyy > /dev/null 2>&1")
+    assert_equal false, Kernel.system("azertyuiop > /dev/null 2>&1")
   end
 
   def patch_open3
