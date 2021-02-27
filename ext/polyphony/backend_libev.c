@@ -114,17 +114,27 @@ void break_async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, in
   // of a *blocking* event loop (waking it up) in a thread-safe, signal-safe manner
 }
 
+inline struct ev_loop *libev_new_loop() {
+  #ifdef POLYPHONY_USE_PIDFD_OPEN
+    return ev_loop_new(EVFLAG_NOSIGMASK);
+  #else
+    int is_main_thread = (rb_thread_current() == rb_thread_main());
+    return is_main_thread ? EV_DEFAULT : ev_loop_new(EVFLAG_NOSIGMASK);
+  #endif
+}
+
 static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
-  VALUE thread = rb_thread_current();
-  int is_main_thread = (thread == rb_thread_main());
-
+  
   GetBackend(self, backend);
-  backend->ev_loop = is_main_thread ? EV_DEFAULT : ev_loop_new(EVFLAG_NOSIGMASK);
+  backend->ev_loop = libev_new_loop();
 
+  // start async watcher used for breaking a poll op (from another thread)
   ev_async_init(&backend->break_async, break_async_callback);
   ev_async_start(backend->ev_loop, &backend->break_async);
-  ev_unref(backend->ev_loop); // don't count the break_async watcher
+  // the break_async watcher is unreferenced, in order for Backend_poll to not
+  // block when no other watcher is active
+  ev_unref(backend->ev_loop);
 
   backend->currently_polling = 0;
   backend->pending_count = 0;
@@ -901,17 +911,14 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   }
   else {
     int e = errno;
-    printf("  errno: %d\n", e);
+    rb_syserr_fail(e, strerror(e));
   }
 
   int status = 0;
   pid_t ret = waitpid(pid_int, &status, WNOHANG);
   if (ret < 0) {
     int e = errno;
-    if (e == ECHILD)
-      ret = pid_int;
-    else
-      rb_syserr_fail(e, strerror(e));
+    rb_syserr_fail(e, strerror(e));
   }
   return rb_ary_new_from_args(2, INT2NUM(ret), INT2NUM(WEXITSTATUS(status)));
 }
@@ -977,7 +984,7 @@ VALUE Backend_kind(VALUE self) {
 void Init_Backend() {
   ev_set_allocator(xrealloc);
 
-  VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cData);
+  VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cObject);
   rb_define_alloc_func(cBackend, Backend_allocate);
 
   rb_define_method(cBackend, "initialize", Backend_initialize, 0);
