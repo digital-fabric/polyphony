@@ -16,10 +16,35 @@
 
 #include "polyphony.h"
 #include "../liburing/liburing.h"
-#include "ruby/thread.h"
 #include "backend_io_uring_context.h"
+#include "ruby/thread.h"
+#include "ruby/io.h"
 
 VALUE SYM_io_uring;
+
+#ifdef POLYPHONY_UNSET_NONBLOCK
+ID ID_ivar_is_nonblocking;
+
+// One of the changes introduced in Ruby 3.0 as part of the work on the
+// FiberScheduler interface is that all created sockets are marked as
+// non-blocking. This prevents the io_uring backend from working correctly,
+// since it will return an EAGAIN error just like a normal syscall. So here
+// instead of setting O_NONBLOCK (which is required for the libev backend), we
+// unset it.
+inline void io_unset_nonblock(rb_io_t *fptr, VALUE io) {
+  VALUE is_nonblocking = rb_ivar_get(io, ID_ivar_is_nonblocking);
+  if (is_nonblocking == Qfalse) return;
+
+  rb_ivar_set(io, ID_ivar_is_nonblocking, Qfalse);
+
+  int oflags = fcntl(fptr->fd, F_GETFL);
+  if ((oflags == -1) && (oflags & O_NONBLOCK)) return;
+  oflags &= !O_NONBLOCK;
+  fcntl(fptr->fd, F_SETFL, oflags);
+}
+#else
+#define io_unset_nonblock(fptr, io)
+#endif
 
 typedef struct Backend_t {
   // common fields
@@ -300,6 +325,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
+  io_unset_nonblock(fptr, io);
   rectify_io_file_pos(fptr);
   OBJ_TAINT(str);
 
@@ -360,6 +386,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
+  io_unset_nonblock(fptr, io);
   rectify_io_file_pos(fptr);
 
   while (1) {
@@ -406,6 +433,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
+  io_unset_nonblock(fptr, io);
   rectify_io_file_pos(fptr);
 
   while (1) {
@@ -445,6 +473,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
+  io_unset_nonblock(fptr, io);
 
   char *buf = StringValuePtr(str);
   long len = RSTRING_LEN(str);
@@ -488,6 +517,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
+  io_unset_nonblock(fptr, io);
 
   iov = malloc(iov_count * sizeof(struct iovec));
   for (int i = 0; i < argc; i++) {
@@ -567,6 +597,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
+  io_unset_nonblock(fptr, io);
   rectify_io_file_pos(fptr);
   OBJ_TAINT(str);
 
@@ -614,6 +645,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io) {
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
+  io_unset_nonblock(fptr, io);
   rectify_io_file_pos(fptr);
 
   while (1) {
@@ -659,6 +691,7 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
+  io_unset_nonblock(fptr, io);
   rectify_io_file_pos(fptr);
 
   while (1) {
@@ -697,6 +730,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
+  io_unset_nonblock(fptr, io);
 
   char *buf = StringValuePtr(str);
   long len = RSTRING_LEN(str);
@@ -734,6 +768,8 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE soc
   if (underlying_sock != Qnil) server_socket = underlying_sock;
 
   GetOpenFile(server_socket, fptr);
+  io_unset_nonblock(fptr, server_socket);
+
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_ACCEPT);
@@ -797,6 +833,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
 
   GetBackend(self, backend);
   GetOpenFile(sock, fptr);
+  io_unset_nonblock(fptr, sock);
 
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = inet_addr(host_buf);
@@ -823,6 +860,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
   GetOpenFile(io, fptr);
+  io_unset_nonblock(fptr, io);
 
   VALUE resume_value = io_uring_backend_wait_fd(backend, fptr->fd, RTEST(write));
   RAISE_IF_EXCEPTION(resume_value);
@@ -997,7 +1035,7 @@ VALUE Backend_kind(VALUE self) {
 }
 
 void Init_Backend() {
-  VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cData);
+  VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cObject);
   rb_define_alloc_func(cBackend, Backend_allocate);
 
   rb_define_method(cBackend, "initialize", Backend_initialize, 0);
@@ -1026,6 +1064,10 @@ void Init_Backend() {
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
 
   rb_define_method(cBackend, "kind", Backend_kind, 0);
+
+  #ifdef POLYPHONY_UNSET_NONBLOCK
+  ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
+  #endif
 
   SYM_io_uring = ID2SYM(rb_intern("io_uring"));
 }

@@ -155,19 +155,19 @@ class BackendTest < MiniTest::Test
   end
 
   def test_accept_loop
-    server = Net.listening_socket_from_options('127.0.0.1', 1234, reuse_addr: true)
+    server = Net.listening_socket_from_options('127.0.0.1', 1235, reuse_addr: true)
 
     clients = []
     server_fiber = spin do
       @backend.accept_loop(server, TCPSocket) { |c| clients << c }
     end
 
-    c1 = TCPSocket.new('127.0.0.1', 1234)
+    c1 = TCPSocket.new('127.0.0.1', 1235)
     sleep 0.01
 
     assert_equal 1, clients.size
 
-    c2 = TCPSocket.new('127.0.0.1', 1234)
+    c2 = TCPSocket.new('127.0.0.1', 1235)
     sleep 0.01
 
     assert_equal 2, clients.size

@@ -16,6 +16,7 @@ end
 $defs << '-DPOLYPHONY_USE_PIDFD_OPEN' if use_pidfd_open
 if use_liburing
   $defs << "-DPOLYPHONY_BACKEND_LIBURING"
+  $defs << "-DPOLYPHONY_UNSET_NONBLOCK" if RUBY_VERSION =~ /^3/
   $CFLAGS << " -Wno-pointer-arith"
 else
   $defs << "-DPOLYPHONY_BACKEND_LIBEV"
