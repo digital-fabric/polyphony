@@ -26,11 +26,11 @@ struct io_internal_read_struct {
 
 #define StringValue(v) rb_string_value(&(v))
 
-inline int io_setstrbuf(VALUE *str, long len) {
+int io_setstrbuf(VALUE *str, long len) {
   #ifdef _WIN32
     len = (len + 1) & ~1L;	/* round up for wide char */
   #endif
-  if (NIL_P(*str)) {
+  if (*str == Qnil) {
     *str = rb_str_new(0, len);
     return 1;
   }
@@ -55,7 +55,7 @@ inline void io_shrink_read_string(VALUE str, long n) {
   }
 }
 
-inline void io_set_read_length(VALUE str, long n, int shrinkable) {
+void io_set_read_length(VALUE str, long n, int shrinkable) {
   if (RSTRING_LEN(str) != n) {
     rb_str_modify(str);
     rb_str_set_len(str, n);
@@ -70,7 +70,7 @@ inline rb_encoding* io_read_encoding(rb_io_t *fptr) {
     return rb_default_external_encoding();
 }
 
-inline VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
+VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
     OBJ_TAINT(str);
     rb_enc_associate(str, io_read_encoding(fptr));
     return str;
@@ -138,9 +138,9 @@ inline double current_time() {
 }
 
 inline VALUE backend_timeout_exception(VALUE exception) {
-  if (RTEST(rb_obj_is_kind_of(exception, rb_cArray)))
+  if (rb_obj_is_kind_of(exception, rb_cArray) == Qtrue)
     return rb_funcall(rb_ary_entry(exception, 0), ID_new, 1, rb_ary_entry(exception, 1));
-  else if (RTEST(rb_obj_is_kind_of(exception, rb_cClass)))
+  else if (rb_obj_is_kind_of(exception, rb_cClass) == Qtrue)
     return rb_funcall(exception, ID_new, 0);
   else
     return rb_funcall(rb_eRuntimeError, ID_new, 1, exception);

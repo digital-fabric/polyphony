@@ -23,9 +23,9 @@
 #define COND_TRACE(...) if (__tracing_enabled__) { TRACE(__VA_ARGS__); }
 
 // exceptions
-#define TEST_EXCEPTION(ret) (RTEST(rb_obj_is_kind_of(ret, rb_eException)))
+#define TEST_EXCEPTION(ret) (rb_obj_is_kind_of(ret, rb_eException) == Qtrue)
 #define RAISE_EXCEPTION(e) rb_funcall(e, ID_invoke, 0);
-#define RAISE_IF_EXCEPTION(ret) if (RTEST(rb_obj_is_kind_of(ret, rb_eException))) { RAISE_EXCEPTION(ret); }
+#define RAISE_IF_EXCEPTION(ret) if (rb_obj_is_kind_of(ret, rb_eException) == Qtrue) { RAISE_EXCEPTION(ret); }
 #define RAISE_IF_NOT_NIL(ret) if (ret != Qnil) { RAISE_EXCEPTION(ret); }
 
 // Fiber#transfer

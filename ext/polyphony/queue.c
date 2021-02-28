@@ -247,7 +247,7 @@ VALUE Queue_size_m(VALUE self) {
 }
 
 void Init_Queue() {
-  cQueue = rb_define_class_under(mPolyphony, "Queue", rb_cData);
+  cQueue = rb_define_class_under(mPolyphony, "Queue", rb_cObject);
   rb_define_alloc_func(cQueue, Queue_allocate);
 
   rb_define_method(cQueue, "initialize", Queue_initialize, -1);

@@ -77,7 +77,7 @@ VALUE Event_await(VALUE self) {
 }
 
 void Init_Event() {
-  cEvent = rb_define_class_under(mPolyphony, "Event", rb_cData);
+  cEvent = rb_define_class_under(mPolyphony, "Event", rb_cObject);
   rb_define_alloc_func(cEvent, Event_allocate);
 
   rb_define_method(cEvent, "initialize", Event_initialize, 0);

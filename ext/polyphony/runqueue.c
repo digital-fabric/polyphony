@@ -101,7 +101,7 @@ int Runqueue_empty_p(VALUE self) {
 }
 
 void Init_Runqueue() {
-  cRunqueue = rb_define_class_under(mPolyphony, "Runqueue", rb_cData);
+  cRunqueue = rb_define_class_under(mPolyphony, "Runqueue", rb_cObject);
   rb_define_alloc_func(cRunqueue, Runqueue_allocate);
 
   rb_define_method(cRunqueue, "initialize", Runqueue_initialize, 0);
