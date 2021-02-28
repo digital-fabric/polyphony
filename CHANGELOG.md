@@ -1,3 +1,13 @@
+## 0.52.0
+
+- Polyphony is now compatible with Ruby 3.0
+- Add `Backend#sendv` method for sending multiple strings
+- Accept flags argument in `Backend#send` (#48)
+- Fix io_uring backend on Ruby 3.0 (#47)
+- Implement C-based public backend API: `Polyphony.backend_XXXX` methods
+- libev backend: Use` pidfd_open` for Linux 5.3+, otherwise use a libev child watcher
+- Use `:call` as default method in `#feed_loop`
+
 ## 0.51.0
 
 - Implement `IO#feed_loop`, `Socket#feed_loop`
