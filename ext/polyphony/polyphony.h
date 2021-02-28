@@ -31,6 +31,8 @@
 // Fiber#transfer
 #define FIBER_TRANSFER(fiber, value) rb_funcall(fiber, ID_transfer, 1, value)
 
+#define BACKEND() (rb_ivar_get(rb_thread_current(), ID_ivar_backend))
+
 extern VALUE mPolyphony;
 extern VALUE cQueue;
 extern VALUE cEvent;

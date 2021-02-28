@@ -46,8 +46,6 @@ VALUE Polyphony_trace(VALUE self, VALUE enabled) {
   return Qnil;
 }
 
-#define BACKEND() (rb_ivar_get(rb_thread_current(), ID_ivar_backend))
-
 VALUE Polyphony_backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
   return Backend_accept(BACKEND(), server_socket, socket_class);
 }

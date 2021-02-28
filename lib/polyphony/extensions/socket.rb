@@ -48,14 +48,17 @@ class ::Socket
     end
   end
 
-  def send(mesg, flags)
-    Polyphony.backend_send(self, mesg, flags)
-  end
+  # def send(mesg, flags)
+  #   Polyphony.backend_send(self, mesg, flags)
+  # end
 
-  def write(*args)
-    Polyphony.backend_sendv(self, args, 0)
-  end
-  alias_method :<<, :write
+  # def write(*args)
+  #   Polyphony.backend_sendv(self, args, 0)
+  # end
+
+  # def <<(mesg)
+  #   Polyphony.backend_send(self, mesg, 0)
+  # end
 
   def readpartial(maxlen, str = +'')
     Polyphony.backend_recv(self, str, maxlen)
@@ -150,14 +153,17 @@ class ::TCPSocket
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
 
-  def send(mesg, flags)
-    Polyphony.backend_send(self, mesg, flags)
-  end
+  # def send(mesg, flags)
+  #   Polyphony.backend_send(self, mesg, flags)
+  # end
 
-  def write(*args)
-    Polyphony.backend_sendv(self, args, 0)
-  end
-  alias_method :<<, :write
+  # def write(*args)
+  #   Polyphony.backend_sendv(self, args, 0)
+  # end
+
+  # def <<(mesg)
+  #   Polyphony.backend_send(self, mesg, 0)
+  # end
 
   def readpartial(maxlen, str = nil)
     @read_buffer ||= +''
@@ -238,7 +244,10 @@ class ::UNIXSocket
   def write(*args)
     Polyphony.backend_sendv(self, args, 0)
   end
-  alias_method :<<, :write
+
+  def <<(mesg)
+    Polyphony.backend_send(self, mesg, 0)
+  end
 
   def readpartial(maxlen, str = nil)
     @read_buffer ||= +''

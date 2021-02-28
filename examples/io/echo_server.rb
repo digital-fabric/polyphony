@@ -9,6 +9,7 @@ puts 'Echoing on port 1234...'
 while (client = server.accept)
   spin do
     while (data = client.gets)
+      # client.send("you said: #{data.chomp}!\n", 0)
       client.write('you said: ', data.chomp, "!\n")
     end
   rescue Errno::ECONNRESET
