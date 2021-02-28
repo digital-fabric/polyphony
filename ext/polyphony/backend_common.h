@@ -158,6 +158,8 @@ VALUE Backend_timeout_ensure_safe(VALUE arg) {
   return rb_rescue2(Backend_timeout_safe, Qnil, Backend_timeout_rescue, Qnil, rb_eException, (VALUE)0);
 }
 
+static VALUE empty_string = Qnil;
+
 VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags) {
   switch (RARRAY_LEN(ary)) {
   case 0:
@@ -165,6 +167,13 @@ VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags) {
   case 1:
     return Backend_send(self, io, RARRAY_AREF(ary, 0), flags);
   default:
-    return Backend_send(self, io, rb_funcall(ary, rb_intern("join"), 0), flags);
+    if (empty_string == Qnil) {
+      empty_string = rb_str_new_literal("");
+      rb_global_variable(&empty_string);
+    }
+    VALUE joined = rb_ary_join(ary, empty_string);
+    VALUE result = Backend_send(self, io, joined, flags);
+    RB_GC_GUARD(joined);
+    return result;
   }
 }

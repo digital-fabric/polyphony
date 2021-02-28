@@ -34,6 +34,33 @@ class SocketTest < MiniTest::Test
     server&.close
   end
 
+  # sending multiple strings at once
+  def test_sendv
+    port = rand(1234..5678)
+    server = TCPServer.new('127.0.0.1', port)
+
+    server_fiber = spin do
+      while (socket = server.accept)
+        spin do
+          while (data = socket.gets(8192))
+            socket.write("you said ", data)
+          end
+        end
+      end
+    end
+
+    snooze
+    client = TCPSocket.new('127.0.0.1', port)
+    client.write("1234\n")
+    assert_equal "you said 1234\n", client.recv(8192)
+    client.close
+  ensure
+    server_fiber&.stop
+    server_fiber&.await
+    server&.close
+  end
+
+
   def test_feed_loop
     port = rand(1234..5678)
     server = TCPServer.new('127.0.0.1', port)

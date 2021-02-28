@@ -720,7 +720,7 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
   return io;
 }
 
-VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
+VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   Backend_t *backend;
   rb_io_t *fptr;
   VALUE underlying_io;
@@ -735,12 +735,13 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str) {
   char *buf = StringValuePtr(str);
   long len = RSTRING_LEN(str);
   long left = len;
+  int flags_int = NUM2INT(flags);
 
   while (left > 0) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_SEND);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
-    io_uring_prep_send(sqe, fptr->fd, buf, left, 0);
+    io_uring_prep_send(sqe, fptr->fd, buf, left, flags_int);
     
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     OP_CONTEXT_RELEASE(&backend->store, ctx);
@@ -1052,7 +1053,8 @@ void Init_Backend() {
   rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 1);
   rb_define_method(cBackend, "recv_feed_loop", Backend_recv_feed_loop, 3);
-  rb_define_method(cBackend, "send", Backend_send, 2);
+  rb_define_method(cBackend, "send", Backend_send, 3);
+  rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
   rb_define_method(cBackend, "connect", Backend_connect, 3);

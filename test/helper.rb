@@ -52,7 +52,7 @@ class MiniTest::Test
     Fiber.current.instance_variable_set(:@auto_watcher, nil)
     Thread.current.backend.finalize
     Thread.current.backend = Polyphony::Backend.new
-    sleep 0.01
+    sleep 0.001
   end
 
   def teardown
