@@ -1,9 +1,3 @@
-- Implement io_uring Backend_send with variable arity.
-- Implement a buffer store for use in:
-  - io_uring Backend_send_m
-  - io_uring Backend_writev (for iov)
-  - libvev Backend_writev (for iov)
-
 - Check segfault when resetting a `cancel_after` timeout lots of times at very high rate
 - Check why `throttled_loop` inside of `move_on_after` fails to stop
 
