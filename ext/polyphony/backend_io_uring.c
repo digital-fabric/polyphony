@@ -43,7 +43,8 @@ inline void io_unset_nonblock(rb_io_t *fptr, VALUE io) {
   fcntl(fptr->fd, F_SETFL, oflags);
 }
 #else
-#define io_unset_nonblock(fptr, io) # nop
+// NOP
+#define io_unset_nonblock(fptr, io)
 #endif
 
 typedef struct Backend_t {
@@ -824,13 +825,11 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   return self;
 }
 
-VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
-  Backend_t *backend;
+VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE maxlen, int loop) {
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   VALUE underlying_io;
-
-  GetBackend(self, backend);
+  int total = 0;
 
   underlying_io = rb_ivar_get(src, ID_ivar_io);
   if (underlying_io != Qnil) src = underlying_io;
@@ -844,24 +843,39 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   io_unset_nonblock(dest_fptr, dest);
 
   VALUE resume_value = Qnil;
-  op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_SPLICE);
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
-  io_uring_prep_splice(sqe, src_fptr->fd, -1, dest_fptr->fd, -1, NUM2INT(maxlen), 0);
+
+  while (1) {
+    op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_SPLICE);
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_splice(sqe, src_fptr->fd, -1, dest_fptr->fd, -1, NUM2INT(maxlen), 0);
     
-  int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
-  OP_CONTEXT_RELEASE(&backend->store, ctx);
-  RAISE_IF_EXCEPTION(resume_value);
-  if (!ctx->completed) return resume_value;
+    int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    OP_CONTEXT_RELEASE(&backend->store, ctx);
+    RAISE_IF_EXCEPTION(resume_value);
+    if (!ctx->completed) return resume_value;
+
+    if (result < 0)
+      rb_syserr_fail(-result, strerror(-result));
+
+    if (result == 0 || !loop) return INT2NUM(total);
+    total += result;
+  }
+
   RB_GC_GUARD(resume_value);
-
-  if (result < 0)
-    rb_syserr_fail(-result, strerror(-result));
-
-  return INT2NUM(result);
 }
 
-VALUE Backend_splice_loop(VALUE self, VALUE src, VALUE dest, VALUE chunksize) {
-  return Qnil;
+VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  return io_uring_backend_splice(backend, src, dest, maxlen, 0);
+}
+
+VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  return io_uring_backend_splice(backend, src, dest, chunksize, 1);
 }
 
 
@@ -1101,7 +1115,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
   rb_define_method(cBackend, "splice", Backend_splice, 3);
-  rb_define_method(cBackend, "splice_loop", Backend_splice_loop, 3);
+  rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);

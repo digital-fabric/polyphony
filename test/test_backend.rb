@@ -252,4 +252,25 @@ class BackendTest < MiniTest::Test
 
     assert_equal 'foobar', result
   end
+
+  def test_splice_to_eof
+    i1, o1 = IO.pipe
+    i2, o2 = IO.pipe
+
+    f = spin {
+      o2.splice_to_eof(i1, 1000)
+      o2.close
+    }
+
+    o1.write('foo')
+    result = i2.readpartial(1000)
+    assert_equal 'foo', result
+
+    o1.write('bar')
+    result = i2.readpartial(1000)
+    assert_equal 'bar', result
+  ensure
+    f.interrupt
+    f.await
+  end
 end

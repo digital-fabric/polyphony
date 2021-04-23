@@ -830,6 +830,67 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
+VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  Backend_t *backend;
+  struct libev_io watcher;
+  VALUE switchpoint_result = Qnil;
+  VALUE underlying_io;
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+  int len;
+  int total = 0;
+
+  #ifndef POLYPHONY_LINUX
+  rb_raise(rb_eRuntimeError, "splice not supported");
+  #endif
+
+  GetBackend(self, backend);
+
+  underlying_io = rb_ivar_get(src, ID_ivar_io);
+  if (underlying_io != Qnil) src = underlying_io;
+  GetOpenFile(src, src_fptr);
+  io_set_nonblock(src_fptr, src);
+
+  underlying_io = rb_ivar_get(dest, ID_ivar_io);
+  if (underlying_io != Qnil) dest = underlying_io;
+  dest = rb_io_get_write_io(dest);
+  GetOpenFile(dest, dest_fptr);
+  io_set_nonblock(dest_fptr, dest);
+
+  watcher.fiber = Qnil;
+  while (1) {
+    len = splice(src_fptr->fd, 0, dest_fptr->fd, 0, NUM2INT(maxlen), 0);
+    if (len < 0) {
+      int e = errno;
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, src_fptr->fd, &watcher, EV_READ);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fptr->fd, &watcher, EV_WRITE);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else if (len == 0) {
+      break;
+    }
+    else {
+      total += len;
+    }
+  }
+
+  if (watcher.fiber == Qnil) {
+    switchpoint_result = backend_snooze();
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
+
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return INT2NUM(total);
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
   rb_io_t *fptr;

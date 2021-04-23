@@ -18,13 +18,13 @@
   - `Fiber#receive_loop` (very little effort, should be implemented in C)
 
 
-- Add `Backend#splice`, `Backend#splice_loop` for implementing stuff like proxying:
+- Add `Backend#splice`, `Backend#splice_to_eof` for implementing stuff like proxying:
 
   ```ruby
   def two_way_proxy(socket1, socket2)
     backend = Thread.current.backend
-    f1 = spin { backend.splice_loop(socket1, socket2) }
-    f2 = spin { backend.splice_loop(socket2, socket1) }
+    f1 = spin { backend.splice_to_eof(socket1, socket2) }
+    f2 = spin { backend.splice_to_eof(socket2, socket1) }
     Fiber.await(f1, f2)
   end
   ```

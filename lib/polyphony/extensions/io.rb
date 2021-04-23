@@ -252,7 +252,7 @@ class ::IO
     Polyphony.backend_splice(src, self, maxlen)
   end
 
-  def splice_loop(src, chunksize = 8192)
-    Polyphony.backend_splice_loop(src, self, chunksize)
+  def splice_to_eof(src, chunksize = 8192)
+    Polyphony.backend_splice_to_eof(src, self, chunksize)
   end
 end
