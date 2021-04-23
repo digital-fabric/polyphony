@@ -237,4 +237,19 @@ class BackendTest < MiniTest::Test
     end
     assert_equal [1], buffer
   end
+
+  def test_splice
+    i1, o1 = IO.pipe
+    i2, o2 = IO.pipe
+
+    spin {
+      o2.splice(i1, 1000)
+      o2.close
+    }
+
+    o1.write('foobar')
+    result = i2.read
+
+    assert_equal 'foobar', result
+  end
 end

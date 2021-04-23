@@ -38,11 +38,15 @@ thread.
 
 #ifdef POLYPHONY_BACKEND_LIBEV
 
+#ifdef POLYPHONY_LINUX
+#define _GNU_SOURCE 1
+#endif
+
+#include <fcntl.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdnoreturn.h>
@@ -769,6 +773,63 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
+VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  Backend_t *backend;
+  struct libev_io watcher;
+  VALUE switchpoint_result = Qnil;
+  VALUE underlying_io;
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+  int len;
+
+  #ifndef POLYPHONY_LINUX
+  rb_raise(rb_eRuntimeError, "splice not supported");
+  #endif
+
+  GetBackend(self, backend);
+
+  underlying_io = rb_ivar_get(src, ID_ivar_io);
+  if (underlying_io != Qnil) src = underlying_io;
+  GetOpenFile(src, src_fptr);
+  io_set_nonblock(src_fptr, src);
+
+  underlying_io = rb_ivar_get(dest, ID_ivar_io);
+  if (underlying_io != Qnil) dest = underlying_io;
+  dest = rb_io_get_write_io(dest);
+  GetOpenFile(dest, dest_fptr);
+  io_set_nonblock(dest_fptr, dest);
+
+  watcher.fiber = Qnil;
+  while (1) {
+    len = splice(src_fptr->fd, 0, dest_fptr->fd, 0, NUM2INT(maxlen), 0);
+    if (len < 0) {
+      int e = errno;
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, src_fptr->fd, &watcher, EV_READ);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fptr->fd, &watcher, EV_WRITE);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      break;
+    }
+  }
+
+  if (watcher.fiber == Qnil) {
+    switchpoint_result = backend_snooze();
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
+
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return INT2NUM(len);
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
   rb_io_t *fptr;
@@ -993,27 +1054,26 @@ void Init_Backend() {
 
   rb_define_method(cBackend, "poll", Backend_poll, 3);
   rb_define_method(cBackend, "break", Backend_wakeup, 0);
+  rb_define_method(cBackend, "kind", Backend_kind, 0);
 
-  rb_define_method(cBackend, "read", Backend_read, 4);
-  rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
-  rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
-  rb_define_method(cBackend, "write", Backend_write_m, -1);
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
+  rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
+  rb_define_method(cBackend, "read", Backend_read, 4);
+  rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
   rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_loop", Backend_read_loop, 1);
   rb_define_method(cBackend, "recv_feed_loop", Backend_feed_loop, 3);
   rb_define_method(cBackend, "send", Backend_send, 3);
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);
-  rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
-  rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);
-  rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
+  rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
-
-  rb_define_method(cBackend, "kind", Backend_kind, 0);
+  rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
+  rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
+  rb_define_method(cBackend, "write", Backend_write_m, -1);
 
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
   SYM_libev = ID2SYM(rb_intern("libev"));

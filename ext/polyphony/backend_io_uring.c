@@ -43,7 +43,7 @@ inline void io_unset_nonblock(rb_io_t *fptr, VALUE io) {
   fcntl(fptr->fd, F_SETFL, oflags);
 }
 #else
-#define io_unset_nonblock(fptr, io)
+#define io_unset_nonblock(fptr, io) # nop
 #endif
 
 typedef struct Backend_t {
@@ -824,6 +824,47 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   return self;
 }
 
+VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  Backend_t *backend;
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+  VALUE underlying_io;
+
+  GetBackend(self, backend);
+
+  underlying_io = rb_ivar_get(src, ID_ivar_io);
+  if (underlying_io != Qnil) src = underlying_io;
+  GetOpenFile(src, src_fptr);
+  io_unset_nonblock(src_fptr, src);
+
+  underlying_io = rb_ivar_get(dest, ID_ivar_io);
+  if (underlying_io != Qnil) dest = underlying_io;
+  dest = rb_io_get_write_io(dest);
+  GetOpenFile(dest, dest_fptr);
+  io_unset_nonblock(dest_fptr, dest);
+
+  VALUE resume_value = Qnil;
+  op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_SPLICE);
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+  io_uring_prep_splice(sqe, src_fptr->fd, -1, dest_fptr->fd, -1, NUM2INT(maxlen), 0);
+    
+  int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+  OP_CONTEXT_RELEASE(&backend->store, ctx);
+  RAISE_IF_EXCEPTION(resume_value);
+  if (!ctx->completed) return resume_value;
+  RB_GC_GUARD(resume_value);
+
+  if (result < 0)
+    rb_syserr_fail(-result, strerror(-result));
+
+  return INT2NUM(result);
+}
+
+VALUE Backend_splice_loop(VALUE self, VALUE src, VALUE dest, VALUE chunksize) {
+  return Qnil;
+}
+
+
 VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   Backend_t *backend;
   rb_io_t *fptr;
@@ -1045,27 +1086,29 @@ void Init_Backend() {
 
   rb_define_method(cBackend, "poll", Backend_poll, 3);
   rb_define_method(cBackend, "break", Backend_wakeup, 0);
+  rb_define_method(cBackend, "kind", Backend_kind, 0);
 
-  rb_define_method(cBackend, "read", Backend_read, 4);
-  rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
-  rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
-  rb_define_method(cBackend, "write", Backend_write_m, -1);
-  rb_define_method(cBackend, "recv", Backend_recv, 3);
-  rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 1);
-  rb_define_method(cBackend, "recv_feed_loop", Backend_recv_feed_loop, 3);
-  rb_define_method(cBackend, "send", Backend_send, 3);
-  rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
-  rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
+  rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
+  rb_define_method(cBackend, "read", Backend_read, 4);
+  rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
+  rb_define_method(cBackend, "recv", Backend_recv, 3);
+  rb_define_method(cBackend, "recv_feed_loop", Backend_recv_feed_loop, 3);
+  rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 1);
+  rb_define_method(cBackend, "send", Backend_send, 3);
+  rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
-  rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
+  rb_define_method(cBackend, "splice", Backend_splice, 3);
+  rb_define_method(cBackend, "splice_loop", Backend_splice_loop, 3);
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);
-  rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
+  rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
+  rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
+  rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
+  rb_define_method(cBackend, "write", Backend_write_m, -1);
 
-  rb_define_method(cBackend, "kind", Backend_kind, 0);
 
   #ifdef POLYPHONY_UNSET_NONBLOCK
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");

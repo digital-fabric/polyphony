@@ -10,6 +10,7 @@ enum op_type {
   OP_WRITE,
   OP_RECV,
   OP_SEND,
+  OP_SPLICE,
   OP_TIMEOUT,
   OP_POLL,
   OP_ACCEPT,

@@ -29,6 +29,35 @@
   end
   ```
 
+- Add support for `close` to io_uring backend
+
+- Add support for submission of multiple requests to io_uring backend:
+
+  ```ruby
+  Thread.current.backend.submit(
+    [sock, :<<, chunk_header(len)],
+    [sock, :splice, file, len]
+  )
+  ```
+
+  Full example (for writing chunks from a file to an HTTP response):
+
+  ```ruby
+  def serve_io(io)
+    i, o = IO.pipe
+    backend = Thread.current.backend
+    while true
+      len = o.splice(io, 8192)
+      break if len == 0
+      
+      backend.submit(
+        [sock, :<<, chunk_header(len)],
+        [sock, :splice, file, len]
+      )
+    end
+  end
+  ```
+
 - Graceful shutdown again:
   - What happens to children when doing a graceful shutdown?
   - What are the implications of passing graceful shutdown flag to children?
