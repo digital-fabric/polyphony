@@ -1,3 +1,7 @@
+## 0.53.0
+
+- Implement `Backend#splice`, `Backend#splice_to_eof`, along with `IO#splice`, `IO#splice_to_eof`
+
 ## 0.52.0
 
 - Polyphony is now compatible with Ruby 3.0
