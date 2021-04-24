@@ -241,9 +241,10 @@ class BackendTest < MiniTest::Test
   def test_splice
     i1, o1 = IO.pipe
     i2, o2 = IO.pipe
+    len = nil
 
     spin {
-      o2.splice(i1, 1000)
+      len = o2.splice(i1, 1000)
       o2.close
     }
 
@@ -251,14 +252,16 @@ class BackendTest < MiniTest::Test
     result = i2.read
 
     assert_equal 'foobar', result
+    assert_equal 6, len
   end
 
   def test_splice_to_eof
     i1, o1 = IO.pipe
     i2, o2 = IO.pipe
+    len = nil
 
     f = spin {
-      o2.splice_to_eof(i1, 1000)
+      len = o2.splice_to_eof(i1, 1000)
       o2.close
     }
 
@@ -269,9 +272,14 @@ class BackendTest < MiniTest::Test
     o1.write('bar')
     result = i2.readpartial(1000)
     assert_equal 'bar', result
-  ensure
-    f.interrupt
+    o1.close
     f.await
+    assert_equal 6, len
+  ensure
+    if f.alive?
+      f.interrupt
+      f.await
+    end
   end
 end
 
