@@ -124,6 +124,10 @@ class ThreadTest < MiniTest::Test
     t&.join
   end
 
+  def test_backend_class_method
+    assert_equal Thread.current.backend, Thread.backend
+  end
+
   def test_that_suspend_returns_immediately_if_no_watchers
     records = []
     t = Polyphony::Trace.new(:fiber_all) do |r|

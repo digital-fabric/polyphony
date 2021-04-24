@@ -35,8 +35,8 @@
 
   ```ruby
   Thread.current.backend.submit(
-    [sock, :<<, chunk_header(len)],
-    [sock, :splice, file, len]
+    [:send, sock, chunk_header(len)],
+    [:splice, file, sock, len]
   )
   ```
 

@@ -150,7 +150,7 @@ static inline bool cq_ring_needs_flush(struct io_uring *ring) {
 	return IO_URING_READ_ONCE(*ring->sq.kflags) & IORING_SQ_CQ_OVERFLOW;
 }
 
-void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
+static inline void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
   op_context_t *ctx = io_uring_cqe_get_data(cqe);
   if (!ctx) return;
 
@@ -169,7 +169,7 @@ void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *bac
 }
 
 // adapted from io_uring_peek_batch_cqe in queue.c 
-// this peeks at cqes and for each one 
+// this peeks at cqes and handles each available cqe
 void io_uring_backend_handle_ready_cqes(Backend_t *backend) {
   struct io_uring *ring = &backend->ring;
 	bool overflow_checked = false;
@@ -315,8 +315,8 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   Backend_t *backend;
   rb_io_t *fptr;
   long dynamic_len = length == Qnil;
-  long len = dynamic_len ? 4096 : NUM2INT(length);
-  int shrinkable = io_setstrbuf(&str, len);
+  long buffer_size = dynamic_len ? 4096 : NUM2INT(length);
+  int shrinkable = io_setstrbuf(&str, buffer_size);
   char *buf = RSTRING_PTR(str);
   long total = 0;
   int read_to_eof = RTEST(to_eof);
@@ -334,7 +334,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
     VALUE resume_value = Qnil;
     op_context_t *ctx = OP_CONTEXT_ACQUIRE(&backend->store, OP_READ);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
-    io_uring_prep_read(sqe, fptr->fd, buf, len - total, -1);
+    io_uring_prep_read(sqe, fptr->fd, buf, buffer_size - total, -1);
 
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     OP_CONTEXT_RELEASE(&backend->store, ctx);
@@ -350,14 +350,15 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
       total += result;
       if (!read_to_eof) break;
 
-      if (total == len) {
+      if (total == buffer_size) {
         if (!dynamic_len) break;
 
+        // resize buffer
         rb_str_resize(str, total);
-        rb_str_modify_expand(str, len);
+        rb_str_modify_expand(str, buffer_size);
         buf = RSTRING_PTR(str) + total;
         shrinkable = 0;
-        len += len;
+        buffer_size += buffer_size;
       }
       else buf += result;
     }

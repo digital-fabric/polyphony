@@ -21,7 +21,7 @@ static VALUE SYM_scheduled_fibers;
 static VALUE SYM_pending_watchers;
 
 static VALUE Thread_fiber_scheduling_stats(VALUE self) {
-  VALUE backend = rb_ivar_get(self,ID_ivar_backend);
+  VALUE backend = rb_ivar_get(self, ID_ivar_backend);
   VALUE stats = rb_hash_new();
   VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
   long pending_count;
@@ -53,7 +53,7 @@ void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize) {
       // event selector. Otherwise it's gonna be stuck waiting for an event to
       // happen, not knowing that it there's already a fiber ready to run in its
       // run queue.
-      VALUE backend = rb_ivar_get(self,ID_ivar_backend);
+      VALUE backend = rb_ivar_get(self, ID_ivar_backend);
       Backend_wakeup(backend);
     }
   }
@@ -138,6 +138,10 @@ VALUE Thread_debug(VALUE self) {
   return self;
 }
 
+VALUE Thread_class_backend(VALUE _self) {
+  return rb_ivar_get(rb_thread_current(), ID_ivar_backend);
+}
+
 void Init_Thread() {
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
@@ -149,6 +153,8 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
   rb_define_method(rb_cThread, "fiber_scheduling_index", Thread_fiber_scheduling_index, 1);
   rb_define_method(rb_cThread, "fiber_unschedule", Thread_fiber_unschedule, 1);
+
+  rb_define_singleton_method(rb_cThread, "backend", Thread_class_backend, 0);
 
   rb_define_method(rb_cThread, "debug!", Thread_debug, 0);
 
