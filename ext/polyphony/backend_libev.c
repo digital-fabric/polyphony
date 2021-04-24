@@ -58,6 +58,9 @@ thread.
 #include "ruby/io.h"
 
 VALUE SYM_libev;
+VALUE SYM_send;
+VALUE SYM_splice;
+VALUE SYM_write;
 
 ID ID_ivar_is_nonblocking;
 
@@ -1103,6 +1106,27 @@ VALUE Backend_kind(VALUE self) {
   return SYM_libev;
 }
 
+VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
+  VALUE result = Qnil;
+  if (argc == 0) return result;
+
+  for (int i = 0; i < argc; i++) {
+    VALUE op = argv[i];
+    VALUE op_type = RARRAY_AREF(op, 0);
+    if (op_type == SYM_write)
+      result = Backend_write(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2));
+    else if (op_type == SYM_send)
+      result = Backend_send(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2), RARRAY_AREF(op, 3));
+    else if (op_type == SYM_splice)
+      result = Backend_splice(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2), RARRAY_AREF(op, 3));
+    else
+      rb_raise(rb_eRuntimeError, "Invalid operation type");
+  }
+  
+  RB_GC_GUARD(result);
+  return result;
+}
+
 void Init_Backend() {
   ev_set_allocator(xrealloc);
 
@@ -1116,6 +1140,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "poll", Backend_poll, 3);
   rb_define_method(cBackend, "break", Backend_wakeup, 0);
   rb_define_method(cBackend, "kind", Backend_kind, 0);
+  rb_define_method(cBackend, "chain", Backend_chain, -1);
 
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
@@ -1138,6 +1163,10 @@ void Init_Backend() {
 
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
   SYM_libev = ID2SYM(rb_intern("libev"));
+
+  SYM_send = ID2SYM(rb_intern("send"));
+  SYM_splice = ID2SYM(rb_intern("splice"));
+  SYM_write = ID2SYM(rb_intern("write"));
 }
 
 #endif // POLYPHONY_BACKEND_LIBEV

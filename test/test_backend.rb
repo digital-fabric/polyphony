@@ -274,3 +274,78 @@ class BackendTest < MiniTest::Test
     f.await
   end
 end
+
+class BackendChainTest < MiniTest::Test
+  def setup
+    super
+    @prev_backend = Thread.current.backend
+    @backend = Polyphony::Backend.new
+    Thread.current.backend = @backend
+  end
+
+  def teardown
+    @backend.finalize
+    Thread.current.backend = @prev_backend
+  end
+
+  def test_simple_write_chain
+    i, o = IO.pipe
+
+    result = Thread.backend.chain(
+      [:write, o, 'hello'],
+      [:write, o, ' world']
+    )
+
+    assert_equal 6, result
+    o.close
+    assert_equal 'hello world', i.read
+  end
+
+  def chunk_header(len)
+    "Content-Length: #{len}\r\n\r\n"
+  end
+
+  def serve_io(from, to)
+    i, o = IO.pipe
+    backend = Thread.current.backend
+    while true
+      len = o.splice(from, 8192)
+      break if len == 0
+      
+      backend.chain(
+        [:write, to, chunk_header(len)],
+        [:splice, i, to, len]
+      )
+    end
+    to.close
+  end
+
+  def test_chain_with_splice
+    from_r, from_w = IO.pipe
+    to_r, to_w = IO.pipe
+
+    result = nil
+    f = spin { serve_io(from_r, to_w) }
+
+    from_w << 'Hello world!'
+    from_w.close
+
+    assert_equal "Content-Length: 12\r\n\r\nHello world!", to_r.read
+  end
+
+  def test_invalid_op
+    i, o = IO.pipe
+
+    assert_raises(RuntimeError) {
+      Thread.backend.chain(
+        [:read, o]
+      )
+    }
+
+    assert_raises(TypeError) {
+      Thread.backend.chain(
+        [:write, o]
+      )
+    }
+  end
+end

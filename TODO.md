@@ -51,8 +51,8 @@
       break if len == 0
       
       backend.submit(
-        [sock, :<<, chunk_header(len)],
-        [sock, :splice, file, len]
+        [:write, sock, chunk_header(len)],
+        [:splice, i, sock, len]
       )
     end
   end
