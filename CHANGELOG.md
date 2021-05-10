@@ -1,3 +1,7 @@
+## 0.53.1
+
+- Remove `splice` methods on libev backend on non-Linux OS (#43)
+
 ## 0.53.0
 
 - Implement `Backend#splice`, `Backend#splice_to_eof`, along with `IO#splice`, `IO#splice_to_eof`
