@@ -1,4 +1,4 @@
-## 0.53.1
+## 0.53.2
 
 - Remove `splice` methods on libev backend on non-Linux OS (#43)
 
