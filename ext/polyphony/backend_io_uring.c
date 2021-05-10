@@ -858,8 +858,8 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
     if (result < 0)
       rb_syserr_fail(-result, strerror(-result));
 
-    if (result == 0 || !loop) return INT2NUM(total);
     total += result;
+    if (result == 0 || !loop) return INT2NUM(total);
   }
 
   RB_GC_GUARD(resume_value);

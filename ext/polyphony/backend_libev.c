@@ -776,6 +776,7 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
+#ifndef POLYPHONY_LINUX
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
@@ -784,10 +785,6 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   int len;
-
-  #ifndef POLYPHONY_LINUX
-  rb_raise(rb_eRuntimeError, "splice not supported");
-  #endif
 
   GetBackend(self, backend);
 
@@ -843,10 +840,6 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   int len;
   int total = 0;
 
-  #ifndef POLYPHONY_LINUX
-  rb_raise(rb_eRuntimeError, "splice not supported");
-  #endif
-
   GetBackend(self, backend);
 
   underlying_io = rb_ivar_get(src, ID_ivar_io);
@@ -893,6 +886,7 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
+#endif
 
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
@@ -1113,14 +1107,18 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
   for (int i = 0; i < argc; i++) {
     VALUE op = argv[i];
     VALUE op_type = RARRAY_AREF(op, 0);
-    if (op_type == SYM_write)
+    VALUE op_len = RARRAY_LEN(op);
+
+    if (op_type == SYM_write && op_len == 3)
       result = Backend_write(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2));
-    else if (op_type == SYM_send)
+    else if (op_type == SYM_send && op_len == 4)
       result = Backend_send(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2), RARRAY_AREF(op, 3));
-    else if (op_type == SYM_splice)
+    #ifndef POLYPHONY_LINUX
+    else if (op_type == SYM_splice && op_len == 4)
       result = Backend_splice(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2), RARRAY_AREF(op, 3));
+    #endif
     else
-      rb_raise(rb_eRuntimeError, "Invalid operation type");
+      rb_raise(rb_eRuntimeError, "Invalid op specified or bad op arity");
   }
   
   RB_GC_GUARD(result);
@@ -1154,6 +1152,12 @@ void Init_Backend() {
   rb_define_method(cBackend, "send", Backend_send, 3);
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
+
+  #ifndef POLYPHONY_LINUX
+  rb_define_method(cBackend, "splice", Backend_splice, 3);
+  rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
+  #endif
+
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
