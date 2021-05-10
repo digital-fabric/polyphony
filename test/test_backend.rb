@@ -350,7 +350,7 @@ class BackendChainTest < MiniTest::Test
       )
     }
 
-    assert_raises(TypeError) {
+    assert_raises(RuntimeError) {
       Thread.backend.chain(
         [:write, o]
       )

@@ -776,7 +776,7 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-#ifndef POLYPHONY_LINUX
+#ifdef POLYPHONY_LINUX
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
@@ -1113,7 +1113,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
       result = Backend_write(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2));
     else if (op_type == SYM_send && op_len == 4)
       result = Backend_send(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2), RARRAY_AREF(op, 3));
-    #ifndef POLYPHONY_LINUX
+    #ifdef POLYPHONY_LINUX
     else if (op_type == SYM_splice && op_len == 4)
       result = Backend_splice(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2), RARRAY_AREF(op, 3));
     #endif
@@ -1153,7 +1153,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
 
-  #ifndef POLYPHONY_LINUX
+  #ifdef POLYPHONY_LINUX
   rb_define_method(cBackend, "splice", Backend_splice, 3);
   rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
   #endif
