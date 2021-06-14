@@ -35,6 +35,14 @@ module Polyphony
       @token = @store.shift
       @holding_fiber = Fiber.current
     end
+
+    def owned?
+      @holding_fiber == Fiber.current
+    end
+
+    def locked?
+      @holding_fiber
+    end
   end
 
   # Implements a fiber-aware ConditionVariable

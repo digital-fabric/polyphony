@@ -70,4 +70,47 @@ class MutexTest < MiniTest::Test
     Fiber.current.await_all_children
     assert_equal [:bar, :foo], buf
   end
+
+  def test_owned?
+    buf = []
+    lock = Polyphony::Mutex.new
+    (1..3).each do |i|
+      spin do
+        lock.synchronize do
+          buf << ">> #{i}"
+          buf << [i, lock.owned?]
+          sleep(rand * 0.05)
+          buf << "<< #{i}"
+        end
+        buf << [i, lock.owned?]
+      end
+    end
+
+    Fiber.current.await_all_children
+    assert_equal ['>> 1', [1, true], '<< 1', [1, false], '>> 2', [2, true], '<< 2', [2, false], '>> 3', [3, true], '<< 3', [3, false]], buf
+  end
+
+  def test_locked?
+    lock = Polyphony::Mutex.new
+    a = spin do
+      sender = receive
+      lock.synchronize do
+        sender << 'pong'
+        receive
+      end
+      sender << 'pong'
+    end
+
+    snooze
+    assert !lock.locked?
+    a << Fiber.current
+    
+    receive
+    assert lock.locked?
+
+    a << Fiber.current
+    
+    receive
+    assert !lock.locked?
+  end
 end
