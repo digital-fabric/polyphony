@@ -1,3 +1,11 @@
+## 0.54.0
+
+- Implement Mutex#owned?, #locked? (#50)
+- Fix arity for SSLSocket#peeraddr (#55)
+- Add missing SSLServer#accept_loop method (#53)
+- Fix SSLSocket buffering behaviour
+- Add recv_loop alias for SSLSocket (#54)
+
 ## 0.53.2
 
 - Remove `splice` methods on libev backend on non-Linux OS (#43)

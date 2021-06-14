@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Polyphony
-  VERSION = '0.53.2'
+  VERSION = '0.54.0'
 end
