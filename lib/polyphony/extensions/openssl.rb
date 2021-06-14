@@ -84,4 +84,5 @@ class ::OpenSSL::SSL::SSLSocket
       yield data
     end
   end
+  alias_method :recv_loop, :read_loop
 end
