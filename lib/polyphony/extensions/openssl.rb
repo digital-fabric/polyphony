@@ -42,6 +42,15 @@ class ::OpenSSL::SSL::SSLSocket
     end
   end
 
+  def fill_rbuff
+    data = self.sysread(BLOCK_SIZE)
+    if data
+      @rbuffer << data
+    else
+      @eof = true
+    end
+  end
+
   alias_method :orig_sysread, :sysread
   def sysread(maxlen, buf = +'')
     while true
