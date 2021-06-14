@@ -75,6 +75,11 @@ class ::OpenSSL::SSL::SSLSocket
     end
   end
   alias_method :recv_loop, :read_loop
+
+  alias_method :orig_peeraddr, :peeraddr
+  def peeraddr(_ = nil)
+    orig_peeraddr
+  end
 end
 
 # OpenSSL socket helper methods (to make it compatible with Socket API) and overrides
