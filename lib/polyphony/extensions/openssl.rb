@@ -3,7 +3,7 @@
 require 'openssl'
 require_relative './socket'
 
-# Open ssl socket helper methods (to make it compatible with Socket API)
+# OpenSSL socket helper methods (to make it compatible with Socket API) and overrides
 class ::OpenSSL::SSL::SSLSocket
   alias_method :orig_initialize, :initialize
   def initialize(socket, context = nil)
@@ -21,25 +21,6 @@ class ::OpenSSL::SSL::SSLSocket
 
   def reuse_addr
     io.reuse_addr
-  end
-
-  alias_method :orig_accept, :accept
-  def accept
-    while true
-      result = accept_nonblock(exception: false)
-      case result
-      when :wait_readable then Polyphony.backend_wait_io(io, false)
-      when :wait_writable then Polyphony.backend_wait_io(io, true)
-      else
-        return result
-      end
-    end
-  end
-
-  def accept_loop
-    while true
-      yield accept
-    end
   end
 
   def fill_rbuff
@@ -94,4 +75,15 @@ class ::OpenSSL::SSL::SSLSocket
     end
   end
   alias_method :recv_loop, :read_loop
+end
+
+# OpenSSL socket helper methods (to make it compatible with Socket API) and overrides
+class ::OpenSSL::SSL::SSLServer
+  def accept_loop(ignore_errors = true)
+    loop do
+      yield accept
+    rescue SystemCallError, StandardError => e
+      raise e unless ignore_errors
+    end
+  end
 end

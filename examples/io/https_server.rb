@@ -14,6 +14,10 @@ opts = {
 server = Polyphony::Net.tcp_listen('localhost', 1234, opts)
 
 puts 'Serving HTTPS on port 1234'
+
+spin_loop(interval: 1) { STDOUT << '.' }
+
+# server.accept_loop do |socket|
 while (socket = server.accept)
   spin do
     while (data = socket.gets("\n", 8192))
