@@ -75,14 +75,21 @@ class TimerCancelAfterTest < MiniTest::Test
   end
 
   def test_timer_cancel_after_with_reset
-    t0 = Time.now
+    buf = []
     @timer.cancel_after(0.01) do
-      sleep 0.007
+      sleep 0.005
+      buf << 1
       @timer.reset
-      sleep 0.007
+      sleep 0.005
+      buf << 2
+      @timer.reset
+      sleep 0.005
+      buf << 3
+      @timer.reset
+      sleep 0.005
+      buf << 4
     end
-    t1 = Time.now
-    assert_in_range 0.012..0.024, t1 - t0
+    assert_equal [1, 2, 3, 4], buf
   end
 
   class CustomException < Exception

@@ -50,7 +50,7 @@ class SignalTrapTest < Minitest::Test
     ensure
       o.close
     end
-    sleep 0.02
+    sleep 0.1
     o.close
     Process.kill('INT', pid)
     Thread.current.backend.waitpid(pid)

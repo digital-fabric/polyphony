@@ -132,7 +132,6 @@ class FiberTest < MiniTest::Test
     event = Polyphony::Event.new
 
     t = Thread.new do
-      f = spin_loop { snooze }
       sleep 0.001
       event.signal(:foo)
     end
