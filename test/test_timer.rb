@@ -147,7 +147,6 @@ class TimerMiscTest < MiniTest::Test
     snooze
     assert_equal [], buffer
     sleep 0.1
-    p :post_sleep
     assert_equal [2], buffer
   end
 

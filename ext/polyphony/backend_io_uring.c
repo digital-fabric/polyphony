@@ -152,15 +152,15 @@ static inline void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, 
   if (!ctx) return;
 
   ctx->result = cqe->res;
-
-  if (ctx->completed)
-    // already marked as deleted as result of fiber resuming before op
-    // completion, so we can release the context
+  ctx->completed = 1;
+  if (!ctx->ref_count)
+    // already dereferenced as result of fiber resuming before op completion
+    // (with an exception), so we can release the context
     context_store_release(&backend->store, ctx);
   else {
-    // otherwise, we mark it as completed, schedule the fiber and let it deal
-    // with releasing the context
-    ctx->completed = 1;
+    // normal operation, op has completed, we dereference it, schedule the fiber
+    // and let it deal with releasing the context
+    ctx->ref_count -= 1;
     if (ctx->result != -ECANCELED) Fiber_make_runnable(ctx->fiber, ctx->resume_value);
   }
 }
@@ -270,10 +270,9 @@ int io_uring_backend_defer_submit_and_await(
 
   switchpoint_result = backend_await(backend);
 
-  if (!ctx->completed) {
+  if (ctx->ref_count) {
+    // op was not completed (an exception was raised), so we need to cancel it
     ctx->result = -ECANCELED;
-
-    // op was not completed, so we need to cancel it
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_cancel(sqe, ctx, 0);
     backend->pending_sqes = 0;

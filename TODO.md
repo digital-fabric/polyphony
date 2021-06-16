@@ -10,9 +10,6 @@
 
 - Add support for `break` and `StopIteration` in all loops (with tests)
 
-- Change `IO#gets` to use `String#split` to cut into lines, much faster (see
-  examples/performance/line_splitting.rb)
-
 - More tight loops
   - `IO#gets_loop`, `Socket#gets_loop`, `OpenSSL::Socket#gets_loop` (medium effort)
   - `Fiber#receive_loop` (very little effort, should be implemented in C)

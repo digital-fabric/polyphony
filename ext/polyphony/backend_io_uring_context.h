@@ -21,7 +21,8 @@ typedef struct op_context {
   struct op_context *prev;
   struct op_context *next;
   enum op_type      type: 16;
-  int               completed : 16;
+  int               completed : 8;
+  unsigned int      ref_count : 8;         
   int               id;
   int               result;
   VALUE             fiber;
@@ -43,11 +44,12 @@ void context_store_free(op_context_store_t *store);
 
 #define OP_CONTEXT_ACQUIRE(store, op_type) context_store_acquire(store, op_type)
 #define OP_CONTEXT_RELEASE(store, ctx) { \
-  if (ctx->completed) {\
-    context_store_release(store, ctx); \
+  ctx->completed = 1; \
+  if (ctx->ref_count) { \
+    ctx->ref_count -= 1; \
   } \
   else { \
-    ctx->completed = 1; \
+    context_store_release(store, ctx); \
   } \
 }
 
