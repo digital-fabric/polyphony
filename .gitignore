@@ -57,3 +57,5 @@ lib/*.so
 
 _site
 .sass-cache
+
+log
