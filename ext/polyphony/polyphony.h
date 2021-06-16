@@ -90,6 +90,7 @@ int Runqueue_index_of(VALUE self, VALUE fiber);
 void Runqueue_clear(VALUE self);
 long Runqueue_len(VALUE self);
 int Runqueue_empty_p(VALUE self);
+int Runqueue_should_poll_nonblocking(VALUE self);
 
 #ifdef POLYPHONY_BACKEND_LIBEV
 #define Backend_recv_loop Backend_read_loop

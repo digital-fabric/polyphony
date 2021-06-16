@@ -86,7 +86,7 @@ VALUE Thread_switch_fiber(VALUE self) {
   VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
   runqueue_entry next;
   VALUE backend = rb_ivar_get(self, ID_ivar_backend);
-  unsigned int pending_count = Backend_pending_count(backend);
+  unsigned int pending_ops_count = Backend_pending_count(backend);
   unsigned int backend_was_polled = 0;
 
   if (__tracing_enabled__ && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
@@ -95,14 +95,24 @@ VALUE Thread_switch_fiber(VALUE self) {
   while (1) {
     next = Runqueue_shift(runqueue);
     if (next.fiber != Qnil) {
-      if (!backend_was_polled && pending_count) {
+      // Polling for I/O op completion is normally done when the run queue is
+      // empty, but if the runqueue never empties, we'll never get to process
+      // any event completions. In order to prevent this, an anti-starve
+      // mechanism is employed, under the following conditions:
+      // - a blocking poll was not yet performed
+      // - there are pending blocking operations
+      // - the runqueue has signalled that a non-blocking poll should be
+      //   performed
+      //   - the run queue length high watermark has reached its threshold (currently 128)
+      //   - the run queue switch counter has reached its threshold (currently 64) 
+      if (!backend_was_polled && pending_ops_count && Runqueue_should_poll_nonblocking(runqueue)) {
         // this prevents event starvation in case the run queue never empties
         Backend_poll(backend, Qtrue, current_fiber, runqueue);
       }
       break;
     }
-    if (pending_count == 0) break;
-
+    
+    if (pending_ops_count == 0) break;
     Backend_poll(backend, Qnil, current_fiber, runqueue);
     backend_was_polled = 1;
   }

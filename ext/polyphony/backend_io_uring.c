@@ -51,7 +51,6 @@ typedef struct Backend_t {
   // common fields
   unsigned int        currently_polling;
   unsigned int        pending_count;
-  unsigned int        poll_no_wait_count;
 
   // implementation-specific fields
   struct io_uring     ring;
@@ -88,7 +87,6 @@ static VALUE Backend_initialize(VALUE self) {
 
   backend->currently_polling = 0;
   backend->pending_count = 0;
-  backend->poll_no_wait_count = 0;
   backend->pending_sqes = 0;
   backend->prepared_limit = 2048;
 
@@ -118,7 +116,6 @@ VALUE Backend_post_fork(VALUE self) {
   context_store_free(&backend->store);
   backend->currently_polling = 0;
   backend->pending_count = 0;
-  backend->poll_no_wait_count = 0;
   backend->pending_sqes = 0;
 
   return self;
@@ -218,16 +215,6 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
   int is_nowait = nowait == Qtrue;
   Backend_t *backend;
   GetBackend(self, backend);
-
-  if (is_nowait) {
-    backend->poll_no_wait_count++;
-    if (backend->poll_no_wait_count < 10) return self;
-
-    long runnable_count = Runqueue_len(runqueue);
-    if (backend->poll_no_wait_count < runnable_count) return self;
-  }
-
-  backend->poll_no_wait_count = 0;
 
   if (is_nowait && backend->pending_sqes) {
     backend->pending_sqes = 0;
@@ -1090,6 +1077,31 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
 VALUE Backend_kind(VALUE self) {
   return SYM_io_uring;
 }
+
+// VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
+//   VALUE result = Qnil;
+//   if (argc == 0) return result;
+
+//   for (int i = 0; i < argc; i++) {
+//     VALUE op = argv[i];
+//     VALUE op_type = RARRAY_AREF(op, 0);
+//     VALUE op_len = RARRAY_LEN(op);
+
+//     if (op_type == SYM_write && op_len == 3)
+//       result = Backend_write(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2));
+//     else if (op_type == SYM_send && op_len == 4)
+//       result = Backend_send(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2), RARRAY_AREF(op, 3));
+//     #ifdef POLYPHONY_LINUX
+//     else if (op_type == SYM_splice && op_len == 4)
+//       result = Backend_splice(self, RARRAY_AREF(op, 1), RARRAY_AREF(op, 2), RARRAY_AREF(op, 3));
+//     #endif
+//     else
+//       rb_raise(rb_eRuntimeError, "Invalid op specified or bad op arity");
+//   }
+  
+//   RB_GC_GUARD(result);
+//   return result;
+// }
 
 void Init_Backend() {
   VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cObject);
