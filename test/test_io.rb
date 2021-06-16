@@ -98,8 +98,10 @@ class IOTest < MiniTest::Test
 
     buf = []
     f = spin do
+      peer = receive
       while (l = i.gets)
         buf << l
+        peer << true
       end
     end
 
@@ -107,11 +109,12 @@ class IOTest < MiniTest::Test
     assert_equal [], buf
 
     o << 'fab'
-    snooze
+    f << Fiber.current
+    sleep 0.05
     assert_equal [], buf
     
     o << "ulous\n"
-    sleep 0.01
+    receive
     assert_equal ["fabulous\n"], buf
 
     o.close
