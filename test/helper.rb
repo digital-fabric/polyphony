@@ -15,9 +15,9 @@ require 'minitest/reporters'
 
 ::Exception.__disable_sanitized_backtrace__ = true
 
-Minitest::Reporters.use! [
-  Minitest::Reporters::SpecReporter.new
-]
+# Minitest::Reporters.use! [
+#   Minitest::Reporters::SpecReporter.new
+# ]
 
 class ::Fiber
   attr_writer :auto_watcher
