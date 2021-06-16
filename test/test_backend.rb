@@ -298,7 +298,6 @@ class BackendChainTest < MiniTest::Test
 
   def test_simple_write_chain
     skip
-
     i, o = IO.pipe
 
     result = Thread.backend.chain(

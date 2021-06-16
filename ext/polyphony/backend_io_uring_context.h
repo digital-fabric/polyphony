@@ -14,15 +14,15 @@ enum op_type {
   OP_TIMEOUT,
   OP_POLL,
   OP_ACCEPT,
-  OP_CONNECT
+  OP_CONNECT,
+  OP_CHAIN
 };
 
 typedef struct op_context {
   struct op_context *prev;
   struct op_context *next;
   enum op_type      type: 16;
-  int               completed : 8;
-  unsigned int      ref_count : 8;         
+  unsigned int      ref_count : 16;         
   int               id;
   int               result;
   VALUE             fiber;
@@ -43,14 +43,24 @@ void context_store_release(op_context_store_t *store, op_context_t *ctx);
 void context_store_free(op_context_store_t *store);
 
 #define OP_CONTEXT_ACQUIRE(store, op_type) context_store_acquire(store, op_type)
-#define OP_CONTEXT_RELEASE(store, ctx) { \
-  ctx->completed = 1; \
-  if (ctx->ref_count) { \
-    ctx->ref_count -= 1; \
-  } \
-  else { \
-    context_store_release(store, ctx); \
-  } \
+
+inline unsigned int OP_CONTEXT_RELEASE(op_context_store_t *store, op_context_t *ctx) {
+  int completed = !ctx->ref_count;
+  if (ctx->ref_count)
+    ctx->ref_count -= 1;
+  else
+    context_store_release(store, ctx);
+  return completed;
 }
+// define OP_CONTEXT_RELEASE(store, ctx) {
+//   unsigned int interrupted = ctx->ref_count;
+//   if (ctx->ref_count) {
+//     ctx->ref_count -= 1;
+//   }
+//   else {
+//     context_store_release(store, ctx);
+//   }
+//   interrupted;
+// }
 
 #endif /* BACKEND_IO_URING_CONTEXT_H */

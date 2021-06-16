@@ -44,7 +44,6 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
   ctx->type = type;
   ctx->fiber = rb_fiber_current();
   ctx->resume_value = Qnil;
-  ctx->completed = 0;
   ctx->ref_count = 1;
   ctx->result = 0;
 
