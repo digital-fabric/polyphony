@@ -62,30 +62,6 @@ VALUE SYM_send;
 VALUE SYM_splice;
 VALUE SYM_write;
 
-ID ID_ivar_is_nonblocking;
-
-// Since we need to ensure that fd's are non-blocking before every I/O
-// operation, here we improve upon Ruby's rb_io_set_nonblock by caching the
-// "nonblock" state in an instance variable. Calling rb_ivar_get on every read
-// is still much cheaper than doing a fcntl syscall on every read! Preliminary
-// benchmarks (with a "hello world" HTTP server) show throughput is improved
-// by 10-13%.
-inline void io_set_nonblock(rb_io_t *fptr, VALUE io) {
-  VALUE is_nonblocking = rb_ivar_get(io, ID_ivar_is_nonblocking);
-  if (is_nonblocking == Qtrue) return;
-
-  rb_ivar_set(io, ID_ivar_is_nonblocking, Qtrue);
-
-#ifdef _WIN32
-  rb_w32_set_nonblock(fptr->fd);
-#elif defined(F_GETFL)
-  int oflags = fcntl(fptr->fd, F_GETFL);
-  if ((oflags == -1) && (oflags & O_NONBLOCK)) return;
-  oflags |= O_NONBLOCK;
-  fcntl(fptr->fd, F_SETFL, oflags);
-#endif
-}
-
 typedef struct Backend_t {
   // common fields
   unsigned int        currently_polling;
@@ -271,7 +247,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
-  io_set_nonblock(fptr, io);
+  io_verify_blocking_mode(fptr, io, Qfalse);
   rectify_io_file_pos(fptr);
   watcher.fiber = Qnil;
   OBJ_TAINT(str);
@@ -343,7 +319,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io) {
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
-  io_set_nonblock(fptr, io);
+  io_verify_blocking_mode(fptr, io, Qfalse);
   rectify_io_file_pos(fptr);
   watcher.fiber = Qnil;
 
@@ -395,7 +371,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   if (underlying_io != Qnil) io = underlying_io;
   GetOpenFile(io, fptr);
   rb_io_check_byte_readable(fptr);
-  io_set_nonblock(fptr, io);
+  io_verify_blocking_mode(fptr, io, Qfalse);
   rectify_io_file_pos(fptr);
   watcher.fiber = Qnil;
 
@@ -443,7 +419,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
-  io_set_nonblock(fptr, io);
+  io_verify_blocking_mode(fptr, io, Qfalse);
   watcher.fiber = Qnil;
 
   while (left > 0) {
@@ -493,7 +469,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
-  io_set_nonblock(fptr, io);
+  io_verify_blocking_mode(fptr, io, Qfalse);
   watcher.fiber = Qnil;
 
   iov = malloc(iov_count * sizeof(struct iovec));
@@ -574,7 +550,7 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
 
   GetBackend(self, backend);
   GetOpenFile(server_socket, fptr);
-  io_set_nonblock(fptr, server_socket);
+  io_verify_blocking_mode(fptr, server_socket, Qfalse);
   watcher.fiber = Qnil;
   while (1) {
     fd = accept(fptr->fd, &addr, &len);
@@ -602,7 +578,7 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
       fp->fd = fd;
       fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
       rb_io_ascii8bit_binmode(socket);
-      io_set_nonblock(fp, socket);
+      io_verify_blocking_mode(fp, socket, Qfalse);
       rb_io_synchronized(fp);
 
       // if (rsock_do_not_reverse_lookup) {
@@ -631,7 +607,7 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
 
   GetBackend(self, backend);
   GetOpenFile(server_socket, fptr);
-  io_set_nonblock(fptr, server_socket);
+  io_verify_blocking_mode(fptr, server_socket, Qfalse);
   watcher.fiber = Qnil;
 
   while (1) {
@@ -659,7 +635,7 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
       fp->fd = fd;
       fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
       rb_io_ascii8bit_binmode(socket);
-      io_set_nonblock(fp, socket);
+      io_verify_blocking_mode(fp, socket, Qfalse);
       rb_io_synchronized(fp);
 
       rb_yield(socket);
@@ -687,7 +663,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
 
   GetBackend(self, backend);
   GetOpenFile(sock, fptr);
-  io_set_nonblock(fptr, sock);
+  io_verify_blocking_mode(fptr, sock, Qfalse);
   watcher.fiber = Qnil;
 
   addr.sin_family = AF_INET;
@@ -730,7 +706,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   GetBackend(self, backend);
   io = rb_io_get_write_io(io);
   GetOpenFile(io, fptr);
-  io_set_nonblock(fptr, io);
+  io_verify_blocking_mode(fptr, io, Qfalse);
   watcher.fiber = Qnil;
 
   while (left > 0) {
@@ -778,13 +754,13 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   underlying_io = rb_ivar_get(src, ID_ivar_io);
   if (underlying_io != Qnil) src = underlying_io;
   GetOpenFile(src, src_fptr);
-  io_set_nonblock(src_fptr, src);
+  io_verify_blocking_mode(src_fptr, src, Qfalse);
 
   underlying_io = rb_ivar_get(dest, ID_ivar_io);
   if (underlying_io != Qnil) dest = underlying_io;
   dest = rb_io_get_write_io(dest);
   GetOpenFile(dest, dest_fptr);
-  io_set_nonblock(dest_fptr, dest);
+  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
 
   watcher.fiber = Qnil;
   while (1) {
@@ -832,13 +808,13 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   underlying_io = rb_ivar_get(src, ID_ivar_io);
   if (underlying_io != Qnil) src = underlying_io;
   GetOpenFile(src, src_fptr);
-  io_set_nonblock(src_fptr, src);
+  io_verify_blocking_mode(src_fptr, src, Qfalse);
 
   underlying_io = rb_ivar_get(dest, ID_ivar_io);
   if (underlying_io != Qnil) dest = underlying_io;
   dest = rb_io_get_write_io(dest);
   GetOpenFile(dest, dest_fptr);
-  io_set_nonblock(dest_fptr, dest);
+  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
 
   watcher.fiber = Qnil;
   while (1) {
@@ -1152,7 +1128,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "write", Backend_write_m, -1);
 
-  ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
   SYM_libev = ID2SYM(rb_intern("libev"));
 
   SYM_send = ID2SYM(rb_intern("send"));

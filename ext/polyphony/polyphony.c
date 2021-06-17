@@ -10,6 +10,7 @@ ID ID_each;
 ID ID_inspect;
 ID ID_invoke;
 ID ID_new;
+ID ID_ivar_blocking_mode;
 ID ID_ivar_io;
 ID ID_ivar_runnable;
 ID ID_ivar_running;
@@ -158,19 +159,20 @@ void Init_Polyphony() {
 
   cTimeoutException = rb_define_class_under(mPolyphony, "TimeoutException", rb_eException);
 
-  ID_call           = rb_intern("call");
-  ID_caller         = rb_intern("caller");
-  ID_clear          = rb_intern("clear");
-  ID_each           = rb_intern("each");
-  ID_inspect        = rb_intern("inspect");
-  ID_invoke         = rb_intern("invoke");
-  ID_ivar_io        = rb_intern("@io");
-  ID_ivar_runnable  = rb_intern("@runnable");
-  ID_ivar_running   = rb_intern("@running");
-  ID_ivar_thread    = rb_intern("@thread");
-  ID_new            = rb_intern("new");
-  ID_signal         = rb_intern("signal");
-  ID_size           = rb_intern("size");
-  ID_switch_fiber   = rb_intern("switch_fiber");
-  ID_transfer       = rb_intern("transfer");
+  ID_call               = rb_intern("call");
+  ID_caller             = rb_intern("caller");
+  ID_clear              = rb_intern("clear");
+  ID_each               = rb_intern("each");
+  ID_inspect            = rb_intern("inspect");
+  ID_invoke             = rb_intern("invoke");
+  ID_ivar_blocking_mode = rb_intern("@blocking_mode");
+  ID_ivar_io            = rb_intern("@io");
+  ID_ivar_runnable      = rb_intern("@runnable");
+  ID_ivar_running       = rb_intern("@running");
+  ID_ivar_thread        = rb_intern("@thread");
+  ID_new                = rb_intern("new");
+  ID_signal             = rb_intern("signal");
+  ID_size               = rb_intern("size");
+  ID_switch_fiber       = rb_intern("switch_fiber");
+  ID_transfer           = rb_intern("transfer");
 }

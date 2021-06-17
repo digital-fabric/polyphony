@@ -177,3 +177,28 @@ VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags) {
     return result;
   }
 }
+
+inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
+  VALUE blocking_mode = rb_ivar_get(io, ID_ivar_blocking_mode);
+  if (blocking == blocking_mode) return;
+
+  rb_ivar_set(io, ID_ivar_blocking_mode, blocking);
+
+#ifdef _WIN32
+  if (blocking != Qtrue)
+    rb_w32_set_nonblock(fptr->fd);
+#elif defined(F_GETFL)
+  int oflags = fcntl(fptr->fd, F_GETFL);
+  if (oflags == -1) return;
+  int is_nonblocking = oflags & O_NONBLOCK;
+  
+  if (blocking == Qtrue) {
+    if (!is_nonblocking) return;
+    oflags &= ~O_NONBLOCK;
+  } else {
+    if (is_nonblocking) return;
+    oflags |= O_NONBLOCK;
+  }
+  fcntl(fptr->fd, F_SETFL, oflags);
+#endif
+}

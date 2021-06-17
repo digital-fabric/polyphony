@@ -47,6 +47,7 @@ extern ID ID_fiber_trace;
 extern ID ID_inspect;
 extern ID ID_invoke;
 extern ID ID_ivar_backend;
+extern ID ID_ivar_blocking_mode;
 extern ID ID_ivar_io;
 extern ID ID_ivar_runnable;
 extern ID ID_ivar_running;
