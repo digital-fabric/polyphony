@@ -36,9 +36,9 @@ class ::Socket
   end
 
   def recvfrom(maxlen, flags = 0)
-    @read_buffer ||= +''
+    buf = +''
     while true
-      result = recvfrom_nonblock(maxlen, flags, @read_buffer, **NO_EXCEPTION)
+      result = recvfrom_nonblock(maxlen, flags, buf, **NO_EXCEPTION)
       case result
       when nil then raise IOError
       when :wait_readable then Polyphony.backend_wait_io(self, false)
@@ -165,17 +165,10 @@ class ::TCPSocket
   #   Polyphony.backend_send(self, mesg, 0)
   # end
 
-  def readpartial(maxlen, str = nil)
-    @read_buffer ||= +''
-    result = Polyphony.backend_recv(self, @read_buffer, maxlen)
+  def readpartial(maxlen, str = +'')
+    result = Polyphony.backend_recv(self, str, maxlen)
     raise EOFError unless result
 
-    if str
-      str << @read_buffer
-    else
-      str = @read_buffer
-    end
-    @read_buffer = +''
     str
   end
 
@@ -249,17 +242,10 @@ class ::UNIXSocket
     Polyphony.backend_send(self, mesg, 0)
   end
 
-  def readpartial(maxlen, str = nil)
-    @read_buffer ||= +''
-    result = Polyphony.backend_recv(self, @read_buffer, maxlen)
+  def readpartial(maxlen, str = +'')
+    result = Polyphony.backend_recv(self, str, maxlen)
     raise EOFError unless result
 
-    if str
-      str << @read_buffer
-    else
-      str = @read_buffer
-    end
-    @read_buffer = +''
     str
   end
 
