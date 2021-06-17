@@ -290,7 +290,7 @@ class IOClassMethodsTest < MiniTest::Test
   end
 
   def test_foreach
-    skip "IO.foreach is not yet implemented"
+    skip 'IO.foreach is not yet implemented'
     lines = []
     IO.foreach(__FILE__) { |l| lines << l }
     assert_equal "# frozen_string_literal: true\n", lines[0]

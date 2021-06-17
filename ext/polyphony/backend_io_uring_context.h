@@ -39,10 +39,8 @@ const char *op_type_to_str(enum op_type type);
 
 void context_store_initialize(op_context_store_t *store);
 op_context_t *context_store_acquire(op_context_store_t *store, enum op_type type);
-void context_store_release(op_context_store_t *store, op_context_t *ctx);
+int context_store_release(op_context_store_t *store, op_context_t *ctx);
 void context_store_free(op_context_store_t *store);
-
-#define OP_CONTEXT_ACQUIRE(store, op_type) context_store_acquire(store, op_type)
 
 inline unsigned int OP_CONTEXT_RELEASE(op_context_store_t *store, op_context_t *ctx) {
   int completed = !ctx->ref_count;
@@ -52,15 +50,5 @@ inline unsigned int OP_CONTEXT_RELEASE(op_context_store_t *store, op_context_t *
     context_store_release(store, ctx);
   return completed;
 }
-// define OP_CONTEXT_RELEASE(store, ctx) {
-//   unsigned int interrupted = ctx->ref_count;
-//   if (ctx->ref_count) {
-//     ctx->ref_count -= 1;
-//   }
-//   else {
-//     context_store_release(store, ctx);
-//   }
-//   interrupted;
-// }
 
 #endif /* BACKEND_IO_URING_CONTEXT_H */

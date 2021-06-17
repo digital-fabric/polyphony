@@ -26,7 +26,7 @@ class BackendTest < MiniTest::Test
       @backend.sleep 0.01
       count += 1
     }.await
-    assert_in_delta 0.03, Time.now - t0, 0.005
+    assert_in_delta 0.03, Time.now - t0, 0.01
     assert_equal 3, count
   end
 
@@ -297,7 +297,6 @@ class BackendChainTest < MiniTest::Test
   end
 
   def test_simple_write_chain
-    skip
     i, o = IO.pipe
 
     result = Thread.backend.chain(
@@ -308,6 +307,36 @@ class BackendChainTest < MiniTest::Test
     assert_equal 6, result
     o.close
     assert_equal 'hello world', i.read
+  end
+
+  def test_simple_send_chain
+    port = rand(1234..5678)
+    server = TCPServer.new('127.0.0.1', port)
+
+    server_fiber = spin do
+      while (socket = server.accept)
+        spin do
+          while (data = socket.gets(8192))
+            socket << data
+          end
+        end
+      end
+    end
+
+    snooze
+    client = TCPSocket.new('127.0.0.1', port)
+    
+    result = Thread.backend.chain(
+      [:send, client, 'hello', 0],
+      [:send, client, " world\n", 0]
+    )
+    sleep 0.1
+    assert_equal "hello world\n", client.recv(8192)
+    client.close
+  ensure
+    server_fiber&.stop
+    server_fiber&.await
+    server&.close
   end
 
   def chunk_header(len)
@@ -330,8 +359,6 @@ class BackendChainTest < MiniTest::Test
   end
 
   def test_chain_with_splice
-    skip
-
     from_r, from_w = IO.pipe
     to_r, to_w = IO.pipe
 
@@ -345,13 +372,20 @@ class BackendChainTest < MiniTest::Test
   end
 
   def test_invalid_op
-    skip
-
     i, o = IO.pipe
 
     assert_raises(RuntimeError) {
       Thread.backend.chain(
-        [:read, o]
+        [:read, i]
+      )
+    }
+
+    assert_raises(RuntimeError) {
+      Thread.backend.chain(
+        [:write, o, 'abc'],
+        [:write, o, 'abc'],
+        [:write, o, 'abc'],
+        [:read, i]
       )
     }
 
@@ -360,5 +394,10 @@ class BackendChainTest < MiniTest::Test
         [:write, o]
       )
     }
+
+    # Eventually we should add some APIs to the io_uring backend to query the
+    # contxt store, then add some tests here to verify that the chain op ctx is
+    # released properly before raising the error (for the time being this has
+    # been verified manually).
   end
 end
