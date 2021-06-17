@@ -26,27 +26,8 @@ VALUE SYM_splice;
 VALUE SYM_write;
 
 #ifdef POLYPHONY_UNSET_NONBLOCK
-ID ID_ivar_is_nonblocking;
-
-// One of the changes introduced in Ruby 3.0 as part of the work on the
-// FiberScheduler interface is that all created sockets are marked as
-// non-blocking. This prevents the io_uring backend from working correctly,
-// since it will return an EAGAIN error just like a normal syscall. So here
-// instead of setting O_NONBLOCK (which is required for the libev backend), we
-// unset it.
-inline void io_unset_nonblock(rb_io_t *fptr, VALUE io) {
-  VALUE is_nonblocking = rb_ivar_get(io, ID_ivar_is_nonblocking);
-  if (is_nonblocking == Qfalse) return;
-
-  rb_ivar_set(io, ID_ivar_is_nonblocking, Qfalse);
-
-  int oflags = fcntl(fptr->fd, F_GETFL);
-  if ((oflags == -1) && (oflags & O_NONBLOCK)) return;
-  oflags &= !O_NONBLOCK;
-  fcntl(fptr->fd, F_SETFL, oflags);
-}
+#define io_unset_nonblock(fptr, io) io_verify_blocking_mode(fptr, io, Qtrue)
 #else
-// NOP
 #define io_unset_nonblock(fptr, io)
 #endif
 
