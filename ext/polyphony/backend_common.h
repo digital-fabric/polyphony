@@ -26,7 +26,7 @@ struct io_internal_read_struct {
 
 #define StringValue(v) rb_string_value(&(v))
 
-int io_setstrbuf(VALUE *str, long len) {
+inline int io_setstrbuf(VALUE *str, long len) {
   #ifdef _WIN32
     len = (len + 1) & ~1L;	/* round up for wide char */
   #endif
@@ -55,7 +55,7 @@ inline void io_shrink_read_string(VALUE str, long n) {
   }
 }
 
-void io_set_read_length(VALUE str, long n, int shrinkable) {
+inline void io_set_read_length(VALUE str, long n, int shrinkable) {
   if (RSTRING_LEN(str) != n) {
     rb_str_modify(str);
     rb_str_set_len(str, n);
@@ -64,16 +64,16 @@ void io_set_read_length(VALUE str, long n, int shrinkable) {
 }
 
 inline rb_encoding* io_read_encoding(rb_io_t *fptr) {
-    if (fptr->encs.enc) {
-	return fptr->encs.enc;
-    }
-    return rb_default_external_encoding();
+  if (fptr->encs.enc) {
+	  return fptr->encs.enc;
+  }
+  return rb_default_external_encoding();
 }
 
-VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
-    OBJ_TAINT(str);
-    rb_enc_associate(str, io_read_encoding(fptr));
-    return str;
+inline VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
+  OBJ_TAINT(str);
+  rb_enc_associate(str, io_read_encoding(fptr));
+  return str;
 }
 
 //////////////////////////////////////////////////////////////////////
