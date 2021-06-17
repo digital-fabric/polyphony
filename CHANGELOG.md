@@ -1,4 +1,11 @@
-## 0.54.0
+## 0.55.0 2021-06-17
+
+- Finish io_uring implementation of Backend#chain
+- Reimplement io_uring op_context acquire/release algorithm (using ref count) 
+- Fix #gets on sockets
+- Redesign event anti-starvation mechanism
+
+## 0.54.0 2021-06-14
 
 - Implement Mutex#owned?, #locked? (#50)
 - Fix arity for SSLSocket#peeraddr (#55)
@@ -6,15 +13,15 @@
 - Fix SSLSocket buffering behaviour
 - Add recv_loop alias for SSLSocket (#54)
 
-## 0.53.2
+## 0.53.2 2021-05-10
 
 - Remove `splice` methods on libev backend on non-Linux OS (#43)
 
-## 0.53.0
+## 0.53.0 2021-04-23
 
 - Implement `Backend#splice`, `Backend#splice_to_eof`, along with `IO#splice`, `IO#splice_to_eof`
 
-## 0.52.0
+## 0.52.0 2021-02-28
 
 - Polyphony is now compatible with Ruby 3.0
 - Add `Backend#sendv` method for sending multiple strings
@@ -24,19 +31,19 @@
 - libev backend: Use` pidfd_open` for Linux 5.3+, otherwise use a libev child watcher
 - Use `:call` as default method in `#feed_loop`
 
-## 0.51.0
+## 0.51.0 2021-02-02
 
 - Implement `IO#feed_loop`, `Socket#feed_loop`
 - Fix error handling in `Process.kill_and_await`
 
-## 0.50.1
+## 0.50.1 2021-01-31
 
 - Set `IOSQE_ASYNC` flag in io_uring backend
 - Fix error handling in `Backend#waitpid`
 - Reimplement libev backend's `#waitpid` by using pidfd_open (in similar manner
   to the io_uring backend)
 
-## 0.50.0
+## 0.50.0 2021-01-28
 
 - Use `Process::CLOCK_MONOTONIC` in Timer
 - Add `Timer#sleep`, `Timer#after`, `Timer#every`
@@ -44,50 +51,50 @@
 - Add `Thread#fiber_index_of` method
 - Use `Backend#wait_event` in `Fiber#await`
 
-## 0.49.2
+## 0.49.2 2021-01-19
 
 - Fix hang with 100s or more child fibers when terminating
 - Fix double pending_count increment in io_uring backend
 
-## 0.49.1
+## 0.49.1 2021-01-13
 
 - Use `TCPSocket` instead of `Socket` in `Net.tcp_connect`
 - Catch `Errno::ERSCH` in `Process.kill_and_await`
 - Set io_uring queue size to 2048
 
-## 0.49.0
+## 0.49.0 2021-01-11
 
 - Implement `Polyphony::Timer` for performant timeouts
 
-## 0.48.0
+## 0.48.0 2021-01-05
 
 - Implement graceful shutdown
 - Add support for `break` / `StopIteration` in `spin_loop`
 - Fix `IO#gets`, `IO#readpartial`
 
-## 0.47.5.1
+## 0.47.5.1 2020-11-20
 
 - Add missing `Socket#accept_loop` method
 
-## 0.47.5
+## 0.47.5 2020-11-20
 
 - Add `socket_class` argument to `Backend#accept`, `Backend#accept_loop`
 - Fix `#supervise` to stop when all children fibers are done
 
-## 0.47.4
+## 0.47.4 2020-11-14
 
 - Add support for Unix sockets
 
-## 0.47.3
+## 0.47.3 2020-11-12
 
 - Enable I/O in signal handlers (#45)
 - Accept `:interval` argument in `#spin_loop`
 
-## 0.47.2
+## 0.47.2 2020-11-10
 
 - Fix API compatibility between TCPSocket and IO
 
-## 0.47.0
+## 0.47.0 2020-11-10
 
 - Implement `#spin_scope` used for creating blocking fiber scopes 
 - Reimplement `move_on_after`, `cancel_after`, `Timeout.timeout` using
@@ -95,18 +102,18 @@
 - Implement `Backend#timeout` API
 - Implemented capped queues
 
-## 0.46.1
+## 0.46.1 2020-11-04
 
 - Add `TCPServer#accept_loop`, `OpenSSL::SSL::SSLSocket#accept_loop` method
 - Fix compilation error on MacOS (#43)
 - Fix backtrace for `Timeout.timeout`
 - Add `Backend#timer_loop`
 
-## 0.46.0
+## 0.46.0 2020-10-08
 
 - Implement [io_uring backend](https://github.com/digital-fabric/polyphony/pull/44)
 
-## 0.45.5
+## 0.45.5 2020-10-04
 
 - Fix compilation error (#43)
 - Add support for resetting move_on_after, cancel_after timeouts
@@ -115,22 +122,22 @@
 - Schedule parent with priority on uncaught exception
 - Fix race condition in `Mutex#synchronize` (#41)
 
-## 0.45.4
+## 0.45.4 2020-09-06
 
 - Improve signal trapping mechanism
 
-## 0.45.3
+## 0.45.3 2020-09-02
 
 - Don't swallow error in `Process#kill_and_await`
 - Add `Fiber#mailbox` attribute reader
 - Fix bug in `Fiber.await`
 - Implement `IO#getc`, `IO#getbyte`
 
-## 0.45.2
+## 0.45.2 2020-08-03
 
 - Rewrite `Fiber#<<`, `Fiber#await`, `Fiber#receive` in C
 
-## 0.45.1
+## 0.45.1 2020-08-01
 
 - Fix Net::HTTP compatibility
 - Fix fs adapter
@@ -140,7 +147,7 @@
 - Cleanup code
 - Improve support for Ruby 3 keyword args
 
-## 0.45.0
+## 0.45.0 2020-07-29
 
 - Cleanup code
 - Rename `Agent` to `Backend`
