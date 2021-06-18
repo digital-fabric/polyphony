@@ -4,7 +4,6 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdnoreturn.h>
@@ -19,6 +18,7 @@
 #include "backend_io_uring_context.h"
 #include "ruby/thread.h"
 #include "ruby/io.h"
+#include "backend_common.h"
 
 VALUE SYM_io_uring;
 VALUE SYM_send;
@@ -32,9 +32,7 @@ VALUE SYM_write;
 #endif
 
 typedef struct Backend_t {
-  // common fields
-  unsigned int        currently_polling;
-  unsigned int        pending_count;
+  struct Backend_base base;
 
   // implementation-specific fields
   struct io_uring     ring;
@@ -43,8 +41,6 @@ typedef struct Backend_t {
   unsigned int        prepared_limit;
   int                 event_fd;
 } Backend_t;
-
-#include "backend_common.h"
 
 static size_t Backend_size(const void *ptr) {
   return sizeof(Backend_t);
@@ -69,8 +65,8 @@ static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  backend->currently_polling = 0;
-  backend->pending_count = 0;
+  backend->base.currently_polling = 0;
+  backend->base.pending_count = 0;
   backend->pending_sqes = 0;
   backend->prepared_limit = 2048;
 
@@ -98,8 +94,8 @@ VALUE Backend_post_fork(VALUE self) {
   io_uring_queue_exit(&backend->ring);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
   context_store_free(&backend->store);
-  backend->currently_polling = 0;
-  backend->pending_count = 0;
+  backend->base.currently_polling = 0;
+  backend->base.pending_count = 0;
   backend->pending_sqes = 0;
 
   return self;
@@ -109,7 +105,7 @@ unsigned int Backend_pending_count(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  return backend->pending_count;
+  return backend->base.pending_count;
 }
 
 typedef struct poll_context {
@@ -178,9 +174,9 @@ void io_uring_backend_poll(Backend_t *backend) {
     io_uring_submit(&backend->ring);
   }
 
-  backend->currently_polling = 1;
+  backend->base.currently_polling = 1;
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
-  backend->currently_polling = 0;
+  backend->base.currently_polling = 0;
   if (poll_ctx.result < 0) return;
 
   io_uring_backend_handle_completion(poll_ctx.cqe, backend);
@@ -209,7 +205,7 @@ VALUE Backend_wakeup(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  if (backend->currently_polling) {
+  if (backend->base.currently_polling) {
     // Since we're currently blocking while waiting for a completion, we add a
     // NOP which would cause the io_uring_enter syscall to return
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
@@ -244,7 +240,7 @@ int io_uring_backend_defer_submit_and_await(
   io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
   io_uring_backend_defer_submit(backend);
 
-  switchpoint_result = backend_await(backend);
+  switchpoint_result = backend_await((struct Backend_base *)backend);
 
   if (ctx->ref_count > 1) {
     // op was not completed (an exception was raised), so we need to cancel it
@@ -1158,7 +1154,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
 
   ctx->ref_count = sqe_count + 1;
   io_uring_backend_defer_submit(backend);
-  resume_value = backend_await(backend);
+  resume_value = backend_await((struct Backend_base *)backend);
   int result = ctx->result;
   int completed = context_store_release(&backend->store, ctx);
   if (!completed) {

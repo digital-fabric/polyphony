@@ -42,7 +42,6 @@ thread.
 #define _GNU_SOURCE 1
 #endif
 
-#include <fcntl.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
@@ -52,10 +51,14 @@ thread.
 #include <stdnoreturn.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 #include "polyphony.h"
 #include "../libev/ev.h"
 #include "ruby/io.h"
+
+#include "../libev/ev.h"
+#include "backend_common.h"
 
 VALUE SYM_libev;
 VALUE SYM_send;
@@ -63,9 +66,7 @@ VALUE SYM_splice;
 VALUE SYM_write;
 
 typedef struct Backend_t {
-  // common fields
-  unsigned int        currently_polling;
-  unsigned int        pending_count;
+  struct Backend_base base;
 
   // implementation-specific fields
   struct ev_loop *ev_loop;
@@ -118,8 +119,8 @@ static VALUE Backend_initialize(VALUE self) {
   // block when no other watcher is active
   ev_unref(backend->ev_loop);
 
-  backend->currently_polling = 0;
-  backend->pending_count = 0;
+  backend->base.currently_polling = 0;
+  backend->base.pending_count = 0;
 
   return Qnil;
 }
@@ -154,7 +155,7 @@ unsigned int Backend_pending_count(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  return backend->pending_count;
+  return backend->base.pending_count;
 }
 
 VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
@@ -162,9 +163,9 @@ VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue
   GetBackend(self, backend);
 
   COND_TRACE(2, SYM_fiber_event_poll_enter, current_fiber);
-  backend->currently_polling = 1;
+  backend->base.currently_polling = 1;
   ev_run(backend->ev_loop, nowait == Qtrue ? EVRUN_NOWAIT : EVRUN_ONCE);
-  backend->currently_polling = 0;
+  backend->base.currently_polling = 0;
   COND_TRACE(2, SYM_fiber_event_poll_leave, current_fiber);
 
   return self;
@@ -174,7 +175,7 @@ VALUE Backend_wakeup(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  if (backend->currently_polling) {
+  if (backend->base.currently_polling) {
     // Since the loop will run until at least one event has occurred, we signal
     // the selector's associated async watcher, which will cause the ev loop to
     // return. In contrast to using `ev_break` to break out of the loop, which
@@ -186,10 +187,6 @@ VALUE Backend_wakeup(VALUE self) {
 
   return Qnil;
 }
-
-#include "../libev/ev.h"
-
-#include "backend_common.h"
 
 struct libev_io {
   struct ev_io io;
@@ -211,7 +208,7 @@ VALUE libev_wait_fd_with_watcher(Backend_t *backend, int fd, struct libev_io *wa
   }
   ev_io_start(backend->ev_loop, &watcher->io);
 
-  switchpoint_result = backend_await(backend);
+  switchpoint_result = backend_await((struct Backend_base *)backend);
 
   ev_io_stop(backend->ev_loop, &watcher->io);
   RB_GC_GUARD(switchpoint_result);
@@ -264,7 +261,6 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
     }
     else {
       switchpoint_result = backend_snooze();
-
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
 
       if (n == 0) break; // EOF
@@ -884,7 +880,7 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
   ev_timer_init(&watcher.timer, Backend_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(backend->ev_loop, &watcher.timer);
 
-  switchpoint_result = backend_await(backend);
+  switchpoint_result = backend_await((struct Backend_base *)backend);
 
   ev_timer_stop(backend->ev_loop, &watcher.timer);
   RAISE_IF_EXCEPTION(switchpoint_result);
@@ -912,7 +908,7 @@ noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
     VALUE switchpoint_result = Qnil;    
     ev_timer_init(&watcher.timer, Backend_timer_callback, sleep_duration, 0.);
     ev_timer_start(backend->ev_loop, &watcher.timer);
-    switchpoint_result = backend_await(backend);
+    switchpoint_result = backend_await((struct Backend_base *)backend);
     ev_timer_stop(backend->ev_loop, &watcher.timer);
     RAISE_IF_EXCEPTION(switchpoint_result);
     RB_GC_GUARD(switchpoint_result);
@@ -1029,7 +1025,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   ev_child_init(&watcher.child, Backend_child_callback, NUM2INT(pid), 0);
   ev_child_start(backend->ev_loop, &watcher.child);
 
-  switchpoint_result = backend_await(backend);
+  switchpoint_result = backend_await((struct Backend_base *)backend);
 
   ev_child_stop(backend->ev_loop, &watcher.child);
   RAISE_IF_EXCEPTION(switchpoint_result);
@@ -1051,7 +1047,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   ev_async_init(&async, Backend_async_callback);
   ev_async_start(backend->ev_loop, &async);
 
-  switchpoint_result = backend_await(backend);
+  switchpoint_result = backend_await((struct Backend_base *)backend);
 
   ev_async_stop(backend->ev_loop, &async);
   if (RTEST(raise)) RAISE_IF_EXCEPTION(switchpoint_result);
