@@ -48,7 +48,7 @@ class TimerMoveOnAfterTest < MiniTest::Test
     t1 = Time.now
 
     assert_nil v
-    assert_in_range 0.015..0.03, t1 - t0
+    assert_in_range 0.015..0.04, t1 - t0
   end
 end
 
@@ -76,17 +76,17 @@ class TimerCancelAfterTest < MiniTest::Test
 
   def test_timer_cancel_after_with_reset
     buf = []
-    @timer.cancel_after(0.01) do
-      sleep 0.005
+    @timer.cancel_after(0.13) do
+      sleep 0.05
       buf << 1
       @timer.reset
-      sleep 0.005
+      sleep 0.05
       buf << 2
       @timer.reset
-      sleep 0.005
+      sleep 0.05
       buf << 3
       @timer.reset
-      sleep 0.005
+      sleep 0.05
       buf << 4
     end
     assert_equal [1, 2, 3, 4], buf
@@ -158,6 +158,6 @@ class TimerMiscTest < MiniTest::Test
     end
     sleep 0.05
     f.stop
-    assert_in_range 4..6, buffer.size
+    assert_in_range 3..7, buffer.size
   end
 end

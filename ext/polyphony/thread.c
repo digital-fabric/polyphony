@@ -88,6 +88,7 @@ VALUE Thread_switch_fiber(VALUE self) {
   VALUE backend = rb_ivar_get(self, ID_ivar_backend);
   unsigned int pending_ops_count = Backend_pending_count(backend);
   unsigned int backend_was_polled = 0;
+  unsigned int idle_tasks_run_count = 0;
 
   if (__tracing_enabled__ && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
     TRACE(2, SYM_fiber_switchpoint, current_fiber);
@@ -112,6 +113,10 @@ VALUE Thread_switch_fiber(VALUE self) {
       break;
     }
     
+    if (!idle_tasks_run_count) {
+      idle_tasks_run_count++;
+      Backend_run_idle_tasks(backend);
+    }
     if (pending_ops_count == 0) break;
     Backend_poll(backend, Qnil, current_fiber, runqueue);
     backend_was_polled = 1;

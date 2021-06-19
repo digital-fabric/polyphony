@@ -125,6 +125,7 @@ unsigned int Backend_pending_count(VALUE self);
 VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue);
 VALUE Backend_wait_event(VALUE self, VALUE raise_on_exception);
 VALUE Backend_wakeup(VALUE self);
+VALUE Backend_run_idle_tasks(VALUE self);
 
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);

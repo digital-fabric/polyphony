@@ -172,3 +172,15 @@ inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
   fcntl(fptr->fd, F_SETFL, flags);
 #endif
 }
+
+inline void backend_run_idle_tasks(struct Backend_base *base) {
+  if (base->idle_gc_period == 0) return;
+
+  double now = current_time();
+  if (now - base->idle_gc_last_time < base->idle_gc_period) return;
+
+  base->idle_gc_last_time = now;
+  rb_gc_enable();
+  rb_gc_start();
+  rb_gc_disable();
+}

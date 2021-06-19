@@ -121,6 +121,8 @@ static VALUE Backend_initialize(VALUE self) {
 
   backend->base.currently_polling = 0;
   backend->base.pending_count = 0;
+  backend->base.idle_gc_period = 0;
+  backend->base.idle_gc_last_time = 0;
 
   return Qnil;
 }
@@ -151,7 +153,7 @@ VALUE Backend_post_fork(VALUE self) {
   return self;
 }
 
-unsigned int Backend_pending_count(VALUE self) {
+inline unsigned int Backend_pending_count(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
@@ -1084,6 +1086,21 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
   return result;
 }
 
+VALUE Backend_idle_gc_period_set(VALUE self, VALUE period) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+  backend->base.idle_gc_period = NUM2DBL(period);
+  backend->base.idle_gc_last_time = current_time();
+  return self;
+}
+
+inline VALUE Backend_run_idle_tasks(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+  backend_run_idle_tasks(&backend->base);
+  return self;
+}
+
 void Init_Backend() {
   ev_set_allocator(xrealloc);
 
@@ -1098,6 +1115,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "break", Backend_wakeup, 0);
   rb_define_method(cBackend, "kind", Backend_kind, 0);
   rb_define_method(cBackend, "chain", Backend_chain, -1);
+  rb_define_method(cBackend, "idle_gc_period=", Backend_idle_gc_period_set, 1);
 
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);

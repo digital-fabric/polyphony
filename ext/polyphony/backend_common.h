@@ -7,6 +7,8 @@
 struct Backend_base {
   unsigned int currently_polling;
   unsigned int pending_count;
+  double idle_gc_period;
+  double idle_gc_last_time;
 };
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN
@@ -66,6 +68,7 @@ VALUE backend_timeout_exception(VALUE exception);
 VALUE Backend_timeout_ensure_safe(VALUE arg);
 VALUE Backend_timeout_ensure_safe(VALUE arg);
 VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags);
+void backend_run_idle_tasks(struct Backend_base *base);
 void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking);
 
 #endif /* BACKEND_COMMON_H */
