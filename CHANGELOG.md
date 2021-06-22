@@ -1,3 +1,8 @@
+## 0.56.0 2021-06-22
+
+- Implement fake `Backend#splice`, `Backend#splice_to_eof` methods for non-Linux
+  OS
+
 ## 0.55.0 2021-06-17
 
 - Finish io_uring implementation of Backend#chain
