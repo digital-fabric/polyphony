@@ -849,6 +849,157 @@ error:
 }
 #endif
 
+VALUE Backend_fake_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  Backend_t *backend;
+  struct libev_io watcher;
+  VALUE switchpoint_result = Qnil;
+  VALUE underlying_io;
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+  int len = NUM2INT(maxlen);
+  VALUE str = rb_str_new(0, len);
+  char *buf = RSTRING_PTR(str);
+  int left = 0;
+  int total = 0;
+
+  GetBackend(self, backend);
+
+  underlying_io = rb_ivar_get(src, ID_ivar_io);
+  if (underlying_io != Qnil) src = underlying_io;
+  GetOpenFile(src, src_fptr);
+  io_verify_blocking_mode(src_fptr, src, Qfalse);
+
+  underlying_io = rb_ivar_get(dest, ID_ivar_io);
+  if (underlying_io != Qnil) dest = underlying_io;
+  dest = rb_io_get_write_io(dest);
+  GetOpenFile(dest, dest_fptr);
+  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
+
+  watcher.fiber = Qnil;
+  
+  while (1) {
+    ssize_t n = read(src_fptr->fd, buf, len);
+    if (n < 0) {
+      int e = errno;
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, src_fptr->fd, &watcher, EV_READ);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      total = left = n;
+      break;
+    }
+  }
+
+  while (left > 0) {
+    ssize_t n = write(dest_fptr->fd, buf, left);
+    if (n < 0) {
+      int e = errno;
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fptr->fd, &watcher, EV_WRITE);
+
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      buf += n;
+      left -= n;
+    }
+  }
+
+  if (watcher.fiber == Qnil) {
+    switchpoint_result = backend_snooze();
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
+
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+  RB_GC_GUARD(str);
+
+  return INT2NUM(total);
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
+VALUE Backend_fake_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  Backend_t *backend;
+  struct libev_io watcher;
+  VALUE switchpoint_result = Qnil;
+  VALUE underlying_io;
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+  int len = NUM2INT(maxlen);
+  VALUE str = rb_str_new(0, len);
+  char *buf = RSTRING_PTR(str);
+  int left = 0;
+  int total = 0;
+
+  GetBackend(self, backend);
+
+  underlying_io = rb_ivar_get(src, ID_ivar_io);
+  if (underlying_io != Qnil) src = underlying_io;
+  GetOpenFile(src, src_fptr);
+  io_verify_blocking_mode(src_fptr, src, Qfalse);
+
+  underlying_io = rb_ivar_get(dest, ID_ivar_io);
+  if (underlying_io != Qnil) dest = underlying_io;
+  dest = rb_io_get_write_io(dest);
+  GetOpenFile(dest, dest_fptr);
+  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
+
+  watcher.fiber = Qnil;
+
+  while (1) { 
+    char *ptr = buf;
+    while (1) {
+      ssize_t n = read(src_fptr->fd, ptr, len);
+      if (n < 0) {
+        int e = errno;
+        if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+        switchpoint_result = libev_wait_fd_with_watcher(backend, src_fptr->fd, &watcher, EV_READ);
+        if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      }
+      else if (n == 0) goto done;
+      else {
+        total += n;
+        left = n;
+        break;
+      }
+    }
+
+    while (left > 0) {
+      ssize_t n = write(dest_fptr->fd, ptr, left);
+      if (n < 0) {
+        int e = errno;
+        if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+        switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fptr->fd, &watcher, EV_WRITE);
+        if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      }
+      else {
+        ptr += n;
+        left -= n;
+      }
+    }
+  }
+
+done:
+  if (watcher.fiber == Qnil) {
+    switchpoint_result = backend_snooze();
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
+
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+  RB_GC_GUARD(str);
+
+  return INT2NUM(total);
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
   rb_io_t *fptr;
@@ -1133,6 +1284,9 @@ void Init_Backend() {
   #ifdef POLYPHONY_LINUX
   rb_define_method(cBackend, "splice", Backend_splice, 3);
   rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
+  #else
+  rb_define_method(cBackend, "splice", Backend_fake_splice, 3);
+  rb_define_method(cBackend, "splice_to_eof", Backend_fake_splice_to_eof, 3);
   #endif
 
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);
