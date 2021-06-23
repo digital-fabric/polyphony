@@ -239,8 +239,10 @@ int io_uring_backend_defer_submit_and_await(
 {
   VALUE switchpoint_result = Qnil;
 
-  io_uring_sqe_set_data(sqe, ctx);
-  io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
+  if (sqe) {
+    io_uring_sqe_set_data(sqe, ctx);
+    io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
+  }
   io_uring_backend_defer_submit(backend);
 
   switchpoint_result = backend_await((struct Backend_base *)backend);
@@ -446,7 +448,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_WRITE);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
-    io_uring_prep_write(sqe, fptr->fd, buf, left, -1);
+    io_uring_prep_write(sqe, fptr->fd, buf, left, 0);
     
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
@@ -1065,7 +1067,7 @@ struct io_uring_sqe *Backend_chain_prepare_write(Backend_t *backend, VALUE io, V
   long len = RSTRING_LEN(str);
 
   struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
-  io_uring_prep_write(sqe, fptr->fd, buf, len, -1);
+  io_uring_prep_write(sqe, fptr->fd, buf, len, 0);
   return sqe;
 }
 
@@ -1190,6 +1192,160 @@ inline VALUE Backend_run_idle_tasks(VALUE self) {
   return self;
 }
 
+static inline void splice_chunks_prep_write(op_context_t *ctx, struct io_uring_sqe *sqe, int fd, VALUE str) {
+  char *buf = RSTRING_PTR(str);
+  int len = RSTRING_LEN(str);
+  io_uring_prep_write(sqe, fd, buf, len, 0);
+  // io_uring_prep_send(sqe, fd, buf, len, 0);
+  io_uring_sqe_set_data(sqe, ctx);
+}
+
+static inline void splice_chunks_prep_splice(op_context_t *ctx, struct io_uring_sqe *sqe, int src, int dest, int maxlen) {
+  io_uring_prep_splice(sqe, src, -1, dest, -1, maxlen, 0);
+  io_uring_sqe_set_data(sqe, ctx);
+}
+
+static inline void splice_chunks_get_sqe(
+  Backend_t *backend,
+  op_context_t **ctx,
+  struct io_uring_sqe **sqe,
+  enum op_type type
+)
+{
+  if (*ctx) {
+    if (*sqe) (*sqe)->flags |= IOSQE_IO_LINK;
+    (*ctx)->ref_count++;
+  }
+  else
+    *ctx = context_store_acquire(&backend->store, type);
+  (*sqe) = io_uring_get_sqe(&backend->ring);
+}
+
+static inline void splice_chunks_cancel(Backend_t *backend, op_context_t *ctx) {
+  ctx->result = -ECANCELED;
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+  io_uring_prep_cancel(sqe, ctx, 0);
+  backend->pending_sqes = 0;
+  io_uring_submit(&backend->ring);
+}
+
+static inline int splice_chunks_await_ops(
+  Backend_t *backend,
+  op_context_t **ctx,
+  int *result,
+  VALUE *switchpoint_result
+)
+{
+  int res = io_uring_backend_defer_submit_and_await(backend, 0, *ctx, switchpoint_result);
+  if (result) (*result) = res;
+  int completed = context_store_release(&backend->store, *ctx);
+  if (!completed) {
+    splice_chunks_cancel(backend, *ctx);
+    if (TEST_EXCEPTION(*switchpoint_result)) return 1;
+  }
+  *ctx = 0;
+  return 0;
+}
+
+#define SPLICE_CHUNKS_AWAIT_OPS(backend, ctx, result, switchpoint_result) \
+  if (splice_chunks_await_ops(backend, ctx, result, switchpoint_result)) goto error;
+
+VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VALUE postfix, VALUE chunk_prefix, VALUE chunk_postfix, VALUE chunk_size) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+  int total = 0;
+  int err = 0;
+  VALUE switchpoint_result = Qnil;
+  op_context_t *ctx = 0;
+  struct io_uring_sqe *sqe = 0;
+
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+
+  VALUE underlying_io = rb_ivar_get(src, ID_ivar_io);
+  if (underlying_io != Qnil) src = underlying_io;
+  GetOpenFile(src, src_fptr);
+  io_verify_blocking_mode(src_fptr, src, Qtrue);
+
+  underlying_io = rb_ivar_get(dest, ID_ivar_io);
+  if (underlying_io != Qnil) dest = underlying_io;
+  dest = rb_io_get_write_io(dest);
+  GetOpenFile(dest, dest_fptr);
+  io_verify_blocking_mode(dest_fptr, dest, Qtrue);
+
+  int maxlen = NUM2INT(chunk_size);
+  VALUE str = Qnil;
+  VALUE chunk_len_value = Qnil;
+
+  int pipefd[2] = { -1, -1 };
+  if (pipe(pipefd) == -1) {
+    err = errno;
+    goto syscallerror;
+  }
+
+  if (prefix != Qnil) {
+    splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
+    splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, prefix);
+  }
+
+  while (1) {
+    int chunk_len;
+    VALUE chunk_prefix_str = Qnil;
+    VALUE chunk_postfix_str = Qnil;
+
+    splice_chunks_get_sqe(backend, &ctx, &sqe, OP_SPLICE);
+    splice_chunks_prep_splice(ctx, sqe, src_fptr->fd, pipefd[1], maxlen);
+    
+    SPLICE_CHUNKS_AWAIT_OPS(backend, &ctx, &chunk_len, &switchpoint_result);
+    if (chunk_len == 0) break;
+    
+    total += chunk_len;
+    chunk_len_value = INT2NUM(chunk_len);
+
+
+    if (chunk_prefix != Qnil) {
+      chunk_prefix_str = (TYPE(chunk_prefix) == T_STRING) ? chunk_prefix : rb_funcall(chunk_prefix, ID_call, 1, chunk_len_value);
+      splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
+      splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, chunk_prefix_str);
+    }
+
+    splice_chunks_get_sqe(backend, &ctx, &sqe, OP_SPLICE);
+    splice_chunks_prep_splice(ctx, sqe, pipefd[0], dest_fptr->fd, chunk_len);
+
+    if (chunk_postfix != Qnil) {
+      chunk_postfix_str = (TYPE(chunk_postfix) == T_STRING) ? chunk_postfix : rb_funcall(chunk_postfix, ID_call, 1, chunk_len_value);
+      splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
+      splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, chunk_postfix_str);
+    }
+
+    RB_GC_GUARD(chunk_prefix_str);
+    RB_GC_GUARD(chunk_postfix_str);
+  }
+
+  if (postfix != Qnil) {
+    splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
+    splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, postfix);
+  }
+  if (ctx) {
+    SPLICE_CHUNKS_AWAIT_OPS(backend, &ctx, 0, &switchpoint_result);
+  }
+
+  RB_GC_GUARD(str);
+  RB_GC_GUARD(chunk_len_value);
+  RB_GC_GUARD(switchpoint_result);
+  if (pipefd[0] != -1) close(pipefd[0]);
+  if (pipefd[1] != -1) close(pipefd[1]);
+  return INT2NUM(total);
+syscallerror:
+  if (pipefd[0] != -1) close(pipefd[0]);
+  if (pipefd[1] != -1) close(pipefd[1]);
+  rb_syserr_fail(err, strerror(err));
+error:
+  if (pipefd[0] != -1) close(pipefd[0]);
+  if (pipefd[1] != -1) close(pipefd[1]);
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
 void Init_Backend() {
   VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cObject);
   rb_define_alloc_func(cBackend, Backend_allocate);
@@ -1203,6 +1359,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "kind", Backend_kind, 0);
   rb_define_method(cBackend, "chain", Backend_chain, -1);
   rb_define_method(cBackend, "idle_gc_period=", Backend_idle_gc_period_set, 1);
+  rb_define_method(cBackend, "splice_chunks", Backend_splice_chunks, 7);
 
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);

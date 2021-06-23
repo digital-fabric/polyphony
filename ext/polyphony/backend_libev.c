@@ -1297,7 +1297,7 @@ inline VALUE Backend_run_idle_tasks(VALUE self) {
   return self;
 }
 
-inline int write_str(Backend_t *backend, int fd, VALUE str, struct libev_rw_io *watcher, VALUE *result) {
+inline int splice_chunks_write(Backend_t *backend, int fd, VALUE str, struct libev_rw_io *watcher, VALUE *result) {
   char *buf = RSTRING_PTR(str);
   int len = RSTRING_LEN(str);
   int left = len;
@@ -1317,8 +1317,6 @@ inline int write_str(Backend_t *backend, int fd, VALUE str, struct libev_rw_io *
   }
   return 0;
 }
-
-const int DEFAULT_CHUNK_SIZE = 65536;
 
 VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VALUE postfix, VALUE chunk_prefix, VALUE chunk_postfix, VALUE chunk_size) {
   Backend_t *backend;
@@ -1357,7 +1355,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   fcntl(pipefd[1], F_SETFL, O_NONBLOCK);
 
   if (prefix != Qnil) {
-    int err = write_str(backend, dest_fptr->fd, prefix, &watcher, &result);
+    int err = splice_chunks_write(backend, dest_fptr->fd, prefix, &watcher, &result);
     if (err == -1) goto error; else if (err) goto syscallerror;
   }
   while (1) {
@@ -1383,7 +1381,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
     if (chunk_prefix != Qnil) {
       VALUE str = (TYPE(chunk_prefix) == T_STRING) ? chunk_prefix : rb_funcall(chunk_prefix, ID_call, 1, chunk_len_value);
-      int err = write_str(backend, dest_fptr->fd, str, &watcher, &result);
+      int err = splice_chunks_write(backend, dest_fptr->fd, str, &watcher, &result);
       if (err == -1) goto error; else if (err) goto syscallerror;
     }
 
@@ -1405,13 +1403,13 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
     if (chunk_postfix != Qnil) {
       VALUE str = (TYPE(chunk_postfix) == T_STRING) ? chunk_postfix : rb_funcall(chunk_postfix, ID_call, 1, chunk_len_value);
-      int err = write_str(backend, dest_fptr->fd, str, &watcher, &result);
+      int err = splice_chunks_write(backend, dest_fptr->fd, str, &watcher, &result);
       if (err == -1) goto error; else if (err) goto syscallerror;
     }
   }
 
   if (postfix != Qnil) {
-    int err = write_str(backend, dest_fptr->fd, postfix, &watcher, &result);
+    int err = splice_chunks_write(backend, dest_fptr->fd, postfix, &watcher, &result);
     if (err == -1) goto error; else if (err) goto syscallerror;
   }
 
