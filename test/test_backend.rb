@@ -282,6 +282,41 @@ class BackendTest < MiniTest::Test
     end
   end
 
+
+  def test_splice_chunks
+    body = 'abcd' * 250
+    chunk_size = 750
+
+    buf = +''
+    r, w = IO.pipe
+    reader = spin do
+      r.read_loop { |data| buf << data }
+    end
+
+    i, o = IO.pipe
+    writer = spin do
+      o << body
+      o.close
+    end
+    Thread.current.backend.splice_chunks(
+      i,
+      w,
+      "Content-Type: foo\r\n\r\n",
+      "0\r\n\r\n",
+      ->(len) { "#{len.to_s(16)}\r\n" },
+      "\r\n",
+      chunk_size
+    )
+    w.close
+    reader.await
+
+    expected = "Content-Type: foo\r\n\r\n#{750.to_s(16)}\r\n#{body[0..749]}\r\n#{250.to_s(16)}\r\n#{body[750..999]}\r\n0\r\n\r\n"
+    assert_equal expected, buf
+  ensure
+    o.close
+    w.close
+  end
+
   def test_idle_gc
     GC.disable
 

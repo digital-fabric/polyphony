@@ -737,10 +737,63 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
+struct libev_rw_ctx {
+  int ref_count;
+  VALUE fiber;
+};
+
+struct libev_ref_count_io {
+  struct ev_io io;
+  struct libev_rw_ctx *ctx;
+};
+
+struct libev_rw_io {
+  struct libev_ref_count_io r;
+  struct libev_ref_count_io w;
+  struct libev_rw_ctx ctx;
+};
+
+void Backend_rw_io_callback(EV_P_ ev_io *w, int revents)
+{
+  struct libev_ref_count_io *watcher = (struct libev_ref_count_io *)w;
+  int ref_count = watcher->ctx->ref_count--;
+  if (!ref_count)
+    Fiber_make_runnable(watcher->ctx->fiber, Qnil);
+}
+
+VALUE libev_wait_rw_fd_with_watcher(Backend_t *backend, int r_fd, int w_fd, struct libev_rw_io *watcher) {
+  VALUE switchpoint_result = Qnil;
+
+  if (watcher->ctx.fiber == Qnil) watcher->ctx.fiber = rb_fiber_current();
+  watcher->ctx.ref_count = 0;
+  if (r_fd != -1) {
+    ev_io_init(&watcher->r.io, Backend_rw_io_callback, r_fd, EV_READ);
+    ev_io_start(backend->ev_loop, &watcher->r.io);
+    watcher->r.ctx = &watcher->ctx;
+    watcher->ctx.ref_count++;
+  }
+  if (w_fd != -1) {
+    ev_io_init(&watcher->w.io, Backend_rw_io_callback, w_fd, EV_WRITE);
+    ev_io_start(backend->ev_loop, &watcher->w.io);
+    watcher->w.ctx = &watcher->ctx;
+    watcher->ctx.ref_count++;
+  }
+
+  switchpoint_result = backend_await((struct Backend_base *)backend);
+
+  if (r_fd != -1) ev_io_stop(backend->ev_loop, &watcher->r.io);
+  if (w_fd != -1) ev_io_stop(backend->ev_loop, &watcher->w.io);
+  RB_GC_GUARD(switchpoint_result);
+  return switchpoint_result;
+}
+
+
+
+
 #ifdef POLYPHONY_LINUX
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
-  struct libev_io watcher;
+  struct libev_rw_io watcher;
   VALUE switchpoint_result = Qnil;
   VALUE underlying_io;
   rb_io_t *src_fptr;
@@ -760,17 +813,14 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   GetOpenFile(dest, dest_fptr);
   io_verify_blocking_mode(dest_fptr, dest, Qfalse);
 
-  watcher.fiber = Qnil;
+  watcher.ctx.fiber = Qnil;
   while (1) {
     len = splice(src_fptr->fd, 0, dest_fptr->fd, 0, NUM2INT(maxlen), 0);
     if (len < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, src_fptr->fd, &watcher, EV_READ);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
-
-      switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fptr->fd, &watcher, EV_WRITE);
+      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fptr->fd, dest_fptr->fd, &watcher);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
@@ -778,12 +828,12 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
     }
   }
 
-  if (watcher.fiber == Qnil) {
+  if (watcher.ctx.fiber == Qnil) {
     switchpoint_result = backend_snooze();
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
 
-  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(watcher.ctx.fiber);
   RB_GC_GUARD(switchpoint_result);
 
   return INT2NUM(len);
@@ -793,7 +843,7 @@ error:
 
 VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
-  struct libev_io watcher;
+  struct libev_rw_io watcher;
   VALUE switchpoint_result = Qnil;
   VALUE underlying_io;
   rb_io_t *src_fptr;
@@ -814,17 +864,14 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   GetOpenFile(dest, dest_fptr);
   io_verify_blocking_mode(dest_fptr, dest, Qfalse);
 
-  watcher.fiber = Qnil;
+  watcher.ctx.fiber = Qnil;
   while (1) {
     len = splice(src_fptr->fd, 0, dest_fptr->fd, 0, NUM2INT(maxlen), 0);
     if (len < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, src_fptr->fd, &watcher, EV_READ);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
-
-      switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fptr->fd, &watcher, EV_WRITE);
+      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fptr->fd, dest_fptr->fd, &watcher);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else if (len == 0) {
@@ -835,12 +882,12 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
     }
   }
 
-  if (watcher.fiber == Qnil) {
+  if (watcher.ctx.fiber == Qnil) {
     switchpoint_result = backend_snooze();
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
 
-  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(watcher.ctx.fiber);
   RB_GC_GUARD(switchpoint_result);
 
   return INT2NUM(total);
@@ -1250,6 +1297,144 @@ inline VALUE Backend_run_idle_tasks(VALUE self) {
   return self;
 }
 
+inline int write_str(Backend_t *backend, int fd, VALUE str, struct libev_rw_io *watcher, VALUE *result) {
+  char *buf = RSTRING_PTR(str);
+  int len = RSTRING_LEN(str);
+  int left = len;
+  while (left > 0) {
+    ssize_t n = write(fd, buf, left);
+    if (n < 0) {
+      int err = errno;
+      if ((err != EWOULDBLOCK && err != EAGAIN)) return err;
+
+      *result = libev_wait_rw_fd_with_watcher(backend, -1, fd, watcher);
+      if (TEST_EXCEPTION(*result)) return -1;
+    }
+    else {
+      buf += n;
+      left -= n;
+    }
+  }
+  return 0;
+}
+
+const int DEFAULT_CHUNK_SIZE = 65536;
+
+VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VALUE postfix, VALUE chunk_prefix, VALUE chunk_postfix, VALUE chunk_size) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+  int total = 0;
+  int err = 0;
+  VALUE result = Qnil;
+
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+
+  VALUE underlying_io = rb_ivar_get(src, ID_ivar_io);
+  if (underlying_io != Qnil) src = underlying_io;
+  GetOpenFile(src, src_fptr);
+  io_verify_blocking_mode(src_fptr, src, Qfalse);
+
+  underlying_io = rb_ivar_get(dest, ID_ivar_io);
+  if (underlying_io != Qnil) dest = underlying_io;
+  dest = rb_io_get_write_io(dest);
+  GetOpenFile(dest, dest_fptr);
+  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
+
+  struct libev_rw_io watcher;
+  watcher.ctx.fiber = Qnil;
+  int maxlen = NUM2INT(chunk_size);
+  VALUE str = Qnil;
+  VALUE chunk_len_value = Qnil;
+
+  int pipefd[2] = { -1, -1 };
+  if (pipe(pipefd) == -1) {
+    err = errno;
+    goto syscallerror;
+  }
+
+  fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
+  fcntl(pipefd[1], F_SETFL, O_NONBLOCK);
+
+  if (prefix != Qnil) {
+    int err = write_str(backend, dest_fptr->fd, prefix, &watcher, &result);
+    if (err == -1) goto error; else if (err) goto syscallerror;
+  }
+  while (1) {
+    int chunk_len;
+    // splice to pipe
+    while (1) {
+      chunk_len = splice(src_fptr->fd, 0, pipefd[1], 0, maxlen, 0);
+      if (chunk_len < 0) {
+        err = errno;
+        if (err != EWOULDBLOCK && err != EAGAIN) goto syscallerror;
+
+        result = libev_wait_rw_fd_with_watcher(backend, src_fptr->fd, pipefd[1], &watcher);
+        if (TEST_EXCEPTION(result)) goto error;
+      }
+      else {
+        break;
+      }
+    }
+    if (chunk_len == 0) break;
+    
+    total += chunk_len;
+    chunk_len_value = INT2NUM(chunk_len);
+
+    if (chunk_prefix != Qnil) {
+      VALUE str = (TYPE(chunk_prefix) == T_STRING) ? chunk_prefix : rb_funcall(chunk_prefix, ID_call, 1, chunk_len_value);
+      int err = write_str(backend, dest_fptr->fd, str, &watcher, &result);
+      if (err == -1) goto error; else if (err) goto syscallerror;
+    }
+
+    int left = chunk_len;
+    while (1) {
+      int n = splice(pipefd[0], 0, dest_fptr->fd, 0, left, 0);
+      if (n < 0) {
+        err = errno;
+        if (err != EWOULDBLOCK && err != EAGAIN) goto syscallerror;
+
+        result = libev_wait_rw_fd_with_watcher(backend, pipefd[0], dest_fptr->fd, &watcher);
+        if (TEST_EXCEPTION(result)) goto error;
+      }
+      else {
+        left -= n;
+        if (left == 0) break;
+      }
+    }
+
+    if (chunk_postfix != Qnil) {
+      VALUE str = (TYPE(chunk_postfix) == T_STRING) ? chunk_postfix : rb_funcall(chunk_postfix, ID_call, 1, chunk_len_value);
+      int err = write_str(backend, dest_fptr->fd, str, &watcher, &result);
+      if (err == -1) goto error; else if (err) goto syscallerror;
+    }
+  }
+
+  if (postfix != Qnil) {
+    int err = write_str(backend, dest_fptr->fd, postfix, &watcher, &result);
+    if (err == -1) goto error; else if (err) goto syscallerror;
+  }
+
+  if (watcher.ctx.fiber == Qnil) {
+    result = backend_snooze();
+    if (TEST_EXCEPTION(result)) goto error;
+  }
+  RB_GC_GUARD(str);
+  RB_GC_GUARD(chunk_len_value);
+  RB_GC_GUARD(result);
+  if (pipefd[0] != -1) close(pipefd[0]);
+  if (pipefd[1] != -1) close(pipefd[1]);
+  return INT2NUM(total);
+syscallerror:
+  if (pipefd[0] != -1) close(pipefd[0]);
+  if (pipefd[1] != -1) close(pipefd[1]);
+  rb_syserr_fail(err, strerror(err));
+error:
+  if (pipefd[0] != -1) close(pipefd[0]);
+  if (pipefd[1] != -1) close(pipefd[1]);
+  return RAISE_EXCEPTION(result);
+}
+
 void Init_Backend() {
   ev_set_allocator(xrealloc);
 
@@ -1265,6 +1450,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "kind", Backend_kind, 0);
   rb_define_method(cBackend, "chain", Backend_chain, -1);
   rb_define_method(cBackend, "idle_gc_period=", Backend_idle_gc_period_set, 1);
+  rb_define_method(cBackend, "splice_chunks", Backend_splice_chunks, 7);
 
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
