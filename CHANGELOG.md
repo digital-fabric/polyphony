@@ -1,3 +1,9 @@
+## 0.57.0 2021-06-23
+
+- Implement `Backend#splice_chunks` method for both libev and io_uring backends
+- Improve waiting for readiness in libev `Backend#splice`, `#splice_to_eof`
+- Enable splice op in libev `Backend#chain` for non-Linux OS
+
 ## 0.56.0 2021-06-22
 
 - Implement fake `Backend#splice`, `Backend#splice_to_eof` methods for non-Linux
