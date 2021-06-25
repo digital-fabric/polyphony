@@ -37,8 +37,7 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
     ctx = malloc(sizeof(op_context_t));
   }
   ctx->id = (++store->last_id);
-  // printf("acquire %d (%s)\n", ctx->id, op_type_to_str(type));
-  
+  // printf("acquire %p %d (%s)\n", ctx, ctx->id, op_type_to_str(type));
   ctx->prev = NULL;
   ctx->next = store->taken;
   if (store->taken) store->taken->prev = ctx;
@@ -55,7 +54,7 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
 
 // returns true if ctx was released
 inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
-  // printf("release %d (%s, ref_count: %d)\n", ctx->id, op_type_to_str(ctx->type), ctx->ref_count);
+  // printf("release %p %d (%s, ref_count: %d)\n", ctx, ctx->id, op_type_to_str(ctx->type), ctx->ref_count);
 
   assert(ctx->ref_count);
   

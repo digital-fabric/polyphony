@@ -343,6 +343,24 @@ class BackendTest < MiniTest::Test
   ensure
     GC.enable
   end
+
+  def test_idle_block
+    counter = 0
+
+    @backend.idle_block = proc { counter += 1 }
+    
+    3.times { snooze }
+    assert_equal 0, counter
+
+    sleep 0.01
+    assert_equal 1, counter
+    sleep 0.01
+    assert_equal 2, counter
+
+    assert_equal 2, counter
+    3.times { snooze }
+    assert_equal 2, counter
+  end
 end
 
 class BackendChainTest < MiniTest::Test

@@ -42,13 +42,19 @@ typedef struct Backend_t {
   int                 event_fd;
 } Backend_t;
 
+static void Backend_mark(void *ptr) {
+  Backend_t *backend = ptr;
+  if (backend->base.idle_block != Qnil)
+    rb_gc_mark(backend->base.idle_block);
+}
+
 static size_t Backend_size(const void *ptr) {
   return sizeof(Backend_t);
 }
 
 static const rb_data_type_t Backend_type = {
     "IOUringBackend",
-    {0, 0, Backend_size,},
+    {Backend_mark, 0, Backend_size,},
     0, 0, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
@@ -65,11 +71,7 @@ static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  backend->base.currently_polling = 0;
-  backend->base.pending_count = 0;
-  backend->base.idle_gc_period = 0;
-  backend->base.idle_gc_last_time = 0;
-
+  initialize_backend_base(&backend->base);
   backend->pending_sqes = 0;
   backend->prepared_limit = 2048;
 
@@ -134,6 +136,7 @@ static inline void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, 
   op_context_t *ctx = io_uring_cqe_get_data(cqe);
   if (!ctx) return;
 
+  // printf("cqe ctx %p id: %d result: %d (%s, ref_count: %d)\n", ctx, ctx->id, cqe->res, op_type_to_str(ctx->type), ctx->ref_count);
   ctx->result = cqe->res;
   if (ctx->ref_count == 2 && ctx->result != -ECANCELED && ctx->fiber)
     Fiber_make_runnable(ctx->fiber, ctx->resume_value);
@@ -908,7 +911,6 @@ int io_uring_backend_submit_timeout_and_await(Backend_t *backend, double duratio
   
   op_context_t *ctx = context_store_acquire(&backend->store, OP_TIMEOUT);
   io_uring_prep_timeout(sqe, &ts, 0, 0);
-
   io_uring_backend_defer_submit_and_await(backend, sqe, ctx, resume_value);
   return context_store_release(&backend->store, ctx);
 }
@@ -1185,6 +1187,13 @@ VALUE Backend_idle_gc_period_set(VALUE self, VALUE period) {
   return self;
 }
 
+VALUE Backend_idle_block_set(VALUE self, VALUE block) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+  backend->base.idle_block = block;
+  return self;
+}
+
 inline VALUE Backend_run_idle_tasks(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -1359,6 +1368,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "kind", Backend_kind, 0);
   rb_define_method(cBackend, "chain", Backend_chain, -1);
   rb_define_method(cBackend, "idle_gc_period=", Backend_idle_gc_period_set, 1);
+  rb_define_method(cBackend, "idle_block=", Backend_idle_block_set, 1);
   rb_define_method(cBackend, "splice_chunks", Backend_splice_chunks, 7);
 
   rb_define_method(cBackend, "accept", Backend_accept, 2);

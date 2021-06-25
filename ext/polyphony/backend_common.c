@@ -5,6 +5,14 @@
 #include "polyphony.h"
 #include "backend_common.h"
 
+inline void initialize_backend_base(struct Backend_base *base) {
+  base->currently_polling = 0;
+  base->pending_count = 0;
+  base->idle_gc_period = 0;
+  base->idle_gc_last_time = 0;
+  base->idle_block = Qnil;
+}
+
 #ifdef POLYPHONY_USE_PIDFD_OPEN
 #ifndef __NR_pidfd_open
 #define __NR_pidfd_open 434   /* System call # on most architectures */
@@ -174,6 +182,9 @@ inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
 }
 
 inline void backend_run_idle_tasks(struct Backend_base *base) {
+  if (base->idle_block != Qnil)
+    rb_funcall(base->idle_block, ID_call, 0);
+
   if (base->idle_gc_period == 0) return;
 
   double now = current_time();

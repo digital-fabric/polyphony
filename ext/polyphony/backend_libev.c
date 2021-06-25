@@ -73,13 +73,19 @@ typedef struct Backend_t {
   struct ev_async break_async;
 } Backend_t;
 
+static void Backend_mark(void *ptr) {
+  Backend_t *backend = ptr;
+  if (backend->base.idle_block != Qnil)
+    rb_gc_mark(backend->base.idle_block);
+}
+
 static size_t Backend_size(const void *ptr) {
   return sizeof(Backend_t);
 }
 
 static const rb_data_type_t Backend_type = {
     "LibevBackend",
-    {0, 0, Backend_size,},
+    {Backend_mark, 0, Backend_size,},
     0, 0, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
@@ -110,6 +116,8 @@ static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   
   GetBackend(self, backend);
+
+  initialize_backend_base(&backend->base);
   backend->ev_loop = libev_new_loop();
 
   // start async watcher used for breaking a poll op (from another thread)
@@ -118,11 +126,6 @@ static VALUE Backend_initialize(VALUE self) {
   // the break_async watcher is unreferenced, in order for Backend_poll to not
   // block when no other watcher is active
   ev_unref(backend->ev_loop);
-
-  backend->base.currently_polling = 0;
-  backend->base.pending_count = 0;
-  backend->base.idle_gc_period = 0;
-  backend->base.idle_gc_last_time = 0;
 
   return Qnil;
 }
@@ -1290,6 +1293,13 @@ VALUE Backend_idle_gc_period_set(VALUE self, VALUE period) {
   return self;
 }
 
+VALUE Backend_idle_block_set(VALUE self, VALUE block) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+  backend->base.idle_block = block;
+  return self;
+}
+
 inline VALUE Backend_run_idle_tasks(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -1448,6 +1458,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "kind", Backend_kind, 0);
   rb_define_method(cBackend, "chain", Backend_chain, -1);
   rb_define_method(cBackend, "idle_gc_period=", Backend_idle_gc_period_set, 1);
+  rb_define_method(cBackend, "idle_block=", Backend_idle_block_set, 1);
   rb_define_method(cBackend, "splice_chunks", Backend_splice_chunks, 7);
 
   rb_define_method(cBackend, "accept", Backend_accept, 2);
