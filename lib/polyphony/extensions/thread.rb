@@ -105,4 +105,12 @@ class ::Thread
     main_fiber << value
   end
   alias_method :send, :<<
+
+  def idle_gc_period=(period)
+    backend.idle_gc_period = period
+  end
+
+  def on_idle(&block)
+    backend.idle_block = block
+  end
 end

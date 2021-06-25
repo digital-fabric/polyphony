@@ -340,6 +340,13 @@ class BackendTest < MiniTest::Test
     # GC period.
     sleep 0.05
     assert_equal count + 1, GC.count
+
+    @backend.idle_gc_period = 0
+    count = GC.count
+    sleep 0.001
+    sleep 0.002
+    sleep 0.003
+    assert_equal count, GC.count
   ensure
     GC.enable
   end
@@ -359,6 +366,10 @@ class BackendTest < MiniTest::Test
 
     assert_equal 2, counter
     3.times { snooze }
+    assert_equal 2, counter
+
+    @backend.idle_block = nil
+    sleep 0.01
     assert_equal 2, counter
   end
 end

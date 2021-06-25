@@ -171,4 +171,56 @@ class ThreadTest < MiniTest::Test
     t&.kill
     t&.join
   end
+
+  def test_idle_gc
+    GC.disable
+
+    count = GC.count
+    snooze
+    assert_equal count, GC.count
+    sleep 0.01
+    assert_equal count, GC.count
+
+    Thread.current.idle_gc_period = 0.1
+    snooze
+    assert_equal count, GC.count
+    sleep 0.05
+    assert_equal count, GC.count
+    # The idle tasks are ran at most once per fiber switch, before the backend
+    # is polled. Therefore, the second sleep will not have triggered a GC, since
+    # only 0.05s have passed since the gc period was set.
+    sleep 0.07
+    assert_equal count, GC.count
+    # Upon the third sleep the GC should be triggered, at 0.12s post setting the
+    # GC period.
+    sleep 0.05
+    assert_equal count + 1, GC.count
+
+    Thread.current.idle_gc_period = 0
+    count = GC.count
+    sleep 0.001
+    sleep 0.002
+    sleep 0.003
+    assert_equal count, GC.count
+  ensure
+    GC.enable
+  end
+
+  def test_on_idle
+    counter = 0
+
+    Thread.current.on_idle { counter += 1 }
+    
+    3.times { snooze }
+    assert_equal 0, counter
+
+    sleep 0.01
+    assert_equal 1, counter
+    sleep 0.01
+    assert_equal 2, counter
+
+    assert_equal 2, counter
+    3.times { snooze }
+    assert_equal 2, counter
+  end
 end
