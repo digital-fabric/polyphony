@@ -1,3 +1,8 @@
+## 0.58 2021-06-25
+
+- Implement `Thread#idle_gc_period`, `#on_idle` (#56)
+- Implement `Backend#idle_block=` (#56)
+
 ## 0.57.0 2021-06-23
 
 - Implement `Backend#splice_chunks` method for both libev and io_uring backends
