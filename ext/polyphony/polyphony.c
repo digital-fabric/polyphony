@@ -42,11 +42,6 @@ static VALUE Polyphony_suspend(VALUE self) {
   return ret;
 }
 
-VALUE Polyphony_trace(VALUE self, VALUE enabled) {
-  __tracing_enabled__ = RTEST(enabled) ? 1 : 0;
-  return Qnil;
-}
-
 VALUE Polyphony_backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
   return Backend_accept(BACKEND(), server_socket, socket_class);
 }
@@ -129,8 +124,6 @@ VALUE Polyphony_backend_write(int argc, VALUE *argv, VALUE self) {
 
 void Init_Polyphony() {
   mPolyphony = rb_define_module("Polyphony");
-
-  rb_define_singleton_method(mPolyphony, "trace", Polyphony_trace, 1);
 
   // backend methods
   rb_define_singleton_method(mPolyphony, "backend_accept", Polyphony_backend_accept, 2);

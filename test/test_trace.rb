@@ -1,72 +1,48 @@
 # frozen_string_literal: true
 
 require_relative 'helper'
-require 'polyphony/adapters/trace'
 
 class TraceTest < MiniTest::Test
-  def test_tracing_disabled
-    records = []
-    t = Polyphony::Trace.new { |r| records << r if r[:event] =~ /^fiber_/ }
-    t.enable
-    snooze
-    assert_equal 0, records.size
-  ensure
-    t&.disable
-    Polyphony.trace(nil)
-  end
-
   def test_tracing_enabled
-    skip
-    records = []
-    t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
-    Polyphony.trace(true)
-    t.enable
+    events = []
+    Thread.backend.trace_proc = proc { |*e| events << e }
     snooze
-    t.disable
     
-    assert_equal 3, records.size
-    events = records.map { |r| r[:event] }
-    assert_equal [:fiber_schedule, :fiber_switchpoint, :fiber_run], events
-    assert_equal [Fiber.current], records.map { |r| r[:fiber] }.uniq
+    assert_equal [
+      [:fiber_schedule, Fiber.current, nil],
+      [:fiber_switchpoint, Fiber.current],
+      [:fiber_run, Fiber.current, nil]
+    ], events
   ensure
-    t&.disable
-    Polyphony.trace(nil)
+    Thread.backend.trace_proc = nil
   end
 
   def test_2_fiber_trace
-    skip
-    records = []
-    thread = Thread.current
-    t = Polyphony::Trace.new(:fiber_all) do |r|
-      records << r if Thread.current == thread && r[:event] =~ /^fiber_/
-    end
-    t.enable
-    Polyphony.trace(true)
+    events = []
+    Thread.backend.trace_proc = proc { |*e| events << e }
 
-    f = spin { sleep 0 }
+    f = spin { sleep 0; :byebye }
     suspend
     sleep 0
 
-    events = records.map { |r| [r[:fiber] == f ? :f : :current, r[:event]] }
     assert_equal [
-      [:f, :fiber_create],
-      [:f, :fiber_schedule],
-      [:current, :fiber_switchpoint],
-      [:f, :fiber_run],
-      [:f, :fiber_switchpoint],
-      [:f, :fiber_event_poll_enter],
-      [:f, :fiber_schedule],
-      [:f, :fiber_event_poll_leave],
-      [:f, :fiber_run],
-      [:f, :fiber_terminate],
-      [:current, :fiber_switchpoint],
-      [:current, :fiber_event_poll_enter],
-      [:current, :fiber_schedule],
-      [:current, :fiber_event_poll_leave],
-      [:current, :fiber_run]
+      [:fiber_create, f],
+      [:fiber_schedule, f, nil],
+      [:fiber_switchpoint, Fiber.current],
+      [:fiber_run, f, nil],
+      [:fiber_switchpoint, f],
+      [:fiber_event_poll_enter, f],
+      [:fiber_schedule, f, nil],
+      [:fiber_event_poll_leave, f],
+      [:fiber_run, f, nil],
+      [:fiber_terminate, f, :byebye],
+      [:fiber_switchpoint, Fiber.current],
+      [:fiber_event_poll_enter, Fiber.current],
+      [:fiber_schedule, Fiber.current, nil],
+      [:fiber_event_poll_leave, Fiber.current],
+      [:fiber_run, Fiber.current, nil]
     ], events
   ensure
-    t&.disable
-    Polyphony.trace(nil)
+    Thread.backend.trace_proc = nil
   end
 end

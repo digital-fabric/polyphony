@@ -12,6 +12,7 @@ inline void backend_base_initialize(struct Backend_base *base) {
   base->idle_gc_period = 0;
   base->idle_gc_last_time = 0;
   base->idle_block = Qnil;
+  base->trace_proc = Qnil;
 }
 
 inline void backend_base_finalize(struct Backend_base *base) {
@@ -20,6 +21,7 @@ inline void backend_base_finalize(struct Backend_base *base) {
 
 inline void backend_base_mark(struct Backend_base *base) {
   if (base->idle_block != Qnil) rb_gc_mark(base->idle_block);
+  if (base->trace_proc != Qnil) rb_gc_mark(base->trace_proc);
   runqueue_mark(&base->runqueue);
 }
 
@@ -30,8 +32,8 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   unsigned int backend_was_polled = 0;
   unsigned int idle_tasks_run_count = 0;
 
-  // if (__tracing_enabled__ && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
-  //   TRACE(2, SYM_fiber_switchpoint, current_fiber);
+  if (SHOULD_TRACE(base) && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
+    TRACE(base, 2, SYM_fiber_switchpoint, current_fiber);
 
   while (1) {
     next = runqueue_shift(&base->runqueue);
@@ -65,7 +67,7 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   if (next.fiber == Qnil) return Qnil;
 
   // run next fiber
-  COND_TRACE(3, SYM_fiber_run, next.fiber, next.value);
+  COND_TRACE(base, 3, SYM_fiber_run, next.fiber, next.value);
 
   rb_ivar_set(next.fiber, ID_ivar_runnable, Qnil);
   RB_GC_GUARD(next.fiber);
@@ -80,7 +82,7 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
   if (rb_fiber_alive_p(fiber) != Qtrue) return;
   already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
 
-  COND_TRACE(3, SYM_fiber_schedule, fiber, value);
+  COND_TRACE(base, 3, SYM_fiber_schedule, fiber, value);
   (prioritize ? runqueue_unshift : runqueue_push)(&base->runqueue, fiber, value, already_runnable);
   if (!already_runnable) {
     rb_ivar_set(fiber, ID_ivar_runnable, Qtrue);
@@ -93,9 +95,14 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
       Backend_wakeup(backend);
     }
   }
-
 }
 
+
+inline void backend_trace(struct Backend_base *base, int argc, VALUE *argv) {
+  if (base->trace_proc == Qnil) return;
+
+  rb_funcallv(base->trace_proc, ID_call, argc, argv);
+}
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN
 #ifndef __NR_pidfd_open

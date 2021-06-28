@@ -262,7 +262,7 @@ module Polyphony
       @parent = parent
       @caller = caller
       @block = block
-      __fiber_trace__(:fiber_create, self)
+      Thread.backend.trace(:fiber_create, self)
       schedule
     end
 
@@ -311,7 +311,7 @@ module Polyphony
 
     def finalize(result, uncaught_exception = false)
       result, uncaught_exception = finalize_children(result, uncaught_exception)
-      __fiber_trace__(:fiber_terminate, self, result)
+      Thread.backend.trace(:fiber_terminate, self, result)
       @result = result
       @running = false
       inform_dependants(result, uncaught_exception)

@@ -7,7 +7,6 @@ void Init_Queue();
 void Init_Event();
 void Init_SocketExtensions();
 void Init_Thread();
-void Init_Tracing();
 
 #ifdef POLYPHONY_PLAYGROUND
 extern void playground();
@@ -21,7 +20,6 @@ void Init_polyphony_ext() {
   Init_Event();
   Init_Fiber();
   Init_Thread();
-  Init_Tracing();
 
   Init_SocketExtensions();
 

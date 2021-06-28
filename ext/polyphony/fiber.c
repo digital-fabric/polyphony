@@ -1,6 +1,5 @@
 #include "polyphony.h"
 
-ID ID_fiber_trace;
 ID ID_ivar_auto_watcher;
 ID ID_ivar_mailbox;
 ID ID_ivar_result;
@@ -169,7 +168,6 @@ void Init_Fiber() {
   rb_global_variable(&SYM_runnable);
   rb_global_variable(&SYM_waiting);
 
-  ID_fiber_trace              = rb_intern("__fiber_trace__");
   ID_ivar_auto_watcher        = rb_intern("@auto_watcher");
   ID_ivar_mailbox             = rb_intern("@mailbox");
   ID_ivar_result              = rb_intern("@result");

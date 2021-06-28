@@ -164,11 +164,11 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  // COND_TRACE(2, SYM_fiber_event_poll_enter, current_fiber);
+  COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_enter, rb_fiber_current());
   backend->base.currently_polling = 1;
   ev_run(backend->ev_loop, blocking == Qtrue ? EVRUN_ONCE : EVRUN_NOWAIT);
   backend->base.currently_polling = 0;
-  // COND_TRACE(2, SYM_fiber_event_poll_leave, current_fiber);
+  COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_leave, rb_fiber_current());
 
   return self;
 }
@@ -1472,6 +1472,21 @@ error:
   return RAISE_EXCEPTION(result);
 }
 
+VALUE Backend_trace(int argc, VALUE *argv, VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+  backend_trace(&backend->base, argc, argv);
+  return self;
+}
+
+VALUE Backend_trace_proc_set(VALUE self, VALUE block) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  backend->base.trace_proc = block;
+  return self;
+}
+
 void Init_Backend() {
   ev_set_allocator(xrealloc);
 
@@ -1481,6 +1496,8 @@ void Init_Backend() {
   rb_define_method(cBackend, "initialize", Backend_initialize, 0);
   rb_define_method(cBackend, "finalize", Backend_finalize, 0);
   rb_define_method(cBackend, "post_fork", Backend_post_fork, 0);
+  rb_define_method(cBackend, "trace", Backend_trace, -1);
+  rb_define_method(cBackend, "trace_proc=", Backend_trace_proc_set, 1);
 
   rb_define_method(cBackend, "poll", Backend_poll, 1);
   rb_define_method(cBackend, "break", Backend_wakeup, 0);

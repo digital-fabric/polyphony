@@ -19,10 +19,6 @@
   free(strings); \
 }
 
-// tracing
-#define TRACE(...)  rb_funcall(rb_cObject, ID_fiber_trace, __VA_ARGS__)
-#define COND_TRACE(...) if (__tracing_enabled__) { TRACE(__VA_ARGS__); }
-
 // exceptions
 #define TEST_EXCEPTION(ret) (rb_obj_is_kind_of(ret, rb_eException) == Qtrue)
 #define RAISE_EXCEPTION(e) rb_funcall(e, ID_invoke, 0);
@@ -43,7 +39,6 @@ extern ID ID_call;
 extern ID ID_caller;
 extern ID ID_clear;
 extern ID ID_each;
-extern ID ID_fiber_trace;
 extern ID ID_inspect;
 extern ID ID_invoke;
 extern ID ID_ivar_backend;
@@ -66,14 +61,6 @@ extern VALUE SYM_fiber_run;
 extern VALUE SYM_fiber_schedule;
 extern VALUE SYM_fiber_switchpoint;
 extern VALUE SYM_fiber_terminate;
-
-extern int __tracing_enabled__;
-
-enum {
-  FIBER_STATE_NOT_SCHEDULED = 0,
-  FIBER_STATE_WAITING       = 1,
-  FIBER_STATE_SCHEDULED     = 2
-};
 
 VALUE Fiber_auto_watcher(VALUE self);
 void Fiber_make_runnable(VALUE fiber, VALUE value);

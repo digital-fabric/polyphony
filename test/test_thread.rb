@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative 'helper'
-require 'polyphony/adapters/trace'
 
 class ThreadTest < MiniTest::Test
   def test_thread_spin
@@ -129,20 +128,14 @@ class ThreadTest < MiniTest::Test
   end
 
   def test_that_suspend_returns_immediately_if_no_watchers
-    skip
     records = []
-    t = Polyphony::Trace.new(:fiber_all) do |r|
-      records << r if r[:event] =~ /^fiber_/
-    end
-    t.enable
-    Polyphony.trace(true)
-
+    Thread.backend.trace_proc = proc {|*r| records << r }
     suspend
-    t.disable
-    assert_equal [:fiber_switchpoint], records.map { |r| r[:event] }
+    assert_equal [
+      [:fiber_switchpoint, Fiber.current]
+    ], records
   ensure
-    t&.disable
-    Polyphony.trace(false)
+    Thread.backend.trace_proc = nil
   end
 
   def test_thread_child_fiber_termination

@@ -18,6 +18,7 @@ struct Backend_base {
   double idle_gc_period;
   double idle_gc_last_time;
   VALUE idle_block;
+  VALUE trace_proc;
 };
 
 void backend_base_initialize(struct Backend_base *base);
@@ -25,6 +26,14 @@ void backend_base_finalize(struct Backend_base *base);
 void backend_base_mark(struct Backend_base *base);
 VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base);
 void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_base *base, VALUE fiber, VALUE value, int prioritize);
+void backend_trace(struct Backend_base *base, int argc, VALUE *argv);
+
+// tracing
+#define SHOULD_TRACE(base) ((base)->trace_proc != Qnil)
+#define TRACE(base, ...)  rb_funcall((base)->trace_proc, ID_call, __VA_ARGS__)
+#define COND_TRACE(base, ...) if (SHOULD_TRACE(base)) { TRACE(base, __VA_ARGS__); }
+
+
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN
 int pidfd_open(pid_t pid, unsigned int flags);
