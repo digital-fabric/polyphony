@@ -1,3 +1,7 @@
+## 0.59.1 2021-06-28
+
+- Accept fiber tag in `Polyphony::Timer.new`
+
 ## 0.59 2021-06-28
 
 - Redesign tracing mechanism and API - now completely separated from Ruby core
