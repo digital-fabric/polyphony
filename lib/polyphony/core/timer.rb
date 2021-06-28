@@ -3,8 +3,8 @@
 module Polyphony
   # Implements a common timer for running multiple timeouts
   class Timer
-    def initialize(resolution:)
-      @fiber = spin_loop(interval: resolution) { update }
+    def initialize(tag = nil, resolution:)
+      @fiber = spin_loop(tag, interval: resolution) { update }
       @timeouts = {}
     end
 
