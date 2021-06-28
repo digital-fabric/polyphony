@@ -87,7 +87,7 @@ class BackendTest < MiniTest::Test
     buf = []
     f = spin do
       buf << :ready
-      @backend.read_loop(i) { |d| buf << d }
+      @backend.read_loop(i, 8192) { |d| buf << d }
       buf << :done
     end
 
@@ -107,7 +107,7 @@ class BackendTest < MiniTest::Test
     parent = spin do
       f = spin do
         buf << :ready
-        @backend.read_loop(i) { |d| buf << d }
+        @backend.read_loop(i, 8192) { |d| buf << d }
         buf << :done
       end
       suspend
@@ -123,6 +123,16 @@ class BackendTest < MiniTest::Test
 
     parent.await
     assert_equal [:ready, 'foo', 'bar'], buf
+  end
+
+  def test_read_loop_with_max_len
+    r, w = IO.pipe
+
+    w << 'foobar'
+    w.close
+    buf = []
+    @backend.read_loop(r, 3) { |data| buf << data }
+    assert_equal ['foo', 'bar'], buf
   end
 
   Net = Polyphony::Net

@@ -416,4 +416,33 @@ class IOClassMethodsTest < MiniTest::Test
     assert_equal "foo\nbar\n", pipe_read { |f| f.puts 'foo', 'bar' }
     assert_equal "foo\nbar\n", pipe_read { |f| f.puts 'foo', "bar\n" }
   end
+
+  def test_read_loop
+    i, o = IO.pipe
+
+    buf = []
+    f = spin do
+      buf << :ready
+      i.read_loop { |d| buf << d }
+      buf << :done
+    end
+
+    # writing always causes snoozing
+    o << 'foo'
+    o << 'bar'
+    o.close
+
+    f.await
+    assert_equal [:ready, 'foo', 'bar', :done], buf
+  end
+
+  def test_read_loop_with_max_len
+    r, w = IO.pipe
+
+    w << 'foobar'
+    w.close
+    buf = []
+    r.read_loop(3) { |data| buf << data }
+    assert_equal ['foo', 'bar'], buf
+  end
 end

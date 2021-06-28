@@ -331,13 +331,13 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   return Backend_read(self, io, str, length, Qnil);
 }
 
-VALUE Backend_read_loop(VALUE self, VALUE io) {
+VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
   VALUE str;
   long total;
-  long len = 8192;
+  long len = NUM2INT(maxlen);
   int shrinkable;
   char *buf;
   VALUE switchpoint_result = Qnil;
@@ -1512,9 +1512,9 @@ void Init_Backend() {
   rb_define_method(cBackend, "connect", Backend_connect, 3);
   rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
   rb_define_method(cBackend, "read", Backend_read, 4);
-  rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
+  rb_define_method(cBackend, "read_loop", Backend_read_loop, 2);
   rb_define_method(cBackend, "recv", Backend_recv, 3);
-  rb_define_method(cBackend, "recv_loop", Backend_read_loop, 1);
+  rb_define_method(cBackend, "recv_loop", Backend_read_loop, 2);
   rb_define_method(cBackend, "recv_feed_loop", Backend_feed_loop, 3);
   rb_define_method(cBackend, "send", Backend_send, 3);
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);

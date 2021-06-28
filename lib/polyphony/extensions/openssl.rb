@@ -69,8 +69,8 @@ class ::OpenSSL::SSL::SSLSocket
     result || (raise EOFError)
   end
 
-  def read_loop
-    while (data = sysread(8192))
+  def read_loop(maxlen = 8192)
+    while (data = sysread(maxlen))
       yield data
     end
   end

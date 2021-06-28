@@ -367,12 +367,12 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
   return str;
 }
 
-VALUE Backend_read_loop(VALUE self, VALUE io) {
+VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
   rb_io_t *fptr;
   VALUE str;
   long total;
-  long len = 8192;
+  long len = NUM2INT(maxlen);
   int shrinkable;
   char *buf;
   VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
@@ -626,12 +626,12 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
   return str;
 }
 
-VALUE Backend_recv_loop(VALUE self, VALUE io) {
+VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
   rb_io_t *fptr;
   VALUE str;
   long total;
-  long len = 8192;
+  long len = NUM2INT(maxlen);
   int shrinkable;
   char *buf;
   VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
@@ -1422,10 +1422,10 @@ void Init_Backend() {
   rb_define_method(cBackend, "connect", Backend_connect, 3);
   rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
   rb_define_method(cBackend, "read", Backend_read, 4);
-  rb_define_method(cBackend, "read_loop", Backend_read_loop, 1);
+  rb_define_method(cBackend, "read_loop", Backend_read_loop, 2);
   rb_define_method(cBackend, "recv", Backend_recv, 3);
   rb_define_method(cBackend, "recv_feed_loop", Backend_recv_feed_loop, 3);
-  rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 1);
+  rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 2);
   rb_define_method(cBackend, "send", Backend_send, 3);
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);

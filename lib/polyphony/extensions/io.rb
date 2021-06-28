@@ -216,8 +216,8 @@ class ::IO
     buf ? readpartial(maxlen, buf) : readpartial(maxlen)
   end
 
-  def read_loop(&block)
-    Polyphony.backend_read_loop(self, &block)
+  def read_loop(maxlen = 8192, &block)
+    Polyphony.backend_read_loop(self, maxlen, &block)
   end
 
   def feed_loop(receiver, method = :call, &block)
