@@ -1,3 +1,9 @@
+## 0.59 2021-06-28
+
+- Redesign tracing mechanism and API - now completely separated from Ruby core
+  trace API
+- Refactor C code - move run queue into backend
+
 ## 0.58 2021-06-25
 
 - Implement `Thread#idle_gc_period`, `#on_idle` (#56)
