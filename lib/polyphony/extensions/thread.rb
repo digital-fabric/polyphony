@@ -111,6 +111,6 @@ class ::Thread
   end
 
   def on_idle(&block)
-    backend.idle_block = block
+    backend.idle_proc = block
   end
 end

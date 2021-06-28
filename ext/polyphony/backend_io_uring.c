@@ -1216,10 +1216,10 @@ VALUE Backend_idle_gc_period_set(VALUE self, VALUE period) {
   return self;
 }
 
-VALUE Backend_idle_block_set(VALUE self, VALUE block) {
+VALUE Backend_idle_proc_set(VALUE self, VALUE block) {
   Backend_t *backend;
   GetBackend(self, backend);
-  backend->base.idle_block = block;
+  backend->base.idle_proc = block;
   return self;
 }
 
@@ -1414,7 +1414,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "kind", Backend_kind, 0);
   rb_define_method(cBackend, "chain", Backend_chain, -1);
   rb_define_method(cBackend, "idle_gc_period=", Backend_idle_gc_period_set, 1);
-  rb_define_method(cBackend, "idle_block=", Backend_idle_block_set, 1);
+  rb_define_method(cBackend, "idle_proc=", Backend_idle_proc_set, 1);
   rb_define_method(cBackend, "splice_chunks", Backend_splice_chunks, 7);
 
   rb_define_method(cBackend, "accept", Backend_accept, 2);

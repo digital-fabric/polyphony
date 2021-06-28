@@ -17,7 +17,7 @@ struct Backend_base {
   unsigned int pending_count;
   double idle_gc_period;
   double idle_gc_last_time;
-  VALUE idle_block;
+  VALUE idle_proc;
   VALUE trace_proc;
 };
 

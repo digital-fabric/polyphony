@@ -11,7 +11,7 @@ inline void backend_base_initialize(struct Backend_base *base) {
   base->pending_count = 0;
   base->idle_gc_period = 0;
   base->idle_gc_last_time = 0;
-  base->idle_block = Qnil;
+  base->idle_proc = Qnil;
   base->trace_proc = Qnil;
 }
 
@@ -20,7 +20,7 @@ inline void backend_base_finalize(struct Backend_base *base) {
 }
 
 inline void backend_base_mark(struct Backend_base *base) {
-  if (base->idle_block != Qnil) rb_gc_mark(base->idle_block);
+  if (base->idle_proc != Qnil) rb_gc_mark(base->idle_proc);
   if (base->trace_proc != Qnil) rb_gc_mark(base->trace_proc);
   runqueue_mark(&base->runqueue);
 }
@@ -273,8 +273,8 @@ inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
 }
 
 inline void backend_run_idle_tasks(struct Backend_base *base) {
-  if (base->idle_block != Qnil)
-    rb_funcall(base->idle_block, ID_call, 0);
+  if (base->idle_proc != Qnil)
+    rb_funcall(base->idle_proc, ID_call, 0);
 
   if (base->idle_gc_period == 0) return;
 
