@@ -44,8 +44,12 @@ typedef struct Backend_t {
 
 static void Backend_mark(void *ptr) {
   Backend_t *backend = ptr;
-  if (backend->base.idle_block != Qnil)
-    rb_gc_mark(backend->base.idle_block);
+  backend_base_mark(&backend->base);
+}
+
+static void Backend_free(void *ptr) {
+  Backend_t *backend = ptr;
+  backend_base_finalize(&backend->base);
 }
 
 static size_t Backend_size(const void *ptr) {
@@ -54,7 +58,7 @@ static size_t Backend_size(const void *ptr) {
 
 static const rb_data_type_t Backend_type = {
     "IOUringBackend",
-    {Backend_mark, 0, Backend_size,},
+    {Backend_mark, Backend_free, Backend_size,},
     0, 0, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
@@ -71,7 +75,7 @@ static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  initialize_backend_base(&backend->base);
+  backend_base_initialize(&backend->base);
   backend->pending_sqes = 0;
   backend->prepared_limit = 2048;
 
@@ -104,13 +108,6 @@ VALUE Backend_post_fork(VALUE self) {
   backend->pending_sqes = 0;
 
   return self;
-}
-
-unsigned int Backend_pending_count(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  return backend->base.pending_count;
 }
 
 typedef struct poll_context {
@@ -189,22 +186,54 @@ void io_uring_backend_poll(Backend_t *backend) {
   io_uring_cqe_seen(&backend->ring, poll_ctx.cqe);
 }
 
-VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
-  int is_nowait = nowait == Qtrue;
+inline VALUE Backend_poll(VALUE self, VALUE blocking) {
+  int is_blocking = blocking == Qtrue;
   Backend_t *backend;
   GetBackend(self, backend);
 
-  if (is_nowait && backend->pending_sqes) {
+  if (!is_blocking && backend->pending_sqes) {
     backend->pending_sqes = 0;
     io_uring_submit(&backend->ring);
   }
 
-  COND_TRACE(2, SYM_fiber_event_poll_enter, current_fiber);
-  if (!is_nowait) io_uring_backend_poll(backend);
+  // COND_TRACE(2, SYM_fiber_event_poll_enter, current_fiber);
+  if (is_blocking) io_uring_backend_poll(backend);
   io_uring_backend_handle_ready_cqes(backend);
-  COND_TRACE(2, SYM_fiber_event_poll_leave, current_fiber);
+  // COND_TRACE(2, SYM_fiber_event_poll_leave, current_fiber);
   
   return self;
+}
+
+inline void Backend_schedule_fiber(VALUE thread, VALUE self, VALUE fiber, VALUE value, int prioritize) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  backend_base_schedule_fiber(thread, self, &backend->base, fiber, value, prioritize);
+}
+
+inline void Backend_unschedule_fiber(VALUE self, VALUE fiber) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  runqueue_delete(&backend->base.runqueue, fiber);  
+}
+
+inline VALUE Backend_switch_fiber(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  return backend_base_switch_fiber(self, &backend->base);
+}
+
+inline struct backend_stats Backend_stats(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  return (struct backend_stats){
+    .scheduled_fibers = runqueue_len(&backend->base.runqueue),
+    .waiting_fibers = 0,
+    .pending_ops = backend->base.pending_count
+  };
 }
 
 VALUE Backend_wakeup(VALUE self) {
@@ -1363,7 +1392,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "finalize", Backend_finalize, 0);
   rb_define_method(cBackend, "post_fork", Backend_post_fork, 0);
 
-  rb_define_method(cBackend, "poll", Backend_poll, 3);
+  rb_define_method(cBackend, "poll", Backend_poll, 1);
   rb_define_method(cBackend, "break", Backend_wakeup, 0);
   rb_define_method(cBackend, "kind", Backend_kind, 0);
   rb_define_method(cBackend, "chain", Backend_chain, -1);

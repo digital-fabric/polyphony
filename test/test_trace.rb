@@ -16,6 +16,7 @@ class TraceTest < MiniTest::Test
   end
 
   def test_tracing_enabled
+    skip
     records = []
     t = Polyphony::Trace.new(:fiber_all) { |r| records << r if r[:event] =~ /^fiber_/ }
     Polyphony.trace(true)
@@ -33,6 +34,7 @@ class TraceTest < MiniTest::Test
   end
 
   def test_2_fiber_trace
+    skip
     records = []
     thread = Thread.current
     t = Polyphony::Trace.new(:fiber_all) do |r|

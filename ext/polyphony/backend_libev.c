@@ -75,8 +75,12 @@ typedef struct Backend_t {
 
 static void Backend_mark(void *ptr) {
   Backend_t *backend = ptr;
-  if (backend->base.idle_block != Qnil)
-    rb_gc_mark(backend->base.idle_block);
+  backend_base_mark(&backend->base);
+}
+
+static void Backend_free(void *ptr) {
+  Backend_t *backend = ptr;
+  backend_base_finalize(&backend->base);
 }
 
 static size_t Backend_size(const void *ptr) {
@@ -85,7 +89,7 @@ static size_t Backend_size(const void *ptr) {
 
 static const rb_data_type_t Backend_type = {
     "LibevBackend",
-    {Backend_mark, 0, Backend_size,},
+    {Backend_mark, Backend_free, Backend_size,},
     0, 0, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
@@ -117,7 +121,7 @@ static VALUE Backend_initialize(VALUE self) {
   
   GetBackend(self, backend);
 
-  initialize_backend_base(&backend->base);
+  backend_base_initialize(&backend->base);
   backend->ev_loop = libev_new_loop();
 
   // start async watcher used for breaking a poll op (from another thread)
@@ -156,24 +160,38 @@ VALUE Backend_post_fork(VALUE self) {
   return self;
 }
 
-inline unsigned int Backend_pending_count(VALUE self) {
+inline VALUE Backend_poll(VALUE self, VALUE blocking) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  return backend->base.pending_count;
-}
-
-VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  COND_TRACE(2, SYM_fiber_event_poll_enter, current_fiber);
+  // COND_TRACE(2, SYM_fiber_event_poll_enter, current_fiber);
   backend->base.currently_polling = 1;
-  ev_run(backend->ev_loop, nowait == Qtrue ? EVRUN_NOWAIT : EVRUN_ONCE);
+  ev_run(backend->ev_loop, blocking == Qtrue ? EVRUN_ONCE : EVRUN_NOWAIT);
   backend->base.currently_polling = 0;
-  COND_TRACE(2, SYM_fiber_event_poll_leave, current_fiber);
+  // COND_TRACE(2, SYM_fiber_event_poll_leave, current_fiber);
 
   return self;
+}
+
+inline void Backend_schedule_fiber(VALUE thread, VALUE self, VALUE fiber, VALUE value, int prioritize) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  backend_base_schedule_fiber(thread, self, &backend->base, fiber, value, prioritize);
+}
+
+inline void Backend_unschedule_fiber(VALUE self, VALUE fiber) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  runqueue_delete(&backend->base.runqueue, fiber);  
+}
+
+inline VALUE Backend_switch_fiber(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  return backend_base_switch_fiber(self, &backend->base);
 }
 
 VALUE Backend_wakeup(VALUE self) {
@@ -191,6 +209,17 @@ VALUE Backend_wakeup(VALUE self) {
   }
 
   return Qnil;
+}
+
+inline struct backend_stats Backend_stats(VALUE self) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  return (struct backend_stats){
+    .scheduled_fibers = runqueue_len(&backend->base.runqueue),
+    .waiting_fibers = 0,
+    .pending_ops = backend->base.pending_count
+  };
 }
 
 struct libev_io {
@@ -1453,7 +1482,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "finalize", Backend_finalize, 0);
   rb_define_method(cBackend, "post_fork", Backend_post_fork, 0);
 
-  rb_define_method(cBackend, "poll", Backend_poll, 3);
+  rb_define_method(cBackend, "poll", Backend_poll, 1);
   rb_define_method(cBackend, "break", Backend_wakeup, 0);
   rb_define_method(cBackend, "kind", Backend_kind, 0);
   rb_define_method(cBackend, "chain", Backend_chain, -1);

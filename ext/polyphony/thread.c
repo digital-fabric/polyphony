@@ -1,19 +1,15 @@
 #include "polyphony.h"
+#include "backend_common.h"
 
 ID ID_deactivate_all_watchers_post_fork;
 ID ID_ivar_backend;
 ID ID_ivar_join_wait_queue;
 ID ID_ivar_main_fiber;
 ID ID_ivar_terminated;
-ID ID_ivar_runqueue;
 ID ID_stop;
 
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
-  VALUE runqueue = rb_funcall(cRunqueue, ID_new, 0);
-
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
-  rb_ivar_set(self, ID_ivar_runqueue, runqueue);
-
   return self;
 }
 
@@ -21,53 +17,20 @@ static VALUE SYM_scheduled_fibers;
 static VALUE SYM_pending_watchers;
 
 static VALUE Thread_fiber_scheduling_stats(VALUE self) {
-  VALUE backend = rb_ivar_get(self, ID_ivar_backend);
+  struct backend_stats backend_stats = Backend_stats(rb_ivar_get(self, ID_ivar_backend));
+
   VALUE stats = rb_hash_new();
-  VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
-  long pending_count;
-
-  long scheduled_count = Runqueue_len(runqueue);
-  rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(scheduled_count));
-
-  pending_count = Backend_pending_count(backend);
-  rb_hash_aset(stats, SYM_pending_watchers, INT2NUM(pending_count));
-
+  rb_hash_aset(stats, SYM_scheduled_fibers, INT2NUM(backend_stats.scheduled_fibers));
+  rb_hash_aset(stats, SYM_pending_watchers, INT2NUM(backend_stats.pending_ops));
   return stats;
 }
 
-void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize) {
-  VALUE runqueue;
-  int already_runnable;
-
-  if (rb_fiber_alive_p(fiber) != Qtrue) return;
-  already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
-
-  COND_TRACE(3, SYM_fiber_schedule, fiber, value);
-  runqueue = rb_ivar_get(self, ID_ivar_runqueue);
-  (prioritize ? Runqueue_unshift : Runqueue_push)(runqueue, fiber, value, already_runnable);
-  if (!already_runnable) {
-    rb_ivar_set(fiber, ID_ivar_runnable, Qtrue);
-    if (rb_thread_current() != self) {
-      // If the fiber scheduling is done across threads, we need to make sure the
-      // target thread is woken up in case it is in the middle of running its
-      // event selector. Otherwise it's gonna be stuck waiting for an event to
-      // happen, not knowing that it there's already a fiber ready to run in its
-      // run queue.
-      VALUE backend = rb_ivar_get(self, ID_ivar_backend);
-      Backend_wakeup(backend);
-    }
-  }
-}
-
-VALUE Thread_fiber_scheduling_index(VALUE self, VALUE fiber) {
-  VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
-
-  return INT2NUM(Runqueue_index_of(runqueue, fiber));
+inline void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize) {
+  Backend_schedule_fiber(self, rb_ivar_get(self, ID_ivar_backend), fiber, value, prioritize);
 }
 
 VALUE Thread_fiber_unschedule(VALUE self, VALUE fiber) {
-  VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
-  Runqueue_delete(runqueue, fiber);
+  Backend_unschedule_fiber(rb_ivar_get(self, ID_ivar_backend), fiber);
   return self;
 }
 
@@ -82,65 +45,15 @@ VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) 
 }
 
 VALUE Thread_switch_fiber(VALUE self) {
-  VALUE current_fiber = rb_fiber_current();
-  VALUE runqueue = rb_ivar_get(self, ID_ivar_runqueue);
-  runqueue_entry next;
-  VALUE backend = rb_ivar_get(self, ID_ivar_backend);
-  unsigned int pending_ops_count = Backend_pending_count(backend);
-  unsigned int backend_was_polled = 0;
-  unsigned int idle_tasks_run_count = 0;
-
-  if (__tracing_enabled__ && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
-    TRACE(2, SYM_fiber_switchpoint, current_fiber);
-
-  while (1) {
-    next = Runqueue_shift(runqueue);
-    if (next.fiber != Qnil) {
-      // Polling for I/O op completion is normally done when the run queue is
-      // empty, but if the runqueue never empties, we'll never get to process
-      // any event completions. In order to prevent this, an anti-starve
-      // mechanism is employed, under the following conditions:
-      // - a blocking poll was not yet performed
-      // - there are pending blocking operations
-      // - the runqueue has signalled that a non-blocking poll should be
-      //   performed
-      //   - the run queue length high watermark has reached its threshold (currently 128)
-      //   - the run queue switch counter has reached its threshold (currently 64) 
-      if (!backend_was_polled && pending_ops_count && Runqueue_should_poll_nonblocking(runqueue)) {
-        // this prevents event starvation in case the run queue never empties
-        Backend_poll(backend, Qtrue, current_fiber, runqueue);
-      }
-      break;
-    }
-    
-    if (!idle_tasks_run_count) {
-      idle_tasks_run_count++;
-      Backend_run_idle_tasks(backend);
-    }
-    if (pending_ops_count == 0) break;
-    Backend_poll(backend, Qnil, current_fiber, runqueue);
-    backend_was_polled = 1;
-  }
-
-  if (next.fiber == Qnil) return Qnil;
-
-  // run next fiber
-  COND_TRACE(3, SYM_fiber_run, next.fiber, next.value);
-
-  rb_ivar_set(next.fiber, ID_ivar_runnable, Qnil);
-  RB_GC_GUARD(next.fiber);
-  RB_GC_GUARD(next.value);
-  return (next.fiber == current_fiber) ?
-    next.value : FIBER_TRANSFER(next.fiber, next.value);
+  return Backend_switch_fiber(rb_ivar_get(self, ID_ivar_backend));
 }
 
 VALUE Thread_fiber_schedule_and_wakeup(VALUE self, VALUE fiber, VALUE resume_obj) {
-  VALUE backend = rb_ivar_get(self, ID_ivar_backend);
   if (fiber != Qnil) {
     Thread_schedule_fiber_with_priority(self, fiber, resume_obj);
   }
 
-  if (Backend_wakeup(backend) == Qnil) {
+  if (Backend_wakeup(rb_ivar_get(self, ID_ivar_backend)) == Qnil) {
     // we're not inside the ev_loop, so we just do a switchpoint
     Thread_switch_fiber(self);
   }
@@ -166,7 +79,6 @@ void Init_Thread() {
   rb_define_method(rb_cThread, "schedule_fiber_with_priority",
     Thread_schedule_fiber_with_priority, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
-  rb_define_method(rb_cThread, "fiber_scheduling_index", Thread_fiber_scheduling_index, 1);
   rb_define_method(rb_cThread, "fiber_unschedule", Thread_fiber_unschedule, 1);
 
   rb_define_singleton_method(rb_cThread, "backend", Thread_class_backend, 0);
@@ -178,7 +90,6 @@ void Init_Thread() {
   ID_ivar_join_wait_queue               = rb_intern("@join_wait_queue");
   ID_ivar_main_fiber                    = rb_intern("@main_fiber");
   ID_ivar_terminated                    = rb_intern("@terminated");
-  ID_ivar_runqueue                      = rb_intern("@runqueue");
   ID_stop                               = rb_intern("stop");
 
   SYM_scheduled_fibers = ID2SYM(rb_intern("scheduled_fibers"));

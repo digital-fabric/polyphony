@@ -5,13 +5,97 @@
 #include "polyphony.h"
 #include "backend_common.h"
 
-inline void initialize_backend_base(struct Backend_base *base) {
+inline void backend_base_initialize(struct Backend_base *base) {
+  runqueue_initialize(&base->runqueue);
   base->currently_polling = 0;
   base->pending_count = 0;
   base->idle_gc_period = 0;
   base->idle_gc_last_time = 0;
   base->idle_block = Qnil;
 }
+
+inline void backend_base_finalize(struct Backend_base *base) {
+  runqueue_finalize(&base->runqueue);
+}
+
+inline void backend_base_mark(struct Backend_base *base) {
+  if (base->idle_block != Qnil) rb_gc_mark(base->idle_block);
+  runqueue_mark(&base->runqueue);
+}
+
+VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
+  VALUE current_fiber = rb_fiber_current();
+  runqueue_entry next;
+  unsigned int pending_ops_count = base->pending_count;
+  unsigned int backend_was_polled = 0;
+  unsigned int idle_tasks_run_count = 0;
+
+  // if (__tracing_enabled__ && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
+  //   TRACE(2, SYM_fiber_switchpoint, current_fiber);
+
+  while (1) {
+    next = runqueue_shift(&base->runqueue);
+    if (next.fiber != Qnil) {
+      // Polling for I/O op completion is normally done when the run queue is
+      // empty, but if the runqueue never empties, we'll never get to process
+      // any event completions. In order to prevent this, an anti-starve
+      // mechanism is employed, under the following conditions:
+      // - a blocking poll was not yet performed
+      // - there are pending blocking operations
+      // - the runqueue has signalled that a non-blocking poll should be
+      //   performed
+      //   - the run queue length high watermark has reached its threshold (currently 128)
+      //   - the run queue switch counter has reached its threshold (currently 64) 
+      if (!backend_was_polled && pending_ops_count && runqueue_should_poll_nonblocking(&base->runqueue)) {
+        // this prevents event starvation in case the run queue never empties
+        Backend_poll(backend, Qnil);
+      }
+      break;
+    }
+    
+    if (!idle_tasks_run_count) {
+      idle_tasks_run_count++;
+      backend_run_idle_tasks(base);
+    }
+    if (pending_ops_count == 0) break;
+    Backend_poll(backend, Qtrue);
+    backend_was_polled = 1;
+  }
+
+  if (next.fiber == Qnil) return Qnil;
+
+  // run next fiber
+  COND_TRACE(3, SYM_fiber_run, next.fiber, next.value);
+
+  rb_ivar_set(next.fiber, ID_ivar_runnable, Qnil);
+  RB_GC_GUARD(next.fiber);
+  RB_GC_GUARD(next.value);
+  return (next.fiber == current_fiber) ?
+    next.value : FIBER_TRANSFER(next.fiber, next.value);
+}
+
+void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_base *base, VALUE fiber, VALUE value, int prioritize) {
+  int already_runnable;
+
+  if (rb_fiber_alive_p(fiber) != Qtrue) return;
+  already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
+
+  COND_TRACE(3, SYM_fiber_schedule, fiber, value);
+  (prioritize ? runqueue_unshift : runqueue_push)(&base->runqueue, fiber, value, already_runnable);
+  if (!already_runnable) {
+    rb_ivar_set(fiber, ID_ivar_runnable, Qtrue);
+    if (rb_thread_current() != thread) {
+      // If the fiber scheduling is done across threads, we need to make sure the
+      // target thread is woken up in case it is in the middle of running its
+      // event selector. Otherwise it's gonna be stuck waiting for an event to
+      // happen, not knowing that it there's already a fiber ready to run in its
+      // run queue.
+      Backend_wakeup(backend);
+    }
+  }
+
+}
+
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN
 #ifndef __NR_pidfd_open

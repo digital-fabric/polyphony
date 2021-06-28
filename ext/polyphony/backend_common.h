@@ -3,8 +3,16 @@
 
 #include "ruby.h"
 #include "ruby/io.h"
+#include "runqueue.h"
+
+struct backend_stats {
+  int scheduled_fibers;
+  int waiting_fibers;
+  int pending_ops;
+};
 
 struct Backend_base {
+  runqueue_t runqueue;
   unsigned int currently_polling;
   unsigned int pending_count;
   double idle_gc_period;
@@ -12,7 +20,11 @@ struct Backend_base {
   VALUE idle_block;
 };
 
-void initialize_backend_base(struct Backend_base *base);
+void backend_base_initialize(struct Backend_base *base);
+void backend_base_finalize(struct Backend_base *base);
+void backend_base_mark(struct Backend_base *base);
+VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base);
+void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_base *base, VALUE fiber, VALUE value, int prioritize);
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN
 int pidfd_open(pid_t pid, unsigned int flags);

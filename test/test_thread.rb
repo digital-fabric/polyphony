@@ -129,6 +129,7 @@ class ThreadTest < MiniTest::Test
   end
 
   def test_that_suspend_returns_immediately_if_no_watchers
+    skip
     records = []
     t = Polyphony::Trace.new(:fiber_all) do |r|
       records << r if r[:event] =~ /^fiber_/

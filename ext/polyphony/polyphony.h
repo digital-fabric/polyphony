@@ -5,6 +5,7 @@
 
 #include "ruby.h"
 #include "runqueue_ring_buffer.h"
+#include "backend_common.h"
 
 // debugging
 #define OBJ_ID(obj) (NUM2LONG(rb_funcall(obj, rb_intern("object_id"), 0)))
@@ -36,7 +37,6 @@
 extern VALUE mPolyphony;
 extern VALUE cQueue;
 extern VALUE cEvent;
-extern VALUE cRunqueue;
 extern VALUE cTimeoutException;
 
 extern ID ID_call;
@@ -121,11 +121,14 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write);
 VALUE Backend_waitpid(VALUE self, VALUE pid);
 VALUE Backend_write_m(int argc, VALUE *argv, VALUE self);
 
-unsigned int Backend_pending_count(VALUE self);
-VALUE Backend_poll(VALUE self, VALUE nowait, VALUE current_fiber, VALUE runqueue);
+VALUE Backend_poll(VALUE self, VALUE blocking);
 VALUE Backend_wait_event(VALUE self, VALUE raise_on_exception);
 VALUE Backend_wakeup(VALUE self);
 VALUE Backend_run_idle_tasks(VALUE self);
+VALUE Backend_switch_fiber(VALUE self);
+void Backend_schedule_fiber(VALUE thread, VALUE self, VALUE fiber, VALUE value, int prioritize);
+struct backend_stats Backend_stats(VALUE self);
+void Backend_unschedule_fiber(VALUE self, VALUE fiber);
 
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);
