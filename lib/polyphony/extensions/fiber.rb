@@ -209,6 +209,14 @@ module Polyphony
       (@children ||= {}).keys
     end
 
+    def add_child(child_fiber)
+      (@children ||= {})[child_fiber] = true
+    end
+
+    def remove_child(child_fiber)
+      @children.delete(child_fiber) if @children
+    end
+
     def spin(tag = nil, orig_caller = Kernel.caller, &block)
       f = Fiber.new { |v| f.run(v) }
       f.prepare(tag, block, orig_caller, self)
@@ -251,6 +259,12 @@ module Polyphony
         c.terminate(graceful)
         c.await
       end
+    end
+
+    def detach
+      @parent.remove_child(self)
+      @parent = @thread.main_fiber
+      @parent.add_child(self)
     end
   end
 

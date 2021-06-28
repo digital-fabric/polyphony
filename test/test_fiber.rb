@@ -732,6 +732,37 @@ class FiberTest < MiniTest::Test
     assert_equal ['bar'], buffer
     snooze
   end
+
+  def test_detach
+    buf = []
+    child = nil
+    parent = spin(:parent) do
+      buf << :hi_from_parent
+      child = spin(:child) do
+        buf << :hi_from_child
+        # wait for message (from main fiber)
+        buf << receive
+      end
+      snooze
+      buf << :bye_from_parent
+    end
+
+    snooze
+    assert_equal parent, child.parent
+    child.detach 
+    assert_equal Fiber.current, child.parent
+    parent.await
+    
+    child << :bye
+    child.await
+
+    assert_equal [
+      :hi_from_parent,
+      :hi_from_child,
+      :bye_from_parent,
+      :bye
+    ], buf
+  end
 end
 
 class MailboxTest < MiniTest::Test
