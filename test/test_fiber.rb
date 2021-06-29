@@ -763,6 +763,41 @@ class FiberTest < MiniTest::Test
       :bye
     ], buf
   end
+
+  def test_attach
+    buf = []
+    child = nil
+    parent = spin(:parent) do
+      buf << :hi_from_parent
+      child = spin(:child) do
+        buf << :hi_from_child
+        # wait for message (from main fiber)
+        buf << receive
+      end
+      snooze
+      buf << :bye_from_parent
+    end
+
+    new_parent = spin(:new_parent) { buf << receive }
+
+    snooze
+    assert_equal parent, child.parent
+    child.attach(new_parent)
+    assert_equal new_parent, child.parent
+    parent.await
+    
+    child << :bye
+    new_parent << :bye_new_parent
+    snooze
+
+    assert_equal [
+      :hi_from_parent,
+      :hi_from_child,
+      :bye_from_parent,
+      :bye,
+      :bye_new_parent
+    ], buf
+  end
 end
 
 class MailboxTest < MiniTest::Test

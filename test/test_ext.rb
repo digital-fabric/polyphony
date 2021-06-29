@@ -42,7 +42,7 @@ class ExceptionTest < MiniTest::Test
 end
 
 class ProcessTest < MiniTest::Test
-  def test_detach
+  def test_process_detach
     pid = Polyphony.fork { sleep 0.05; exit! 42 }
     buffer = []
     spin { 3.times { |i| buffer << i; snooze } }

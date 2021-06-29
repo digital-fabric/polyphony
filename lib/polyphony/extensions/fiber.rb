@@ -266,6 +266,12 @@ module Polyphony
       @parent = @thread.main_fiber
       @parent.add_child(self)
     end
+
+    def attach(parent)
+      @parent.remove_child(self)
+      @parent = parent
+      @parent.add_child(self)
+    end
   end
 
   # Fiber life cycle methods
