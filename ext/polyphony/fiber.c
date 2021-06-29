@@ -81,34 +81,6 @@ static VALUE Fiber_state(VALUE self) {
   return SYM_waiting;
 }
 
-VALUE Fiber_await(VALUE self) {
-  VALUE result;
-
-  // we compare with false, since a fiber that has not yet started will have
-  // @running set to nil
-  if (rb_ivar_get(self, ID_ivar_running) == Qfalse) {
-    result = rb_ivar_get(self, ID_ivar_result);
-    RAISE_IF_EXCEPTION(result);
-    return result;
-  }
-
-  VALUE fiber = rb_fiber_current();
-  VALUE waiting_fibers = rb_ivar_get(self, ID_ivar_waiting_fibers);
-  if (waiting_fibers == Qnil) {
-    waiting_fibers = rb_hash_new();
-    rb_ivar_set(self, ID_ivar_waiting_fibers, waiting_fibers);
-  }
-  rb_hash_aset(waiting_fibers, fiber, Qtrue);
-
-  VALUE backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
-  result = Backend_wait_event(backend, Qnil);
-
-  rb_hash_delete(waiting_fibers, fiber);
-  RAISE_IF_EXCEPTION(result);
-  RB_GC_GUARD(result);
-  return result;
-}
-
 VALUE Fiber_send(VALUE self, VALUE value) {
   VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
   if (mailbox == Qnil) {
@@ -125,7 +97,7 @@ VALUE Fiber_receive(VALUE self) {
     mailbox = rb_funcall(cQueue, ID_new, 0);
     rb_ivar_set(self, ID_ivar_mailbox, mailbox);
   }
-  return Queue_shift(mailbox);  
+  return Queue_shift(mailbox);
 }
 
 VALUE Fiber_mailbox(VALUE self) {
@@ -149,9 +121,6 @@ void Init_Fiber() {
   rb_define_method(cFiber, "schedule_with_priority", Fiber_schedule_with_priority, -1);
   rb_define_method(cFiber, "state", Fiber_state, 0);
   rb_define_method(cFiber, "auto_watcher", Fiber_auto_watcher, 0);
-
-  rb_define_method(cFiber, "await", Fiber_await, 0);
-  rb_define_method(cFiber, "join", Fiber_await, 0);
 
   rb_define_method(cFiber, "<<", Fiber_send, 1);
   rb_define_method(cFiber, "send", Fiber_send, 1);

@@ -43,6 +43,14 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_await_dead_children
+    f1 = spin { :foo }
+    f2 = spin { :bar }
+    2.times { snooze }
+    
+    assert_equal [:foo, :bar], Fiber.await(f1, f2)
+  end
+
   def test_await_from_multiple_fibers
     buffer = []
     f1 = spin {
@@ -348,12 +356,12 @@ class FiberTest < MiniTest::Test
     assert_equal [:foo, :terminate], buffer
   end
 
-  CMD_TERMINATE_MAIN_FIBER = <<~BASH
-    ruby -rbundler/setup -rpolyphony -e"spin { sleep 0.1; Thread.current.main_fiber.terminate }; begin; sleep; rescue Polyphony::Terminate; STDOUT << 'terminated'; end" 2>&1
+  CMD_TERMINATE_CHILD_FIBER = <<~BASH
+    ruby -rbundler/setup -rpolyphony -e'f = spin { sleep }; spin { sleep 0.1; f.terminate }; f.await' 2>&1
   BASH
 
-  CMD_TERMINATE_CHILD_FIBER = <<~BASH
-    ruby -rbundler/setup -rpolyphony -e"f = spin { sleep }; spin { sleep 0.1; f.terminate }; f.await" 2>&1
+  CMD_TERMINATE_MAIN_FIBER = <<~BASH
+    ruby -rbundler/setup -rpolyphony -e"spin { sleep 0.1; Thread.current.main_fiber.terminate }; begin; sleep; rescue Polyphony::Terminate; STDOUT << 'terminated'; end" 2>&1
   BASH
 
   def test_terminate_main_fiber
@@ -547,24 +555,38 @@ class FiberTest < MiniTest::Test
     assert f.location =~ location
   end
 
-  def test_when_done
-    flag = nil
-    values = []
-    f = spin do
-      snooze until flag
+  def test_monitor
+    child = nil
+    parent = spin do
+      child = spin { receive }
+      child.await
     end
-    f.when_done { values << 42 }
 
     snooze
-    assert values.empty?
-    snooze
-    flag = true
-    assert values.empty?
-    assert f.alive?
+    child.monitor
+    spin { child << :foo }
+
+    msg = receive
+    assert_equal [child, :foo], msg
+  end
+
+  def test_unmonitor
+    child = nil
+    parent = spin(:parent) do
+      child = spin(:child) { receive }
+      child.await
+    end
 
     snooze
-    assert_equal [42], values
-    assert !f.running?
+    child.monitor
+    spin { child << :foo }
+    snooze
+
+    child.unmonitor
+
+    Fiber.current << :bar
+    msg = receive
+    assert_equal :bar, msg
   end
 
   def test_children
@@ -1030,7 +1052,7 @@ class FiberControlTest < MiniTest::Test
     assert_equal 'foo', result.message
     assert_equal f1, result.source_fiber
     assert_equal :dead, f1.state
-    assert_equal :dead, f2.state
+    assert_equal :waiting, f2.state
   end
 
   def test_select_with_interruption

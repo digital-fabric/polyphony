@@ -372,7 +372,7 @@ class SpinScopeTest < MiniTest::Test
     rescue => e
       buffer << e.message
     end
-    6.times { snooze }
+    10.times { snooze }
     assert_equal 0, Fiber.current.children.size
     assert_equal ['foobar'], buffer
   end

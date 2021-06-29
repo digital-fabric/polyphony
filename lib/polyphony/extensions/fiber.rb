@@ -22,9 +22,9 @@ module Polyphony
         return self
       end
 
-      parent.spin(@tag, @caller, &@block).tap do |f|
-        f.schedule(value) unless value.nil?
-      end
+      fiber = parent.spin(@tag, @caller, &@block)
+      fiber.schedule(value) unless value.nil?
+      fiber
     end
     alias_method :reset, :restart
 
@@ -66,6 +66,11 @@ module Polyphony
     def interject(&block)
       raise Polyphony::Interjection.new(block)
     end
+
+    def await
+      Fiber.await(self).first
+    end
+    alias_method :join, :await
   end
 
   # Fiber supervision
@@ -78,7 +83,7 @@ module Polyphony
       while true
         supervise_perform(opts)
       end
-    rescue Polyphony::MoveOn
+  rescue Polyphony::MoveOn
       # generated in #supervise_perform to stop supervisor
     ensure
       @on_child_done = nil
@@ -119,72 +124,62 @@ module Polyphony
     def await(*fibers)
       return [] if fibers.empty?
 
-      state = setup_await_select_state(fibers)
-      await_setup_monitoring(fibers, state)
-      suspend
-      fibers.map(&:result)
+      Fiber.current.message_on_child_termination = true
+      results = {}
+      fibers.each do |f|
+        results[f] = nil
+        if f.dead?
+          # fiber already terminated, so queue message
+          Fiber.current.send [f, f.result]
+        else
+          f.monitor
+        end
+      end
+      exception = nil
+      while !fibers.empty?
+        (fiber, result) = receive
+        next unless fibers.include?(fiber)
+
+        fibers.delete(fiber)
+        if result.is_a?(Exception)
+          exception ||= result
+          fibers.each { |f| f.terminate }
+        else
+          results[fiber] = result
+        end
+      end
+      results.values
     ensure
-      await_select_cleanup(state) if state
+      Fiber.current.message_on_child_termination = false
+      raise exception if exception
     end
     alias_method :join, :await
 
-    def setup_await_select_state(fibers)
-      {
-        awaiter: Fiber.current,
-        pending: fibers.each_with_object({}) { |f, h| h[f] = true }
-      }
-    end
-
-    def await_setup_monitoring(fibers, state)
-      fibers.each do |f|
-        f.when_done { |r| await_fiber_done(f, r, state) }
-      end
-    end
-
-    def await_fiber_done(fiber, result, state)
-      state[:pending].delete(fiber)
-
-      if state[:cleanup]
-        state[:awaiter].schedule if state[:pending].empty?
-      elsif !state[:done] && (result.is_a?(Exception) || state[:pending].empty?)
-        state[:awaiter].schedule(result)
-        state[:done] = true
-      end
-    end
-
-    def await_select_cleanup(state)
-      return if state[:pending].empty?
-
-      terminate = Polyphony::Terminate.new
-      state[:cleanup] = true
-      state[:pending].each_key { |f| f.schedule(terminate) }
-      suspend
-    end
-
     def select(*fibers)
-      state = setup_await_select_state(fibers)
-      select_setup_monitoring(fibers, state)
-      suspend
-    ensure
-      await_select_cleanup(state)
-    end
-
-    def select_setup_monitoring(fibers, state)
+      return nil if fibers.empty?
+  
       fibers.each do |f|
-        f.when_done { |r| select_fiber_done(f, r, state) }
+        if f.dead?
+          result = f.result
+          result.is_a?(Exception) ? (raise result) : (return [f, result])
+        end
       end
-    end
 
-    def select_fiber_done(fiber, result, state)
-      state[:pending].delete(fiber)
-      if state[:cleanup]
-        # in cleanup mode the selector is resumed if no more pending fibers
-        state[:awaiter].schedule if state[:pending].empty?
-      elsif !state[:selected]
-        # first fiber to complete, we schedule the result
-        state[:awaiter].schedule([fiber, result])
-        state[:selected] = true
+      Fiber.current.message_on_child_termination = true
+      fibers.each { |f| f.monitor }
+      while true
+        (fiber, result) = receive
+        next unless fibers.include?(fiber)
+  
+        fibers.each { |f| f.unmonitor }
+        if result.is_a?(Exception)
+          raise result
+        else
+          return [fiber, result]
+        end
       end
+    ensure
+      Fiber.current.message_on_child_termination = false
     end
 
     # Creates and schedules with priority an out-of-band fiber that runs the
@@ -226,7 +221,10 @@ module Polyphony
 
     def child_done(child_fiber, result)
       @children.delete(child_fiber)
-      @on_child_done&.(child_fiber, result)
+
+      if result.is_a?(Exception) && !@message_on_child_termination
+        schedule_with_priority(result)
+      end
     end
 
     def terminate_all_children(graceful = false)
@@ -242,14 +240,7 @@ module Polyphony
     def await_all_children
       return unless @children && !@children.empty?
 
-      results = @children.dup
-      @on_child_done = proc do |c, r|
-        results[c] = r
-        schedule if @children.empty?
-      end
-      suspend
-      @on_child_done = nil
-      results.values
+      Fiber.await(*@children.keys)
     end
 
     def shutdown_all_children(graceful = false)
@@ -324,8 +315,6 @@ module Polyphony
 
     def restart_self(first_value)
       @mailbox = nil
-      @when_done_procs = nil
-      @waiting_fibers = nil
       run(first_value)
     end
 
@@ -333,8 +322,9 @@ module Polyphony
       result, uncaught_exception = finalize_children(result, uncaught_exception)
       Thread.backend.trace(:fiber_terminate, self, result)
       @result = result
-      @running = false
+
       inform_dependants(result, uncaught_exception)
+      @running = false
     ensure
       # Prevent fiber from being resumed after terminating
       @thread.fiber_unschedule(self)
@@ -352,17 +342,27 @@ module Polyphony
     end
 
     def inform_dependants(result, uncaught_exception)
+      if @monitors
+        msg = [self, result]
+        @monitors.each { |f| f << msg }
+      end
+
       @parent&.child_done(self, result)
-      @when_done_procs&.each { |p| p.(result) }
-      @waiting_fibers&.each_key { |f| f.schedule(result) }
-      
-      # propagate unaught exception to parent
-      @parent&.schedule_with_priority(result) if uncaught_exception && !@waiting_fibers
     end
 
-    def when_done(&block)
-      @when_done_procs ||= []
-      @when_done_procs << block
+    attr_accessor :message_on_child_termination 
+
+    def monitor
+      @monitors ||= []
+      @monitors << Fiber.current
+    end
+
+    def unmonitor
+      @monitors.delete(Fiber.current) if @monitors
+    end
+
+    def dead?
+      state == :dead
     end
   end
 end
