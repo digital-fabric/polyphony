@@ -57,21 +57,21 @@ static VALUE Queue_initialize(int argc, VALUE *argv, VALUE self) {
   return self;
 }
 
-inline void queue_resume_first_blocked_fiber(ring_buffer *queue) {
+inline void queue_schedule_first_blocked_fiber(ring_buffer *queue) {
   if (queue->count) {
     VALUE fiber = ring_buffer_shift(queue);
     if (fiber != Qnil) Fiber_make_runnable(fiber, Qnil);
   }
 }
 
-inline void queue_resume_all_blocked_fibers(ring_buffer *queue) {
+inline void queue_schedule_all_blocked_fibers(ring_buffer *queue) {
   while (queue->count) {
     VALUE fiber = ring_buffer_shift(queue);
     if (fiber != Qnil) Fiber_make_runnable(fiber, Qnil);
   }
 }
 
-inline void queue_resume_blocked_fibers_to_capacity(Queue_t *queue) {
+inline void queue_schedule_blocked_fibers_to_capacity(Queue_t *queue) {
   for (unsigned int i = queue->values.count; (i < queue->capacity) && queue->push_queue.count; i++) {
     VALUE fiber = ring_buffer_shift(&queue->push_queue);
     if (fiber != Qnil) Fiber_make_runnable(fiber, Qnil);
@@ -101,7 +101,7 @@ VALUE Queue_push(VALUE self, VALUE value) {
 
   if (queue->capacity) capped_queue_block_push(queue);
 
-  queue_resume_first_blocked_fiber(&queue->shift_queue);
+  queue_schedule_first_blocked_fiber(&queue->shift_queue);
   ring_buffer_push(&queue->values, value);
 
   return self;
@@ -113,7 +113,7 @@ VALUE Queue_unshift(VALUE self, VALUE value) {
 
   if (queue->capacity) capped_queue_block_push(queue);
 
-  queue_resume_first_blocked_fiber(&queue->shift_queue);
+  queue_schedule_first_blocked_fiber(&queue->shift_queue);
   ring_buffer_unshift(&queue->values, value);
 
   return self;
@@ -140,7 +140,7 @@ VALUE Queue_shift(VALUE self) {
   }
   VALUE value = ring_buffer_shift(&queue->values);
   if ((queue->capacity) && (queue->capacity > queue->values.count))
-    queue_resume_first_blocked_fiber(&queue->push_queue);
+    queue_schedule_first_blocked_fiber(&queue->push_queue);
   RB_GC_GUARD(value);
   return value;
 }
@@ -152,7 +152,7 @@ VALUE Queue_delete(VALUE self, VALUE value) {
   ring_buffer_delete(&queue->values, value);
 
   if (queue->capacity && (queue->capacity > queue->values.count))
-    queue_resume_first_blocked_fiber(&queue->push_queue);
+    queue_schedule_first_blocked_fiber(&queue->push_queue);
 
   return self;
 }
@@ -164,9 +164,9 @@ VALUE Queue_cap(VALUE self, VALUE cap) {
   queue->capacity = new_capacity;
   
   if (queue->capacity)
-    queue_resume_blocked_fibers_to_capacity(queue);
+    queue_schedule_blocked_fibers_to_capacity(queue);
   else
-    queue_resume_all_blocked_fibers(&queue->push_queue);
+    queue_schedule_all_blocked_fibers(&queue->push_queue);
   
   return self;
 }
@@ -183,7 +183,7 @@ VALUE Queue_clear(VALUE self) {
   GetQueue(self, queue);
 
   ring_buffer_clear(&queue->values);
-  if (queue->capacity) queue_resume_blocked_fibers_to_capacity(queue);
+  if (queue->capacity) queue_schedule_blocked_fibers_to_capacity(queue);
 
   return self;
 }
@@ -200,7 +200,7 @@ VALUE Queue_shift_each(VALUE self) {
   GetQueue(self, queue);
 
   ring_buffer_shift_each(&queue->values);
-  if (queue->capacity) queue_resume_blocked_fibers_to_capacity(queue);
+  if (queue->capacity) queue_schedule_blocked_fibers_to_capacity(queue);
   return self;
 }
 
@@ -209,7 +209,7 @@ VALUE Queue_shift_all(VALUE self) {
   GetQueue(self, queue);
 
   VALUE result = ring_buffer_shift_all(&queue->values);
-  if (queue->capacity) queue_resume_blocked_fibers_to_capacity(queue);
+  if (queue->capacity) queue_schedule_blocked_fibers_to_capacity(queue);
   return result;
 }
 
