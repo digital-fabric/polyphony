@@ -40,18 +40,17 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
     if (next.fiber != Qnil) {
       // Polling for I/O op completion is normally done when the run queue is
       // empty, but if the runqueue never empties, we'll never get to process
-      // any event completions. In order to prevent this, an anti-starve
+      // any event completions. In order to prevent this, an anti-starvation
       // mechanism is employed, under the following conditions:
       // - a blocking poll was not yet performed
       // - there are pending blocking operations
-      // - the runqueue has signalled that a non-blocking poll should be
-      //   performed
-      //   - the run queue length high watermark has reached its threshold (currently 128)
-      //   - the run queue switch counter has reached its threshold (currently 64) 
-      if (!backend_was_polled && pending_ops_count && runqueue_should_poll_nonblocking(&base->runqueue)) {
-        // this prevents event starvation in case the run queue never empties
-        Backend_poll(backend, Qnil);
-      }
+      // - the runqueue shift count has reached a fixed threshold (currently 64), or
+      // - the next fiber is the same as the current fiber (a single fiber is snoozing)
+      int do_nonblocking_poll = !backend_was_polled && pending_ops_count && (
+        runqueue_should_poll_nonblocking(&base->runqueue) || next.fiber == current_fiber
+      );
+      if (do_nonblocking_poll) Backend_poll(backend, Qnil);
+
       break;
     }
     

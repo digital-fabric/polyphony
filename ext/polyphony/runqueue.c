@@ -58,14 +58,11 @@ inline int runqueue_empty_p(runqueue_t *runqueue) {
   return (runqueue->entries.count == 0);
 }
 
-static const unsigned int ANTI_STARVE_HIGH_WATERMARK_THRESHOLD = 128;
 static const unsigned int ANTI_STARVE_SWITCH_COUNT_THRESHOLD = 64;
 
 inline int runqueue_should_poll_nonblocking(runqueue_t *runqueue) {
-  if (runqueue->high_watermark < ANTI_STARVE_HIGH_WATERMARK_THRESHOLD) return 0;
   if (runqueue->switch_count < ANTI_STARVE_SWITCH_COUNT_THRESHOLD) return 0;
 
-  // the 
   runqueue->switch_count = 0;
   return 1;
 }
