@@ -301,6 +301,8 @@ VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
   io_uring_prep_poll_add(sqe, fd, write ? POLLOUT : POLLIN);
 
   io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resumed_value);
+  context_store_release(&backend->store, ctx);
+
   RB_GC_GUARD(resumed_value);
   return resumed_value;
 }
