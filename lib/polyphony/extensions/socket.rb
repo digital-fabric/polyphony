@@ -26,8 +26,8 @@ class ::Socket
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
 
-  def recv_loop(&block)
-    Polyphony.backend_recv_loop(self, &block)
+  def recv_loop(maxlen = 8192, &block)
+    Polyphony.backend_recv_loop(self, maxlen, &block)
   end
   alias_method :read_loop, :recv_loop
 
@@ -144,8 +144,8 @@ class ::TCPSocket
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
 
-  def recv_loop(&block)
-    Polyphony.backend_recv_loop(self, &block)
+  def recv_loop(maxlen = 8192, &block)
+    Polyphony.backend_recv_loop(self, maxlen, &block)
   end
   alias_method :read_loop, :recv_loop
 
@@ -221,8 +221,8 @@ class ::UNIXSocket
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
 
-  def recv_loop(&block)
-    Polyphony.backend_recv_loop(self, &block)
+  def recv_loop(maxlen = 8192, &block)
+    Polyphony.backend_recv_loop(self, maxlen, &block)
   end
   alias_method :read_loop, :recv_loop
 
