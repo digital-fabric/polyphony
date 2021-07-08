@@ -170,7 +170,7 @@ inline VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
-VALUE backend_await(struct Backend_base *backend) {
+inline VALUE backend_await(struct Backend_base *backend) {
   VALUE ret;
   backend->pending_count++;
   ret = Thread_switch_fiber(rb_thread_current());
@@ -179,9 +179,10 @@ VALUE backend_await(struct Backend_base *backend) {
   return ret;
 }
 
-VALUE backend_snooze() {
+inline VALUE backend_snooze() {
+  VALUE ret;
   Fiber_make_runnable(rb_fiber_current(), Qnil);
-  VALUE ret = Thread_switch_fiber(rb_thread_current());
+  ret = Thread_switch_fiber(rb_thread_current());
   return ret;
 }
 

@@ -7,7 +7,6 @@
 
 struct backend_stats {
   int scheduled_fibers;
-  int waiting_fibers;
   int pending_ops;
 };
 

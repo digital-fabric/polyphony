@@ -217,7 +217,6 @@ inline struct backend_stats Backend_stats(VALUE self) {
 
   return (struct backend_stats){
     .scheduled_fibers = runqueue_len(&backend->base.runqueue),
-    .waiting_fibers = 0,
     .pending_ops = backend->base.pending_count
   };
 }
