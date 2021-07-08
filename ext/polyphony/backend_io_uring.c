@@ -305,13 +305,19 @@ VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
   return resumed_value;
 }
 
-VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
+VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, VALUE pos) {
   Backend_t *backend;
   rb_io_t *fptr;
   long dynamic_len = length == Qnil;
   long buffer_size = dynamic_len ? 4096 : NUM2INT(length);
-  int shrinkable = io_setstrbuf(&str, buffer_size);
-  char *buf = RSTRING_PTR(str);
+  long buf_pos = NUM2INT(pos);
+  if (str != Qnil) {
+    int current_len = RSTRING_LEN(str);
+    if (buf_pos < 0 || buf_pos > current_len) buf_pos = current_len;
+  }
+  else buf_pos = 0;
+  int shrinkable = io_setstrbuf(&str, buf_pos + buffer_size);
+  char *buf = RSTRING_PTR(str) + buf_pos;
   long total = 0;
   int read_to_eof = RTEST(to_eof);
   VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
@@ -348,9 +354,9 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
         if (!dynamic_len) break;
 
         // resize buffer
-        rb_str_resize(str, total);
+        rb_str_resize(str, buf_pos + total);
         rb_str_modify_expand(str, buffer_size);
-        buf = RSTRING_PTR(str) + total;
+        buf = RSTRING_PTR(str) + buf_pos + total;
         shrinkable = 0;
         buffer_size += buffer_size;
       }
@@ -358,7 +364,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
     }
   }
 
-  io_set_read_length(str, total, shrinkable);
+  io_set_read_length(str, buf_pos + total, shrinkable);
   io_enc_str(str, fptr);
 
   if (!total) return Qnil;
@@ -579,13 +585,19 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
     Backend_writev(self, argv[0], argc - 1, argv + 1);
 }
 
-VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
+VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
   Backend_t *backend;
   rb_io_t *fptr;
   long dynamic_len = length == Qnil;
   long len = dynamic_len ? 4096 : NUM2INT(length);
-  int shrinkable = io_setstrbuf(&str, len);
-  char *buf = RSTRING_PTR(str);
+  long buf_pos = NUM2INT(pos);
+  if (str != Qnil) {
+    int current_len = RSTRING_LEN(str);
+    if (buf_pos < 0 || buf_pos > current_len) buf_pos = current_len;
+  }
+  else buf_pos = 0;
+  int shrinkable = io_setstrbuf(&str, buf_pos + len);
+  char *buf = RSTRING_PTR(str) + buf_pos;
   long total = 0;
   VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
@@ -617,7 +629,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
     }
   }
 
-  io_set_read_length(str, total, shrinkable);
+  io_set_read_length(str, buf_pos + total, shrinkable);
   io_enc_str(str, fptr);
 
   if (!total) return Qnil;
@@ -1420,9 +1432,9 @@ void Init_Backend() {
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
   rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
-  rb_define_method(cBackend, "read", Backend_read, 4);
+  rb_define_method(cBackend, "read", Backend_read, 5);
   rb_define_method(cBackend, "read_loop", Backend_read_loop, 2);
-  rb_define_method(cBackend, "recv", Backend_recv, 3);
+  rb_define_method(cBackend, "recv", Backend_recv, 4);
   rb_define_method(cBackend, "recv_feed_loop", Backend_recv_feed_loop, 3);
   rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 2);
   rb_define_method(cBackend, "send", Backend_send, 3);

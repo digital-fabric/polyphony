@@ -265,8 +265,8 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   struct libev_io watcher;
   rb_io_t *fptr;
   long dynamic_len = length == Qnil;
-  long buf_pos = NUM2INT(pos);
   long len = dynamic_len ? 4096 : NUM2INT(length);
+  long buf_pos = NUM2INT(pos);
   if (str != Qnil) {
     int current_len = RSTRING_LEN(str);
     if (buf_pos < 0 || buf_pos > current_len) buf_pos = current_len;

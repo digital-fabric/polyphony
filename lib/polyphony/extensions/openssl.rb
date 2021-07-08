@@ -64,8 +64,18 @@ class ::OpenSSL::SSL::SSLSocket
     # @sync = osync
   end
 
-  def readpartial(maxlen, buf = +'')
-    result = sysread(maxlen, buf)
+  def readpartial(maxlen, buf = +'', buffer_pos = 0)
+    if buffer_pos != 0
+      if (result = sysread(maxlen, +''))
+        if buffer_pos == -1
+          result = buf + result
+        else
+          result = buf[0...buffer_pos] + result
+        end
+      end
+    else
+      result = sysread(maxlen, buf)
+    end
     result || (raise EOFError)
   end
 

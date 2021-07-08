@@ -60,8 +60,8 @@ class ::Socket
   #   Polyphony.backend_send(self, mesg, 0)
   # end
 
-  def readpartial(maxlen, str = +'')
-    Polyphony.backend_recv(self, str, maxlen, 0)
+  def readpartial(maxlen, str = +'', buffer_pos = 0)
+    Polyphony.backend_recv(self, str, maxlen, buffer_pos)
   end
 
   ZERO_LINGER = [0, 0].pack('ii').freeze
@@ -165,8 +165,8 @@ class ::TCPSocket
   #   Polyphony.backend_send(self, mesg, 0)
   # end
 
-  def readpartial(maxlen, str = +'')
-    result = Polyphony.backend_recv(self, str, maxlen, 0)
+  def readpartial(maxlen, str = +'', buffer_pos = 0)
+    result = Polyphony.backend_recv(self, str, maxlen, buffer_pos)
     raise EOFError unless result
 
     str
@@ -242,8 +242,8 @@ class ::UNIXSocket
     Polyphony.backend_send(self, mesg, 0)
   end
 
-  def readpartial(maxlen, str = +'')
-    result = Polyphony.backend_recv(self, str, maxlen, 0)
+  def readpartial(maxlen, str = +'', buffer_pos = 0)
+    result = Polyphony.backend_recv(self, str, maxlen, buffer_pos)
     raise EOFError unless result
 
     str
