@@ -23,7 +23,7 @@ class ::Socket
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
-    Polyphony.backend_recv(self, outbuf || +'', maxlen)
+    Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
 
   def recv_loop(&block)
@@ -61,7 +61,7 @@ class ::Socket
   # end
 
   def readpartial(maxlen, str = +'')
-    Polyphony.backend_recv(self, str, maxlen)
+    Polyphony.backend_recv(self, str, maxlen, 0)
   end
 
   ZERO_LINGER = [0, 0].pack('ii').freeze
@@ -141,7 +141,7 @@ class ::TCPSocket
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
-    Polyphony.backend_recv(self, outbuf || +'', maxlen)
+    Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
 
   def recv_loop(&block)
@@ -166,7 +166,7 @@ class ::TCPSocket
   # end
 
   def readpartial(maxlen, str = +'')
-    result = Polyphony.backend_recv(self, str, maxlen)
+    result = Polyphony.backend_recv(self, str, maxlen, 0)
     raise EOFError unless result
 
     str
@@ -218,7 +218,7 @@ end
 
 class ::UNIXSocket
   def recv(maxlen, flags = 0, outbuf = nil)
-    Polyphony.backend_recv(self, outbuf || +'', maxlen)
+    Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
 
   def recv_loop(&block)
@@ -243,7 +243,7 @@ class ::UNIXSocket
   end
 
   def readpartial(maxlen, str = +'')
-    result = Polyphony.backend_recv(self, str, maxlen)
+    result = Polyphony.backend_recv(self, str, maxlen, 0)
     raise EOFError unless result
 
     str

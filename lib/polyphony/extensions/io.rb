@@ -101,7 +101,7 @@ class ::IO
     return @read_buffer.slice!(0) if @read_buffer && !@read_buffer.empty?
     
     @read_buffer ||= +''
-    Polyphony.backend_read(self, @read_buffer, 8192, false)
+    Polyphony.backend_read(self, @read_buffer, 8192, false, -1)
     return @read_buffer.slice!(0) if !@read_buffer.empty?
 
     nil
@@ -110,7 +110,7 @@ class ::IO
   alias_method :orig_read, :read
   def read(len = nil)
     @read_buffer ||= +''
-    result = Polyphony.backend_read(self, @read_buffer, len, true)
+    result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
     return nil unless result
 
     already_read = @read_buffer
@@ -120,7 +120,7 @@ class ::IO
 
   alias_method :orig_readpartial, :read
   def readpartial(len, str = +'')
-    result = Polyphony.backend_read(self, str, len, false)
+    result = Polyphony.backend_read(self, str, len, false, 0)
     raise EOFError unless result
 
     result
@@ -151,9 +151,8 @@ class ::IO
       idx = @read_buffer.index(sep)
       return @read_buffer.slice!(0, idx + sep_size) if idx
 
-      data = readpartial(8192, +'')
-      return nil unless data
-      @read_buffer << data
+      result = Polyphony.backend_read(self, @read_buffer, 8192, false, -1)
+      return nil unless result
     end
   rescue EOFError
     return nil

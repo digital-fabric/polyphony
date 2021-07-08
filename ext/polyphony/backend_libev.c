@@ -260,14 +260,20 @@ VALUE libev_wait_fd(Backend_t *backend, int fd, int events, int raise_exception)
   return switchpoint_result;
 }
 
-VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
+VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, VALUE pos) {
   Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
   long dynamic_len = length == Qnil;
+  long buf_pos = NUM2INT(pos);
   long len = dynamic_len ? 4096 : NUM2INT(length);
-  int shrinkable = io_setstrbuf(&str, len);
-  char *buf = RSTRING_PTR(str);
+  if (str != Qnil) {
+    int current_len = RSTRING_LEN(str);
+    if (buf_pos < 0 || buf_pos > current_len) buf_pos = current_len;
+  }
+  else buf_pos = 0;
+  int shrinkable = io_setstrbuf(&str, buf_pos + len);
+  char *buf = RSTRING_PTR(str) + buf_pos;
   long total = 0;
   VALUE switchpoint_result = Qnil;
   int read_to_eof = RTEST(to_eof);
@@ -303,9 +309,9 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
       if (total == len) {
         if (!dynamic_len) break;
 
-        rb_str_resize(str, total);
+        rb_str_resize(str, buf_pos + total);
         rb_str_modify_expand(str, len);
-        buf = RSTRING_PTR(str) + total;
+        buf = RSTRING_PTR(str) + buf_pos + total;
         shrinkable = 0;
         len += len;
       }
@@ -313,7 +319,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) 
     }
   }
 
-  io_set_read_length(str, total, shrinkable);
+  io_set_read_length(str, buf_pos + total, shrinkable);
   io_enc_str(str, fptr);
 
   if (total == 0) return Qnil;
@@ -326,8 +332,8 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
-  return Backend_read(self, io, str, length, Qnil);
+VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
+  return Backend_read(self, io, str, length, Qnil, pos);
 }
 
 VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
@@ -1510,9 +1516,9 @@ void Init_Backend() {
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
   rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
-  rb_define_method(cBackend, "read", Backend_read, 4);
+  rb_define_method(cBackend, "read", Backend_read, 5);
   rb_define_method(cBackend, "read_loop", Backend_read_loop, 2);
-  rb_define_method(cBackend, "recv", Backend_recv, 3);
+  rb_define_method(cBackend, "recv", Backend_recv, 4);
   rb_define_method(cBackend, "recv_loop", Backend_read_loop, 2);
   rb_define_method(cBackend, "recv_feed_loop", Backend_feed_loop, 3);
   rb_define_method(cBackend, "send", Backend_send, 3);

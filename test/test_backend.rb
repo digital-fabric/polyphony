@@ -33,7 +33,7 @@ class BackendTest < MiniTest::Test
   def test_write_read_partial
     i, o = IO.pipe
     buf = +''
-    f = spin { @backend.read(i, buf, 5, false) }
+    f = spin { @backend.read(i, buf, 5, false, 0) }
     @backend.write(o, 'Hello world')
     return_value = f.await
     
@@ -44,7 +44,7 @@ class BackendTest < MiniTest::Test
   def test_write_read_to_eof_limited_buffer
     i, o = IO.pipe
     buf = +''
-    f = spin { @backend.read(i, buf, 5, true) }
+    f = spin { @backend.read(i, buf, 5, true, 0) }
     @backend.write(o, 'Hello')
     snooze
     @backend.write(o, ' world')
@@ -59,7 +59,7 @@ class BackendTest < MiniTest::Test
   def test_write_read_to_eof
     i, o = IO.pipe
     buf = +''
-    f = spin { @backend.read(i, buf, 10**6, true) }
+    f = spin { @backend.read(i, buf, 10**6, true, 0) }
     @backend.write(o, 'Hello')
     snooze
     @backend.write(o, ' world')
@@ -68,6 +68,33 @@ class BackendTest < MiniTest::Test
     return_value = f.await
     
     assert_equal 'Hello world', buf
+    assert_equal return_value, buf
+  end
+
+  def test_write_read_with_buffer_position
+    i, o = IO.pipe
+    buf = +'abcdefghij'
+    f = spin { @backend.read(i, buf, 20, false, 0) }
+    @backend.write(o, 'blah')
+    return_value = f.await
+    
+    assert_equal 'blah', buf
+    assert_equal return_value, buf
+
+    buf = +'abcdefghij'
+    f = spin { @backend.read(i, buf, 20, false, -1) }
+    @backend.write(o, 'klmn')
+    return_value = f.await
+    
+    assert_equal 'abcdefghijklmn', buf
+    assert_equal return_value, buf
+
+    buf = +'abcdefghij'
+    f = spin { @backend.read(i, buf, 20, false, 3) }
+    @backend.write(o, 'DEF')
+    return_value = f.await
+    
+    assert_equal 'abcDEF', buf
     assert_equal return_value, buf
   end
 

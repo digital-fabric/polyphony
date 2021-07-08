@@ -58,16 +58,16 @@ VALUE Polyphony_backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE me
   return Backend_feed_loop(BACKEND(), io, receiver, method);
 }
 
-VALUE Polyphony_backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof) {
-  return Backend_read(BACKEND(), io, str, length, to_eof);
+VALUE Polyphony_backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, VALUE pos) {
+  return Backend_read(BACKEND(), io, str, length, to_eof, pos);
 }
 
 VALUE Polyphony_backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   return Backend_read_loop(BACKEND(), io, maxlen);
 }
 
-VALUE Polyphony_backend_recv(VALUE self, VALUE io, VALUE str, VALUE length) {
-  return Backend_recv(BACKEND(), io, str, length);
+VALUE Polyphony_backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
+  return Backend_recv(BACKEND(), io, str, length, pos);
 }
 
 VALUE Polyphony_backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
@@ -130,9 +130,9 @@ void Init_Polyphony() {
   rb_define_singleton_method(mPolyphony, "backend_accept_loop", Polyphony_backend_accept_loop, 2);
   rb_define_singleton_method(mPolyphony, "backend_connect", Polyphony_backend_connect, 3);
   rb_define_singleton_method(mPolyphony, "backend_feed_loop", Polyphony_backend_feed_loop, 3);
-  rb_define_singleton_method(mPolyphony, "backend_read", Polyphony_backend_read, 4);
+  rb_define_singleton_method(mPolyphony, "backend_read", Polyphony_backend_read, 5);
   rb_define_singleton_method(mPolyphony, "backend_read_loop", Polyphony_backend_read_loop, 2);
-  rb_define_singleton_method(mPolyphony, "backend_recv", Polyphony_backend_recv, 3);
+  rb_define_singleton_method(mPolyphony, "backend_recv", Polyphony_backend_recv, 4);
   rb_define_singleton_method(mPolyphony, "backend_recv_loop", Polyphony_backend_recv_loop, 2);
   rb_define_singleton_method(mPolyphony, "backend_recv_feed_loop", Polyphony_backend_recv_feed_loop, 3);
   rb_define_singleton_method(mPolyphony, "backend_send", Polyphony_backend_send, 3);
