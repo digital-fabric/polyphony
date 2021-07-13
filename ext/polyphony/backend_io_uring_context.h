@@ -22,7 +22,7 @@ typedef struct op_context {
   struct op_context *prev;
   struct op_context *next;
   enum op_type      type: 16;
-  unsigned int      ref_count : 16;         
+  unsigned int      ref_count : 16;       
   int               id;
   int               result;
   VALUE             fiber;
@@ -31,8 +31,10 @@ typedef struct op_context {
 
 typedef struct op_context_store {
   int           last_id;
-  op_context_t *available;
-  op_context_t *taken;
+  op_context_t  *available;
+  op_context_t  *taken;
+  int           available_count;
+  int           taken_count;
 } op_context_store_t;
 
 const char *op_type_to_str(enum op_type type);

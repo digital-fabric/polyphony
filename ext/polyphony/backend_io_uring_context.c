@@ -25,6 +25,8 @@ void context_store_initialize(op_context_store_t *store) {
   store->last_id = 0;
   store->available = NULL;
   store->taken = NULL;
+  store->available_count = 0;
+  store->taken_count = 0;
 }
 
 inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_type type) {
@@ -32,12 +34,12 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
   if (ctx) {
     if (ctx->next) ctx->next->prev = NULL;
     store->available = ctx->next;
+    store->available_count--;
   }
   else {
     ctx = malloc(sizeof(op_context_t));
   }
   ctx->id = (++store->last_id);
-  // printf("acquire %p %d (%s)\n", ctx, ctx->id, op_type_to_str(type));
   ctx->prev = NULL;
   ctx->next = store->taken;
   if (store->taken) store->taken->prev = ctx;
@@ -49,17 +51,24 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
   ctx->ref_count = 2;
   ctx->result = 0;
 
+  store->taken_count++;
+
+  printf("acquire %p %d (%s, ref_count: %d) taken: %d\n", ctx, ctx->id, op_type_to_str(type), ctx->ref_count, store->taken_count);
+
   return ctx;
 }
 
 // returns true if ctx was released
 inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
-  // printf("release %p %d (%s, ref_count: %d)\n", ctx, ctx->id, op_type_to_str(ctx->type), ctx->ref_count);
+  printf("release %p %d (%s, ref_count: %d)\n", ctx, ctx->id, op_type_to_str(ctx->type), ctx->ref_count);
 
   assert(ctx->ref_count);
   
   ctx->ref_count--;
   if (ctx->ref_count) return 0;
+
+  store->taken_count--;
+  store->available_count++;
 
   if (ctx->next) ctx->next->prev = ctx->prev;
   if (ctx->prev) ctx->prev->next = ctx->next;

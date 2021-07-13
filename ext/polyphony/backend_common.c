@@ -25,6 +25,11 @@ inline void backend_base_mark(struct Backend_base *base) {
   runqueue_mark(&base->runqueue);
 }
 
+inline void conditional_nonblocking_poll(VALUE backend, struct Backend_base *base, VALUE current, VALUE next) {
+  if (runqueue_should_poll_nonblocking(&base->runqueue) || next == current) 
+    Backend_poll(backend, Qnil);
+}
+
 VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   VALUE current_fiber = rb_fiber_current();
   runqueue_entry next;
@@ -32,8 +37,7 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   unsigned int backend_was_polled = 0;
   unsigned int idle_tasks_run_count = 0;
 
-  if (SHOULD_TRACE(base) && (rb_ivar_get(current_fiber, ID_ivar_running) != Qfalse))
-    TRACE(base, 2, SYM_fiber_switchpoint, current_fiber);
+  COND_TRACE(base, 2, SYM_fiber_switchpoint, current_fiber);
 
   while (1) {
     next = runqueue_shift(&base->runqueue);
@@ -46,10 +50,8 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
       // - there are pending blocking operations
       // - the runqueue shift count has reached a fixed threshold (currently 64), or
       // - the next fiber is the same as the current fiber (a single fiber is snoozing)
-      int do_nonblocking_poll = !backend_was_polled && pending_ops_count && (
-        runqueue_should_poll_nonblocking(&base->runqueue) || next.fiber == current_fiber
-      );
-      if (do_nonblocking_poll) Backend_poll(backend, Qnil);
+      if (!backend_was_polled && pending_ops_count)
+        conditional_nonblocking_poll(backend, base, current_fiber, next.fiber);
 
       break;
     }
@@ -81,7 +83,10 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
   if (rb_fiber_alive_p(fiber) != Qtrue) return;
   already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
 
-  COND_TRACE(base, 3, SYM_fiber_schedule, fiber, value);
+  if (SHOULD_TRACE(base)) {
+    VALUE pri = INT2NUM(prioritize);
+    COND_TRACE(base, 4, SYM_fiber_schedule, fiber, value, pri);
+  }
   (prioritize ? runqueue_unshift : runqueue_push)(&base->runqueue, fiber, value, already_runnable);
   if (!already_runnable) {
     rb_ivar_set(fiber, ID_ivar_runnable, Qtrue);
