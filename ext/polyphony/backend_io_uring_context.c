@@ -53,14 +53,14 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
 
   store->taken_count++;
 
-  printf("acquire %p %d (%s, ref_count: %d) taken: %d\n", ctx, ctx->id, op_type_to_str(type), ctx->ref_count, store->taken_count);
+  // printf("acquire %p %d (%s, ref_count: %d) taken: %d\n", ctx, ctx->id, op_type_to_str(type), ctx->ref_count, store->taken_count);
 
   return ctx;
 }
 
 // returns true if ctx was released
 inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
-  printf("release %p %d (%s, ref_count: %d)\n", ctx, ctx->id, op_type_to_str(ctx->type), ctx->ref_count);
+  // printf("release %p %d (%s, ref_count: %d)\n", ctx, ctx->id, op_type_to_str(ctx->type), ctx->ref_count);
 
   assert(ctx->ref_count);
   
