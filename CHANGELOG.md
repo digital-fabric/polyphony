@@ -1,3 +1,15 @@
+## 0.60 2021-07-15
+
+
+- Fix linux version detection (for kernel version > 5.9)
+- Fix op ctx leak in io_uring backend (when polling for I/O readiness)
+- Add support for appending to buffer in `Backend#read`, `Backend#recv` methods
+- Improve anti-event starvation mechanism
+- Redesign fiber monitoring mechanism
+- Implement `Fiber#attach`
+- Add optional maxlen argument to `IO#read_loop`, `Socket#recv_loop` (#60)
+- Implement `Fiber#detach` (#52)
+
 ## 0.59.1 2021-06-28
 
 - Accept fiber tag in `Polyphony::Timer.new`
