@@ -8,8 +8,8 @@ use_pidfd_open = false
 force_use_libev = ENV['POLYPHONY_USE_LIBEV'] != nil
 linux = RUBY_PLATFORM =~ /linux/
 
-if linux && `uname -sr` =~ /Linux 5\.([\d+])/
-  kernel_minor_version = $1.gsub('.', '').to_i
+if linux && `uname -sr` =~ /Linux 5\.(\d+)/
+  kernel_minor_version = $1.to_i
   use_liburing = !force_use_libev && kernel_minor_version >= 6
   use_pidfd_open = kernel_minor_version >= 3
 end
