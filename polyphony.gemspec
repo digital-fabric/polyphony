@@ -29,13 +29,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'pry',                  '0.13.1'
   
   s.add_development_dependency  'msgpack',              '1.4.2'
-  s.add_development_dependency  'pg',                   '1.1.4'
-  s.add_development_dependency  'redis',                '4.1.0'
-  s.add_development_dependency  'hiredis',              '0.6.3'
-  s.add_development_dependency  'http_parser.rb',       '~>0.6.0'
-  s.add_development_dependency  'rack',                 '>=2.0.8', '<2.3.0'
-  s.add_development_dependency  'mysql2',               '0.5.3'
-  s.add_development_dependency  'sequel',               '5.34.0'
   s.add_development_dependency  'httparty',             '0.17.1'
   s.add_development_dependency  'localhost',            '~>1.1.4'
 
