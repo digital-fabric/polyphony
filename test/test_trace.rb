@@ -9,7 +9,7 @@ class TraceTest < MiniTest::Test
     snooze
     
     assert_equal [
-      [:fiber_schedule, Fiber.current, nil, 0],
+      [:fiber_schedule, Fiber.current, nil, false],
       [:fiber_switchpoint, Fiber.current],
       [:fiber_run, Fiber.current, nil]
     ], events
@@ -27,19 +27,19 @@ class TraceTest < MiniTest::Test
 
     assert_equal [
       [:fiber_create, f],
-      [:fiber_schedule, f, nil, 0],
+      [:fiber_schedule, f, nil, false],
       [:fiber_switchpoint, Fiber.current],
       [:fiber_run, f, nil],
       [:fiber_switchpoint, f],
       [:fiber_event_poll_enter, f],
-      [:fiber_schedule, f, nil, 0],
+      [:fiber_schedule, f, nil, false],
       [:fiber_event_poll_leave, f],
       [:fiber_run, f, nil],
       [:fiber_terminate, f, :byebye],
       [:fiber_switchpoint, f],
       [:fiber_switchpoint, Fiber.current],
       [:fiber_event_poll_enter, Fiber.current],
-      [:fiber_schedule, Fiber.current, nil, 0],
+      [:fiber_schedule, Fiber.current, nil, false],
       [:fiber_event_poll_leave, Fiber.current],
       [:fiber_run, Fiber.current, nil]
     ], events

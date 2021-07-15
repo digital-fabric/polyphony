@@ -83,10 +83,8 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
   if (rb_fiber_alive_p(fiber) != Qtrue) return;
   already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
 
-  if (SHOULD_TRACE(base)) {
-    VALUE pri = INT2NUM(prioritize);
-    COND_TRACE(base, 4, SYM_fiber_schedule, fiber, value, pri);
-  }
+  COND_TRACE(base, 4, SYM_fiber_schedule, fiber, value, prioritize ? Qtrue : Qfalse);
+
   (prioritize ? runqueue_unshift : runqueue_push)(&base->runqueue, fiber, value, already_runnable);
   if (!already_runnable) {
     rb_ivar_set(fiber, ID_ivar_runnable, Qtrue);
