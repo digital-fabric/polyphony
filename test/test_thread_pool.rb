@@ -68,7 +68,7 @@ class ThreadPoolTest < MiniTest::Test
     assert_in_range 0.0..0.009, elapsed
     assert buffer.size < 2
     
-    sleep 0.1 # allow time for threads to spawn
+    sleep 0.15 # allow time for threads to spawn
     assert_equal @pool.size, threads.uniq.size
     assert_equal (0..9).to_a, buffer.sort
   end
