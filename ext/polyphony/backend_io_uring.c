@@ -197,15 +197,15 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
   }
 
   COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_enter, rb_fiber_current());
-  if (SHOULD_TRACE(&backend->base))
-    printf(
-      "io_uring_poll(blocking_mode: %d, pending: %d, taken: %d, available: %d, runqueue: %d\n",
-      is_blocking,
-      backend->base.pending_count,
-      backend->store.taken_count,
-      backend->store.available_count,
-      backend->base.runqueue.entries.count
-    );
+  // if (SHOULD_TRACE(&backend->base))
+  //   printf(
+  //     "io_uring_poll(blocking_mode: %d, pending: %d, taken: %d, available: %d, runqueue: %d\n",
+  //     is_blocking,
+  //     backend->base.pending_count,
+  //     backend->store.taken_count,
+  //     backend->store.available_count,
+  //     backend->base.runqueue.entries.count
+  //   );
   if (is_blocking) io_uring_backend_poll(backend);
   io_uring_backend_handle_ready_cqes(backend);
   COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_leave, rb_fiber_current());
