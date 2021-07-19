@@ -26,7 +26,7 @@ class BackendTest < MiniTest::Test
       @backend.sleep 0.01
       count += 1
     }.await
-    assert_in_delta 0.03, Time.now - t0, 0.01
+    assert_in_range 0.02..0.04, Time.now - t0
     assert_equal 3, count
   end
 
