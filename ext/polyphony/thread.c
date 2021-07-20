@@ -13,26 +13,6 @@ static VALUE Thread_setup_fiber_scheduling(VALUE self) {
   return self;
 }
 
-static VALUE SYM_runqueue_length;
-static VALUE SYM_runqueue_max_length;
-static VALUE SYM_op_count;
-static VALUE SYM_switch_count;
-static VALUE SYM_poll_count;
-static VALUE SYM_pending_ops;
-
-static VALUE Thread_fiber_scheduling_stats(VALUE self) {
-  struct backend_stats backend_stats = Backend_stats(rb_ivar_get(self, ID_ivar_backend));
-
-  VALUE stats = rb_hash_new();
-  rb_hash_aset(stats, SYM_runqueue_length, INT2NUM(backend_stats.runqueue_length));
-  rb_hash_aset(stats, SYM_runqueue_max_length, INT2NUM(backend_stats.runqueue_max_length));
-  rb_hash_aset(stats, SYM_op_count, INT2NUM(backend_stats.op_count));
-  rb_hash_aset(stats, SYM_switch_count, INT2NUM(backend_stats.switch_count));
-  rb_hash_aset(stats, SYM_poll_count, INT2NUM(backend_stats.poll_count));
-  rb_hash_aset(stats, SYM_pending_ops, INT2NUM(backend_stats.pending_ops));
-  return stats;
-}
-
 inline void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize) {
   Backend_schedule_fiber(self, rb_ivar_get(self, ID_ivar_backend), fiber, value, prioritize);
 }
@@ -80,7 +60,6 @@ VALUE Thread_class_backend(VALUE _self) {
 
 void Init_Thread() {
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
-  rb_define_method(rb_cThread, "fiber_scheduling_stats", Thread_fiber_scheduling_stats, 0);
   rb_define_method(rb_cThread, "schedule_and_wakeup", Thread_fiber_schedule_and_wakeup, 2);
 
   rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 2);
@@ -99,18 +78,4 @@ void Init_Thread() {
   ID_ivar_main_fiber                    = rb_intern("@main_fiber");
   ID_ivar_terminated                    = rb_intern("@terminated");
   ID_stop                               = rb_intern("stop");
-
-  SYM_runqueue_length = ID2SYM(rb_intern("runqueue_length"));
-  SYM_runqueue_max_length = ID2SYM(rb_intern("runqueue_max_length"));
-  SYM_op_count = ID2SYM(rb_intern("op_count"));
-  SYM_switch_count = ID2SYM(rb_intern("switch_count"));
-  SYM_poll_count = ID2SYM(rb_intern("poll_count"));
-  SYM_pending_ops = ID2SYM(rb_intern("pending_ops"));
-  
-  rb_global_variable(&SYM_runqueue_length);
-  rb_global_variable(&SYM_runqueue_max_length);
-  rb_global_variable(&SYM_op_count);
-  rb_global_variable(&SYM_switch_count);
-  rb_global_variable(&SYM_poll_count);
-  rb_global_variable(&SYM_pending_ops);
 }

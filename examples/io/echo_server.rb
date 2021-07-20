@@ -3,7 +3,7 @@
 require 'bundler/setup'
 require 'polyphony'
 
-spin_loop(interval: 5) { p Thread.current.fiber_scheduling_stats }
+spin_loop(interval: 5) { p Thread.backend.stats }
 
 server = TCPServer.open('127.0.0.1', 1234)
 puts "Pid: #{Process.pid}"

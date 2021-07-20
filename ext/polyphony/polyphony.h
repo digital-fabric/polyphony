@@ -114,7 +114,6 @@ VALUE Backend_wakeup(VALUE self);
 VALUE Backend_run_idle_tasks(VALUE self);
 VALUE Backend_switch_fiber(VALUE self);
 void Backend_schedule_fiber(VALUE thread, VALUE self, VALUE fiber, VALUE value, int prioritize);
-struct backend_stats Backend_stats(VALUE self);
 void Backend_unschedule_fiber(VALUE self, VALUE fiber);
 
 VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);

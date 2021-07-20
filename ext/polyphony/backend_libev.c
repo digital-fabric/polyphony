@@ -213,7 +213,7 @@ VALUE Backend_wakeup(VALUE self) {
   return Qnil;
 }
 
-inline struct backend_stats Backend_stats(VALUE self) {
+inline struct backend_stats backend_get_stats(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
@@ -1527,6 +1527,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "post_fork", Backend_post_fork, 0);
   rb_define_method(cBackend, "trace", Backend_trace, -1);
   rb_define_method(cBackend, "trace_proc=", Backend_trace_proc_set, 1);
+  rb_define_method(cBackend, "stats", Backend_stats, 0);
 
   rb_define_method(cBackend, "poll", Backend_poll, 1);
   rb_define_method(cBackend, "break", Backend_wakeup, 0);
@@ -1569,6 +1570,8 @@ void Init_Backend() {
   SYM_send = ID2SYM(rb_intern("send"));
   SYM_splice = ID2SYM(rb_intern("splice"));
   SYM_write = ID2SYM(rb_intern("write"));
+
+  backend_setup_stats_symbols();
 }
 
 #endif // POLYPHONY_BACKEND_LIBEV

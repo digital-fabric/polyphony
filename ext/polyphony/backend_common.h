@@ -67,6 +67,7 @@ VALUE io_enc_str(VALUE str, rb_io_t *fptr);
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
+struct backend_stats backend_get_stats(VALUE self);
 VALUE backend_await(struct Backend_base *backend);
 VALUE backend_snooze();
 
@@ -99,7 +100,10 @@ VALUE backend_timeout_exception(VALUE exception);
 VALUE Backend_timeout_ensure_safe(VALUE arg);
 VALUE Backend_timeout_ensure_safe(VALUE arg);
 VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags);
+VALUE Backend_stats(VALUE self);
 void backend_run_idle_tasks(struct Backend_base *base);
 void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking);
+
+void backend_setup_stats_symbols();
 
 #endif /* BACKEND_COMMON_H */
