@@ -4,7 +4,6 @@
 inline void runqueue_initialize(runqueue_t *runqueue) {
   runqueue_ring_buffer_init(&runqueue->entries);
   runqueue->high_watermark = 0;
-  runqueue->switch_count = 0;
 }
 
 inline void runqueue_finalize(runqueue_t *runqueue) {
@@ -30,12 +29,7 @@ inline void runqueue_unshift(runqueue_t *runqueue, VALUE fiber, VALUE value, int
 }
 
 inline runqueue_entry runqueue_shift(runqueue_t *runqueue) {
-  runqueue_entry entry = runqueue_ring_buffer_shift(&runqueue->entries);
-  if (entry.fiber == Qnil)
-    runqueue->high_watermark = 0;
-  else
-    runqueue->switch_count += 1;
-  return entry;
+  return runqueue_ring_buffer_shift(&runqueue->entries);
 }
 
 inline void runqueue_delete(runqueue_t *runqueue, VALUE fiber) {
@@ -54,15 +48,12 @@ inline long runqueue_len(runqueue_t *runqueue) {
   return runqueue->entries.count;
 }
 
-inline int runqueue_empty_p(runqueue_t *runqueue) {
-  return (runqueue->entries.count == 0);
+inline long runqueue_max_len(runqueue_t *runqueue) {
+  unsigned int max_len = runqueue->high_watermark;
+  runqueue->high_watermark = 0;
+  return max_len;
 }
 
-static const unsigned int ANTI_STARVE_SWITCH_COUNT_THRESHOLD = 64;
-
-inline int runqueue_should_poll_nonblocking(runqueue_t *runqueue) {
-  if (runqueue->switch_count < ANTI_STARVE_SWITCH_COUNT_THRESHOLD) return 0;
-
-  runqueue->switch_count = 0;
-  return 1;
+inline int runqueue_empty_p(runqueue_t *runqueue) {
+  return (runqueue->entries.count == 0);
 }

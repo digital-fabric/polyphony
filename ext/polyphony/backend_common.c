@@ -8,6 +8,9 @@
 inline void backend_base_initialize(struct Backend_base *base) {
   runqueue_initialize(&base->runqueue);
   base->currently_polling = 0;
+  base->op_count = 0;
+  base->switch_count = 0;
+  base->poll_count = 0;
   base->pending_count = 0;
   base->idle_gc_period = 0;
   base->idle_gc_last_time = 0;
@@ -25,8 +28,10 @@ inline void backend_base_mark(struct Backend_base *base) {
   runqueue_mark(&base->runqueue);
 }
 
+const unsigned int ANTI_STARVE_SWITCH_COUNT_THRESHOLD = 64;
+
 inline void conditional_nonblocking_poll(VALUE backend, struct Backend_base *base, VALUE current, VALUE next) {
-  if (runqueue_should_poll_nonblocking(&base->runqueue) || next == current) 
+  if ((base->switch_count % ANTI_STARVE_SWITCH_COUNT_THRESHOLD) == 0 || next == current) 
     Backend_poll(backend, Qnil);
 }
 
@@ -36,7 +41,8 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   unsigned int pending_ops_count = base->pending_count;
   unsigned int backend_was_polled = 0;
   unsigned int idle_tasks_run_count = 0;
-
+  
+  base->switch_count++;
   COND_TRACE(base, 2, SYM_fiber_switchpoint, current_fiber);
 
   while (1) {
@@ -104,6 +110,22 @@ inline void backend_trace(struct Backend_base *base, int argc, VALUE *argv) {
   if (base->trace_proc == Qnil) return;
 
   rb_funcallv(base->trace_proc, ID_call, argc, argv);
+}
+
+inline struct backend_stats backend_base_stats(struct Backend_base *base) {
+  struct backend_stats stats = {
+    .runqueue_length = runqueue_len(&base->runqueue),
+    .runqueue_max_length = runqueue_max_len(&base->runqueue),
+    .op_count = base->op_count,
+    .switch_count = base->switch_count,
+    .poll_count = base->poll_count,
+    .pending_ops = base->pending_count
+  };
+
+  base->op_count = 0;
+  base->switch_count = 0;
+  base->poll_count = 0;
+  return stats;
 }
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN

@@ -164,6 +164,8 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
   Backend_t *backend;
   GetBackend(self, backend);
 
+  backend->base.poll_count++;
+
   COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_enter, rb_fiber_current());
   backend->base.currently_polling = 1;
   ev_run(backend->ev_loop, blocking == Qtrue ? EVRUN_ONCE : EVRUN_NOWAIT);
@@ -215,10 +217,7 @@ inline struct backend_stats Backend_stats(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  return (struct backend_stats){
-    .scheduled_fibers = runqueue_len(&backend->base.runqueue),
-    .pending_ops = backend->base.pending_count
-  };
+  return backend_base_stats(&backend->base);
 }
 
 struct libev_io {
@@ -289,6 +288,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   OBJ_TAINT(str);
 
   while (1) {
+    backend->base.op_count++;
     ssize_t n = read(fptr->fd, buf, len - total);
     if (n < 0) {
       int e = errno;
@@ -359,6 +359,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   watcher.fiber = Qnil;
 
   while (1) {
+    backend->base.op_count++;
     ssize_t n = read(fptr->fd, buf, len);
     if (n < 0) {
       int e = errno;
@@ -411,6 +412,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   watcher.fiber = Qnil;
 
   while (1) {
+    backend->base.op_count++;
     ssize_t n = read(fptr->fd, buf, len);
     if (n < 0) {
       int e = errno;
@@ -458,6 +460,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   watcher.fiber = Qnil;
 
   while (left > 0) {
+    backend->base.op_count++;
     ssize_t n = write(fptr->fd, buf, left);
     if (n < 0) {
       int e = errno;
@@ -517,6 +520,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   iov_ptr = iov;
 
   while (1) {
+    backend->base.op_count++;
     ssize_t n = writev(fptr->fd, iov_ptr, iov_count);
     if (n < 0) {
       int e = errno;
@@ -588,6 +592,7 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
   io_verify_blocking_mode(fptr, server_socket, Qfalse);
   watcher.fiber = Qnil;
   while (1) {
+    backend->base.op_count++;
     fd = accept(fptr->fd, &addr, &len);
     if (fd < 0) {
       int e = errno;
@@ -646,6 +651,7 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   watcher.fiber = Qnil;
 
   while (1) {
+    backend->base.op_count++;
     fd = accept(fptr->fd, &addr, &len);
     if (fd < 0) {
       int e = errno;
@@ -705,6 +711,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   addr.sin_addr.s_addr = inet_addr(host_buf);
   addr.sin_port = htons(NUM2INT(port));
 
+  backend->base.op_count++;
   int result = connect(fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
   if (result < 0) {
     int e = errno;
@@ -745,6 +752,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   watcher.fiber = Qnil;
 
   while (left > 0) {
+    backend->base.op_count++;
     ssize_t n = send(fptr->fd, buf, left, flags_int);
     if (n < 0) {
       int e = errno;
@@ -852,6 +860,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   watcher.ctx.fiber = Qnil;
   while (1) {
+    backend->base.op_count++;
     len = splice(src_fptr->fd, 0, dest_fptr->fd, 0, NUM2INT(maxlen), 0);
     if (len < 0) {
       int e = errno;
@@ -903,6 +912,7 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   watcher.ctx.fiber = Qnil;
   while (1) {
+    backend->base.op_count++;
     len = splice(src_fptr->fd, 0, dest_fptr->fd, 0, NUM2INT(maxlen), 0);
     if (len < 0) {
       int e = errno;
@@ -962,6 +972,7 @@ VALUE Backend_fake_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   watcher.fiber = Qnil;
   
   while (1) {
+    backend->base.op_count++;
     ssize_t n = read(src_fptr->fd, buf, len);
     if (n < 0) {
       int e = errno;
@@ -977,6 +988,7 @@ VALUE Backend_fake_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   }
 
   while (left > 0) {
+    backend->base.op_count++;
     ssize_t n = write(dest_fptr->fd, buf, left);
     if (n < 0) {
       int e = errno;
@@ -1037,6 +1049,7 @@ VALUE Backend_fake_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen
   while (1) { 
     char *ptr = buf;
     while (1) {
+      backend->base.op_count++;
       ssize_t n = read(src_fptr->fd, ptr, len);
       if (n < 0) {
         int e = errno;
@@ -1054,6 +1067,7 @@ VALUE Backend_fake_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen
     }
 
     while (left > 0) {
+      backend->base.op_count++;
       ssize_t n = write(dest_fptr->fd, ptr, left);
       if (n < 0) {
         int e = errno;
@@ -1093,6 +1107,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   GetBackend(self, backend);
   GetOpenFile(io, fptr);
 
+  backend->base.op_count++;
   return libev_wait_fd(backend, fptr->fd, events, 1);
 }
 
@@ -1116,6 +1131,7 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
   watcher.fiber = rb_fiber_current();
   ev_timer_init(&watcher.timer, Backend_timer_callback, NUM2DBL(duration), 0.);
   ev_timer_start(backend->ev_loop, &watcher.timer);
+  backend->base.op_count++;
 
   switchpoint_result = backend_await((struct Backend_base *)backend);
 
@@ -1145,6 +1161,7 @@ noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
     VALUE switchpoint_result = Qnil;    
     ev_timer_init(&watcher.timer, Backend_timer_callback, sleep_duration, 0.);
     ev_timer_start(backend->ev_loop, &watcher.timer);
+    backend->base.op_count++;
     switchpoint_result = backend_await((struct Backend_base *)backend);
     ev_timer_stop(backend->ev_loop, &watcher.timer);
     RAISE_IF_EXCEPTION(switchpoint_result);
@@ -1196,6 +1213,7 @@ VALUE Backend_timeout(int argc,VALUE *argv, VALUE self) {
   watcher.resume_value = timeout;
   ev_timer_init(&watcher.timer, Backend_timeout_callback, NUM2DBL(duration), 0.);
   ev_timer_start(backend->ev_loop, &watcher.timer);
+  backend->base.op_count++;
 
   struct Backend_timeout_ctx timeout_ctx = {backend, &watcher};
   result = rb_ensure(Backend_timeout_ensure_safe, Qnil, Backend_timeout_ensure, (VALUE)&timeout_ctx);
@@ -1218,6 +1236,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   if (fd >= 0) {
     Backend_t *backend;
     GetBackend(self, backend);
+    backend->base.op_count++;
 
     VALUE resume_value = libev_wait_fd(backend, fd, EV_READ, 0);
     close(fd);
@@ -1261,6 +1280,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   watcher.fiber = rb_fiber_current();
   ev_child_init(&watcher.child, Backend_child_callback, NUM2INT(pid), 0);
   ev_child_start(backend->ev_loop, &watcher.child);
+  backend->base.op_count++;
 
   switchpoint_result = backend_await((struct Backend_base *)backend);
 
@@ -1283,6 +1303,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
 
   ev_async_init(&async, Backend_async_callback);
   ev_async_start(backend->ev_loop, &async);
+  backend->base.op_count++;
 
   switchpoint_result = backend_await((struct Backend_base *)backend);
 
@@ -1346,6 +1367,7 @@ inline int splice_chunks_write(Backend_t *backend, int fd, VALUE str, struct lib
   int len = RSTRING_LEN(str);
   int left = len;
   while (left > 0) {
+    backend->base.op_count++;
     ssize_t n = write(fd, buf, left);
     if (n < 0) {
       int err = errno;
@@ -1406,6 +1428,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     int chunk_len;
     // splice to pipe
     while (1) {
+      backend->base.op_count++;
       chunk_len = splice(src_fptr->fd, 0, pipefd[1], 0, maxlen, 0);
       if (chunk_len < 0) {
         err = errno;
@@ -1431,6 +1454,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
     int left = chunk_len;
     while (1) {
+      backend->base.op_count++;
       int n = splice(pipefd[0], 0, dest_fptr->fd, 0, left, 0);
       if (n < 0) {
         err = errno;

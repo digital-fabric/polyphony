@@ -7,7 +7,6 @@
 typedef struct runqueue {
   runqueue_ring_buffer entries;
   unsigned int high_watermark;
-  unsigned int switch_count;
 } runqueue_t;
 
 void runqueue_initialize(runqueue_t *runqueue);
@@ -21,7 +20,7 @@ void runqueue_delete(runqueue_t *runqueue, VALUE fiber);
 int runqueue_index_of(runqueue_t *runqueue, VALUE fiber);
 void runqueue_clear(runqueue_t *runqueue);
 long runqueue_len(runqueue_t *runqueue);
+long runqueue_max_len(runqueue_t *runqueue);
 int runqueue_empty_p(runqueue_t *runqueue);
-int runqueue_should_poll_nonblocking(runqueue_t *runqueue);
 
 #endif /* RUNQUEUE_H */

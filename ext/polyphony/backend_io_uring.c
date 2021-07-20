@@ -191,6 +191,8 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
   Backend_t *backend;
   GetBackend(self, backend);
 
+  backend->base.poll_count++;
+
   if (!is_blocking && backend->pending_sqes) {
     backend->pending_sqes = 0;
     io_uring_submit(&backend->ring);
@@ -238,10 +240,7 @@ inline struct backend_stats Backend_stats(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  return (struct backend_stats){
-    .scheduled_fibers = runqueue_len(&backend->base.runqueue),
-    .pending_ops = backend->base.pending_count
-  };
+  return backend_base_stats(&backend->base);
 }
 
 VALUE Backend_wakeup(VALUE self) {
@@ -279,6 +278,7 @@ int io_uring_backend_defer_submit_and_await(
 {
   VALUE switchpoint_result = Qnil;
 
+  backend->base.op_count++;
   if (sqe) {
     io_uring_sqe_set_data(sqe, ctx);
     io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
@@ -1043,6 +1043,7 @@ VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
   io_uring_prep_timeout(sqe, &ts, 0, 0);
   io_uring_sqe_set_data(sqe, ctx);
   io_uring_backend_defer_submit(backend);
+  backend->base.op_count++;
 
   struct Backend_timeout_ctx timeout_ctx = {backend, ctx};
   result = rb_ensure(Backend_timeout_ensure_safe, Qnil, Backend_timeout_ensure, (VALUE)&timeout_ctx);
@@ -1210,6 +1211,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
     sqe_count++;
   }
 
+  backend->base.op_count += sqe_count;
   ctx->ref_count = sqe_count + 1;
   io_uring_backend_defer_submit(backend);
   resume_value = backend_await((struct Backend_base *)backend);
@@ -1346,6 +1348,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   if (prefix != Qnil) {
     splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
     splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, prefix);
+    backend->base.op_count++;
   }
 
   while (1) {
@@ -1355,7 +1358,8 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
     splice_chunks_get_sqe(backend, &ctx, &sqe, OP_SPLICE);
     splice_chunks_prep_splice(ctx, sqe, src_fptr->fd, pipefd[1], maxlen);
-    
+    backend->base.op_count++;
+
     SPLICE_CHUNKS_AWAIT_OPS(backend, &ctx, &chunk_len, &switchpoint_result);
     if (chunk_len == 0) break;
     
@@ -1367,15 +1371,18 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
       chunk_prefix_str = (TYPE(chunk_prefix) == T_STRING) ? chunk_prefix : rb_funcall(chunk_prefix, ID_call, 1, chunk_len_value);
       splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
       splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, chunk_prefix_str);
+      backend->base.op_count++;
     }
 
     splice_chunks_get_sqe(backend, &ctx, &sqe, OP_SPLICE);
     splice_chunks_prep_splice(ctx, sqe, pipefd[0], dest_fptr->fd, chunk_len);
+    backend->base.op_count++;
 
     if (chunk_postfix != Qnil) {
       chunk_postfix_str = (TYPE(chunk_postfix) == T_STRING) ? chunk_postfix : rb_funcall(chunk_postfix, ID_call, 1, chunk_len_value);
       splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
       splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, chunk_postfix_str);
+      backend->base.op_count++;
     }
 
     RB_GC_GUARD(chunk_prefix_str);
@@ -1385,6 +1392,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   if (postfix != Qnil) {
     splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
     splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, postfix);
+    backend->base.op_count++;
   }
   if (ctx) {
     SPLICE_CHUNKS_AWAIT_OPS(backend, &ctx, 0, &switchpoint_result);

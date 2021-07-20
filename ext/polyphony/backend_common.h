@@ -6,13 +6,20 @@
 #include "runqueue.h"
 
 struct backend_stats {
-  int scheduled_fibers;
-  int pending_ops;
+  unsigned int runqueue_length;
+  unsigned int runqueue_max_length;
+  unsigned int op_count;
+  unsigned int switch_count;
+  unsigned int poll_count;
+  unsigned int pending_ops;
 };
 
 struct Backend_base {
   runqueue_t runqueue;
   unsigned int currently_polling;
+  unsigned int op_count;
+  unsigned int switch_count;
+  unsigned int poll_count;
   unsigned int pending_count;
   double idle_gc_period;
   double idle_gc_last_time;
@@ -26,6 +33,7 @@ void backend_base_mark(struct Backend_base *base);
 VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base);
 void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_base *base, VALUE fiber, VALUE value, int prioritize);
 void backend_trace(struct Backend_base *base, int argc, VALUE *argv);
+struct backend_stats backend_base_stats(struct Backend_base *base);
 
 // tracing
 #define SHOULD_TRACE(base) ((base)->trace_proc != Qnil)
