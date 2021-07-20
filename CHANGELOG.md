@@ -1,3 +1,7 @@
+## 0.61 2021-07-20
+
+- Add more statistics, move stats to `Backend#stats`
+
 ## 0.60 2021-07-15
 
 
