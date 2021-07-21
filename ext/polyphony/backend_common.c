@@ -112,22 +112,6 @@ inline void backend_trace(struct Backend_base *base, int argc, VALUE *argv) {
   rb_funcallv(base->trace_proc, ID_call, argc, argv);
 }
 
-inline struct backend_stats backend_base_stats(struct Backend_base *base) {
-  struct backend_stats stats = {
-    .runqueue_length = runqueue_len(&base->runqueue),
-    .runqueue_max_length = runqueue_max_len(&base->runqueue),
-    .op_count = base->op_count,
-    .switch_count = base->switch_count,
-    .poll_count = base->poll_count,
-    .pending_ops = base->pending_count
-  };
-
-  base->op_count = 0;
-  base->switch_count = 0;
-  base->poll_count = 0;
-  return stats;
-}
-
 #ifdef POLYPHONY_USE_PIDFD_OPEN
 #ifndef __NR_pidfd_open
 #define __NR_pidfd_open 434   /* System call # on most architectures */
@@ -312,6 +296,24 @@ inline void backend_run_idle_tasks(struct Backend_base *base) {
   rb_gc_disable();
 }
 
+inline struct backend_stats backend_base_stats(struct Backend_base *base) {
+  struct backend_stats stats = {
+    .runqueue_size = runqueue_size(&base->runqueue),
+    .runqueue_length = runqueue_len(&base->runqueue),
+    .runqueue_max_length = runqueue_max_len(&base->runqueue),
+    .op_count = base->op_count,
+    .switch_count = base->switch_count,
+    .poll_count = base->poll_count,
+    .pending_ops = base->pending_count
+  };
+
+  base->op_count = 0;
+  base->switch_count = 0;
+  base->poll_count = 0;
+  return stats;
+}
+
+VALUE SYM_runqueue_size;
 VALUE SYM_runqueue_length;
 VALUE SYM_runqueue_max_length;
 VALUE SYM_op_count;
@@ -323,6 +325,7 @@ VALUE Backend_stats(VALUE self) {
   struct backend_stats backend_stats = backend_get_stats(self);
 
   VALUE stats = rb_hash_new();
+  rb_hash_aset(stats, SYM_runqueue_size, INT2NUM(backend_stats.runqueue_size));
   rb_hash_aset(stats, SYM_runqueue_length, INT2NUM(backend_stats.runqueue_length));
   rb_hash_aset(stats, SYM_runqueue_max_length, INT2NUM(backend_stats.runqueue_max_length));
   rb_hash_aset(stats, SYM_op_count, INT2NUM(backend_stats.op_count));
@@ -334,13 +337,15 @@ VALUE Backend_stats(VALUE self) {
 }
 
 void backend_setup_stats_symbols() {
-  SYM_runqueue_length = ID2SYM(rb_intern("runqueue_length"));
+  SYM_runqueue_size       = ID2SYM(rb_intern("runqueue_size"));
+  SYM_runqueue_length     = ID2SYM(rb_intern("runqueue_length"));
   SYM_runqueue_max_length = ID2SYM(rb_intern("runqueue_max_length"));
-  SYM_op_count = ID2SYM(rb_intern("op_count"));
-  SYM_switch_count = ID2SYM(rb_intern("switch_count"));
-  SYM_poll_count = ID2SYM(rb_intern("poll_count"));
-  SYM_pending_ops = ID2SYM(rb_intern("pending_ops"));
+  SYM_op_count            = ID2SYM(rb_intern("op_count"));
+  SYM_switch_count        = ID2SYM(rb_intern("switch_count"));
+  SYM_poll_count          = ID2SYM(rb_intern("poll_count"));
+  SYM_pending_ops         = ID2SYM(rb_intern("pending_ops"));
   
+  rb_global_variable(&SYM_runqueue_size);
   rb_global_variable(&SYM_runqueue_length);
   rb_global_variable(&SYM_runqueue_max_length);
   rb_global_variable(&SYM_op_count);

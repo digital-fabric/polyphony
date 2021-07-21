@@ -6,6 +6,7 @@
 #include "runqueue.h"
 
 struct backend_stats {
+  unsigned int runqueue_size;
   unsigned int runqueue_length;
   unsigned int runqueue_max_length;
   unsigned int op_count;

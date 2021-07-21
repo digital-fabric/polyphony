@@ -44,6 +44,10 @@ inline void runqueue_clear(runqueue_t *runqueue) {
   runqueue_ring_buffer_clear(&runqueue->entries);
 }
 
+inline long runqueue_size(runqueue_t *runqueue) {
+  return runqueue->entries.size;
+}
+
 inline long runqueue_len(runqueue_t *runqueue) {
   return runqueue->entries.count;
 }
