@@ -44,15 +44,15 @@ inline void runqueue_clear(runqueue_t *runqueue) {
   runqueue_ring_buffer_clear(&runqueue->entries);
 }
 
-inline long runqueue_size(runqueue_t *runqueue) {
+inline unsigned int runqueue_size(runqueue_t *runqueue) {
   return runqueue->entries.size;
 }
 
-inline long runqueue_len(runqueue_t *runqueue) {
+inline unsigned int runqueue_len(runqueue_t *runqueue) {
   return runqueue->entries.count;
 }
 
-inline long runqueue_max_len(runqueue_t *runqueue) {
+inline unsigned int runqueue_max_len(runqueue_t *runqueue) {
   unsigned int max_len = runqueue->high_watermark;
   runqueue->high_watermark = 0;
   return max_len;

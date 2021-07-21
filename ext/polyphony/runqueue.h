@@ -19,9 +19,9 @@ runqueue_entry runqueue_shift(runqueue_t *runqueue);
 void runqueue_delete(runqueue_t *runqueue, VALUE fiber);
 int runqueue_index_of(runqueue_t *runqueue, VALUE fiber);
 void runqueue_clear(runqueue_t *runqueue);
-long runqueue_size(runqueue_t *runqueue);
-long runqueue_len(runqueue_t *runqueue);
-long runqueue_max_len(runqueue_t *runqueue);
+unsigned int runqueue_size(runqueue_t *runqueue);
+unsigned int runqueue_len(runqueue_t *runqueue);
+unsigned int runqueue_max_len(runqueue_t *runqueue);
 int runqueue_empty_p(runqueue_t *runqueue);
 
 #endif /* RUNQUEUE_H */
