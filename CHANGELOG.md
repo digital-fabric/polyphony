@@ -1,3 +1,7 @@
+## 0.62 2021-07-21
+
+- Add `runqueue_size` to backend stats
+
 ## 0.61 2021-07-20
 
 - Add more statistics, move stats to `Backend#stats`
