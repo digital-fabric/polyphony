@@ -12,7 +12,6 @@ class SocketTest < MiniTest::Test
   def test_tcp
     port = rand(1234..5678)
     server = TCPServer.new('127.0.0.1', port)
-
     server_fiber = spin do
       while (socket = server.accept)
         spin do
@@ -27,6 +26,45 @@ class SocketTest < MiniTest::Test
     client = TCPSocket.new('127.0.0.1', port)
     client.write("1234\n")
     assert_equal "1234\n", client.recv(8192)
+    client.close
+  ensure
+    server_fiber&.stop
+    server_fiber&.await
+    server&.close
+  end
+
+  def test_read
+    port = rand(1234..5678)
+    server = TCPServer.new('127.0.0.1', port)
+    server_fiber = spin do
+      while (socket = server.accept)
+        spin do
+          while (data = socket.read(8192))
+            socket << data
+          end
+        end
+      end
+    end
+
+    snooze
+    client = TCPSocket.new('127.0.0.1', port)
+
+    client << 'hi'
+    assert_equal 'hi', client.read(2)
+
+    client << 'foobarbaz'
+    assert_equal 'foo', client.read(3)
+    assert_equal 'bar', client.read(3)
+
+    buf = +'abc'
+    assert_equal 'baz', client.read(3, buf)
+    assert_equal 'baz', buf
+
+    buf = +'def'
+    client << 'foobar'
+    assert_equal 'deffoobar', client.read(6, buf, -1)
+    assert_equal 'deffoobar', buf
+
     client.close
   ensure
     server_fiber&.stop

@@ -22,6 +22,23 @@ class ::Socket
     Polyphony.backend_connect(self, addr.ip_address, addr.ip_port)
   end
 
+  alias_method :orig_read, :read
+  def read(maxlen = nil, buf = nil, buf_pos = 0)
+    return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
+    return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
+    
+    buf = +''
+    len = buf.bytesize
+    while true
+      Polyphony.backend_recv(self, buf, maxlen || 4096, -1)
+      new_len = buf.bytesize
+      break if new_len == len
+
+      len = new_len
+    end
+    buf
+  end
+
   def recv(maxlen, flags = 0, outbuf = nil)
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
@@ -140,6 +157,23 @@ class ::TCPSocket
     setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_REUSEPORT, 1)
   end
 
+  alias_method :orig_read, :read
+  def read(maxlen = nil, buf = nil, buf_pos = 0)
+    return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
+    return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
+    
+    buf = +''
+    len = buf.bytesize
+    while true
+      Polyphony.backend_recv(self, buf, maxlen || 4096, -1)
+      new_len = buf.bytesize
+      break if new_len == len
+
+      len = new_len
+    end
+    buf
+  end
+
   def recv(maxlen, flags = 0, outbuf = nil)
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
@@ -217,6 +251,23 @@ class ::UNIXServer
 end
 
 class ::UNIXSocket
+  alias_method :orig_read, :read
+  def read(maxlen = nil, buf = nil, buf_pos = 0)
+    return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
+    return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
+    
+    buf = +''
+    len = buf.bytesize
+    while true
+      Polyphony.backend_recv(self, buf, maxlen || 4096, -1)
+      new_len = buf.bytesize
+      break if new_len == len
+
+      len = new_len
+    end
+    buf
+  end
+
   def recv(maxlen, flags = 0, outbuf = nil)
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end

@@ -64,6 +64,20 @@ class ::OpenSSL::SSL::SSLSocket
     # @sync = osync
   end
 
+  alias_method :orig_read, :read
+  def read(maxlen = nil, buf = nil, buf_pos = 0)
+    return readpartial(maxlen, buf, buf_pos) if buf
+
+    buf = +''
+    return readpartial(maxlen, buf) if maxlen
+
+    while true
+      readpartial(4096, buf, -1)
+    end
+  rescue EOFError
+    buf
+  end
+
   def readpartial(maxlen, buf = +'', buffer_pos = 0)
     if buffer_pos != 0
       if (result = sysread(maxlen, +''))
