@@ -1,3 +1,7 @@
+## 0.64 2021-07-26
+
+- Add optional raise_on_eof argument to `#readpartial`
+
 ## 0.63 2021-07-26
 
 - Add support for specifying buf and buf_pos in `IO#read`
