@@ -78,7 +78,7 @@ class ::OpenSSL::SSL::SSLSocket
     buf
   end
 
-  def readpartial(maxlen, buf = +'', buffer_pos = 0)
+  def readpartial(maxlen, buf = +'', buffer_pos = 0, raise_on_eof = true)
     if buffer_pos != 0
       if (result = sysread(maxlen, +''))
         if buffer_pos == -1
@@ -90,7 +90,9 @@ class ::OpenSSL::SSL::SSLSocket
     else
       result = sysread(maxlen, buf)
     end
-    result || (raise EOFError)
+
+    raise EOFError if !result && raise_on_eof
+    result
   end
 
   def read_loop(maxlen = 8192)

@@ -123,9 +123,9 @@ class ::IO
   end
 
   alias_method :orig_readpartial, :read
-  def readpartial(len, str = +'', buffer_pos = 0)
+  def readpartial(len, str = +'', buffer_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_read(self, str, len, false, buffer_pos)
-    raise EOFError unless result
+    raise EOFError if !result && raise_on_eof
 
     result
   end
