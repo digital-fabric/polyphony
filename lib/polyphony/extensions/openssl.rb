@@ -5,6 +5,10 @@ require_relative './socket'
 
 # OpenSSL socket helper methods (to make it compatible with Socket API) and overrides
 class ::OpenSSL::SSL::SSLSocket
+  def __polyphony_read_method__
+    :readpartial
+  end
+
   alias_method :orig_initialize, :initialize
   def initialize(socket, context = nil)
     socket = socket.respond_to?(:io) ? socket.io || socket : socket

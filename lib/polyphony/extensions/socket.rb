@@ -5,6 +5,12 @@ require 'socket'
 require_relative './io'
 require_relative '../core/thread_pool'
 
+class BasicSocket
+  def __polyphony_read_method__
+    :backend_recv
+  end
+end
+
 # Socket overrides (eventually rewritten in C)
 class ::Socket
   def accept

@@ -76,6 +76,10 @@ end
 
 # IO instance method patches
 class ::IO
+  def __polyphony_read_method__
+    :backend_read
+  end
+
   # def each(sep = $/, limit = nil, chomp: nil)
   #   sep, limit = $/, sep if sep.is_a?(Integer)
   # end
