@@ -1,3 +1,7 @@
+## 0.65 2021-07-29
+
+- Add `#__polyphony_read_method__` method for read method detection
+
 ## 0.64 2021-07-26
 
 - Add optional raise_on_eof argument to `#readpartial`
