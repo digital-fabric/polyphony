@@ -1384,7 +1384,7 @@ inline int splice_chunks_write(Backend_t *backend, int fd, VALUE str, struct lib
   return 0;
 }
 
-inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_fd, int maxlen, 
+int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_fd, int maxlen, 
   struct libev_rw_io *watcher, VALUE *result, int *chunk_len) {
 #ifdef POLYPHONY_LINUX
   backend->base.op_count++;
