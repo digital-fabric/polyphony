@@ -152,6 +152,8 @@ class MoveOnAfterTest < MiniTest::Test
   end
 
   def test_nested_move_on_after
+    skip unless IS_LINUX
+
     t0 = Time.now
     o = move_on_after(0.01, with_value: 1) do
       move_on_after(0.02, with_value: 2) do
@@ -415,6 +417,8 @@ class GlobalAPIEtcTest < MiniTest::Test
   end
 
   def test_every
+    skip unless IS_LINUX
+
     buffer = []
     t0 = Time.now
     f = spin do
