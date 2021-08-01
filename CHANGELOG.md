@@ -1,3 +1,6 @@
+## 0.66 2021-08-01
+
+- Fix all splicing APIs on non-linux OSes (#63)
 - Add GC marking of buffers when cancelling read/write ops in io_uring backend 
 
 ## 0.65 2021-07-29
