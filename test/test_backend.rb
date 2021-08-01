@@ -347,8 +347,8 @@ class BackendTest < MiniTest::Test
 
 
   def test_splice_chunks
-    body = 'abcd' * 250
-    chunk_size = 750
+    body = 'abcd' * 4
+    chunk_size = 12
 
     buf = +''
     r, w = IO.pipe
@@ -373,7 +373,7 @@ class BackendTest < MiniTest::Test
     w.close
     reader.await
 
-    expected = "Content-Type: foo\r\n\r\n#{750.to_s(16)}\r\n#{body[0..749]}\r\n#{250.to_s(16)}\r\n#{body[750..999]}\r\n0\r\n\r\n"
+    expected = "Content-Type: foo\r\n\r\n#{12.to_s(16)}\r\n#{body[0..11]}\r\n#{4.to_s(16)}\r\n#{body[12..15]}\r\n0\r\n\r\n"
     assert_equal expected, buf
   ensure
     o.close

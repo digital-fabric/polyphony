@@ -941,9 +941,8 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
-#endif
-
-VALUE Backend_fake_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+#else
+VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
   VALUE switchpoint_result = Qnil;
@@ -1018,7 +1017,7 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE Backend_fake_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
   VALUE switchpoint_result = Qnil;
@@ -1097,6 +1096,7 @@ done:
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
+#endif
 
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
@@ -1390,14 +1390,13 @@ inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_fd, int
   backend->base.op_count++;
   while (1) {
     *chunk_len = splice(src_fd, 0, dest_fd, 0, maxlen, 0);
-    if (*chunk_len < 0) {
-      int err = errno;
-      if (err != EWOULDBLOCK && err != EAGAIN) return err;
+    if (*chunk_len >= 0) return 0;
+    
+    int err = errno;
+    if (err != EWOULDBLOCK && err != EAGAIN) return err;
 
-      *result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, watcher);
-      if (TEST_EXCEPTION(*result)) return -1;
-    }
-    return 0;
+    *result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, watcher);
+    if (TEST_EXCEPTION(*result)) return -1;
   }
 #else
   char *buf = malloc(maxlen);
@@ -1409,10 +1408,10 @@ inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_fd, int
     if (*chunk_len >= 0) break;
 
     ret = errno;
-    if ((ret != EWOULDBLOCK && e != EAGAIN)) goto done;
+    if ((ret != EWOULDBLOCK && ret != EAGAIN)) goto done;
 
     *result = libev_wait_rw_fd_with_watcher(backend, src_fd, -1, watcher);
-    if (TEST_EXCEPTION(switchpoint_result)) goto exception;
+    if (TEST_EXCEPTION(*result)) goto exception;
   }
 
   backend->base.op_count++;
@@ -1422,11 +1421,11 @@ inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_fd, int
     ssize_t n = write(dest_fd, ptr, left);
     if (n < 0) {
       ret = errno;
-      if ((ret != EWOULDBLOCK && e != EAGAIN)) goto done;
+      if ((ret != EWOULDBLOCK && ret != EAGAIN)) goto done;
 
-      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, -1, dest_fd, watcher);
+      *result = libev_wait_rw_fd_with_watcher(backend, -1, dest_fd, watcher);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto exception;
+      if (TEST_EXCEPTION(*result)) goto exception;
     }
     else {
       ptr += n;
@@ -1484,7 +1483,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     if (err == -1) goto error; else if (err) goto syscallerror;
   }
   while (1) {
-    int chunk_len;
+    int chunk_len = 0;
     err = splice_chunks_splice(backend, src_fptr->fd, pipefd[1], maxlen, &watcher, &result, &chunk_len);
     if (err == -1) goto error; else if (err) goto syscallerror;
     if (chunk_len == 0) break;
@@ -1588,13 +1587,8 @@ void Init_Backend() {
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
 
-  #ifdef POLYPHONY_LINUX
   rb_define_method(cBackend, "splice", Backend_splice, 3);
   rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
-  #else
-  rb_define_method(cBackend, "splice", Backend_fake_splice, 3);
-  rb_define_method(cBackend, "splice_to_eof", Backend_fake_splice_to_eof, 3);
-  #endif
 
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
