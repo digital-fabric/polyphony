@@ -15,6 +15,8 @@ require 'minitest/reporters'
 
 ::Exception.__disable_sanitized_backtrace__ = true
 
+IS_LINUX = RUBY_PLATFORM =~ /linux/
+
 # Minitest::Reporters.use! [
 #   Minitest::Reporters::SpecReporter.new
 # ]

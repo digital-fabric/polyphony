@@ -137,7 +137,7 @@ class MoveOnAfterTest < MiniTest::Test
     t1 = Time.now
 
     assert_nil v
-    assert_in_range 0.014..0.02, t1 - t0
+    assert_in_range 0.014..0.02, t1 - t0 if IS_LINUX
   end
 
   def test_move_on_after_without_block
@@ -210,7 +210,7 @@ class CancelAfterTest < MiniTest::Test
       sleep 0.007
     end
     t1 = Time.now
-    assert_in_range 0.014..0.024, t1 - t0
+    assert_in_range 0.014..0.024, t1 - t0 if IS_LINUX
   end
 
   class CustomException < Exception
@@ -399,7 +399,7 @@ class ThrottledLoopTest < MiniTest::Test
     end
     f.await
     t1 = Time.now
-    assert_in_range 0.075..0.15, t1 - t0
+    assert_in_range 0.075..0.15, t1 - t0 if IS_LINUX
     assert_equal [1, 2, 3, 4, 5], buffer    
   end
 end

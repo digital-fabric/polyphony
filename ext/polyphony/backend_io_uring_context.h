@@ -27,6 +27,9 @@ typedef struct op_context {
   int               result;
   VALUE             fiber;
   VALUE             resume_value;
+  unsigned int      buffer_count;
+  VALUE             buffer0;
+  VALUE             *buffers;
 } op_context_t;
 
 typedef struct op_context_store {
@@ -43,14 +46,8 @@ void context_store_initialize(op_context_store_t *store);
 op_context_t *context_store_acquire(op_context_store_t *store, enum op_type type);
 int context_store_release(op_context_store_t *store, op_context_t *ctx);
 void context_store_free(op_context_store_t *store);
-
-inline unsigned int OP_CONTEXT_RELEASE(op_context_store_t *store, op_context_t *ctx) {
-  int completed = !ctx->ref_count;
-  if (ctx->ref_count)
-    ctx->ref_count -= 1;
-  else
-    context_store_release(store, ctx);
-  return completed;
-}
+void context_store_mark_taken_buffers(op_context_store_t *store);
+void context_attach_buffers(op_context_t *ctx, unsigned int count, VALUE *buffers);
+void context_attach_buffers_v(op_context_t *ctx, unsigned int count, ...);
 
 #endif /* BACKEND_IO_URING_CONTEXT_H */

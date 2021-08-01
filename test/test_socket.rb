@@ -159,6 +159,8 @@ class SocketTest < MiniTest::Test
 end
 
 class HTTPClientTest < MiniTest::Test
+  skip unless IS_LINUX
+
   require 'json'
 
   def test_http

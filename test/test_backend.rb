@@ -26,7 +26,7 @@ class BackendTest < MiniTest::Test
       @backend.sleep 0.01
       count += 1
     }.await
-    assert_in_range 0.02..0.04, Time.now - t0
+    assert_in_range 0.02..0.04, Time.now - t0 if IS_LINUX
     assert_equal 3, count
   end
 
@@ -243,6 +243,8 @@ class BackendTest < MiniTest::Test
   end
 
   def test_timer_loop
+    skip unless IS_LINUX
+
     i = 0
     f = spin do
       @backend.timer_loop(0.01) { i += 1 }
@@ -288,6 +290,8 @@ class BackendTest < MiniTest::Test
   end
 
   def test_nested_timeout
+    skip unless IS_LINUX
+
     buffer = []
     assert_raises(MyTimeoutException) do
       @backend.timeout(0.01, MyTimeoutException) do
@@ -394,6 +398,9 @@ class BackendTest < MiniTest::Test
     assert_equal count, GC.count
     sleep 0.05
     assert_equal count, GC.count
+
+    return unless IS_LINUX
+
     # The idle tasks are ran at most once per fiber switch, before the backend
     # is polled. Therefore, the second sleep will not have triggered a GC, since
     # only 0.05s have passed since the gc period was set.

@@ -180,6 +180,9 @@ class ThreadTest < MiniTest::Test
     assert_equal count, GC.count
     sleep 0.05
     assert_equal count, GC.count
+    
+    return unless IS_LINUX
+
     # The idle tasks are ran at most once per fiber switch, before the backend
     # is polled. Therefore, the second sleep will not have triggered a GC, since
     # only 0.05s have passed since the gc period was set.

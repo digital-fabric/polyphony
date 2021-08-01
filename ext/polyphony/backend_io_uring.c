@@ -25,6 +25,8 @@ VALUE SYM_send;
 VALUE SYM_splice;
 VALUE SYM_write;
 
+VALUE eArgumentError;
+
 #ifdef POLYPHONY_UNSET_NONBLOCK
 #define io_unset_nonblock(fptr, io) io_verify_blocking_mode(fptr, io, Qtrue)
 #else
@@ -45,6 +47,7 @@ typedef struct Backend_t {
 static void Backend_mark(void *ptr) {
   Backend_t *backend = ptr;
   backend_base_mark(&backend->base);
+  context_store_mark_taken_buffers(&backend->store);
 }
 
 static void Backend_free(void *ptr) {
@@ -349,8 +352,11 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
 
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
-    RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &str);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
 
     if (result < 0)
@@ -410,8 +416,11 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
     
     ssize_t result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
-    RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &str);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
 
     if (result < 0)
@@ -457,8 +466,11 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
     
     ssize_t result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
-    RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &str);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
 
     if (result < 0)
@@ -500,8 +512,11 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
     
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
-    RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &str);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
     
     if (result < 0)
@@ -549,12 +564,10 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
-    if (TEST_EXCEPTION(resume_value)) {
-      free(iov);
-      RAISE_EXCEPTION(resume_value);
-    }
     if (!completed) {
       free(iov);
+      context_attach_buffers(ctx, argc, argv);
+      RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
@@ -588,8 +601,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 
 VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
   if (argc < 2)
-    // TODO: raise ArgumentError
-    rb_raise(rb_eRuntimeError, "(wrong number of arguments (expected 2 or more))");
+    rb_raise(eArgumentError, "(wrong number of arguments (expected 2 or more))");
 
   return (argc == 2) ?
     Backend_write(self, argv[0], argv[1]) :
@@ -628,8 +640,11 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
     
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
-    RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &str);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
 
     if (result < 0)
@@ -675,8 +690,11 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
     
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
-    RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &str);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
 
     if (result < 0)
@@ -721,8 +739,11 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
     
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
-    RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &str);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
 
     if (result < 0)
@@ -764,8 +785,11 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
     
     int result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     int completed = context_store_release(&backend->store, ctx);
-    RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &str);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
     RB_GC_GUARD(resume_value);
 
     if (result < 0)
@@ -1165,6 +1189,24 @@ struct io_uring_sqe *Backend_chain_prepare_splice(Backend_t *backend, VALUE src,
   return sqe;
 }
 
+void Backend_chain_ctx_attach_buffers(op_context_t *ctx, int argc, VALUE *argv) {
+  int count = 0;
+  if (argc > 1) ctx->buffers = malloc(sizeof(VALUE) * (argc - 1));
+
+  for (int i = 0; i < argc; i++) {
+    VALUE op = argv[i];
+    VALUE op_type = RARRAY_AREF(op, 0);
+
+    if (op_type == SYM_write || op_type == SYM_send) {
+      if (!count) ctx->buffer0 = RARRAY_AREF(op, 2);
+      else        ctx->buffers[count - 1] = RARRAY_AREF(op, 2);
+      count++;
+    }
+  }
+  ctx->buffer_count = count;
+}
+
+
 VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
   VALUE resume_value = Qnil;
   unsigned int sqe_count = 0;
@@ -1218,6 +1260,8 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
   int result = ctx->result;
   int completed = context_store_release(&backend->store, ctx);
   if (!completed) {
+    Backend_chain_ctx_attach_buffers(ctx, argc, argv);
+    
     // op was not completed (an exception was raised), so we need to cancel it
     ctx->result = -ECANCELED;
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
@@ -1409,6 +1453,7 @@ syscallerror:
   if (pipefd[1] != -1) close(pipefd[1]);
   rb_syserr_fail(err, strerror(err));
 error:
+  context_attach_buffers_v(ctx, 4, prefix, postfix, chunk_prefix, chunk_postfix);
   if (pipefd[0] != -1) close(pipefd[0]);
   if (pipefd[1] != -1) close(pipefd[1]);
   return RAISE_EXCEPTION(switchpoint_result);
@@ -1469,7 +1514,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "write", Backend_write_m, -1);
 
-
   #ifdef POLYPHONY_UNSET_NONBLOCK
   ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
   #endif
@@ -1480,6 +1524,8 @@ void Init_Backend() {
   SYM_write = ID2SYM(rb_intern("write"));
 
   backend_setup_stats_symbols();
+
+  eArgumentError = rb_const_get(rb_cObject, rb_intern("ArgumentError"));
 }
 
 #endif // POLYPHONY_BACKEND_LIBURING

@@ -50,6 +50,7 @@ inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_ty
   ctx->resume_value = Qnil;
   ctx->ref_count = 2;
   ctx->result = 0;
+  ctx->buffer_count = 0;
 
   store->taken_count++;
 
@@ -66,6 +67,8 @@ inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
   
   ctx->ref_count--;
   if (ctx->ref_count) return 0;
+
+  if (ctx->buffer_count > 1) free(ctx->buffers);
 
   store->taken_count--;
   store->available_count++;
@@ -92,4 +95,43 @@ void context_store_free(op_context_store_t *store) {
     free(store->taken);
     store->taken = next;
   }
+}
+
+inline void context_store_mark_taken_buffers(op_context_store_t *store) {
+  op_context_t *ctx = store->taken;
+  while (ctx) {
+    for (unsigned int i = 0; i < ctx->buffer_count; i++)
+      rb_gc_mark(i == 0 ? ctx->buffer0 : ctx->buffers[i - 1]);
+    ctx = ctx->next;
+  }
+}
+
+inline void context_attach_buffers(op_context_t *ctx, unsigned int count, VALUE *buffers) {
+  // attaching buffers to the context is done in order to ensure that any GC
+  // pass done before the context is released will mark those buffers, even if
+  // the fiber has already been resumed and the buffers are not in use anymore.
+  // This is done in order to prevent a possible race condition where on the
+  // kernel side the buffers are still in use, but in userspace they have
+  // effectively been freed after a GC pass.
+  ctx->buffer_count = count;
+  if (count > 1)
+    ctx->buffers = malloc(sizeof(VALUE) * (count - 1));
+  for (unsigned int i = 0; i < count; i++)
+    if (!i) ctx->buffer0 = buffers[0];
+    else    ctx->buffers[i - 1] = buffers[i];
+}
+
+inline void context_attach_buffers_v(op_context_t *ctx, unsigned int count, ...) {
+  va_list values;
+
+  va_start(values, count);
+
+  ctx->buffer_count = count;
+  if (count > 1)
+    ctx->buffers = malloc(sizeof(VALUE) * (count - 1));
+  for (unsigned int i = 0; i < count; i++)
+    if (!i) ctx->buffer0 = va_arg(values, VALUE);
+    else    ctx->buffers[i - 1] = va_arg(values, VALUE);
+
+  va_end(values);
 }
