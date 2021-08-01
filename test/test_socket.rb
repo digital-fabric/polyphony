@@ -158,21 +158,22 @@ class SocketTest < MiniTest::Test
   end
 end
 
-class HTTPClientTest < MiniTest::Test
-  skip unless IS_LINUX
+if IS_LINUX
+  class HTTPClientTest < MiniTest::Test
 
-  require 'json'
+    require 'json'
 
-  def test_http
-    res = HTTParty.get('http://ipinfo.io/')
+    def test_http
+      res = HTTParty.get('http://ipinfo.io/')
 
-    response = JSON.load(res.body)
-    assert_equal 'https://ipinfo.io/missingauth', response['readme']
-  end
+      response = JSON.load(res.body)
+      assert_equal 'https://ipinfo.io/missingauth', response['readme']
+    end
 
-  def test_https
-    res = HTTParty.get('https://ipinfo.io/')
-    response = JSON.load(res.body)
-    assert_equal 'https://ipinfo.io/missingauth', response['readme']
+    def test_https
+      res = HTTParty.get('https://ipinfo.io/')
+      response = JSON.load(res.body)
+      assert_equal 'https://ipinfo.io/missingauth', response['readme']
+    end
   end
 end
