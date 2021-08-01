@@ -259,6 +259,8 @@ class BackendTest < MiniTest::Test
   end
 
   def test_timeout
+    skip unless IS_LINUX
+
     buffer = []
     assert_raises(Polyphony::TimeoutException) do
       @backend.timeout(0.01, Polyphony::TimeoutException) do

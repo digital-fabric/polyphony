@@ -1,3 +1,5 @@
+- Add GC marking of buffers when cancelling read/write ops in io_uring backend 
+
 ## 0.65 2021-07-29
 
 - Add `#__polyphony_read_method__` method for read method detection

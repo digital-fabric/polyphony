@@ -351,6 +351,8 @@ class IOClassMethodsTest < MiniTest::Test
   end
 
   def test_popen
+    skip unless IS_LINUX
+
     counter = 0
     timer = spin { throttled_loop(200) { counter += 1 } }
 

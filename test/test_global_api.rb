@@ -429,7 +429,7 @@ class GlobalAPIEtcTest < MiniTest::Test
     t0 = Time.now
     sleep 0.1
     elapsed = Time.now - t0
-    assert (0.05..0.15).include? elapsed
+    assert (0.05..0.15).include? elapsed if IS_LINUX
 
     f = spin { sleep }
     snooze
