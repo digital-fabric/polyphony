@@ -5,6 +5,10 @@ require_relative './socket'
 
 # OpenSSL socket helper methods (to make it compatible with Socket API) and overrides
 class ::OpenSSL::SSL::SSLSocket
+  def __polyphony_read_method__
+    :readpartial
+  end
+
   alias_method :orig_initialize, :initialize
   def initialize(socket, context = nil)
     socket = socket.respond_to?(:io) ? socket.io || socket : socket
@@ -64,7 +68,21 @@ class ::OpenSSL::SSL::SSLSocket
     # @sync = osync
   end
 
-  def readpartial(maxlen, buf = +'', buffer_pos = 0)
+  alias_method :orig_read, :read
+  def read(maxlen = nil, buf = nil, buf_pos = 0)
+    return readpartial(maxlen, buf, buf_pos) if buf
+
+    buf = +''
+    return readpartial(maxlen, buf) if maxlen
+
+    while true
+      readpartial(4096, buf, -1)
+    end
+  rescue EOFError
+    buf
+  end
+
+  def readpartial(maxlen, buf = +'', buffer_pos = 0, raise_on_eof = true)
     if buffer_pos != 0
       if (result = sysread(maxlen, +''))
         if buffer_pos == -1
@@ -76,7 +94,9 @@ class ::OpenSSL::SSL::SSLSocket
     else
       result = sysread(maxlen, buf)
     end
-    result || (raise EOFError)
+
+    raise EOFError if !result && raise_on_eof
+    result
   end
 
   def read_loop(maxlen = 8192)

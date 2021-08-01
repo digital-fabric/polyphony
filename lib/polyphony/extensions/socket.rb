@@ -5,6 +5,12 @@ require 'socket'
 require_relative './io'
 require_relative '../core/thread_pool'
 
+class BasicSocket
+  def __polyphony_read_method__
+    :backend_recv
+  end
+end
+
 # Socket overrides (eventually rewritten in C)
 class ::Socket
   def accept
@@ -20,6 +26,23 @@ class ::Socket
   def connect(addr)
     addr = Addrinfo.new(addr) if addr.is_a?(String)
     Polyphony.backend_connect(self, addr.ip_address, addr.ip_port)
+  end
+
+  alias_method :orig_read, :read
+  def read(maxlen = nil, buf = nil, buf_pos = 0)
+    return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
+    return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
+    
+    buf = +''
+    len = buf.bytesize
+    while true
+      Polyphony.backend_recv(self, buf, maxlen || 4096, -1)
+      new_len = buf.bytesize
+      break if new_len == len
+
+      len = new_len
+    end
+    buf
   end
 
   def recv(maxlen, flags = 0, outbuf = nil)
@@ -60,8 +83,9 @@ class ::Socket
   #   Polyphony.backend_send(self, mesg, 0)
   # end
 
-  def readpartial(maxlen, str = +'', buffer_pos = 0)
-    Polyphony.backend_recv(self, str, maxlen, buffer_pos)
+  def readpartial(maxlen, str = +'', buffer_pos = 0, raise_on_eof = true)
+    result = Polyphony.backend_recv(self, str, maxlen, buffer_pos)
+    raise EOFError if !result && raise_on_eof
   end
 
   ZERO_LINGER = [0, 0].pack('ii').freeze
@@ -140,6 +164,23 @@ class ::TCPSocket
     setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_REUSEPORT, 1)
   end
 
+  alias_method :orig_read, :read
+  def read(maxlen = nil, buf = nil, buf_pos = 0)
+    return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
+    return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
+    
+    buf = +''
+    len = buf.bytesize
+    while true
+      Polyphony.backend_recv(self, buf, maxlen || 4096, -1)
+      new_len = buf.bytesize
+      break if new_len == len
+
+      len = new_len
+    end
+    buf
+  end
+
   def recv(maxlen, flags = 0, outbuf = nil)
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
@@ -165,11 +206,10 @@ class ::TCPSocket
   #   Polyphony.backend_send(self, mesg, 0)
   # end
 
-  def readpartial(maxlen, str = +'', buffer_pos = 0)
+  def readpartial(maxlen, str = +'', buffer_pos = 0, raise_on_eof)
     result = Polyphony.backend_recv(self, str, maxlen, buffer_pos)
-    raise EOFError unless result
-
-    str
+    raise EOFError if !result && raise_on_eof
+    result
   end
 
   def read_nonblock(len, str = nil, exception: true)
@@ -217,6 +257,23 @@ class ::UNIXServer
 end
 
 class ::UNIXSocket
+  alias_method :orig_read, :read
+  def read(maxlen = nil, buf = nil, buf_pos = 0)
+    return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
+    return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
+    
+    buf = +''
+    len = buf.bytesize
+    while true
+      Polyphony.backend_recv(self, buf, maxlen || 4096, -1)
+      new_len = buf.bytesize
+      break if new_len == len
+
+      len = new_len
+    end
+    buf
+  end
+
   def recv(maxlen, flags = 0, outbuf = nil)
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
@@ -242,11 +299,10 @@ class ::UNIXSocket
     Polyphony.backend_send(self, mesg, 0)
   end
 
-  def readpartial(maxlen, str = +'', buffer_pos = 0)
+  def readpartial(maxlen, str = +'', buffer_pos = 0, raise_on_eof)
     result = Polyphony.backend_recv(self, str, maxlen, buffer_pos)
-    raise EOFError unless result
-
-    str
+    raise EOFError if !result && raise_on_eof
+    result
   end
 
   def read_nonblock(len, str = nil, exception: true)

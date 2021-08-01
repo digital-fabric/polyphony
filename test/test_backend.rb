@@ -98,6 +98,32 @@ class BackendTest < MiniTest::Test
     assert_equal return_value, buf
   end
 
+  def test_read_concat_big
+    i, o = IO.pipe
+
+    body = " " * 4000
+
+    data = "post /?q=time&blah=blah HTTP/1\r\nHost: dev.realiteq.net\r\n\r\n" +
+           "get /?q=time HTTP/1.1\r\nContent-Length: #{body.bytesize}\r\n\r\n#{body}" +
+           "get /?q=time HTTP/1.1\r\nCookie: foo\r\nCookie: bar\r\n\r\n"
+
+    o << data
+    o.close
+    
+    buf = +''
+
+    @backend.read(i, buf, 4096, false, -1)
+    assert_equal 4096, buf.bytesize
+    
+    @backend.read(i, buf, 1, false, -1)
+    assert_equal 4097, buf.bytesize
+
+    @backend.read(i, buf, 4096, false, -1)
+
+    assert_equal data.bytesize, buf.bytesize
+    assert_equal data, buf
+  end
+
   def test_waitpid
     pid = fork do
       @backend.post_fork

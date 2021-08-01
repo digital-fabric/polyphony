@@ -1,3 +1,16 @@
+## 0.65 2021-07-29
+
+- Add `#__polyphony_read_method__` method for read method detection
+
+## 0.64 2021-07-26
+
+- Add optional raise_on_eof argument to `#readpartial`
+
+## 0.63 2021-07-26
+
+- Add support for specifying buf and buf_pos in `IO#read`
+- Fix `Socket#read` to work and conform to `IO#read` interface
+
 ## 0.62 2021-07-21
 
 - Add `runqueue_size` to backend stats

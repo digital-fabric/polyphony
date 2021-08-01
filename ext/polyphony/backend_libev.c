@@ -1384,6 +1384,65 @@ inline int splice_chunks_write(Backend_t *backend, int fd, VALUE str, struct lib
   return 0;
 }
 
+inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_fd, int maxlen, 
+  struct libev_rw_io *watcher, VALUE *result, int *chunk_len) {
+#ifdef POLYPHONY_LINUX
+  backend->base.op_count++;
+  while (1) {
+    *chunk_len = splice(src_fd, 0, dest_fd, 0, maxlen, 0);
+    if (*chunk_len < 0) {
+      int err = errno;
+      if (err != EWOULDBLOCK && err != EAGAIN) return err;
+
+      *result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, watcher);
+      if (TEST_EXCEPTION(*result)) return -1;
+    }
+    return 0;
+  }
+#else
+  char *buf = malloc(maxlen);
+  int ret;
+
+  backend->base.op_count++;
+  while (1) {
+    *chunk_len = read(src_fd, buf, maxlen);
+    if (*chunk_len >= 0) break;
+
+    ret = errno;
+    if ((ret != EWOULDBLOCK && e != EAGAIN)) goto done;
+
+    *result = libev_wait_rw_fd_with_watcher(backend, src_fd, -1, watcher);
+    if (TEST_EXCEPTION(switchpoint_result)) goto exception;
+  }
+
+  backend->base.op_count++;
+  char *ptr = buf;
+  int left = *chunk_len;
+  while (left > 0) {
+    ssize_t n = write(dest_fd, ptr, left);
+    if (n < 0) {
+      ret = errno;
+      if ((ret != EWOULDBLOCK && e != EAGAIN)) goto done;
+
+      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, -1, dest_fd, watcher);
+
+      if (TEST_EXCEPTION(switchpoint_result)) goto exception;
+    }
+    else {
+      ptr += n;
+      left -= n;
+    }
+  }
+  ret = 0;
+  goto done;
+exception:
+  ret = -1;
+done:
+  free(buf);
+  return ret;
+#endif
+}
+
 VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VALUE postfix, VALUE chunk_prefix, VALUE chunk_postfix, VALUE chunk_size) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -1421,26 +1480,13 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   fcntl(pipefd[1], F_SETFL, O_NONBLOCK);
 
   if (prefix != Qnil) {
-    int err = splice_chunks_write(backend, dest_fptr->fd, prefix, &watcher, &result);
+    err = splice_chunks_write(backend, dest_fptr->fd, prefix, &watcher, &result);
     if (err == -1) goto error; else if (err) goto syscallerror;
   }
   while (1) {
     int chunk_len;
-    // splice to pipe
-    while (1) {
-      backend->base.op_count++;
-      chunk_len = splice(src_fptr->fd, 0, pipefd[1], 0, maxlen, 0);
-      if (chunk_len < 0) {
-        err = errno;
-        if (err != EWOULDBLOCK && err != EAGAIN) goto syscallerror;
-
-        result = libev_wait_rw_fd_with_watcher(backend, src_fptr->fd, pipefd[1], &watcher);
-        if (TEST_EXCEPTION(result)) goto error;
-      }
-      else {
-        break;
-      }
-    }
+    err = splice_chunks_splice(backend, src_fptr->fd, pipefd[1], maxlen, &watcher, &result, &chunk_len);
+    if (err == -1) goto error; else if (err) goto syscallerror;
     if (chunk_len == 0) break;
     
     total += chunk_len;
@@ -1453,20 +1499,12 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     }
 
     int left = chunk_len;
-    while (1) {
-      backend->base.op_count++;
-      int n = splice(pipefd[0], 0, dest_fptr->fd, 0, left, 0);
-      if (n < 0) {
-        err = errno;
-        if (err != EWOULDBLOCK && err != EAGAIN) goto syscallerror;
+    while (left > 0) {
+      int len;
+      err = splice_chunks_splice(backend, pipefd[0], dest_fptr->fd, left, &watcher, &result, &len);
+      if (err == -1) goto error; else if (err) goto syscallerror;
 
-        result = libev_wait_rw_fd_with_watcher(backend, pipefd[0], dest_fptr->fd, &watcher);
-        if (TEST_EXCEPTION(result)) goto error;
-      }
-      else {
-        left -= n;
-        if (left == 0) break;
-      }
+      left -= len;
     }
 
     if (chunk_postfix != Qnil) {

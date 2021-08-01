@@ -9,8 +9,8 @@ Rake::ExtensionTask.new("polyphony_ext") do |ext|
 end
 
 task :recompile => [:clean, :compile]
-
 task :default => [:compile, :test]
+
 task :test do
   exec 'ruby test/run.rb'
 end
