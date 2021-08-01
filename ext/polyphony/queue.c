@@ -78,7 +78,7 @@ inline void queue_schedule_blocked_fibers_to_capacity(Queue_t *queue) {
   }
 }
 
-inline void capped_queue_block_push(Queue_t *queue) {
+static inline void capped_queue_block_push(Queue_t *queue) {
   VALUE fiber = rb_fiber_current();
   VALUE backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
   VALUE switchpoint_result;
