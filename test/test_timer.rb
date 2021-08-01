@@ -19,7 +19,7 @@ class TimerMoveOnAfterTest < MiniTest::Test
     end
     t1 = Time.now
 
-    assert_in_range 0.1..0.15, t1 - t0
+    assert_in_range 0.1..0.15, t1 - t0 if IS_LINUX
     assert_nil v
   end
 
@@ -31,7 +31,7 @@ class TimerMoveOnAfterTest < MiniTest::Test
     end
     t1 = Time.now
 
-    assert_in_range 0.01..0.05, t1 - t0
+    assert_in_range 0.01..0.05, t1 - t0 if IS_LINUX
     assert_equal :bar, v
   end
 
