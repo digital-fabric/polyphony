@@ -10,7 +10,7 @@ class ThrottlerTest < MiniTest::Test
     f = spin { loop { t.process { buffer << 1 } } }
     sleep 0.2
     f.stop
-    assert_in_range 1..3, buffer.size
+    assert_in_range 1..4, buffer.size
   ensure
     t.stop
   end
@@ -23,7 +23,7 @@ class ThrottlerTest < MiniTest::Test
     end
     sleep 0.25
     f.stop
-    assert_in_range 2..6, buffer.size
+    assert_in_range 2..7, buffer.size
   ensure
     t.stop
   end

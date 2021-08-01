@@ -70,7 +70,7 @@ class ThreadPoolTest < MiniTest::Test
     
     sleep 0.15 # allow time for threads to spawn
     assert_equal @pool.size, threads.uniq.size
-    assert_equal (0..9).to_a, buffer.sort
+    assert_equal (0..9).to_a, buffer.sort if IS_LINUX
   end
 
   def test_busy?
