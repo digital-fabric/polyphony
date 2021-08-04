@@ -1,3 +1,12 @@
+- io_uring backend:
+  - if io_uring_get_sqe returns null, snooze fiber and try again
+
+- Tracing:
+  - Emit events on I/O ops, e.g.:
+    - [:op_read_submit, id, io, len]
+    - [:op_read_complete, id, io, len, buffer]
+  - Prevent tracing while an event is being emitted (to allow the trace proc to perform I/O)
+
 - Add support for IPv6:
   https://www.reddit.com/r/ruby/comments/lyen23/understanding_ipv6_and_why_its_important_to_you/
 
@@ -14,46 +23,7 @@
   - `IO#gets_loop`, `Socket#gets_loop`, `OpenSSL::Socket#gets_loop` (medium effort)
   - `Fiber#receive_loop` (very little effort, should be implemented in C)
 
-
-- Add `Backend#splice`, `Backend#splice_to_eof` for implementing stuff like proxying:
-
-  ```ruby
-  def two_way_proxy(socket1, socket2)
-    backend = Thread.current.backend
-    f1 = spin { backend.splice_to_eof(socket1, socket2) }
-    f2 = spin { backend.splice_to_eof(socket2, socket1) }
-    Fiber.await(f1, f2)
-  end
-  ```
-
 - Add support for `close` to io_uring backend
-
-- Add support for submission of multiple requests to io_uring backend:
-
-  ```ruby
-  Thread.current.backend.submit(
-    [:send, sock, chunk_header(len)],
-    [:splice, file, sock, len]
-  )
-  ```
-
-  Full example (for writing chunks from a file to an HTTP response):
-
-  ```ruby
-  def serve_io(io)
-    i, o = IO.pipe
-    backend = Thread.current.backend
-    while true
-      len = o.splice(io, 8192)
-      break if len == 0
-      
-      backend.submit(
-        [:write, sock, chunk_header(len)],
-        [:splice, i, sock, len]
-      )
-    end
-  end
-  ```
 
 - Graceful shutdown again:
   - What happens to children when doing a graceful shutdown?
@@ -92,7 +62,6 @@
 
 -----------------------------------------------------
 
-- Add `Backend#splice(in, out, nbytes)` API
 - Adapter for io/console (what does `IO#raw` do?)
 - Adapter for Pry and IRB (Which fixes #5 and #6)
 - allow backend selection at runtime
