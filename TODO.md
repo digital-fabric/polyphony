@@ -1,5 +1,6 @@
 - io_uring backend:
-  - if io_uring_get_sqe returns null, snooze fiber and try again
+  - if `io_uring_get_sqe` returns null, call `io_uring_submit`, (snooze fiber)?
+    and try again
 
 - Tracing:
   - Emit events on I/O ops, e.g.:
