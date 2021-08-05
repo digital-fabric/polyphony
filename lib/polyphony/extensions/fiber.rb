@@ -43,6 +43,8 @@ module Polyphony
     end
 
     def terminate(graceful = false)
+      trace "* Fiber#terminate #{inspect}"
+      trace caller
       return if @running == false
 
       @graceful_shutdown = graceful
@@ -228,6 +230,8 @@ module Polyphony
     end
 
     def terminate_all_children(graceful = false)
+      trace "* Fiber#terminate_all_children #{inspect}"
+      trace caller
       return unless @children
 
       e = Polyphony::Terminate.new
