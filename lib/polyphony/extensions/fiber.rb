@@ -144,6 +144,8 @@ module Polyphony
 
         fibers.delete(fiber)
         if result.is_a?(Exception)
+          trace await_got_child_exception: result
+          trace child_fibers_to_be_terminated: fibers
           exception ||= result
           fibers.each { |f| f.terminate }
         else
