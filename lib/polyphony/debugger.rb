@@ -35,32 +35,60 @@ module Polyphony
     end
 
     def control_loop(source_fiber)
-      @cmd = :step
       @peer = source_fiber
+      cmd = { kind: :initial }
       loop do
-        case @cmd
-        when :step
-          step
-        end
+        cmd = send(:"cmd_#{cmd[:kind]}", cmd)
       end
     end
 
     POLYPHONY_LIB_DIR = File.expand_path('..', __dir__)
 
-    def step
+    def next_trace_event
+      @peer.transfer
+    end
+
+    def next_command(event)
+      while true
+        cmd = parse_command(@server.interact_with_client(event))
+        return cmd if cmd
+
+        event = { instruction: "Type 'help' for list of commands" }
+      end
+    end
+
+    def parse_command(cmd)
+      case cmd
+      when /^(step|s)$/
+        { kind: :step }
+      when /^(help|h)$/
+        { kind: :help }
+      else
+        nil
+      end
+    end
+
+    def cmd_initial(cmd)
+      next_command(nil)
+    end
+    
+    def cmd_step(cmd)
       tp = nil
       fiber = nil
       while true
-        event = @peer.transfer
+        event = next_trace_event
         @peer = event[:fiber]
         if event[:kind] == :line && event[:path] !~ /#{POLYPHONY_LIB_DIR}/
-          @server.interact_with_client(event)
-          return
+          return next_command(event)
         end
       end
     rescue => e
       trace "Uncaught error: #{e.inspect}"
       @trace&.disable
+    end
+
+    def cmd_help(cmd)
+      next_command(show: :help)
     end
 
     def handle_tp(trace, tp)
@@ -115,7 +143,9 @@ module Polyphony
 
     def interact_with_client(event)
       @client&.orig_write "#{event.inspect}\n"
-      result = @client&.orig_gets&.chomp
+      @client&.orig_gets&.chomp
+    rescue SystemCallError
+      nil
     rescue => e
       trace "Error in interact_with_client: #{e.inspect}"
       e.backtrace[0..3].each { |l| trace l }
