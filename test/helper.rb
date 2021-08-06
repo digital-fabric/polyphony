@@ -46,6 +46,7 @@ end
 class MiniTest::Test
   def setup
     # trace "* setup #{self.name}"
+    Fiber.current.reap_dead_children
     if Fiber.current.children.size > 0
       puts "Children left: #{Fiber.current.children.inspect}"
       exit!

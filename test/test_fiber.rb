@@ -46,7 +46,7 @@ class FiberTest < MiniTest::Test
   def test_await_dead_children
     f1 = spin { :foo }
     f2 = spin { :bar }
-    2.times { snooze }
+    4.times { snooze }
     
     assert_equal [:foo, :bar], Fiber.await(f1, f2)
   end
@@ -67,10 +67,12 @@ class FiberTest < MiniTest::Test
     }
     Fiber.await(f2, f3)
     assert_equal [:foo, :bar, :baz], buffer
-    assert_equal 0, Fiber.current.children.size
+    assert_equal [f1], Fiber.current.children
+    Fiber.current.reap_dead_children
+    assert_equal [], Fiber.current.children
   end
 
-  def test_await_from_multiple_fibers_with_interruption=
+  def test_await_from_multiple_fibers_with_interruption
     buffer = []
     f1 = spin {
       sleep 0.02
@@ -91,6 +93,8 @@ class FiberTest < MiniTest::Test
     f1.stop
 
     snooze
+    assert_equal [f1, f2, f3], Fiber.current.children
+    Fiber.current.reap_dead_children
     assert_equal [], Fiber.current.children
   end
 
@@ -563,10 +567,10 @@ class FiberTest < MiniTest::Test
     end
 
     snooze
-    child.monitor
+    child.monitor(Fiber.current)
     spin { child << :foo }
 
-    msg = receive
+    msg = Fiber.current.monitor_mailbox.shift
     assert_equal [child, :foo], msg
   end
 
@@ -578,14 +582,14 @@ class FiberTest < MiniTest::Test
     end
 
     snooze
-    child.monitor
+    child.monitor(Fiber.current)
     spin { child << :foo }
     snooze
 
-    child.unmonitor
+    child.unmonitor(Fiber.current)
 
-    Fiber.current << :bar
-    msg = receive
+    Fiber.current.monitor_mailbox << :bar
+    msg = Fiber.current.monitor_mailbox.shift
     assert_equal :bar, msg
   end
 
@@ -598,6 +602,7 @@ class FiberTest < MiniTest::Test
 
     f.stop
     snooze
+    Fiber.current.reap_dead_children
     assert_equal [], Fiber.current.children
   end
 

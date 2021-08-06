@@ -7,6 +7,10 @@ require_relative '../core/exceptions'
 module Polyphony
   # Fiber control API
   module FiberControl
+    def monitor_mailbox
+      @monitor_mailbox ||= Polyphony::Queue.new
+    end
+
     def interrupt(value = nil)
       return if @running == false
 
@@ -43,8 +47,6 @@ module Polyphony
     end
 
     def terminate(graceful = false)
-      # trace "* Fiber#terminate #{inspect}"
-      # trace caller
       return if @running == false
 
       @graceful_shutdown = graceful
@@ -126,42 +128,41 @@ module Polyphony
     def await(*fibers)
       return [] if fibers.empty?
 
-      Fiber.current.message_on_child_termination = true
+      current_fiber = self.current
+      mailbox = current_fiber.monitor_mailbox
       results = {}
       fibers.each do |f|
         results[f] = nil
         if f.dead?
           # fiber already terminated, so queue message
-          Fiber.current.send [f, f.result]
+          mailbox << [f, f.result]
         else
-          f.monitor
+          f.monitor(current_fiber)
         end
       end
       exception = nil
       while !fibers.empty?
-        (fiber, result) = receive
+        (fiber, result) = mailbox.shift
         next unless fibers.include?(fiber)
-
         fibers.delete(fiber)
+        current_fiber.remove_child(fiber) if fiber.parent == current_fiber
         if result.is_a?(Exception)
-          trace await_got_child_exception: result
-          trace child_fibers_to_be_terminated: fibers
           exception ||= result
           fibers.each { |f| f.terminate }
         else
           results[fiber] = result
         end
       end
-      results.values
-    ensure
-      Fiber.current.message_on_child_termination = false
       raise exception if exception
+      results.values
     end
     alias_method :join, :await
 
     def select(*fibers)
       return nil if fibers.empty?
   
+      current_fiber = self.current
+      mailbox = current_fiber.monitor_mailbox
       fibers.each do |f|
         if f.dead?
           result = f.result
@@ -169,21 +170,18 @@ module Polyphony
         end
       end
 
-      Fiber.current.message_on_child_termination = true
-      fibers.each { |f| f.monitor }
+      fibers.each { |f| f.monitor(current_fiber) }
       while true
-        (fiber, result) = receive
+        (fiber, result) = mailbox.shift
         next unless fibers.include?(fiber)
   
-        fibers.each { |f| f.unmonitor }
+        fibers.each { |f| f.unmonitor(current_fiber) }
         if result.is_a?(Exception)
           raise result
         else
           return [fiber, result]
         end
       end
-    ensure
-      Fiber.current.message_on_child_termination = false
     end
 
     # Creates and schedules with priority an out-of-band fiber that runs the
@@ -223,14 +221,6 @@ module Polyphony
       f
     end
 
-    def child_done(child_fiber, result)
-      @children.delete(child_fiber)
-
-      if result.is_a?(Exception) && !@message_on_child_termination
-        schedule_with_priority(result)
-      end
-    end
-
     def terminate_all_children(graceful = false)
       return unless @children
 
@@ -244,16 +234,25 @@ module Polyphony
     def await_all_children
       return unless @children && !@children.empty?
 
-      Fiber.await(*@children.keys)
+      Fiber.await(*@children.keys.reject { |c| c.dead? })
     end
 
     def shutdown_all_children(graceful = false)
       return unless @children
 
       @children.keys.each do |c|
+        next if c.dead?
+
         c.terminate(graceful)
         c.await
       end
+      reap_dead_children
+    end
+
+    def reap_dead_children
+      return unless @children
+
+      @children.reject! { |f| f.dead? }
     end
 
     def detach
@@ -327,7 +326,7 @@ module Polyphony
       Thread.backend.trace(:fiber_terminate, self, result)
       @result = result
 
-      inform_dependants(result, uncaught_exception)
+      inform_monitors(result, uncaught_exception)
       @running = false
     ensure
       # Prevent fiber from being resumed after terminating
@@ -345,24 +344,28 @@ module Polyphony
       [e, true]
     end
 
-    def inform_dependants(result, uncaught_exception)
+    def inform_monitors(result, uncaught_exception)
       if @monitors
         msg = [self, result]
-        @monitors.each { |f| f << msg }
+        @monitors.each_key { |f| f.monitor_mailbox << msg }
       end
 
-      @parent&.child_done(self, result)
+      if uncaught_exception && @parent
+        parent_is_monitor = @monitors&.has_key?(@parent)
+        @parent.schedule_with_priority(result) unless parent_is_monitor
+      end
     end
 
-    attr_accessor :message_on_child_termination 
-
-    def monitor
-      @monitors ||= []
-      @monitors << Fiber.current
+    def monitor(fiber)
+      (@monitors ||= {})[fiber] = true
     end
 
-    def unmonitor
-      @monitors.delete(Fiber.current) if @monitors
+    def unmonitor(fiber)
+      (@monitors ||= []).delete(fiber)
+    end
+
+    def monitors
+      @monitors&.keys || []
     end
 
     def dead?
