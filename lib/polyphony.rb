@@ -121,3 +121,9 @@ end
 
 Polyphony.install_terminating_signal_handlers
 Polyphony.install_at_exit_handler
+
+if (debug_socket_path = ENV['POLYPHONY_DEBUG_SOCKET_PATH'])
+  puts "Starting debug server on #{debug_socket_path}"
+  require 'polyphony/debugger/server'
+  Polyphony::DebugServer.start(debug_socket_path)
+end

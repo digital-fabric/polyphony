@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'polyphony'
+
+UNIX_SOCKET_PATH = '/tmp/pdbg.sock'
+
+cmd = ARGV.join(' ')
+injected_lib_path = File.expand_path('../lib/polyphony/debugger/server_inject.rb', __dir__)
+p cmd
+pid = fork { exec("env POLYPHONY_DEBUG_SOCKET_PATH=#{UNIX_SOCKET_PATH} ruby #{cmd}") }
+puts "Started debugged process (#{pid})"
+
+sleep 3
+socket = UNIXSocket.new(UNIX_SOCKET_PATH)
+socket.puts 'pdbg'
+response = socket.gets
+if response.chomp == 'pdbg'
+  puts 'Connected to process'
+end
+loop do
+  status = socket.gets
+  puts status
+
+  STDOUT << "> "
+  cmd = STDIN.gets
+  socket.puts cmd
+end
