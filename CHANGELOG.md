@@ -1,3 +1,9 @@
+## 0.67 2021-08-06
+
+- Improve fiber monitoring
+- Add fiber parking (a parked fiber is prevented from running). This is in
+  preparation for the upcoming work on an integrated debugger.
+
 ## 0.66 2021-08-01
 
 - Fix all splicing APIs on non-linux OSes (#63)
