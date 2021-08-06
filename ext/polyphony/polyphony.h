@@ -44,6 +44,7 @@ extern ID ID_invoke;
 extern ID ID_ivar_backend;
 extern ID ID_ivar_blocking_mode;
 extern ID ID_ivar_io;
+extern ID ID_ivar_parked;
 extern ID ID_ivar_runnable;
 extern ID ID_ivar_running;
 extern ID ID_ivar_thread;
@@ -115,9 +116,11 @@ VALUE Backend_run_idle_tasks(VALUE self);
 VALUE Backend_switch_fiber(VALUE self);
 void Backend_schedule_fiber(VALUE thread, VALUE self, VALUE fiber, VALUE value, int prioritize);
 void Backend_unschedule_fiber(VALUE self, VALUE fiber);
+void Backend_park_fiber(VALUE self, VALUE fiber);
+void Backend_unpark_fiber(VALUE self, VALUE fiber);
 
-VALUE Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
-VALUE Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);
+void Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
+void Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_switch_fiber(VALUE thread);
 
 VALUE Polyphony_snooze(VALUE self);

@@ -7,6 +7,7 @@
 
 inline void backend_base_initialize(struct Backend_base *base) {
   runqueue_initialize(&base->runqueue);
+  runqueue_initialize(&base->parked_runqueue);
   base->currently_polling = 0;
   base->op_count = 0;
   base->switch_count = 0;
@@ -20,12 +21,14 @@ inline void backend_base_initialize(struct Backend_base *base) {
 
 inline void backend_base_finalize(struct Backend_base *base) {
   runqueue_finalize(&base->runqueue);
+  runqueue_finalize(&base->parked_runqueue);
 }
 
 inline void backend_base_mark(struct Backend_base *base) {
   if (base->idle_proc != Qnil) rb_gc_mark(base->idle_proc);
   if (base->trace_proc != Qnil) rb_gc_mark(base->trace_proc);
   runqueue_mark(&base->runqueue);
+  runqueue_mark(&base->parked_runqueue);
 }
 
 const unsigned int ANTI_STARVE_SWITCH_COUNT_THRESHOLD = 64;
@@ -91,7 +94,10 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
 
   COND_TRACE(base, 4, SYM_fiber_schedule, fiber, value, prioritize ? Qtrue : Qfalse);
 
-  (prioritize ? runqueue_unshift : runqueue_push)(&base->runqueue, fiber, value, already_runnable);
+  runqueue_t *runqueue = rb_ivar_get(fiber, ID_ivar_parked) == Qtrue ? 
+    &base->parked_runqueue : &base->runqueue;
+
+  (prioritize ? runqueue_unshift : runqueue_push)(runqueue, fiber, value, already_runnable);
   if (!already_runnable) {
     rb_ivar_set(fiber, ID_ivar_runnable, Qtrue);
     if (rb_thread_current() != thread) {
@@ -105,6 +111,13 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
   }
 }
 
+inline void backend_base_park_fiber(struct Backend_base *base, VALUE fiber) {
+  runqueue_migrate(&base->runqueue, &base->parked_runqueue, fiber);
+}
+
+inline void backend_base_unpark_fiber(struct Backend_base *base, VALUE fiber) {
+  runqueue_migrate(&base->parked_runqueue, &base->runqueue, fiber);
+}
 
 inline void backend_trace(struct Backend_base *base, int argc, VALUE *argv) {
   if (base->trace_proc == Qnil) return;

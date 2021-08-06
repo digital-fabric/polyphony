@@ -1219,3 +1219,22 @@ class GracefulTerminationTest < MiniTest::Test
     assert_equal [1, 2], buffer
   end
 end
+
+class DebugTest < MiniTest::Test
+  def test_parking
+    buf = []
+    f = spin do
+      3.times { |i| snooze; buf << i }
+    end
+    assert_nil f.__parked__?
+    f.__park__
+    assert_equal true, f.__parked__?
+    10.times { snooze }
+    assert_equal [], buf
+    
+    f.__unpark__
+    assert_nil f.__parked__?
+    10.times { snooze }
+    assert_equal [0, 1, 2], buf
+  end
+end

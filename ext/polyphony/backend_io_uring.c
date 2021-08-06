@@ -229,7 +229,7 @@ inline void Backend_unschedule_fiber(VALUE self, VALUE fiber) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  runqueue_delete(&backend->base.runqueue, fiber);  
+  runqueue_delete(&backend->base.runqueue, fiber);
 }
 
 inline VALUE Backend_switch_fiber(VALUE self) {
@@ -1472,6 +1472,20 @@ VALUE Backend_trace_proc_set(VALUE self, VALUE block) {
 
   backend->base.trace_proc = block;
   return self;
+}
+
+void Backend_park_fiber(VALUE self, VALUE fiber) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  backend_base_park_fiber(&backend->base, fiber);
+}
+
+void Backend_unpark_fiber(VALUE self, VALUE fiber) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  backend_base_unpark_fiber(&backend->base, fiber);
 }
 
 void Init_Backend() {

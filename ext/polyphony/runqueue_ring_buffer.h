@@ -29,4 +29,6 @@ void runqueue_ring_buffer_push(runqueue_ring_buffer *buffer, VALUE fiber, VALUE 
 void runqueue_ring_buffer_delete(runqueue_ring_buffer *buffer, VALUE fiber);
 int runqueue_ring_buffer_index_of(runqueue_ring_buffer *buffer, VALUE fiber);
 
+void runqueue_ring_buffer_migrate(runqueue_ring_buffer *src, runqueue_ring_buffer *dest, VALUE fiber);
+
 #endif /* RUNQUEUE_RING_BUFFER_H */

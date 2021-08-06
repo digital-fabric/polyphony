@@ -12,6 +12,7 @@ ID ID_invoke;
 ID ID_new;
 ID ID_ivar_blocking_mode;
 ID ID_ivar_io;
+ID ID_ivar_parked;
 ID ID_ivar_runnable;
 ID ID_ivar_running;
 ID ID_ivar_thread;
@@ -160,6 +161,7 @@ void Init_Polyphony() {
   ID_invoke             = rb_intern("invoke");
   ID_ivar_blocking_mode = rb_intern("@blocking_mode");
   ID_ivar_io            = rb_intern("@io");
+  ID_ivar_parked        = rb_intern("@parked");
   ID_ivar_runnable      = rb_intern("@runnable");
   ID_ivar_running       = rb_intern("@running");
   ID_ivar_thread        = rb_intern("@thread");

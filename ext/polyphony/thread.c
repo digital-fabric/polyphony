@@ -22,14 +22,12 @@ VALUE Thread_fiber_unschedule(VALUE self, VALUE fiber) {
   return self;
 }
 
-VALUE Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
+inline void Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
   schedule_fiber(self, fiber, value, 0);
-  return self;
 }
 
-VALUE Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) {
+inline void Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) {
   schedule_fiber(self, fiber, value, 1);
-  return self;
 }
 
 VALUE Thread_switch_fiber(VALUE self) {
@@ -61,10 +59,6 @@ VALUE Thread_class_backend(VALUE _self) {
 void Init_Thread() {
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "schedule_and_wakeup", Thread_fiber_schedule_and_wakeup, 2);
-
-  rb_define_method(rb_cThread, "schedule_fiber", Thread_schedule_fiber, 2);
-  rb_define_method(rb_cThread, "schedule_fiber_with_priority",
-    Thread_schedule_fiber_with_priority, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
   rb_define_method(rb_cThread, "fiber_unschedule", Thread_fiber_unschedule, 1);
 

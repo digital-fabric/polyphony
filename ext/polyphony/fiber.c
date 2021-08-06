@@ -114,6 +114,22 @@ VALUE Fiber_receive_all_pending(VALUE self) {
   return (mailbox == Qnil) ? rb_ary_new() : Queue_shift_all(mailbox);
 }
 
+VALUE Fiber_park(VALUE self) {
+  rb_ivar_set(self, ID_ivar_parked, Qtrue);
+  Backend_park_fiber(BACKEND(), self);
+  return self;
+}
+
+VALUE Fiber_unpark(VALUE self) {
+  rb_ivar_set(self, ID_ivar_parked, Qnil);
+  Backend_unpark_fiber(BACKEND(), self);
+  return self;
+}
+
+VALUE Fiber_parked_p(VALUE self) {
+  return rb_ivar_get(self, ID_ivar_parked);
+}
+
 void Init_Fiber() {
   VALUE cFiber = rb_const_get(rb_cObject, rb_intern("Fiber"));
   rb_define_method(cFiber, "safe_transfer", Fiber_safe_transfer, -1);
@@ -127,6 +143,10 @@ void Init_Fiber() {
   rb_define_method(cFiber, "receive", Fiber_receive, 0);
   rb_define_method(cFiber, "receive_all_pending", Fiber_receive_all_pending, 0);
   rb_define_method(cFiber, "mailbox", Fiber_mailbox, 0);
+
+  rb_define_method(cFiber, "__park__", Fiber_park, 0);
+  rb_define_method(cFiber, "__unpark__", Fiber_unpark, 0);
+  rb_define_method(cFiber, "__parked__?", Fiber_parked_p, 0);
 
   SYM_dead = ID2SYM(rb_intern("dead"));
   SYM_running = ID2SYM(rb_intern("running"));

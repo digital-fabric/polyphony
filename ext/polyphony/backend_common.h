@@ -17,6 +17,7 @@ struct backend_stats {
 
 struct Backend_base {
   runqueue_t runqueue;
+  runqueue_t parked_runqueue;
   unsigned int currently_polling;
   unsigned int op_count;
   unsigned int switch_count;
@@ -33,6 +34,8 @@ void backend_base_finalize(struct Backend_base *base);
 void backend_base_mark(struct Backend_base *base);
 VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base);
 void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_base *base, VALUE fiber, VALUE value, int prioritize);
+void backend_base_park_fiber(struct Backend_base *base, VALUE fiber);
+void backend_base_unpark_fiber(struct Backend_base *base, VALUE fiber);
 void backend_trace(struct Backend_base *base, int argc, VALUE *argv);
 struct backend_stats backend_base_stats(struct Backend_base *base);
 
@@ -104,7 +107,6 @@ VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags);
 VALUE Backend_stats(VALUE self);
 void backend_run_idle_tasks(struct Backend_base *base);
 void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking);
-
 void backend_setup_stats_symbols();
 
 #endif /* BACKEND_COMMON_H */

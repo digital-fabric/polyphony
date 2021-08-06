@@ -40,6 +40,10 @@ inline int runqueue_index_of(runqueue_t *runqueue, VALUE fiber) {
   return runqueue_ring_buffer_index_of(&runqueue->entries, fiber);
 }
 
+inline void runqueue_migrate(runqueue_t *src, runqueue_t *dest, VALUE fiber) {
+  runqueue_ring_buffer_migrate(&src->entries, &dest->entries, fiber);
+}
+
 inline void runqueue_clear(runqueue_t *runqueue) {
   runqueue_ring_buffer_clear(&runqueue->entries);
 }

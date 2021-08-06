@@ -1553,6 +1553,20 @@ VALUE Backend_trace_proc_set(VALUE self, VALUE block) {
   return self;
 }
 
+void Backend_park_fiber(VALUE self, VALUE fiber) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  backend_base_park_fiber(&backend->base, fiber);
+}
+
+void Backend_unpark_fiber(VALUE self, VALUE fiber) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  backend_base_unpark_fiber(&backend->base, fiber);
+}
+
 void Init_Backend() {
   ev_set_allocator(xrealloc);
 
