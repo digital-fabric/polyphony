@@ -2,7 +2,11 @@
 
 require 'bundler/setup'
 require 'polyphony'
+require 'polyphony/extensions/debug'
 
+Exception.__disable_sanitized_backtrace__ = true
+
+puts '----- start await example ------'
 sleeper = spin do
   puts 'going to sleep'
   sleep 1
@@ -17,4 +21,8 @@ waiter = spin do
   puts 'done waiting'
 end
 
+trace :before_await
+
+sleep 2
 waiter.await
+trace :after_await

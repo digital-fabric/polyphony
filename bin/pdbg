@@ -25,5 +25,6 @@ loop do
 
   STDOUT << "> "
   cmd = STDIN.gets
+  puts '-' * 40
   socket.puts cmd
 end

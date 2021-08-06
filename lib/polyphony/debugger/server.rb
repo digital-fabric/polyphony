@@ -73,15 +73,19 @@ module Polyphony
 
     def step
       tp = nil
+      fiber = nil
       while true
-        sender, event = receive
-        if sender == @fiber && event[:kind] == :line && event[:path] !~ /#{POLYPHONY_LIB_DIR}/
+        event = receive
+        fiber = event[:fiber]
+        if fiber == @fiber && event[:kind] == :line && event[:path] !~ /#{POLYPHONY_LIB_DIR}/
           interact_with_client(event)
-          sender << :ok
+          fiber << :ok
+          fiber.__unpark__
           return
         end
           
-        sender << :ok
+        fiber << :ok
+        fiber.__unpark__
       end
     rescue => e
       puts "Uncaught error: #{e.inspect}"
@@ -106,11 +110,17 @@ module Polyphony
         wait_for_client
       end
 
-      @controller << [Fiber.current, {
+      puts "- #{tp.event} #{tp.path}:#{tp.lineno}"
+
+      fiber = Fiber.current
+      fiber.__park__
+
+      @controller << {
+        fiber: fiber,
         kind: tp.event,
         path: tp.path,
         lineno: tp.lineno
-      }]
+      }
       receive
     ensure
       @in_handle_tp = nil
