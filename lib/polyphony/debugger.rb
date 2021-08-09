@@ -18,7 +18,7 @@ module Polyphony
     trace.enable
 
     at_exit do
-      puts "program terminated"
+      Kernel.trace "program terminated"
       trace.disable
       server.stop
     end
@@ -28,58 +28,111 @@ module Polyphony
     def initialize(server)
       @server = server
       @server.wait_for_client
+      @state = { fibers: {} }
       @control_fiber = Fiber.new { |f| control_loop(f) }
-      puts "control_fiber: #{@control_fiber.inspect}"
       @control_fiber.transfer Fiber.current
-      trace :control_fiber_ready
     end
 
     def control_loop(source_fiber)
       @peer = source_fiber
-      cmd = { kind: :initial }
+      cmd = { cmd: :initial }
       loop do
-        cmd = send(:"cmd_#{cmd[:kind]}", cmd)
+        cmd = send(:"cmd_#{cmd[:cmd]}", cmd)
       end
     end
 
     POLYPHONY_LIB_DIR = File.expand_path('..', __dir__)
 
-    def next_trace_event
-      @peer.transfer
+    def get_next_trace_event
+      @peer.transfer.tap { |e| update_state(e) }
     end
 
-    def next_command(event)
-      while true
-        cmd = parse_command(@server.interact_with_client(event))
-        return cmd if cmd
-
-        event = { instruction: "Type 'help' for list of commands" }
-      end
+    def update_state(event)
+      trace update_state: event
+      @state[:fiber] = event[:fiber]
+      @state[:path] = event[:path]
+      @state[:lineno] = event[:lineno]
+      update_fiber_state(event)
     end
 
-    def parse_command(cmd)
-      case cmd
-      when /^(step|s)$/
-        { kind: :step }
-      when /^(help|h)$/
-        { kind: :help }
-      else
-        nil
+    def update_fiber_state(event)
+      fiber_state = @state[:fibers][event[:fiber]] ||= { stack: [] }
+      case event[:kind]
+      when :call, :c_call, :b_call
+        fiber_state[:stack] << event
+      when :return, :c_return, :b_return
+        fiber_state[:stack].pop
       end
+      fiber_state[:binding] = event[:binding]
+      fiber_state[:path] = event[:path]
+      fiber_state[:lineno] = event[:lineno]
+    end
+
+    def state_presentation(state)
+      {
+        fiber:  fiber_id(state[:fiber]),
+        path:   state[:path],
+        lineno: state[:lineno]
+      }
+    end
+
+    def fiber_id(fiber)
+      {
+        object_id: fiber.object_id,
+        tag: fiber.tag
+      }
+    end
+
+    def fiber_representation(fiber)
+      {
+        object_id: fiber.object_id,
+        tag: fiber.tag,
+        parent: fiber.parent && fiber_id(fiber.parent),
+        children: fiber.children.map { |c| fiber_id(c) }
+      }
+    end
+
+    def get_next_command(info)
+      @server.get_command(info)
     end
 
     def cmd_initial(cmd)
-      next_command(nil)
+      get_next_command(nil)
+    end
+
+    def info_listing(state)
+      {
+        kind: :listing,
+        fiber: fiber_id(state[:fiber]),
+        path: state[:path],
+        lineno: state[:lineno]
+      }
+    end
+
+    def info_state(state)
+      info_listing(state).merge(
+        kind: :state,
+        fibers: info_fiber_states(state[:fibers])
+      )
+    end
+
+    def info_fiber_states(fiber_states)
+      fiber_states.inject({}) do |h, (f, s)|
+        h[fiber_id(f)] = {
+          stack: s[:stack].map { |e| { path: e[:path], lineno: e[:lineno] } }
+        }
+        h
+      end
     end
     
     def cmd_step(cmd)
       tp = nil
       fiber = nil
       while true
-        event = next_trace_event
+        event = get_next_trace_event
         @peer = event[:fiber]
         if event[:kind] == :line && event[:path] !~ /#{POLYPHONY_LIB_DIR}/
-          return next_command(event)
+          return get_next_command(info_listing(@state))
         end
       end
     rescue => e
@@ -88,19 +141,37 @@ module Polyphony
     end
 
     def cmd_help(cmd)
-      next_command(show: :help)
+      get_next_command(kind: :help)
+    end
+
+    def cmd_list(cmd)
+      get_next_command(info_listing(@state))
+    end
+
+    def cmd_state(cmd)
+      get_next_command(info_state(@state))
     end
 
     def handle_tp(trace, tp)
       return if Thread.current == @server.thread
       return if Fiber.current == @control_fiber
 
+      kind = tp.event
       event = {
         fiber: Fiber.current,
-        kind: tp.event,
+        kind: kind,
         path: tp.path,
-        lineno: tp.lineno
+        lineno: tp.lineno,
+        binding: tp.binding
       }
+      case kind
+      when :call, :c_call, :b_call
+        event[:method_id] = tp.method_id
+        event[:parameters] = tp.parameters
+      when :return, :c_return, :b_return
+        event[:method_id] = tp.method_id
+        event[:return_value] = tp.return_value
+      end
       @control_fiber.transfer(event)
     end
   end
@@ -134,16 +205,15 @@ module Polyphony
     end
 
     def wait_for_client
-      trace "wait_for_client"
       sleep 0.1 until @client
-      trace "  got client!"
       msg = @client.gets
       @client.puts msg
     end
 
-    def interact_with_client(event)
-      @client&.orig_write "#{event.inspect}\n"
-      @client&.orig_gets&.chomp
+    def get_command(info)
+      @client&.orig_write "#{info.inspect}\n"
+      cmd = @client&.orig_gets&.chomp
+      eval(cmd)
     rescue SystemCallError
       nil
     rescue => e

@@ -8,23 +8,105 @@ UNIX_SOCKET_PATH = '/tmp/pdbg.sock'
 
 cmd = ARGV.join(' ')
 injected_lib_path = File.expand_path('../lib/polyphony/debugger/server_inject.rb', __dir__)
-p cmd
 pid = fork { exec("env POLYPHONY_DEBUG_SOCKET_PATH=#{UNIX_SOCKET_PATH} ruby #{cmd}") }
 puts "Started debugged process (#{pid})"
 
-sleep 3
-socket = UNIXSocket.new(UNIX_SOCKET_PATH)
+socket = nil
+while !socket
+  socket = UNIXSocket.new(UNIX_SOCKET_PATH) rescue nil
+end
+
+def parse_command(cmd)
+  case cmd
+  when /^(step|s)$/
+    { cmd: :step }
+  when /^(state|st)$/
+    { cmd: :state }
+  when /^(help|h)$/
+    { cmd: :help }
+  when /^(list|l)$/
+    { cmd: :list }
+  else
+    nil
+  end
+end
+
+def display_info(info)
+  info = eval(info)
+  case (info && info[:kind])
+  when :listing
+    print_listing(info)
+  when :state
+    print_state(info)
+  else
+    p info
+  end
+rescue SyntaxError
+  puts "Failed to eval:"
+  p info
+end
+
+FILE_LINES_CACHE = {}
+
+def self.get_snippet(path, lineno)
+  lines = FILE_LINES_CACHE[path] ||= IO.read(path).lines
+  start_idx = lineno - 5
+  stop_idx = lineno + 3
+  stop_idx = lines.size - 1 if stop_idx >= lines.size
+  start_idx = 0 if start_idx < 0
+  (start_idx..stop_idx).map { |idx| [idx + 1, lines[idx]]}
+end
+
+def print_snippet(info, snippet, cur_line)
+  places = FILE_LINES_CACHE[info[:path]].size.to_s.size
+  snippet.each do |(lineno, line)|
+    is_cur = lineno == cur_line
+    formatted = format("%s% #{places}d %s", is_cur ? '=> ' : '   ', lineno, line)
+    puts formatted
+  end
+end
+
+def print_listing(info)
+  snippet = get_snippet(info[:path], info[:lineno])
+  puts "Fiber: #{info[:fiber]} Location: #{info[:path]}:#{info[:lineno]}"
+  puts
+  print_snippet(info, snippet, info[:lineno])
+  puts
+end
+
+def print_help
+  puts
+  puts "Here's some help..."
+  puts
+end
+
+def print_state(info)
+  p info
+end
+
+def get_user_cmd
+  while true
+    STDOUT << "(pdbg) "
+    cmd = parse_command(STDIN.gets)
+    next unless cmd
+    
+    if cmd[:cmd] == :help
+      print_help
+    else
+      return cmd if cmd
+    end
+  end
+end
+
 socket.puts 'pdbg'
 response = socket.gets
 if response.chomp == 'pdbg'
   puts 'Connected to process'
 end
 loop do
-  status = socket.gets
-  puts status
+  info = socket.gets.chomp
+  display_info(info)
 
-  STDOUT << "> "
-  cmd = STDIN.gets
-  puts '-' * 40
-  socket.puts cmd
+  cmd = get_user_cmd
+  socket.puts cmd.inspect
 end
