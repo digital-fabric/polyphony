@@ -47,7 +47,6 @@ class MiniTest::Test
   def setup
     # trace "* setup #{self.name}"
     Fiber.current.setup_main_fiber
-    Fiber.current.instance_variable_set(:@auto_watcher, nil)
     Thread.current.backend.finalize
     Thread.current.backend = Polyphony::Backend.new
     sleep 0.001
