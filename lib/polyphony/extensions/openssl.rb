@@ -114,6 +114,67 @@ end
 
 # OpenSSL socket helper methods (to make it compatible with Socket API) and overrides
 class ::OpenSSL::SSL::SSLServer
+  attr_reader :ctx
+
+  def accept
+    # when @ctx.servername_cb is set, we use a worker thread to run the
+    # ssl.accept call. We need to do this because:
+    # - We cannot switch fibers inside of the servername_cb proc (see
+    #   https://github.com/ruby/openssl/issues/415)
+    # - We don't want to stop the world while we're busy provisioning an ACME
+    #   certificate
+    if @use_accept_worker.nil?
+      if (@use_accept_worker = use_accept_worker_thread?)
+        start_accept_worker_thread
+      end
+    end
+
+    sock, = @svr.accept
+    begin
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, @ctx)
+      ssl.sync_close = true
+      if @use_accept_worker
+        @accept_worker_fiber << [ssl, Fiber.current]
+        receive
+      else
+        ssl.accept
+      end
+      ssl
+    rescue Exception => ex
+      if ssl
+        ssl.close
+      else
+        sock.close
+      end
+      raise ex
+    end
+  end
+
+  def start_accept_worker_thread
+    fiber = Fiber.current
+    @accept_worker_thread = Thread.new do
+      fiber << Fiber.current
+      loop do
+        socket, fiber = receive
+        socket.accept
+        fiber << socket
+      rescue => e
+        fiber.schedule(e) if fiber
+      end
+    end
+    @accept_worker_fiber = receive
+  end
+
+  def use_accept_worker_thread?
+    !!@ctx.servername_cb
+  end
+
+  alias_method :orig_close, :close
+  def close
+    @accept_worker_thread&.kill
+    orig_close
+  end
+
   def accept_loop(ignore_errors = true)
     loop do
       yield accept
