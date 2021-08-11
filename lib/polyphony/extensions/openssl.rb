@@ -116,6 +116,7 @@ end
 class ::OpenSSL::SSL::SSLServer
   attr_reader :ctx
 
+  alias_method :orig_accept, :accept
   def accept
     # when @ctx.servername_cb is set, we use a worker thread to run the
     # ssl.accept call. We need to do this because:
