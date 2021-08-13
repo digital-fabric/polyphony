@@ -103,79 +103,74 @@ class SuperviseTest < MiniTest::Test
     assert_equal supervisor, f3.parent
   end
 
-#   def test_supervise_with_restart
-#     watcher = spin { receive }
-#     parent = spin { supervise(restart: true, watcher: watcher) }
-#     snooze
+  def test_supervise_with_restart_always
+    buffer = []
+    f1 = spin(:f1) do
+      buffer << receive
+    rescue => e
+      buffer << e
+      e
+    end
+    supervisor = spin(:supervisor) { supervise(f1, restart: :always) }
 
-#     buffer = []
-#     f1 = parent.spin do
-#       buffer << 'f1'
-#     end
+    snooze
+    f1 << 'foo'
+    f1.await
+    snooze
+    assert_equal ['foo'], buffer
 
-#     f1.await
-#     assert_equal ['f1'], buffer
-#     watcher.await
-#     assert_equal ['f1', 'f1'], buffer
-#   end
+    10.times { snooze }
 
-#   def test_supervise_with_restart_on_error
-#     parent = spin { supervise(restart: true) }
-#     snooze
+    assert_equal 1, supervisor.children.size
+    f2 = supervisor.children.first
+    assert f1 != f2
+    assert_equal :f1, f2.tag
+    assert_equal supervisor, f2.parent
 
-#     buffer = []
-#     f1 = parent.spin do
-#       buffer << 'f1'
-#       buffer << receive
-#     end
+    e = RuntimeError.new('bar')
+    f2.raise(e)
+    f2.await rescue nil
+    3.times { snooze }
+    assert_equal ['foo', e], buffer
 
-#     snooze
-#     assert_equal ['f1'], buffer
+    assert_equal 1, supervisor.children.size
+    f3 = supervisor.children.first
+    assert f2 != f3
+    assert f1 != f3
+    assert_equal :f1, f3.tag
+    assert_equal supervisor, f3.parent
+  end
 
-#     f1.raise 'foo'
+  def test_supervise_with_restart_on_error
+    buffer = []
+    f1 = spin(:f1) do
+      buffer << receive
+    rescue => e
+      buffer << e
+      e
+    end
+    supervisor = spin(:supervisor) { supervise(f1, restart: :on_error) }
 
-#     3.times { snooze }
+    snooze
+    e = RuntimeError.new('bar')
+    f1.raise(e)
+    f1.await rescue nil
+    snooze
+    assert_equal [e], buffer
 
-#     assert_equal ['f1', 'f1'], buffer
-#     assert_equal :dead, f1.state
+    10.times { snooze }
 
-#     # f1 should have been restarted by supervisor
-#     f1 = parent.children.first
-#     assert_kind_of Fiber, f1
+    assert_equal 1, supervisor.children.size
+    f2 = supervisor.children.first
+    assert f1 != f2
+    assert_equal :f1, f2.tag
+    assert_equal supervisor, f2.parent
 
-#     f1 << 'foo'
-#     f1.await
+    f2 << 'foo'
+    f2.await rescue nil
+    3.times { snooze }
+    assert_equal [e, 'foo'], buffer
 
-#     assert_equal ['f1', 'f1', 'foo'], buffer
-#   end
-
-#   def test_supervisor_termination
-#     f = nil
-#     p = spin do
-#       f = spin { sleep 1 }
-#       supervise
-#     end
-#     sleep 0.01
-
-#     p.terminate
-#     p.await
-
-#     assert :dead, f.state
-#     assert :dead, p.state
-#   end
-
-#   def test_supervisor_termination_with_restart
-#     f = nil
-#     p = spin do
-#       f = spin { sleep 1 }
-#       supervise(restart: true)
-#     end
-#     sleep 0.01
-
-#     p.terminate
-#     p.await
-
-#     assert :dead, f.state
-#     assert :dead, p.state
-#   end
+    assert_equal 0, supervisor.children.size
+  end
 end

@@ -81,8 +81,7 @@ module Polyphony
   # Fiber supervision
   module FiberSupervision
     def supervise(*fibers, **opts, &block)
-      block ||= opts[:on_done] ||
-                (opts[:on_error] && supervise_on_error_proc(opts[:on_error]))
+      block ||= supervise_opts_to_block(opts)
       raise "No block given" unless block
 
       fibers.each do |f|
@@ -98,8 +97,19 @@ module Polyphony
       end
     end
 
-    def supervise_on_error_proc(on_error)
-      ->(f, r) { on_error.(f, r) if r.is_a?(Exception) }
+    def supervise_opts_to_block(opts)
+      block = opts[:on_done] || opts[:on_error]
+      return nil unless block || opts[:restart] 
+
+      error_only = !!opts[:on_error]
+      restart_always = opts[:restart] == :always
+      restart_on_error = opts[:restart] == :on_error
+
+      ->(f, r) do
+        is_error = r.is_a?(Exception)
+        block.(f, r) if block && (!error_only || is_error)
+        f.restart if restart_always || (restart_on_error && is_error)
+      end
     end
   end
 
