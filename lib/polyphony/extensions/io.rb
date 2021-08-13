@@ -160,8 +160,6 @@ class ::IO
       return @read_buffer.slice!(0, idx + sep_size) if idx
 
       result = readpartial(8192, @read_buffer, -1)
-        
-      #Polyphony.backend_read(self, @read_buffer, 8192, false, -1)
       return nil unless result
     end
   rescue EOFError
