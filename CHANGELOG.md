@@ -1,3 +1,10 @@
+## 0.68 2021-08-13
+
+- Fix missing default value in socket classes' `#readpartial`
+- Fix linking of operations in `Backend#chain` (io_uring version)
+- Rename `Fiber#attach` to `Fiber#attach_to`
+- Expose original `SSLServer#accept`
+
 ## 0.67 2021-08-06
 
 - Improve fiber monitoring
