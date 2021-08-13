@@ -27,6 +27,7 @@ module Polyphony
       end
 
       fiber = parent.spin(@tag, @caller, &@block)
+      @monitors&.each_key { |f| fiber.monitor(f) }
       fiber.schedule(value) unless value.nil?
       fiber
     end
