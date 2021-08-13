@@ -79,47 +79,26 @@ module Polyphony
 
   # Fiber supervision
   module FiberSupervision
-    def supervise(opts = {})
-      @counter = 0
-      @on_child_done = proc do |fiber, result|
-        self << fiber unless result.is_a?(Exception)
+    def supervise(*fibers, **opts, &block)
+      block ||= opts[:on_done] ||
+                (opts[:on_error] && supervise_on_error_proc(opts[:on_error]))
+      raise "No block given" unless block
+
+      fibers.each do |f|
+        f.attach_to(self) unless f.parent == self
+        f.monitor(self)
       end
+
+      mailbox = monitor_mailbox
+
       while true
-        supervise_perform(opts)
-      end
-  rescue Polyphony::MoveOn
-      # generated in #supervise_perform to stop supervisor
-    ensure
-      @on_child_done = nil
-    end
-
-    def supervise_perform(opts)
-      fiber = receive
-      if fiber && opts[:restart]
-        restart_fiber(fiber, opts)
-      elsif Fiber.current.children.empty?
-        Fiber.current.stop
-      end
-    rescue Polyphony::Restart
-      restart_all_children
-    rescue Exception => e
-      Kernel.raise e if e.source_fiber.nil? || e.source_fiber == self
-
-      if opts[:restart]
-        restart_fiber(e.source_fiber, opts)
-      elsif Fiber.current.children.empty?
-        Fiber.current.stop
+        (fiber, result) = mailbox.shift
+        block&.call(fiber, result)
       end
     end
 
-    def restart_fiber(fiber, opts)
-      opts[:watcher]&.send [:restart, fiber]
-      case opts[:restart]
-      when true
-        fiber.restart
-      when :one_for_all
-        @children.keys.each(&:restart)
-      end
+    def supervise_on_error_proc(on_error)
+      ->(f, r) { opts[:on_error].(f, r) if r.is_a?(Exception) }
     end
   end
 
@@ -261,10 +240,17 @@ module Polyphony
       @parent.add_child(self)
     end
 
-    def attach_to(parent)
+    def attach_to(fiber)
       @parent.remove_child(self)
-      @parent = parent
-      @parent.add_child(self)
+      @parent = fiber
+      fiber.add_child(self)
+    end
+
+    def attach_and_monitor(fiber)
+      @parent.remove_child(self)
+      @parent = fiber
+      fiber.add_child(self)
+      monitor(fiber)
     end
   end
 

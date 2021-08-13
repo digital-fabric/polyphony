@@ -2,29 +2,29 @@
 
 require_relative 'helper'
 
-# class SuperviseTest < MiniTest::Test
-#   def test_supervise
-#     p = spin { supervise }
-#     snooze
-#     f1 = p.spin { receive }
-#     f2 = p.spin { receive }
+class SuperviseTest < MiniTest::Test
+  def test_supervise_with_no_arguments
+    assert_raises(RuntimeError) do
+      supervise
+    end
+  end
+  
+  def test_supervise_with_block
+    buffer = []
+    f1 = spin(:f1) { receive }
+    f2 = spin(:f2) { receive }
+    supervisor = spin(:supervisor) { supervise(f1, f2) { |*args| buffer << args } }
 
-#     snooze
-#     assert_equal p.state, :waiting
-#     f1 << 'foo'
-#     f1.await
-#     snooze
+    snooze
+    f1 << 'foo'
+    f1.await
+    10.times { snooze }
+    assert_equal [[f1, 'foo']], buffer
 
-#     assert_equal :waiting, p.state
-#     assert_equal :waiting, f2.state
-
-#     f2 << 'bar'
-#     f2.await
-#     assert_equal :runnable, p.state
-    
-#     3.times { snooze }
-#     assert_equal :dead, p.state
-#   end
+    f2 << 'bar'
+    f2.await
+    assert_equal [[f1, 'foo'], [f2, 'bar']], buffer
+  end
 
 #   def test_supervise_with_restart
 #     watcher = spin { receive }
@@ -101,4 +101,4 @@ require_relative 'helper'
 #     assert :dead, f.state
 #     assert :dead, p.state
 #   end
-# end
+end
