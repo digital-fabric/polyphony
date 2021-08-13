@@ -99,7 +99,7 @@ module Polyphony
     end
 
     def supervise_on_error_proc(on_error)
-      ->(f, r) { opts[:on_error].(f, r) if r.is_a?(Exception) }
+      ->(f, r) { on_error.(f, r) if r.is_a?(Exception) }
     end
   end
 
