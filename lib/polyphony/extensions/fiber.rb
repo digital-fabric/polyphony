@@ -261,7 +261,7 @@ module Polyphony
       @parent.add_child(self)
     end
 
-    def attach(parent)
+    def attach_to(parent)
       @parent.remove_child(self)
       @parent = parent
       @parent.add_child(self)
