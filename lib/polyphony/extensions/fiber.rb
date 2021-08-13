@@ -316,6 +316,7 @@ module Polyphony
       inform_monitors(result, uncaught_exception)
       @running = false
     ensure
+      @parent&.remove_child(self)
       # Prevent fiber from being resumed after terminating
       @thread.fiber_unschedule(self)
       Thread.current.switch_fiber
