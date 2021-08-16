@@ -1,3 +1,7 @@
+## 0.69 2021-08-16
+
+- Rename `#__polyphony_read_method__` to `#__parser_read_method__`
+
 ## 0.68 2021-08-13
 
 - Fix missing default value in socket classes' `#readpartial`
