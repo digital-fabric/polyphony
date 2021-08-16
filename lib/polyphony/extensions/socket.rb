@@ -6,7 +6,7 @@ require_relative './io'
 require_relative '../core/thread_pool'
 
 class BasicSocket
-  def __polyphony_read_method__
+  def __parser_read_method__
     :backend_recv
   end
 end
