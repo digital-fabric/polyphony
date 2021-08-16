@@ -76,7 +76,7 @@ end
 
 # IO instance method patches
 class ::IO
-  def __polyphony_read_method__
+  def __parser_read_method__
     :backend_read
   end
 
