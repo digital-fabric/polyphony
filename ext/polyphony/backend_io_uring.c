@@ -1248,7 +1248,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
     }
     
     io_uring_sqe_set_data(last_sqe, ctx);
-    unsigned int flags = (i == argc - 1) ? IOSQE_ASYNC : IOSQE_ASYNC & IOSQE_IO_LINK;
+    unsigned int flags = (i == (argc - 1)) ? IOSQE_ASYNC : IOSQE_ASYNC | IOSQE_IO_LINK;
     io_uring_sqe_set_flags(last_sqe, flags);
     sqe_count++;
   }

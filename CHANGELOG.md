@@ -1,9 +1,9 @@
-## 0.68 2021-08-16
+## 0.68 2021-08-13
 
-- Rename `#__polyphony_read_method__` to `#__parser_read_method__`
-- Expose original `SSLServer#accept` as `SSLServer#orig_accept`
-- Use worker thread for accepting SSL connections when `servername_cb` is set.
-  This is part of a workaround for https://github.com/ruby/openssl/issues/415
+- Fix missing default value in socket classes' `#readpartial`
+- Fix linking of operations in `Backend#chain` (io_uring version)
+- Rename `Fiber#attach` to `Fiber#attach_to`
+- Expose original `SSLServer#accept`
 
 ## 0.67 2021-08-06
 

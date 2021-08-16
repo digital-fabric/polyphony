@@ -156,11 +156,11 @@ class ::OpenSSL::SSL::SSLServer
     @accept_worker_thread = Thread.new do
       fiber << Fiber.current
       loop do
-        socket, fiber = receive
+        socket, peer = receive
         socket.accept
-        fiber << socket
+        peer << socket
       rescue => e
-        fiber.schedule(e) if fiber
+        peer.schedule(e) if fiber
       end
     end
     @accept_worker_fiber = receive

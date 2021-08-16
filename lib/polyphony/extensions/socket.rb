@@ -206,7 +206,7 @@ class ::TCPSocket
   #   Polyphony.backend_send(self, mesg, 0)
   # end
 
-  def readpartial(maxlen, str = +'', buffer_pos = 0, raise_on_eof)
+  def readpartial(maxlen, str = +'', buffer_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_recv(self, str, maxlen, buffer_pos)
     raise EOFError if !result && raise_on_eof
     result
@@ -299,7 +299,7 @@ class ::UNIXSocket
     Polyphony.backend_send(self, mesg, 0)
   end
 
-  def readpartial(maxlen, str = +'', buffer_pos = 0, raise_on_eof)
+  def readpartial(maxlen, str = +'', buffer_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_recv(self, str, maxlen, buffer_pos)
     raise EOFError if !result && raise_on_eof
     result

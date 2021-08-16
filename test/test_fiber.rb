@@ -791,7 +791,7 @@ class FiberTest < MiniTest::Test
     ], buf
   end
 
-  def test_attach
+  def test_attach_to
     buf = []
     child = nil
     parent = spin(:parent) do
@@ -809,7 +809,7 @@ class FiberTest < MiniTest::Test
 
     snooze
     assert_equal parent, child.parent
-    child.attach(new_parent)
+    child.attach_to(new_parent)
     assert_equal new_parent, child.parent
     parent.await
     
