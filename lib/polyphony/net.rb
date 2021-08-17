@@ -67,7 +67,6 @@ module Polyphony
       def setup_alpn(context, protocols)
         context.alpn_protocols = protocols
         context.alpn_select_cb = lambda do |peer_protocols|
-          p alpn_select_cb: peer_protocols
           (protocols & peer_protocols).first
         end
       end
