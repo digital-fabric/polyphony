@@ -235,13 +235,6 @@ module Polyphony
         c.terminate(graceful)
         c.await
       end
-      reap_dead_children
-    end
-
-    def reap_dead_children
-      return unless @children
-
-      @children.reject! { |f| f.dead? }
     end
 
     def detach
