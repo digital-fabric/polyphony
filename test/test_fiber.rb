@@ -67,8 +67,6 @@ class FiberTest < MiniTest::Test
     }
     Fiber.await(f2, f3)
     assert_equal [:foo, :bar, :baz], buffer
-    assert_equal [f1], Fiber.current.children
-    Fiber.current.reap_dead_children
     assert_equal [], Fiber.current.children
   end
 
@@ -93,8 +91,6 @@ class FiberTest < MiniTest::Test
     f1.stop
 
     snooze
-    assert_equal [f1, f2, f3], Fiber.current.children
-    Fiber.current.reap_dead_children
     assert_equal [], Fiber.current.children
   end
 
@@ -602,7 +598,6 @@ class FiberTest < MiniTest::Test
 
     f.stop
     snooze
-    Fiber.current.reap_dead_children
     assert_equal [], Fiber.current.children
   end
 

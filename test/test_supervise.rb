@@ -3,12 +3,6 @@
 require_relative 'helper'
 
 class SuperviseTest < MiniTest::Test
-  def test_supervise_with_no_arguments
-    assert_raises(RuntimeError) do
-      supervise
-    end
-  end
-  
   def test_supervise_with_block
     buffer = []
     f1 = spin(:f1) { receive }
@@ -172,5 +166,22 @@ class SuperviseTest < MiniTest::Test
     assert_equal [e, 'foo'], buffer
 
     assert_equal 0, supervisor.children.size
+  end
+
+  def test_supervise_terminate
+    buffer = []
+    f1 = spin(:f1) do
+      buffer << receive
+    rescue => e
+      buffer << e
+      e
+    end
+    supervisor = spin(:supervisor) { supervise(f1, restart: :on_error) }
+
+    sleep 0.05
+    supervisor.terminate
+    supervisor.await
+
+    assert_equal [], buffer
   end
 end
