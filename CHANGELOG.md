@@ -1,3 +1,8 @@
+## 0.70 2021-08-19
+
+- New implementation for `#supervise`
+- Reset backend state and runqueue on fork
+
 ## 0.69 2021-08-16
 
 - Rename `#__polyphony_read_method__` to `#__parser_read_method__`

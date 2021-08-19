@@ -26,30 +26,7 @@
 
 - Add support for `close` to io_uring backend
 
-- Graceful shutdown again:
-  - What happens to children when doing a graceful shutdown?
-  - What are the implications of passing graceful shutdown flag to children?
-  - What about errors while doing a graceful shutdown?
-  - What about graceful restarts?
-  - Some interesting discussions:
-    - https://trio.discourse.group/search?q=graceful%20shutdown
-    - https://github.com/python-trio/trio/issues/147
-    - https://github.com/python-trio/trio/issues/143
-    - https://trio.discourse.group/t/graceful-shutdown/93/2
-    - https://250bpm.com/blog:146/
-    - https://www.rodrigoaraujo.me/posts/golang-pattern-graceful-shutdown-of-concurrent-events/
-    - https://github.com/tj/go-gracefully
-  - `Fiber#finalize_children` should pass graceful shutdown flag to children
-  - A good use case is an HTTP server that on graceful shutdown:
-    - stops listening
-    - waits for all ongoing requests to finish, optionally with a timeout
-
 ## Roadmap for Polyphony 1.0
-
-- check integration with rb-inotify
-
-- Improve `#supervise`. It does not work as advertised, and seems to exhibit an
-  inconsistent behaviour (see supervisor example).
 
 - Add test that mimics the original design for Monocrono:
   - 256 fibers each waiting for a message
