@@ -31,6 +31,24 @@ inline void backend_base_mark(struct Backend_base *base) {
   runqueue_mark(&base->parked_runqueue);
 }
 
+void backend_base_reset(struct Backend_base *base) {
+  runqueue_finalize(&base->runqueue);
+  runqueue_finalize(&base->parked_runqueue);
+  
+  runqueue_initialize(&base->runqueue);
+  runqueue_initialize(&base->parked_runqueue);
+
+  base->currently_polling = 0;
+  base->op_count = 0;
+  base->switch_count = 0;
+  base->poll_count = 0;
+  base->pending_count = 0;
+  base->idle_gc_period = 0;
+  base->idle_gc_last_time = 0;
+  base->idle_proc = Qnil;
+  base->trace_proc = Qnil;  
+}
+
 const unsigned int ANTI_STARVE_SWITCH_COUNT_THRESHOLD = 64;
 
 inline void conditional_nonblocking_poll(VALUE backend, struct Backend_base *base, VALUE current, VALUE next) {

@@ -32,6 +32,7 @@ struct Backend_base {
 void backend_base_initialize(struct Backend_base *base);
 void backend_base_finalize(struct Backend_base *base);
 void backend_base_mark(struct Backend_base *base);
+void backend_base_reset(struct Backend_base *base);
 VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base);
 void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_base *base, VALUE fiber, VALUE value, int prioritize);
 void backend_base_park_fiber(struct Backend_base *base, VALUE fiber);

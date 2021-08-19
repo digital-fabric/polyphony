@@ -157,6 +157,8 @@ VALUE Backend_post_fork(VALUE self) {
   ev_loop_destroy(backend->ev_loop);
   backend->ev_loop = EV_DEFAULT;
 
+  backend_base_reset(&backend->base);
+
   return self;
 }
 

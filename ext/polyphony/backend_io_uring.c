@@ -106,9 +106,7 @@ VALUE Backend_post_fork(VALUE self) {
   io_uring_queue_exit(&backend->ring);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
   context_store_free(&backend->store);
-  backend->base.currently_polling = 0;
-  backend->base.pending_count = 0;
-  backend->pending_sqes = 0;
+  backend_base_reset(&backend->base);
 
   return self;
 }
