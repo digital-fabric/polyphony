@@ -122,8 +122,8 @@ module Polyphony
       Fiber.current.receive_all_pending
     end
 
-    def supervise(*args, &block)
-      Fiber.current.supervise(*args, &block)
+    def supervise(*args, **opts, &block)
+      Fiber.current.supervise(*args, **opts, &block)
     end
 
     def sleep(duration = nil)
