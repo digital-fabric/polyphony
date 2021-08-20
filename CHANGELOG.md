@@ -1,3 +1,7 @@
+## 0.71 2021-08-20
+
+- Fix compilation on Ruby 3.0
+
 ## 0.70 2021-08-19
 
 - New implementation for `#supervise`
