@@ -1526,10 +1526,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "write", Backend_write_m, -1);
 
-  #ifdef POLYPHONY_UNSET_NONBLOCK
-  ID_ivar_is_nonblocking = rb_intern("@is_nonblocking");
-  #endif
-
   SYM_io_uring = ID2SYM(rb_intern("io_uring"));
   SYM_send = ID2SYM(rb_intern("send"));
   SYM_splice = ID2SYM(rb_intern("splice"));

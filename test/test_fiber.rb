@@ -949,6 +949,27 @@ class MailboxTest < MiniTest::Test
     assert_equal ['foo'] * 100, messages
   end
 
+  def test_receive_exception
+    e = RuntimeError.new 'foo'
+    spin { Fiber.current.parent << e }
+    r = receive
+    assert_equal e, r
+
+    spin { Fiber.current.parent.schedule e }
+    assert_raises(RuntimeError) { receive }
+  end
+
+  def test_receive_cross_thread_exception
+    e = RuntimeError.new 'foo'
+    f = Fiber.current
+    Thread.new { f << e }
+    r = receive
+    assert_equal e, r
+
+    Thread.new { f.schedule e }
+    assert_raises(RuntimeError) { receive }
+  end
+
   def test_receive_all_pending
     assert_equal [], receive_all_pending
 
