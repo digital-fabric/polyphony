@@ -220,4 +220,24 @@ class ThreadTest < MiniTest::Test
     3.times { snooze }
     assert_equal 2, counter
   end
+
+  def test_cross_thread_receive
+    buf = []
+    f = Fiber.current
+    t = Thread.new do
+      f << true
+      while (msg = receive)
+        buf << msg
+      end
+    end
+
+    receive # wait for thread to be ready
+    t << 1
+    t << 2
+    t << 3
+    t << nil
+
+    t.join
+    assert_equal [1, 2, 3], buf
+  end
 end
