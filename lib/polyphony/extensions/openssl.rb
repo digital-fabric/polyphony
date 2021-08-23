@@ -130,24 +130,32 @@ class ::OpenSSL::SSL::SSLServer
       end
     end
 
+    # STDOUT.puts 'SSLServer#accept'
     sock, = @svr.accept
+    # STDOUT.puts "- raw sock: #{sock.inspect}"
     begin
       ssl = OpenSSL::SSL::SSLSocket.new(sock, @ctx)
+      # STDOUT.puts "- ssl sock: #{ssl.inspect}"
       ssl.sync_close = true
       if @use_accept_worker
+        # STDOUT.puts "- send to accept worker"
         @accept_worker_fiber << [ssl, Fiber.current]
-        receive
+        # STDOUT.puts "- wait for accept worker"
+        r = receive
+        # STDOUT.puts "- got reply from accept worker: #{r.inspect}"
+        r.invoke if r.is_a?(Exception)
       else
         ssl.accept
       end
       ssl
-    rescue Exception => ex
+    rescue Exception => e
+      # STDOUT.puts "- accept exception: #{e.inspect}"
       if ssl
         ssl.close
       else
         sock.close
       end
-      raise ex
+      raise e
     end
   end
 
@@ -156,11 +164,18 @@ class ::OpenSSL::SSL::SSLServer
     @accept_worker_thread = Thread.new do
       fiber << Fiber.current
       loop do
+        # STDOUT.puts "- accept_worker wait for work"
         socket, peer = receive
+        # STDOUT.puts "- accept_worker got socket from peer #{peer.inspect}"
         socket.accept
+        # STDOUT.puts "- accept_worker accept returned"
         peer << socket
-      rescue => e
-        peer.schedule(e) if fiber
+        # STDOUT.puts "- accept_worker sent socket back to peer"
+      rescue Polyphony::BaseException
+        raise
+      rescue Exception => e
+        # STDOUT.puts "- accept_worker error: #{e}"
+        peer << e if peer
       end
     end
     @accept_worker_fiber = receive
