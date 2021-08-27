@@ -17,6 +17,9 @@ require 'polyphony'
   # The controller fiber will block until the worker is done (but notice that
   # the worker runs an infinite loop.)
   @worker.await
+rescue => e
+  puts "Uncaught exception in worker: #{e}. Restarting..."
+  @worker.restart
 end
 
 def calc(op, x, y)

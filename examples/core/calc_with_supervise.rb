@@ -16,7 +16,7 @@ require 'polyphony'
   end
   # The controller fiber will block until the worker is done (but notice that
   # the worker runs an infinite loop.)
-  @worker.await
+  @worker.supervise(@worker, restart: :always)
 end
 
 def calc(op, x, y)
