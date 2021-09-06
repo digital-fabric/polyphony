@@ -771,7 +771,8 @@ class FiberTest < MiniTest::Test
 
     snooze
     assert_equal parent, child.parent
-    child.detach 
+    result = child.detach 
+    assert_equal result, child
     assert_equal Fiber.current, child.parent
     parent.await
     
@@ -819,6 +820,29 @@ class FiberTest < MiniTest::Test
       :bye,
       :bye_new_parent
     ], buf
+  end
+
+  def test_attach_all_children_to
+    children = []
+    f1 = spin do
+      3.times {
+        children << spin { receive }
+      }
+      Fiber.current.parent << :ok
+      receive
+    end
+
+    result = receive
+    assert_equal :ok, result
+    assert_equal 3, children.size
+    
+    f2 = spin { supervise }
+    f1.attach_all_children_to(f2)
+
+    snooze
+
+    assert_equal [], f1.children
+    assert_equal children, f2.children
   end
 end
 

@@ -237,10 +237,15 @@ module Polyphony
       end
     end
 
+    def attach_all_children_to(fiber)
+      @children&.keys.each { |c| c.attach_to(fiber) }
+    end
+
     def detach
       @parent.remove_child(self)
       @parent = @thread.main_fiber
       @parent.add_child(self)
+      self
     end
 
     def attach_to(fiber)
@@ -328,7 +333,7 @@ module Polyphony
     # the children are shut down, it is returned along with the uncaught_exception
     # flag set. Otherwise, it returns the given arguments.
     def finalize_children(result, uncaught_exception)
-      shutdown_all_children
+      shutdown_all_children(graceful_shutdown?)
       [result, uncaught_exception]
     rescue Exception => e
       [e, true]
