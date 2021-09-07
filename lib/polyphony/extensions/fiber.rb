@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'fiber'
-
 require_relative '../core/exceptions'
 
 module Polyphony
@@ -149,7 +148,7 @@ module Polyphony
 
     def select(*fibers)
       return nil if fibers.empty?
-  
+
       current_fiber = self.current
       mailbox = current_fiber.monitor_mailbox
       fibers.each do |f|
@@ -163,7 +162,7 @@ module Polyphony
       while true
         (fiber, result) = mailbox.shift
         next unless fibers.include?(fiber)
-  
+
         fibers.each { |f| f.unmonitor(current_fiber) }
         if result.is_a?(Exception)
           raise result

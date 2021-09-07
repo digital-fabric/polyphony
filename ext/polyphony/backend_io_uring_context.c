@@ -64,7 +64,7 @@ inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
   // printf("release %p %d (%s, ref_count: %d)\n", ctx, ctx->id, op_type_to_str(ctx->type), ctx->ref_count);
 
   assert(ctx->ref_count);
-  
+
   ctx->ref_count--;
   if (ctx->ref_count) return 0;
 

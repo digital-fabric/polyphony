@@ -32,7 +32,7 @@ class ::Socket
   def read(maxlen = nil, buf = nil, buf_pos = 0)
     return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
     return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
-    
+
     buf = +''
     len = buf.bytesize
     while true
@@ -168,7 +168,7 @@ class ::TCPSocket
   def read(maxlen = nil, buf = nil, buf_pos = 0)
     return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
     return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
-    
+
     buf = +''
     len = buf.bytesize
     while true
@@ -260,7 +260,7 @@ class ::UNIXSocket
   def read(maxlen = nil, buf = nil, buf_pos = 0)
     return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
     return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
-    
+
     buf = +''
     len = buf.bytesize
     while true

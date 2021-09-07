@@ -103,7 +103,7 @@ class ::IO
   alias_method :orig_getc, :getc
   def getc
     return @read_buffer.slice!(0) if @read_buffer && !@read_buffer.empty?
-    
+
     @read_buffer ||= +''
     Polyphony.backend_read(self, @read_buffer, 8192, false, -1)
     return @read_buffer.slice!(0) if !@read_buffer.empty?
@@ -116,7 +116,7 @@ class ::IO
     if buf
       return Polyphony.backend_read(self, buf, len, true, buf_pos)
     end
-    
+
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
     return nil unless result

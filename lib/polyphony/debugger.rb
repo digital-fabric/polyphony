@@ -9,11 +9,11 @@ module Polyphony
     :return,
     :b_call,
     :b_return
-  ]    
+  ]
 
   def self.start_debug_server(socket_path)
     server = DebugServer.new(socket_path)
-    controller = DebugController.new(server)      
+    controller = DebugController.new(server)
     trace = TracePoint.new(*TP_EVENTS) { |tp| controller.handle_tp(trace, tp) }
     trace.enable
 
@@ -124,7 +124,7 @@ module Polyphony
         h
       end
     end
-    
+
     def cmd_step(cmd)
       tp = nil
       fiber = nil

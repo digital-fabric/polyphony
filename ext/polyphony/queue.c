@@ -162,12 +162,12 @@ VALUE Queue_cap(VALUE self, VALUE cap) {
   Queue_t *queue;
   GetQueue(self, queue);
   queue->capacity = new_capacity;
-  
+
   if (queue->capacity)
     queue_schedule_blocked_fibers_to_capacity(queue);
   else
     queue_schedule_all_blocked_fibers(&queue->push_queue);
-  
+
   return self;
 }
 

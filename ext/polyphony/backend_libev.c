@@ -118,7 +118,7 @@ inline struct ev_loop *libev_new_loop() {
 
 static VALUE Backend_initialize(VALUE self) {
   Backend_t *backend;
-  
+
   GetBackend(self, backend);
 
   backend_base_initialize(&backend->base);
@@ -188,7 +188,7 @@ inline void Backend_unschedule_fiber(VALUE self, VALUE fiber) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  runqueue_delete(&backend->base.runqueue, fiber);  
+  runqueue_delete(&backend->base.runqueue, fiber);
 }
 
 inline VALUE Backend_switch_fiber(VALUE self) {
@@ -971,7 +971,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   io_verify_blocking_mode(dest_fptr, dest, Qfalse);
 
   watcher.fiber = Qnil;
-  
+
   while (1) {
     backend->base.op_count++;
     ssize_t n = read(src_fptr->fd, buf, len);
@@ -1047,7 +1047,7 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   watcher.fiber = Qnil;
 
-  while (1) { 
+  while (1) {
     char *ptr = buf;
     while (1) {
       backend->base.op_count++;
@@ -1159,8 +1159,8 @@ noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
     if (next_time == 0.) next_time = current_time() + interval_d;
     double sleep_duration = next_time - now;
     if (sleep_duration < 0) sleep_duration = 0;
-    
-    VALUE switchpoint_result = Qnil;    
+
+    VALUE switchpoint_result = Qnil;
     ev_timer_init(&watcher.timer, Backend_timer_callback, sleep_duration, 0.);
     ev_timer_start(backend->ev_loop, &watcher.timer);
     backend->base.op_count++;
@@ -1219,7 +1219,7 @@ VALUE Backend_timeout(int argc,VALUE *argv, VALUE self) {
 
   struct Backend_timeout_ctx timeout_ctx = {backend, &watcher};
   result = rb_ensure(Backend_timeout_ensure_safe, Qnil, Backend_timeout_ensure, (VALUE)&timeout_ctx);
-  
+
   if (result == timeout) {
     if (exception == Qnil) return move_on_value;
     RAISE_EXCEPTION(backend_timeout_exception(exception));
@@ -1337,7 +1337,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
     else
       rb_raise(rb_eRuntimeError, "Invalid op specified or bad op arity");
   }
-  
+
   RB_GC_GUARD(result);
   return result;
 }
@@ -1386,14 +1386,14 @@ inline int splice_chunks_write(Backend_t *backend, int fd, VALUE str, struct lib
   return 0;
 }
 
-static inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_fd, int maxlen, 
+static inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_fd, int maxlen,
   struct libev_rw_io *watcher, VALUE *result, int *chunk_len) {
 #ifdef POLYPHONY_LINUX
   backend->base.op_count++;
   while (1) {
     *chunk_len = splice(src_fd, 0, dest_fd, 0, maxlen, 0);
     if (*chunk_len >= 0) return 0;
-    
+
     int err = errno;
     if (err != EWOULDBLOCK && err != EAGAIN) return err;
 
@@ -1489,7 +1489,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     err = splice_chunks_splice(backend, src_fptr->fd, pipefd[1], maxlen, &watcher, &result, &chunk_len);
     if (err == -1) goto error; else if (err) goto syscallerror;
     if (chunk_len == 0) break;
-    
+
     total += chunk_len;
     chunk_len_value = INT2NUM(chunk_len);
 

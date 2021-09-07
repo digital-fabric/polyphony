@@ -34,7 +34,7 @@ inline void backend_base_mark(struct Backend_base *base) {
 void backend_base_reset(struct Backend_base *base) {
   runqueue_finalize(&base->runqueue);
   runqueue_finalize(&base->parked_runqueue);
-  
+
   runqueue_initialize(&base->runqueue);
   runqueue_initialize(&base->parked_runqueue);
 
@@ -46,13 +46,13 @@ void backend_base_reset(struct Backend_base *base) {
   base->idle_gc_period = 0;
   base->idle_gc_last_time = 0;
   base->idle_proc = Qnil;
-  base->trace_proc = Qnil;  
+  base->trace_proc = Qnil;
 }
 
 const unsigned int ANTI_STARVE_SWITCH_COUNT_THRESHOLD = 64;
 
 inline void conditional_nonblocking_poll(VALUE backend, struct Backend_base *base, VALUE current, VALUE next) {
-  if ((base->switch_count % ANTI_STARVE_SWITCH_COUNT_THRESHOLD) == 0 || next == current) 
+  if ((base->switch_count % ANTI_STARVE_SWITCH_COUNT_THRESHOLD) == 0 || next == current)
     Backend_poll(backend, Qnil);
 }
 
@@ -62,7 +62,7 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   unsigned int pending_ops_count = base->pending_count;
   unsigned int backend_was_polled = 0;
   unsigned int idle_tasks_run_count = 0;
-  
+
   base->switch_count++;
   COND_TRACE(base, 2, SYM_fiber_switchpoint, current_fiber);
 
@@ -82,7 +82,7 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
 
       break;
     }
-    
+
     if (!idle_tasks_run_count) {
       idle_tasks_run_count++;
       backend_run_idle_tasks(base);
@@ -112,7 +112,7 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
 
   COND_TRACE(base, 4, SYM_fiber_schedule, fiber, value, prioritize ? Qtrue : Qfalse);
 
-  runqueue_t *runqueue = rb_ivar_get(fiber, ID_ivar_parked) == Qtrue ? 
+  runqueue_t *runqueue = rb_ivar_get(fiber, ID_ivar_parked) == Qtrue ?
     &base->parked_runqueue : &base->runqueue;
 
   (prioritize ? runqueue_unshift : runqueue_push)(runqueue, fiber, value, already_runnable);
@@ -300,7 +300,7 @@ inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
   int flags = fcntl(fptr->fd, F_GETFL);
   if (flags == -1) return;
   int is_nonblocking = flags & O_NONBLOCK;
-  
+
   if (blocking == Qtrue) {
     if (!is_nonblocking) return;
     flags &= ~O_NONBLOCK;
@@ -375,7 +375,7 @@ void backend_setup_stats_symbols() {
   SYM_switch_count        = ID2SYM(rb_intern("switch_count"));
   SYM_poll_count          = ID2SYM(rb_intern("poll_count"));
   SYM_pending_ops         = ID2SYM(rb_intern("pending_ops"));
-  
+
   rb_global_variable(&SYM_runqueue_size);
   rb_global_variable(&SYM_runqueue_length);
   rb_global_variable(&SYM_runqueue_max_length);

@@ -73,7 +73,7 @@ module Polyphony
 
     def spin_scope
       raise unless block_given?
-    
+
       spin do
         result = yield
         Fiber.current.await_all_children

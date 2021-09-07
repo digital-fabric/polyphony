@@ -22,7 +22,7 @@ typedef struct op_context {
   struct op_context *prev;
   struct op_context *next;
   enum op_type      type: 16;
-  unsigned int      ref_count : 16;       
+  unsigned int      ref_count : 16;
   int               id;
   int               result;
   VALUE             fiber;

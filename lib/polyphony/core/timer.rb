@@ -44,7 +44,7 @@ module Polyphony
     ensure
       @timeouts.delete(fiber)
     end
-  
+
     def cancel_after(interval, with_exception: Polyphony::Cancel)
       fiber = Fiber.current
       @timeouts[fiber] = {
@@ -74,7 +74,7 @@ module Polyphony
     def reset
       record = @timeouts[Fiber.current]
       return unless record
-  
+
       record[:target_stamp] = now + record[:interval]
     end
 
