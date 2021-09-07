@@ -135,6 +135,44 @@ class SuperviseTest < MiniTest::Test
     assert_equal supervisor, f3.parent
   end
 
+  def test_supervise_with_restart_true
+    buffer = []
+    f1 = spin(:f1) do
+      buffer << receive
+    rescue => e
+      buffer << e
+      e
+    end
+    supervisor = spin(:supervisor) { supervise(f1, restart: true) }
+
+    snooze
+    f1 << 'foo'
+    f1.await
+    snooze
+    assert_equal ['foo'], buffer
+
+    10.times { snooze }
+
+    assert_equal 1, supervisor.children.size
+    f2 = supervisor.children.first
+    assert f1 != f2
+    assert_equal :f1, f2.tag
+    assert_equal supervisor, f2.parent
+
+    e = RuntimeError.new('bar')
+    f2.raise(e)
+    f2.await rescue nil
+    3.times { snooze }
+    assert_equal ['foo', e], buffer
+
+    assert_equal 1, supervisor.children.size
+    f3 = supervisor.children.first
+    assert f2 != f3
+    assert f1 != f3
+    assert_equal :f1, f3.tag
+    assert_equal supervisor, f3.parent
+  end
+
   def test_supervise_with_restart_on_error
     buffer = []
     f1 = spin(:f1) do
@@ -183,5 +221,39 @@ class SuperviseTest < MiniTest::Test
     supervisor.await
 
     assert_equal [], buffer
+  end
+
+  def test_supervise_without_explicit_fibers
+    buffer = []
+    first = nil
+    supervisor = spin do
+      3.times do |i|
+        f = spin do
+          first = Fiber.current if i == 0
+          receive
+          buffer << i
+        end
+      end
+      Fiber.current.parent << :ok
+      supervise(restart: :always)
+    end
+    msg = receive
+    assert_equal :ok, msg
+    assert_equal 3, supervisor.children.size
+
+    sleep 0.1
+    assert_equal [], buffer
+    
+    old_first = first
+    first << :foo
+    first = nil
+    snooze
+    assert_equal [0], buffer
+
+    snooze
+    assert_equal 3, supervisor.children.size
+    snooze
+    assert first
+    assert first != old_first    
   end
 end

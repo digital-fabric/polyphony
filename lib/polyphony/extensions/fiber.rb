@@ -82,6 +82,7 @@ module Polyphony
     def supervise(*fibers, **opts, &block)
       block ||= supervise_opts_to_block(opts)
 
+      fibers = children if fibers.empty?
       fibers.each do |f|
         f.attach_to(self) unless f.parent == self
         f.monitor(self)
@@ -97,11 +98,12 @@ module Polyphony
 
     def supervise_opts_to_block(opts)
       block = opts[:on_done] || opts[:on_error]
-      return nil unless block || opts[:restart]
+      restart = opts[:restart]
+      return nil unless block || restart
 
       error_only = !!opts[:on_error]
-      restart_always = opts[:restart] == :always
-      restart_on_error = opts[:restart] == :on_error
+      restart_always = (restart == :always) || (restart == true)
+      restart_on_error = restart == :on_error
 
       ->(f, r) do
         is_error = r.is_a?(Exception)
