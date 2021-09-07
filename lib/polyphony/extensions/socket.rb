@@ -232,7 +232,6 @@ class ::TCPServer
   alias_method :orig_accept, :accept
   def accept
     Polyphony.backend_accept(@io, TCPSocket)
-    # @io.accept
   end
 
   def accept_loop(&block)
