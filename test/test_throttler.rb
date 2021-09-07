@@ -34,7 +34,7 @@ class ThrottlerTest < MiniTest::Test
     f = spin { loop { t.process { buffer << 1 } } }
     sleep 0.02
     f.stop
-    assert_in_range 2..3, buffer.size
+    assert_in_range 2..4, buffer.size
   ensure
     t.stop
   end
