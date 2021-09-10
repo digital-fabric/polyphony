@@ -9,9 +9,16 @@ class SocketTest < MiniTest::Test
     super
   end
 
-  def test_tcp
-    port = rand(1234..5678)
+  def start_tcp_server_on_random_port
+    port = rand(1100..60000)
     server = TCPServer.new('127.0.0.1', port)
+    [port, server]
+  rescue Errno::EADDRINUSE
+    retry
+  end
+
+  def test_tcp
+    port, server = start_tcp_server_on_random_port
     server_fiber = spin do
       while (socket = server.accept)
         spin do
@@ -34,8 +41,7 @@ class SocketTest < MiniTest::Test
   end
 
   def test_read
-    port = rand(1234..5678)
-    server = TCPServer.new('127.0.0.1', port)
+    port, server = start_tcp_server_on_random_port
     server_fiber = spin do
       while (socket = server.accept)
         spin do
@@ -74,9 +80,7 @@ class SocketTest < MiniTest::Test
 
   # sending multiple strings at once
   def test_sendv
-    port = rand(1234..5678)
-    server = TCPServer.new('127.0.0.1', port)
-
+    port, server = start_tcp_server_on_random_port
     server_fiber = spin do
       while (socket = server.accept)
         spin do
@@ -100,9 +104,7 @@ class SocketTest < MiniTest::Test
 
 
   def test_feed_loop
-    port = rand(1234..5678)
-    server = TCPServer.new('127.0.0.1', port)
-
+    port, server = start_tcp_server_on_random_port
     server_fiber = spin do
       reader = MessagePack::Unpacker.new
       while (socket = server.accept)
