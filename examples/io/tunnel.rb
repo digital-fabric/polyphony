@@ -21,7 +21,7 @@ def endpoint_loop(idx, peer_idx)
     '0.0.0.0',
     port,
     reuse_addr: true
-  ) 
+  )
   # server = TCPServer.open('0.0.0.0', port)
   log "Listening on port #{port}"
   loop do

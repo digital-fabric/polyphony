@@ -7,7 +7,7 @@ class TraceTest < MiniTest::Test
     events = []
     Thread.backend.trace_proc = proc { |*e| events << e }
     snooze
-    
+
     assert_equal [
       [:fiber_schedule, Fiber.current, nil, false],
       [:fiber_switchpoint, Fiber.current],

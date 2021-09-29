@@ -51,7 +51,7 @@ multiple threads or processes, but this approach has numerous disavantages:
 - Both threads and processes are limited to a few thousand at best on a single
   machine. Trying to spawn a thread per client essentially limits the scaling
   capacity of your system.
-  
+
 Polyphony eschews both threads and processes in favor of fibers as the basic
 unit of concurrency. The idea is that any time a blocking I/O operation occurs,
 the current fiber is paused, and another fiber which has been marked as
@@ -117,7 +117,7 @@ Here's the actual sequence of execution (in pseudo-code)
 sleeper = spin { ... } # The main fiber spins up a new fiber marked as runnable
 suspend # The main fiber suspends, waiting for all other work to finish
   Thread.current.switch_fiber # Polyphony looks for other runnable fibers
-  
+
   # (sleeper fiber)
   puts "Going to sleep..." # The sleeper fiber starts running
   sleep 1 # The sleeper fiber goes to sleep
@@ -280,7 +280,7 @@ def handle_client(client)
 rescue Polyphony::Cancel
   client.puts 'Closing connection due to inactivity.'
 rescue Polyphony::Terminate
-  # We add a handler for the Terminate exception, and give 
+  # We add a handler for the Terminate exception, and give
   client.puts 'Server is shutting down. You have 5 more seconds...'
   move_on_after(5) do
     client_loop(client)

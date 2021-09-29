@@ -27,7 +27,7 @@
 ## 0.66 2021-08-01
 
 - Fix all splicing APIs on non-linux OSes (#63)
-- Add GC marking of buffers when cancelling read/write ops in io_uring backend 
+- Add GC marking of buffers when cancelling read/write ops in io_uring backend
 
 ## 0.65 2021-07-29
 
@@ -91,7 +91,7 @@
 ## 0.55.0 2021-06-17
 
 - Finish io_uring implementation of Backend#chain
-- Reimplement io_uring op_context acquire/release algorithm (using ref count) 
+- Reimplement io_uring op_context acquire/release algorithm (using ref count)
 - Fix #gets on sockets
 - Redesign event anti-starvation mechanism
 
@@ -186,7 +186,7 @@
 
 ## 0.47.0 2020-11-10
 
-- Implement `#spin_scope` used for creating blocking fiber scopes 
+- Implement `#spin_scope` used for creating blocking fiber scopes
 - Reimplement `move_on_after`, `cancel_after`, `Timeout.timeout` using
   `Backend#timeout` (avoids creating canceller fiber for most common use case)
 - Implement `Backend#timeout` API
@@ -281,7 +281,7 @@
 - Reimplement Event using `Agent#wait_event`
 - Improve Queue shift queue performance
 - Introduce `Agent#wait_event` API for waiting on asynchronous events
-- Minimize `fcntl` syscalls in IO operations 
+- Minimize `fcntl` syscalls in IO operations
 
 ## 0.43.7 2020-07-20
 

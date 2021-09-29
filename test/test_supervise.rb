@@ -243,7 +243,7 @@ class SuperviseTest < MiniTest::Test
 
     sleep 0.1
     assert_equal [], buffer
-    
+
     old_first = first
     first << :foo
     first = nil
@@ -254,6 +254,6 @@ class SuperviseTest < MiniTest::Test
     assert_equal 3, supervisor.children.size
     snooze
     assert first
-    assert first != old_first    
+    assert first != old_first
   end
 end

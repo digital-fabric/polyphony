@@ -24,10 +24,10 @@ module Coverage
       @result = {}
       trace = TracePoint.new(:line) do |tp|
         next if tp.path =~ /\(/
-      
+
         absolute = File.expand_path(tp.path)
         next unless LIB_FILES.include?(absolute)# =~ /^#{LIB_DIR}/
-        
+
         @result[absolute] ||= relevant_lines_for_filename(absolute)
         @result[absolute][tp.lineno - 1] = 1
       end

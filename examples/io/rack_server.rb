@@ -14,7 +14,7 @@ module RackAdapter
     def env(req)
       {}
     end
-    
+
     def respond(socket, request, (status_code, headers, body))
       body = body.join
       headers = "Content-Type: text/plain\r\nContent-Length: #{body.bytesize}\r\n"

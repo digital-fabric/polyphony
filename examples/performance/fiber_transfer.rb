@@ -35,7 +35,7 @@ def run(num_fibers)
   end
 
   last.next = first
-  
+
   t0 = Time.now
   puts "start transfer..."
   first.transfer

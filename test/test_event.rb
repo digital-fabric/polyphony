@@ -25,7 +25,7 @@ class EventTest < MiniTest::Test
   def test_that_event_coalesces_signals
     count = 0
     a = Polyphony::Event.new
-   
+
     coproc = spin {
       loop {
         a.await

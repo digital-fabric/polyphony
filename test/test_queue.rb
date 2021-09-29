@@ -70,7 +70,7 @@ class QueueTest < MiniTest::Test
 
   def test_empty?
     assert @queue.empty?
-    
+
     @queue << :foo
     assert !@queue.empty?
 
@@ -82,7 +82,7 @@ class QueueTest < MiniTest::Test
     f1 = spin { @queue.shift }
     f2 = spin { @queue.shift }
     f3 = spin { @queue.shift }
-    
+
     # let fibers run
     snooze
 
@@ -99,7 +99,7 @@ class QueueTest < MiniTest::Test
 
   def test_fiber_removal_from_queue_simple
     f1 = spin { @queue.shift }
-    
+
     # let fibers run
     snooze
 
@@ -114,11 +114,11 @@ class QueueTest < MiniTest::Test
     assert_equal 0, @queue.size
 
     @queue.push 1
-    
+
     assert_equal 1, @queue.size
 
     @queue.push 2
-    
+
     assert_equal 2, @queue.size
 
     @queue.shift
@@ -231,7 +231,7 @@ class CappedQueueTest < MiniTest::Test
     i = 0
     spin_loop do
       i += 1
-      snooze 
+      snooze
     end
 
     5.times { snooze }

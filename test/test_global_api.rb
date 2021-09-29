@@ -280,7 +280,7 @@ class SpinLoopTest < MiniTest::Test
   def test_spin_loop_location
     location = /^#{__FILE__}:#{__LINE__ + 1}/
     f = spin_loop { snooze }
-    
+
     assert_match location, f.location
   end
 
@@ -402,7 +402,7 @@ class ThrottledLoopTest < MiniTest::Test
     f.await
     t1 = Time.now
     assert_in_range 0.075..0.15, t1 - t0 if IS_LINUX
-    assert_equal [1, 2, 3, 4, 5], buffer    
+    assert_equal [1, 2, 3, 4, 5], buffer
   end
 end
 

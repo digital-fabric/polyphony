@@ -137,11 +137,11 @@ class TimerMiscTest < MiniTest::Test
     @timer = Polyphony::Timer.new(resolution: 0.001)
     sleep 0
   end
-  
+
   def teardown
     @timer.stop
   end
-    
+
   def test_timer_after
     buffer = []
     f = @timer.after(0.01) { buffer << 2 }

@@ -9,9 +9,9 @@ next_title: The Design of Polyphony
 ---
 # Extending Polyphony
 
-Polyphony was designed to ease the transition from blocking APIs and 
+Polyphony was designed to ease the transition from blocking APIs and
 callback-based API to non-blocking, fiber-based ones. It is important to
-understand that not all blocking calls can be easily converted into 
+understand that not all blocking calls can be easily converted into
 non-blocking calls. That might be the case with Ruby gems based on C-extensions,
 such as database libraries. In that case, Polyphony's built-in
 [thread pool](#threadpool) might be used for offloading such blocking calls.
@@ -22,7 +22,7 @@ Some of the most common patterns in Ruby APIs is the callback pattern, in which
 the API takes a block as a callback to be called upon completion of a task. One
 such example can be found in the excellent
 [http_parser.rb](https://github.com/tmm1/http_parser.rb/) gem, which is used by
-Polyphony itself to provide HTTP 1 functionality. The `HTTP:Parser` provides 
+Polyphony itself to provide HTTP 1 functionality. The `HTTP:Parser` provides
 multiple hooks, or callbacks, for being notified when an HTTP request is
 complete. The typical callback-based setup is as follows:
 

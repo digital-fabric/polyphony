@@ -180,7 +180,7 @@ class ThreadTest < MiniTest::Test
     assert_equal count, GC.count
     sleep 0.05
     assert_equal count, GC.count
-    
+
     return unless IS_LINUX
 
     # The idle tasks are ran at most once per fiber switch, before the backend
@@ -207,7 +207,7 @@ class ThreadTest < MiniTest::Test
     counter = 0
 
     Thread.current.on_idle { counter += 1 }
-    
+
     3.times { snooze }
     assert_equal 0, counter
 

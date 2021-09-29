@@ -145,7 +145,7 @@ def with_timeout(duration)
     sleep duration
     interruptible_fiber.raise 'timeout'
   end
-  
+
   # do work
   yield
 ensure

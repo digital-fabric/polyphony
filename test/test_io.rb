@@ -107,10 +107,10 @@ class IOTest < MiniTest::Test
       sleep 0.01
       o << 'hi'
     }
-    assert_equal 'hi', i.readpartial(2) 
+    assert_equal 'hi', i.readpartial(2)
     o.close
 
-    assert_raises(EOFError) { i.readpartial(1) }    
+    assert_raises(EOFError) { i.readpartial(1) }
   end
 
   def test_gets
@@ -132,7 +132,7 @@ class IOTest < MiniTest::Test
     f << Fiber.current
     sleep 0.05
     assert_equal [], buf
-    
+
     o << "ulous\n"
     receive
     assert_equal ["fabulous\n"], buf

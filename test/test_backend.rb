@@ -36,7 +36,7 @@ class BackendTest < MiniTest::Test
     f = spin { @backend.read(i, buf, 5, false, 0) }
     @backend.write(o, 'Hello world')
     return_value = f.await
-    
+
     assert_equal 'Hello', buf
     assert_equal return_value, buf
   end
@@ -51,7 +51,7 @@ class BackendTest < MiniTest::Test
     snooze
     o.close
     return_value = f.await
-    
+
     assert_equal 'Hello', buf
     assert_equal return_value, buf
   end
@@ -66,7 +66,7 @@ class BackendTest < MiniTest::Test
     snooze
     o.close
     return_value = f.await
-    
+
     assert_equal 'Hello world', buf
     assert_equal return_value, buf
   end
@@ -77,7 +77,7 @@ class BackendTest < MiniTest::Test
     f = spin { @backend.read(i, buf, 20, false, 0) }
     @backend.write(o, 'blah')
     return_value = f.await
-    
+
     assert_equal 'blah', buf
     assert_equal return_value, buf
 
@@ -85,7 +85,7 @@ class BackendTest < MiniTest::Test
     f = spin { @backend.read(i, buf, 20, false, -1) }
     @backend.write(o, 'klmn')
     return_value = f.await
-    
+
     assert_equal 'abcdefghijklmn', buf
     assert_equal return_value, buf
 
@@ -93,7 +93,7 @@ class BackendTest < MiniTest::Test
     f = spin { @backend.read(i, buf, 20, false, 3) }
     @backend.write(o, 'DEF')
     return_value = f.await
-    
+
     assert_equal 'abcDEF', buf
     assert_equal return_value, buf
   end
@@ -109,12 +109,12 @@ class BackendTest < MiniTest::Test
 
     o << data
     o.close
-    
+
     buf = +''
 
     @backend.read(i, buf, 4096, false, -1)
     assert_equal 4096, buf.bytesize
-    
+
     @backend.read(i, buf, 1, false, -1)
     assert_equal 4097, buf.bytesize
 
@@ -129,7 +129,7 @@ class BackendTest < MiniTest::Test
       @backend.post_fork
       exit(42)
     end
-    
+
     result = @backend.waitpid(pid)
     assert_equal [pid, 42], result
   end
@@ -427,7 +427,7 @@ class BackendTest < MiniTest::Test
     counter = 0
 
     @backend.idle_proc = proc { counter += 1 }
-    
+
     3.times { snooze }
     assert_equal 0, counter
 
@@ -488,7 +488,7 @@ class BackendChainTest < MiniTest::Test
 
     snooze
     client = TCPSocket.new('127.0.0.1', port)
-    
+
     result = Thread.backend.chain(
       [:send, client, 'hello', 0],
       [:send, client, " world\n", 0]
@@ -512,7 +512,7 @@ class BackendChainTest < MiniTest::Test
     while true
       len = o.splice(from, 8192)
       break if len == 0
-      
+
       backend.chain(
         [:write, to, chunk_header(len)],
         [:splice, i, to, len]

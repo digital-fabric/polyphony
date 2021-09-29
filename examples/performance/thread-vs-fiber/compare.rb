@@ -27,7 +27,7 @@ def run_test(name, port, cmd, setting)
   puts "*" * 80
   puts "Run #{name} (#{port}): #{setting}"
   puts "*" * 80
-  
+
   pid = spawn("#{cmd} > /dev/null 2>&1")
   sleep 1
 

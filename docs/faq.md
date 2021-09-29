@@ -99,7 +99,7 @@ In conclusion:
 
 ## If callbacks suck, why not use promises?
 
-Promises have gained a lot of traction during the last few years as an  
+Promises have gained a lot of traction during the last few years as an
 alternative to callbacks, above all in the Javascript community. While promises
 have been at a certain point considered for use in Polyphony, they were not
 found to offer enough of a benefit. Promises still cause split logic, are quite

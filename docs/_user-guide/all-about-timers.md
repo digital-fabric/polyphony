@@ -44,7 +44,7 @@ The `#sleep` forever call can be used for example in the main fiber when we do
 all our work in other fibers, since once the main fiber terminates the program
 exits.
 
-## Doing Work Later 
+## Doing Work Later
 
 While `#sleep` allows you to block execution of the current fiber, sometimes you
 want to perform some work later, while not blocking the current fiber. This is done simply by spinning off another fiber:

@@ -205,7 +205,7 @@ f.raise
 Pops the first message from the fiber's mailbox. If no message is available,
 `#receive` will block until a message is pushed to the mailbox. The received
 message can be any kind of object. This method is complemented by
-`Fiber#<<`/`Fiber#send`. 
+`Fiber#<<`/`Fiber#send`.
 
 ```ruby
 spin { Fiber.current.parent << 'hello from child' }
@@ -328,7 +328,7 @@ Returns the fiber's current state, which can be any of the following:
 Supervises all child fibers, optionally restarting any fiber that terminates.
 
 The given `opts` argument controls the behaviour of the supervision. The
-following options are currently supported: 
+following options are currently supported:
 
 - `:restart`: restart options
   - `nil` - Child fibers are not restarted (default behaviour).

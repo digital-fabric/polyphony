@@ -27,7 +27,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'simplecov',            '0.17.1'
   s.add_development_dependency  'rubocop',              '0.85.1'
   s.add_development_dependency  'pry',                  '0.13.1'
-  
+
   s.add_development_dependency  'msgpack',              '1.4.2'
   s.add_development_dependency  'httparty',             '0.17.1'
   s.add_development_dependency  'localhost',            '~>1.1.4'

@@ -45,7 +45,7 @@ def start_worker(id)
     sleep duration
     raise 'foo' if rand > 0.7
     break if rand > 0.6
-  end  
+  end
 end
 
 supervise(start_worker(1), start_worker(2))

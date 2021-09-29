@@ -73,7 +73,7 @@ class KernelTest < MiniTest::Test
     data = `>&2 echo "error"`
     $stderr.rewind
     $stderr = prev_stderr
-    
+
     assert_equal '', data
     assert_equal "error\n", err_io.read
   ensure

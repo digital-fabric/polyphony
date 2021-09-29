@@ -8,7 +8,7 @@ def slice
   while true
     idx = str.index("\n")
     break unless idx
-    
+
     lines << str.slice!(0, idx + 1)
   end
   raise unless lines.size == 4

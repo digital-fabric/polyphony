@@ -107,7 +107,7 @@
 
       Hitting the breakpoint will show the current location in the source code
       (with few lines before and after), and present a prompt for commands.
-    
+
     - commands:
       - `step` / `up` / `skip` / `continue` etc. - step into, step out, step over, run
       - `switch` - switch fiber

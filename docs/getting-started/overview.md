@@ -114,7 +114,7 @@ single CPU core.
 
 Nevertheless, Polyphony fully supports multithreading, with each thread having
 its own fiber run queue and its own libev event loop. Polyphony even enables
-cross-thread communication using [fiber messaging](#message-passing). 
+cross-thread communication using [fiber messaging](#message-passing).
 
 ## Fibers vs Callbacks
 
@@ -138,7 +138,7 @@ Fibers, in contrast, let the developer express the business logic in a
 sequential, easy to read manner: do this, then that. State can be stored right
 in the business logic, as local variables. And finally, the sequential
 programming style makes it much easier to debug your code, since stack traces
-contain the entire history of execution from the app's inception. 
+contain the entire history of execution from the app's inception.
 
 ## Structured Concurrency
 
@@ -229,7 +229,7 @@ normally or with an exception:
 fiber1 = spin { sleep 1; raise 'foo' }
 fiber2 = spin { sleep 1 }
 
-supervise # blocks and then propagates the error raised in fiber1 
+supervise # blocks and then propagates the error raised in fiber1
 ```
 
 ## Message Passing
@@ -266,7 +266,7 @@ end
 Notice how the state (the `subscribers` variable) stays local, and how the logic
 of the chat room is expressed in a way that is both compact and easy to extend.
 Also notice how the chat room is written as an infinite loop. This is a common
-pattern in Polyphony, since fibers can always be stopped at any moment. 
+pattern in Polyphony, since fibers can always be stopped at any moment.
 
 The code for handling a chat room user might be expressed as follows:
 
@@ -482,5 +482,5 @@ reach version 1.0. Here are some of the exciting directions we're working on.
 
 - Support for more core and stdlib APIs
 - More adapters for gems with C-extensions, such as `mysql`, `sqlite3` etc
-- Use `io_uring` backend as alternative to the libev backend 
+- Use `io_uring` backend as alternative to the libev backend
 - More concurrency constructs for building highly concurrent applications

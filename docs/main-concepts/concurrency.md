@@ -133,7 +133,7 @@ fiber that's blocking on any arbitrary operation.
 Some other constructs offered by Polyphony:
 
 * `Mutex` - a mutex used to synchronize access to a single shared resource.
-* `ResourcePool` - used for synchronizing access to a limited amount of shared 
+* `ResourcePool` - used for synchronizing access to a limited amount of shared
   resources, for example a pool of database connections.
 * `Throttler` - used for throttling repeating operations, for example throttling
   access to a shared resource, or throttling incoming requests.

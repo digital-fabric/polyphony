@@ -104,12 +104,12 @@ class MutexTest < MiniTest::Test
     snooze
     assert !lock.locked?
     a << Fiber.current
-    
+
     receive
     assert lock.locked?
 
     a << Fiber.current
-    
+
     receive
     assert !lock.locked?
   end

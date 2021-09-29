@@ -47,7 +47,7 @@ class FiberTest < MiniTest::Test
     f1 = spin { :foo }
     f2 = spin { :bar }
     4.times { snooze }
-    
+
     assert_equal [:foo, :bar], Fiber.await(f1, f2)
   end
 
@@ -739,7 +739,7 @@ class FiberTest < MiniTest::Test
   def test_setup_raw
     buffer = []
     f = Fiber.new { buffer << receive }
-    
+
     assert_nil f.thread
     snooze
     f.setup_raw
@@ -771,11 +771,11 @@ class FiberTest < MiniTest::Test
 
     snooze
     assert_equal parent, child.parent
-    result = child.detach 
+    result = child.detach
     assert_equal result, child
     assert_equal Fiber.current, child.parent
     parent.await
-    
+
     child << :bye
     child.await
 
@@ -808,7 +808,7 @@ class FiberTest < MiniTest::Test
     child.attach_to(new_parent)
     assert_equal new_parent, child.parent
     parent.await
-    
+
     child << :bye
     new_parent << :bye_new_parent
     snooze
@@ -835,7 +835,7 @@ class FiberTest < MiniTest::Test
     result = receive
     assert_equal :ok, result
     assert_equal 3, children.size
-    
+
     f2 = spin { supervise }
     f1.attach_all_children_to(f2)
 
@@ -1150,7 +1150,7 @@ class RestartTest < MiniTest::Test
     assert_equal [1], buffer
     snooze
     assert_equal [1, 1], buffer
-    
+
     f << 'foo'
     sleep 0.1
     assert_equal [1, 1, 2], buffer
@@ -1276,7 +1276,7 @@ class DebugTest < MiniTest::Test
     assert_equal true, f.__parked__?
     10.times { snooze }
     assert_equal [], buf
-    
+
     f.__unpark__
     assert_nil f.__parked__?
     10.times { snooze }
