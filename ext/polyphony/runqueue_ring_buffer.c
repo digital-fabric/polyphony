@@ -61,8 +61,9 @@ inline void runqueue_ring_buffer_push(runqueue_ring_buffer *buffer, VALUE fiber,
 
 inline void runqueue_ring_buffer_mark(runqueue_ring_buffer *buffer) {
   for (unsigned int i = 0; i < buffer->count; i++) {
-    rb_gc_mark(buffer->entries[(buffer->head + i) % buffer->size].fiber);
-    rb_gc_mark(buffer->entries[(buffer->head + i) % buffer->size].value);
+    runqueue_entry entry = buffer->entries[(buffer->head + i) % buffer->size];
+    rb_gc_mark(entry.fiber);
+    rb_gc_mark(entry.value);
   }
 }
 
