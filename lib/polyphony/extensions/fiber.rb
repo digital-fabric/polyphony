@@ -18,7 +18,7 @@ module Polyphony
     alias_method :stop, :interrupt
 
     def restart(value = nil)
-      raise "Can''t restart main fiber" if @main
+      raise "Can't restart main fiber" if @main
 
       if @running
         schedule Polyphony::Restart.new(value)
