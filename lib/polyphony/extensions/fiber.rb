@@ -82,6 +82,7 @@ module Polyphony
     def supervise(*fibers, **opts, &block)
       block ||= supervise_opts_to_block(opts)
 
+      @supervise_mode = true
       fibers = children if fibers.empty?
       fibers.each do |f|
         f.attach_to(self) unless f.parent == self
@@ -94,6 +95,8 @@ module Polyphony
         (fiber, result) = mailbox.shift
         block&.call(fiber, result)
       end
+    ensure
+      @supervise_mode = false
     end
 
     def supervise_opts_to_block(opts)
@@ -198,6 +201,7 @@ module Polyphony
 
     def add_child(child_fiber)
       (@children ||= {})[child_fiber] = true
+      child_fiber.monitor(self) if @supervise_mode
     end
 
     def remove_child(child_fiber)
@@ -208,6 +212,7 @@ module Polyphony
       f = Fiber.new { |v| f.run(v) }
       f.prepare(tag, block, orig_caller, self)
       (@children ||= {})[f] = true
+      f.monitor(self) if @supervise_mode
       f
     end
 

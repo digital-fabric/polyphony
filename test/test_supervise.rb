@@ -256,4 +256,17 @@ class SuperviseTest < MiniTest::Test
     assert first
     assert first != old_first
   end
+
+  def test_supervise_with_added_fibers
+    buffer = []
+    supervisor = spin do
+      supervise { |f, r| buffer << [f, r] }
+    end
+    snooze
+    f1 = supervisor.spin { snooze; :foo }
+    f2 = supervisor.spin { snooze; :bar }
+    Fiber.await(f1, f2)
+    snooze
+    assert_equal [[f1, :foo], [f2, :bar]], buffer
+  end
 end
