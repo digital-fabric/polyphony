@@ -1,3 +1,17 @@
+## 0.72 2021-11-22
+
+- Add support for supervising added child fibers
+- Do not use io_uring under LinuxKit (#66)
+- Fix error message in `Fiber#restart`
+- refactor `runqueue_ring_buffer_mark`
+- Fix setting up test server on random port
+- Enhance `Fiber#supervise`
+  - Add support for specifying `restart: true` (same as `restart: :always`)
+  - Add support for supervising child fibers (when fibers are not specified)
+- Add `Fiber#attach_all_children_to`
+- Improve `SSLServer#accept` when `servername_cb` is set
+- Fix `#supervise` in Ruby 3.0
+
 ## 0.71 2021-08-20
 
 - Fix compilation on Ruby 3.0
