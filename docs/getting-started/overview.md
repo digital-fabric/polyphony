@@ -350,14 +350,14 @@ operations.
 
 While a standard event loop-based solution would implement a blocking call
 separately from the fiber scheduling, the system backend integrates the two to
-create a blocking call that is already knows how to switch and schedule fibers.
+create a blocking call that already knows how to switch and schedule fibers.
 For example, in Polyphony all APIs having to do with reading from files or
 sockets end up calling `Thread.current.backend.read`, which does all the work.
 
 This design offers some major advantages over other designs. It minimizes memory
-allocations, of both Ruby objects and C structures. For example, instead of
+allocations of both Ruby objects and C structures. For example, instead of
 having to allocate libev watchers on the heap and then pass them around, they
-are allocated on the stack instead, which saves up on both memory and CPU cycles.
+are allocated on the stack instead, which saves both memory and CPU cycles.
 
 In addition, the backend interface includes two methods that allow maximizing
 server performance by accepting connections and reading from sockets in a tight
