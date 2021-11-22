@@ -3,25 +3,36 @@
 require 'rubygems'
 require 'mkmf'
 
-use_liburing = false
-use_pidfd_open = false
-force_use_libev = ENV['POLYPHONY_USE_LIBEV'] != nil
-linux = RUBY_PLATFORM =~ /linux/
 
-if linux && `uname -sr` =~ /Linux 5\.(\d+)/
-  kernel_minor_version = $1.to_i
-  use_liburing = !force_use_libev && kernel_minor_version >= 6
-  use_pidfd_open = kernel_minor_version >= 3
+KERNEL_INFO_RE = /Linux (\d)\.(\d+)\.(?:\d+)\-(?:\d+\-)?(\w+)/
+def get_config
+  config = { linux: !!(RUBY_PLATFORM =~ /linux/) }
+  return config if !config[:linux]
+
+  kernel_info = `uname -sr`
+  m = kernel_info.match(KERNEL_INFO_RE)
+  raise "Could not parse Linux kernel information (#{kernel_info.inspect})" if !m
+
+  version, major_revision, distribution = m[1].to_i, m[2].to_i, m[3]
+  config[:pidfd_open] = (version == 5) && (major_revision >= 3)
+
+  force_libev = ENV['POLYPHONY_USE_LIBEV'] != nil
+  config[:io_uring] = !force_libev &&
+    (version == 5) && (major_revision >= 6) && (distribution != 'linuxkit')
+  config
 end
 
-$defs << '-DPOLYPHONY_USE_PIDFD_OPEN' if use_pidfd_open
-if use_liburing
+config = get_config
+puts "Building Polyphony... (#{config.inspect})"
+
+$defs << '-DPOLYPHONY_USE_PIDFD_OPEN' if config[:pidfd_open]
+if config[:io_uring]
   $defs << "-DPOLYPHONY_BACKEND_LIBURING"
   $defs << "-DPOLYPHONY_UNSET_NONBLOCK" if RUBY_VERSION =~ /^3/
   $CFLAGS << " -Wno-pointer-arith"
 else
   $defs << "-DPOLYPHONY_BACKEND_LIBEV"
-  $defs << "-DPOLYPHONY_LINUX" if linux
+  $defs << "-DPOLYPHONY_LINUX" if config[:linux]
   $defs << '-DEV_USE_LINUXAIO'     if have_header('linux/aio_abi.h')
   $defs << '-DEV_USE_SELECT'       if have_header('sys/select.h')
   $defs << '-DEV_USE_POLL'         if have_type('port_event_t', 'poll.h')
