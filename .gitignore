@@ -59,3 +59,5 @@ _site
 .sass-cache
 
 log
+
+.ruby-version
