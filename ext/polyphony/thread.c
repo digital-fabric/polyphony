@@ -40,7 +40,7 @@ VALUE Thread_fiber_schedule_and_wakeup(VALUE self, VALUE fiber, VALUE resume_obj
   }
 
   if (Backend_wakeup(rb_ivar_get(self, ID_ivar_backend)) == Qnil) {
-    // we're not inside the ev_loop, so we just do a switchpoint
+    // we're not inside Backend_poll, so we just do a switchpoint
     Thread_switch_fiber(self);
   }
 
