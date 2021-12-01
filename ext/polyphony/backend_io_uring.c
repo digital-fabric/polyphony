@@ -995,20 +995,25 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
 VALUE Backend_timer_loop(VALUE self, VALUE interval) {
   Backend_t *backend;
   double interval_d = NUM2DBL(interval);
-  GetBackend(self, backend);
   double next_time = 0.;
+  VALUE resume_value = Qnil;
+
+  GetBackend(self, backend);
 
   while (1) {
     double now = current_time();
     if (next_time == 0.) next_time = current_time() + interval_d;
     double sleep_duration = next_time - now;
-    if (sleep_duration < 0) sleep_duration = 0;
 
-    VALUE resume_value = Qnil;
-    int completed = io_uring_backend_submit_timeout_and_await(backend, sleep_duration, &resume_value);
-    RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
-    RB_GC_GUARD(resume_value);
+    if (sleep_duration > 0) {
+      int completed = io_uring_backend_submit_timeout_and_await(backend, sleep_duration, &resume_value);
+      RAISE_IF_EXCEPTION(resume_value);
+      if (!completed) return resume_value;
+    }
+    else {
+      resume_value = backend_snooze();
+      RAISE_IF_EXCEPTION(resume_value);
+    }
 
     rb_yield(Qnil);
 
@@ -1017,6 +1022,7 @@ VALUE Backend_timer_loop(VALUE self, VALUE interval) {
       if (next_time > now) break;
     }
   }
+  RB_GC_GUARD(resume_value);
 }
 
 struct Backend_timeout_ctx {

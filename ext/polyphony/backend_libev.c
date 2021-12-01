@@ -1146,34 +1146,38 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
 
 noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
   Backend_t *backend;
-  struct libev_timer watcher;
   double interval_d = NUM2DBL(interval);
+  struct libev_timer watcher;
+  watcher.fiber = rb_fiber_current();
+  double next_time = 0.;
+  VALUE resume_value = Qnil;
 
   GetBackend(self, backend);
-  watcher.fiber = rb_fiber_current();
-
-  double next_time = 0.;
 
   while (1) {
     double now = current_time();
     if (next_time == 0.) next_time = current_time() + interval_d;
     double sleep_duration = next_time - now;
-    if (sleep_duration < 0) sleep_duration = 0;
 
-    VALUE switchpoint_result = Qnil;
-    ev_timer_init(&watcher.timer, Backend_timer_callback, sleep_duration, 0.);
-    ev_timer_start(backend->ev_loop, &watcher.timer);
-    backend->base.op_count++;
-    switchpoint_result = backend_await((struct Backend_base *)backend);
-    ev_timer_stop(backend->ev_loop, &watcher.timer);
-    RAISE_IF_EXCEPTION(switchpoint_result);
-    RB_GC_GUARD(switchpoint_result);
+    if (sleep_duration > 0) {
+      ev_timer_init(&watcher.timer, Backend_timer_callback, sleep_duration, 0.);
+      ev_timer_start(backend->ev_loop, &watcher.timer);
+      backend->base.op_count++;
+      resume_value = backend_await((struct Backend_base *)backend);
+      ev_timer_stop(backend->ev_loop, &watcher.timer);
+      RAISE_IF_EXCEPTION(resume_value);
+    }
+    else {
+      resume_value = backend_snooze();
+      RAISE_IF_EXCEPTION(resume_value);
+    }
 
     rb_yield(Qnil);
     do {
       next_time += interval_d;
     } while (next_time <= now);
   }
+  RB_GC_GUARD(resume_value);
 }
 
 struct libev_timeout {

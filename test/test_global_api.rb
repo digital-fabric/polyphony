@@ -429,6 +429,19 @@ class GlobalAPIEtcTest < MiniTest::Test
     assert_in_range 4..6, buffer.size
   end
 
+  def test_every_with_slow_op
+    skip unless IS_LINUX
+
+    buffer = []
+    t0 = Time.now
+    f = spin do
+      every(0.01) { sleep 0.05; buffer << 1 }
+    end
+    sleep 0.15
+    f.stop
+    assert_in_range 2..3, buffer.size
+  end
+
   def test_sleep
     t0 = Time.now
     sleep 0.1
