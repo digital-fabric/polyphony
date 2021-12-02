@@ -101,6 +101,7 @@ VALUE backend_snooze();
 
 void rectify_io_file_pos(rb_io_t *fptr);
 double current_time();
+uint64_t current_time_ns();
 VALUE backend_timeout_exception(VALUE exception);
 VALUE Backend_timeout_ensure_safe(VALUE arg);
 VALUE Backend_timeout_ensure_safe(VALUE arg);

@@ -1,3 +1,5 @@
+- Improve accuracy of timer_loop.
+
 ## 0.72 2021-11-22
 
 - Add support for supervising added child fibers

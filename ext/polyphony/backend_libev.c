@@ -1146,20 +1146,21 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
 
 noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
   Backend_t *backend;
-  double interval_d = NUM2DBL(interval);
   struct libev_timer watcher;
   watcher.fiber = rb_fiber_current();
-  double next_time = 0.;
+  uint64_t interval_ns = NUM2DBL(interval) * 1e9;
+  uint64_t next_time_ns = 0;
   VALUE resume_value = Qnil;
 
   GetBackend(self, backend);
 
   while (1) {
-    double now = current_time();
-    if (next_time == 0.) next_time = current_time() + interval_d;
-    double sleep_duration = next_time - now;
+    uint64_t now_ns = current_time_ns();
+    if (next_time_ns == 0) next_time_ns = now_ns + interval_ns;
+    double sleep_duration = ((double)(next_time_ns - now_ns))/1e9;
 
-    if (sleep_duration > 0) {
+    if (next_time_ns > now_ns) {
+      double sleep_duration = ((double)(next_time_ns - now_ns))/1e9;
       ev_timer_init(&watcher.timer, Backend_timer_callback, sleep_duration, 0.);
       ev_timer_start(backend->ev_loop, &watcher.timer);
       backend->base.op_count++;
@@ -1173,9 +1174,11 @@ noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
     }
 
     rb_yield(Qnil);
-    do {
-      next_time += interval_d;
-    } while (next_time <= now);
+
+    while (1) {
+      next_time_ns += interval_ns;
+      if (next_time_ns > now_ns) break;
+    }
   }
   RB_GC_GUARD(resume_value);
 }

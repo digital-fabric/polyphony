@@ -246,6 +246,13 @@ inline double current_time() {
   return t / 1e9;
 }
 
+inline uint64_t current_time_ns() {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  uint64_t ns = ts.tv_sec;
+  return ns * 1e9 + ts.tv_nsec;
+}
+
 inline VALUE backend_timeout_exception(VALUE exception) {
   if (rb_obj_is_kind_of(exception, rb_cArray) == Qtrue)
     return rb_funcall(rb_ary_entry(exception, 0), ID_new, 1, rb_ary_entry(exception, 1));
