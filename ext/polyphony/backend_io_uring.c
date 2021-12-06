@@ -127,7 +127,7 @@ void *io_uring_backend_poll_without_gvl(void *ptr) {
 
 // copied from queue.c
 static inline bool cq_ring_needs_flush(struct io_uring *ring) {
-	return IO_URING_READ_ONCE(*ring->sq.kflags) & IORING_SQ_CQ_OVERFLOW;
+  return IO_URING_READ_ONCE(*ring->sq.kflags) & IORING_SQ_CQ_OVERFLOW;
 }
 
 static inline void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
@@ -145,9 +145,9 @@ static inline void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, 
 // this peeks at cqes and handles each available cqe
 void io_uring_backend_handle_ready_cqes(Backend_t *backend) {
   struct io_uring *ring = &backend->ring;
-	bool overflow_checked = false;
+  bool overflow_checked = false;
   struct io_uring_cqe *cqe;
-	unsigned head;
+  unsigned head;
   unsigned cqe_count;
 
 again:
@@ -158,16 +158,16 @@ again:
   }
   io_uring_cq_advance(ring, cqe_count);
 
-	if (overflow_checked) goto done;
+  if (overflow_checked) goto done;
 
-	if (cq_ring_needs_flush(ring)) {
-		__sys_io_uring_enter(ring->ring_fd, 0, 0, IORING_ENTER_GETEVENTS, NULL);
-		overflow_checked = true;
-		goto again;
-	}
+  if (cq_ring_needs_flush(ring)) {
+    __sys_io_uring_enter(ring->ring_fd, 0, 0, IORING_ENTER_GETEVENTS, NULL);
+    overflow_checked = true;
+    goto again;
+  }
 
 done:
-	return;
+  return;
 }
 
 void io_uring_backend_poll(Backend_t *backend) {
@@ -831,7 +831,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE soc
       rb_io_synchronized(fp);
 
       // if (rsock_do_not_reverse_lookup) {
-	    //   fp->mode |= FMODE_NOREVLOOKUP;
+      //   fp->mode |= FMODE_NOREVLOOKUP;
       // }
       if (loop) {
         rb_yield(socket);
@@ -962,7 +962,7 @@ inline struct __kernel_timespec double_to_timespec(double duration) {
   double duration_fraction = modf(duration, &duration_integral);
   struct __kernel_timespec ts;
   ts.tv_sec = duration_integral;
-	ts.tv_nsec = floor(duration_fraction * 1000000000);
+  ts.tv_nsec = floor(duration_fraction * 1000000000);
   return ts;
 }
 
