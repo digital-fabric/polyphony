@@ -287,7 +287,6 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   io_verify_blocking_mode(fptr, io, Qfalse);
   rectify_io_file_pos(fptr);
   watcher.fiber = Qnil;
-  OBJ_TAINT(str);
 
   while (1) {
     backend->base.op_count++;

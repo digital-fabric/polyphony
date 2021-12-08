@@ -82,7 +82,6 @@ VALUE backend_snooze();
   shrinkable = io_setstrbuf(&str, len); \
   buf = RSTRING_PTR(str); \
   total = 0; \
-  OBJ_TAINT(str); \
 }
 
 #define READ_LOOP_YIELD_STR() { \

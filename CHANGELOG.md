@@ -1,4 +1,5 @@
-- Improve accuracy of timer_loop.
+- Improve compatibility with Ruby 3.1
+- Improve accuracy of `timer_loop`
 
 ## 0.72 2021-11-22
 

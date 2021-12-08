@@ -202,7 +202,6 @@ inline rb_encoding* io_read_encoding(rb_io_t *fptr) {
 }
 
 inline VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
-  OBJ_TAINT(str);
   rb_enc_associate(str, io_read_encoding(fptr));
   return str;
 }

@@ -26,7 +26,11 @@
 #define RAISE_IF_NOT_NIL(ret) if (ret != Qnil) { RAISE_EXCEPTION(ret); }
 
 // Fiber#transfer
-#define FIBER_TRANSFER(fiber, value) rb_funcall(fiber, ID_transfer, 1, value)
+#if HAVE_RB_FIBER_TRANSFER
+  #define FIBER_TRANSFER(fiber, value) rb_fiber_transfer(fiber, 1, &value)
+#else
+  #define FIBER_TRANSFER(fiber, value) rb_funcall(fiber, ID_transfer, 1, value)
+#endif
 
 #define BACKEND() (rb_ivar_get(rb_thread_current(), ID_ivar_backend))
 

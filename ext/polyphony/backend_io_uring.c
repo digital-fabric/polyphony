@@ -333,7 +333,6 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   rb_io_check_byte_readable(fptr);
   io_unset_nonblock(fptr, io);
   rectify_io_file_pos(fptr);
-  OBJ_TAINT(str);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -621,7 +620,6 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
   rb_io_check_byte_readable(fptr);
   io_unset_nonblock(fptr, io);
   rectify_io_file_pos(fptr);
-  OBJ_TAINT(str);
 
   while (1) {
     VALUE resume_value = Qnil;
