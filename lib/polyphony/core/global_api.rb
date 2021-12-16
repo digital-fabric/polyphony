@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require_relative '../extensions/core'
-require_relative '../extensions/fiber'
-require_relative './exceptions'
 require_relative './throttler'
 
 module Polyphony

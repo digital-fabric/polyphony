@@ -2,15 +2,12 @@
 
 require 'fiber'
 require_relative './polyphony_ext'
-
-require_relative './polyphony/extensions/core'
-require_relative './polyphony/extensions/thread'
-require_relative './polyphony/extensions/fiber'
-require_relative './polyphony/extensions/io'
+require_relative './polyphony/extensions'
 
 Thread.current.setup_fiber_scheduling
 Thread.current.backend = Polyphony::Backend.new
 
+require_relative './polyphony/core/exceptions'
 require_relative './polyphony/core/global_api'
 require_relative './polyphony/core/resource_pool'
 require_relative './polyphony/core/sync'

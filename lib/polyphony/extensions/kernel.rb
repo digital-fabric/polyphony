@@ -1,72 +1,6 @@
 # frozen_string_literal: true
 
-require 'fiber'
-require 'timeout'
 require 'open3'
-
-require_relative '../core/exceptions'
-
-# Exeption overrides
-class ::Exception
-  class << self
-    attr_accessor :__disable_sanitized_backtrace__
-  end
-
-  attr_accessor :source_fiber, :raising_fiber
-
-  alias_method :orig_initialize, :initialize
-  def initialize(*args)
-    @raising_fiber = Fiber.current
-    orig_initialize(*args)
-  end
-
-  alias_method :orig_backtrace, :backtrace
-  def backtrace
-    unless @backtrace_called
-      @backtrace_called = true
-      return orig_backtrace
-    end
-
-    sanitized_backtrace
-  end
-
-  def sanitized_backtrace
-    return sanitize(orig_backtrace) unless @raising_fiber
-
-    backtrace = orig_backtrace || []
-    sanitize(backtrace + @raising_fiber.caller)
-  end
-
-  POLYPHONY_DIR = File.expand_path(File.join(__dir__, '..'))
-
-  def sanitize(backtrace)
-    return backtrace if ::Exception.__disable_sanitized_backtrace__
-
-    backtrace.reject { |l| l[POLYPHONY_DIR] }
-  end
-
-  def invoke
-    Kernel.raise(self)
-  end
-end
-
-# Overrides for Process
-module ::Process
-  class << self
-    alias_method :orig_detach, :detach
-    def detach(pid)
-      fiber = spin { Polyphony.backend_waitpid(pid) }
-      fiber.define_singleton_method(:pid) { pid }
-      fiber
-    end
-
-    alias_method :orig_daemon, :daemon
-    def daemon(*args)
-      orig_daemon(*args)
-      Polyphony.original_pid = Process.pid
-    end
-  end
-end
 
 # Kernel extensions (methods available to all objects / call sites)
 module ::Kernel
@@ -157,12 +91,5 @@ module ::Kernel
     orig_trap(sig) do
       Fiber.schedule_priority_oob_fiber(&block)
     end
-  end
-end
-
-# Override Timeout to use cancel scope
-module ::Timeout
-  def self.timeout(sec, klass = Timeout::Error, message = 'execution expired', &block)
-    cancel_after(sec, with_exception: [klass, message], &block)
   end
 end
