@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
     - uses: actions/checkout@v1
-    - uses: actions/setup-ruby@v1
+    - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{matrix.ruby}}
     - name: Install dependencies
@@ -24,7 +24,7 @@ jobs:
         gem install bundler
         bundle install
     - name: Show Linux kernel version
-      run: uname -r
+      run: uname -a
     - name: Compile C-extension
       run: POLYPHONY_USE_LIBEV=1 bundle exec rake compile
     - name: Run tests
