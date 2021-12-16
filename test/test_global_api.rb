@@ -412,7 +412,7 @@ class GlobalAPIEtcTest < MiniTest::Test
     f = after(0.001) { buffer << 2 }
     snooze
     assert_equal [], buffer
-    sleep 0.001
+    sleep 0.0015
     assert_equal [2], buffer
   end
 
