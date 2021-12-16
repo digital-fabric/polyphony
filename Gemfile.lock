@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    polyphony (0.72)
+    polyphony (0.73)
 
 GEM
   remote: https://rubygems.org/
@@ -75,4 +75,4 @@ DEPENDENCIES
   simplecov (= 0.17.1)
 
 BUNDLED WITH
-   2.2.26
+   2.3.0.dev
