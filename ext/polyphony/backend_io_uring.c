@@ -81,7 +81,7 @@ static VALUE Backend_initialize(VALUE self) {
 
   backend_base_initialize(&backend->base);
   backend->pending_sqes = 0;
-  backend->prepared_limit = 2048;
+  backend->prepared_limit = 128;
   backend->ring_initialized = 0;
 
   context_store_initialize(&backend->store);
