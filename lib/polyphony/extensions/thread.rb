@@ -18,14 +18,20 @@ class ::Thread
   def execute
     # backend must be created in the context of the new thread, therefore it
     # cannot be created in Thread#initialize
-    @backend = Polyphony::Backend.new
+    raise_error = false
+    begin
+      @backend = Polyphony::Backend.new
+    rescue Exception => e
+      raise_error = true
+      raise e
+    end
     setup
     @ready = true
     result = @block.(*@args)
   rescue Polyphony::MoveOn, Polyphony::Terminate => e
     result = e.value
   rescue Exception => e
-    result = e
+    raise_error ? (raise e) : (result = e)
   ensure
     @ready = true
     finalize(result)
@@ -48,7 +54,7 @@ class ::Thread
       @result = result
       signal_waiters(result)
     end
-    @backend.finalize
+    @backend&.finalize
   end
 
   def signal_waiters(result)
