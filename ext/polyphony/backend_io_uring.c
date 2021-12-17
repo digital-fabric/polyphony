@@ -42,6 +42,7 @@ typedef struct Backend_t {
   unsigned int        pending_sqes;
   unsigned int        prepared_limit;
   int                 event_fd;
+  int                 ring_initialized;
 } Backend_t;
 
 static void Backend_mark(void *ptr) {
@@ -81,9 +82,13 @@ static VALUE Backend_initialize(VALUE self) {
   backend_base_initialize(&backend->base);
   backend->pending_sqes = 0;
   backend->prepared_limit = 2048;
+  backend->ring_initialized = 0;
 
   context_store_initialize(&backend->store);
-  io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
+  int ret = io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
+  if (ret) rb_syserr_fail(-ret, strerror(-ret));
+  backend->ring_initialized = 1;
+
   backend->event_fd = -1;
 
   return Qnil;
@@ -93,7 +98,7 @@ VALUE Backend_finalize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  io_uring_queue_exit(&backend->ring);
+  if (backend->ring_initialized) io_uring_queue_exit(&backend->ring);
   if (backend->event_fd != -1) close(backend->event_fd);
   context_store_free(&backend->store);
   return self;
