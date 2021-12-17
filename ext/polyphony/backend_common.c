@@ -281,14 +281,15 @@ VALUE Backend_timeout_ensure_safe(VALUE arg) {
 static VALUE empty_string = Qnil;
 
 VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags) {
+  VALUE joined;
+  VALUE result;
+
   switch (RARRAY_LEN(ary)) {
   case 0:
     return Qnil;
   case 1:
     return Backend_send(self, io, RARRAY_AREF(ary, 0), flags);
   default:
-    VALUE joined;
-    VALUE result;
     if (empty_string == Qnil) {
       empty_string = rb_str_new_literal("");
       rb_global_variable(&empty_string);
