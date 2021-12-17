@@ -1,0 +1,32 @@
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        ruby: [2.6, 2.7, 3.0]
+
+    name: >-
+      ${{matrix.os}}, ${{matrix.ruby}}
+
+    runs-on: ${{matrix.os}}
+    steps:
+    - uses: actions/checkout@v1
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{matrix.ruby}}
+        bundler-cache: true # 'bundle install' and cache
+    - name: Install dependencies
+      run: |
+        gem install bundler
+        bundle install
+    - name: Show Linux kernel version
+      run: uname -a
+    - name: Compile C-extension
+      run: bundle exec rake compile
+    - name: Run tests
+      run:  bundle exec rake test
