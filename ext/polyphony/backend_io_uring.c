@@ -81,17 +81,25 @@ static VALUE Backend_initialize(VALUE self) {
 
   backend_base_initialize(&backend->base);
   backend->pending_sqes = 0;
-  backend->prepared_limit = 128;
   backend->ring_initialized = 0;
-
-  context_store_initialize(&backend->store);
-  int ret = io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
-  if (ret) rb_syserr_fail(-ret, strerror(-ret));
-  backend->ring_initialized = 1;
-
   backend->event_fd = -1;
 
-  return Qnil;
+  context_store_initialize(&backend->store);
+
+  backend->prepared_limit = 1024;
+  while (1) {
+    int ret = io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
+    if (!ret) break;
+    
+    // if ENOMEM is returned, use a smaller limit
+    if (ret == -ENOMEM && backend->prepared_limit > 64)
+      backend->prepared_limit = backend->prepared_limit / 2;
+    else
+      rb_syserr_fail(-ret, strerror(-ret));
+  }
+  backend->ring_initialized = 1;
+
+  return self;
 }
 
 VALUE Backend_finalize(VALUE self) {
