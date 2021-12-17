@@ -916,6 +916,7 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
   rb_io_t *dest_fptr;
   VALUE underlying_io;
   int total = 0;
+  VALUE resume_value = Qnil;
 
   underlying_io = rb_ivar_get(src, ID_ivar_io);
   if (underlying_io != Qnil) src = underlying_io;
@@ -927,8 +928,6 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
   dest = rb_io_get_write_io(dest);
   GetOpenFile(dest, dest_fptr);
   io_unset_nonblock(dest_fptr, dest);
-
-  VALUE resume_value = Qnil;
 
   while (1) {
     op_context_t *ctx = context_store_acquire(&backend->store, OP_SPLICE);
@@ -1095,9 +1094,9 @@ struct Backend_timeout_ctx {
 VALUE Backend_timeout_ensure(VALUE arg) {
   struct Backend_timeout_ctx *timeout_ctx = (struct Backend_timeout_ctx *)arg;
   if (timeout_ctx->ctx->ref_count) {
-    timeout_ctx->ctx->result = -ECANCELED;
     struct io_uring_sqe *sqe;
 
+    timeout_ctx->ctx->result = -ECANCELED;
     // op was not completed, so we need to cancel it
     sqe = io_uring_get_sqe(&timeout_ctx->backend->ring);
     io_uring_prep_cancel(sqe, timeout_ctx->ctx, 0);
@@ -1179,6 +1178,8 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
 
 VALUE Backend_wait_event(VALUE self, VALUE raise) {
   Backend_t *backend;
+  VALUE resume_value;
+
   GetBackend(self, backend);
 
   if (backend->event_fd == -1) {
@@ -1189,7 +1190,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
     }
   }
 
-  VALUE resume_value = io_uring_backend_wait_fd(backend, backend->event_fd, 0);
+  resume_value = io_uring_backend_wait_fd(backend, backend->event_fd, 0);
   if (RTEST(raise)) RAISE_IF_EXCEPTION(resume_value);
   RB_GC_GUARD(resume_value);
   return resume_value;
@@ -1278,11 +1279,12 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
   Backend_t *backend;
   int result;
   int completed;
+  op_context_t *ctx;
 
   GetBackend(self, backend);
   if (argc == 0) return resume_value;
 
-  op_context_t *ctx = context_store_acquire(&backend->store, OP_CHAIN);
+  ctx = context_store_acquire(&backend->store, OP_CHAIN);
   for (int i = 0; i < argc; i++) {
     VALUE op = argv[i];
     VALUE op_type = RARRAY_AREF(op, 0);
@@ -1417,9 +1419,11 @@ static inline int splice_chunks_await_ops(
   VALUE *switchpoint_result
 )
 {
+  int completed;
   int res = io_uring_backend_defer_submit_and_await(backend, 0, *ctx, switchpoint_result);
+
   if (result) (*result) = res;
-  int completed = context_store_release(&backend->store, *ctx);
+  completed = context_store_release(&backend->store, *ctx);
   if (!completed) {
     splice_chunks_cancel(backend, *ctx);
     if (TEST_EXCEPTION(*switchpoint_result)) return 1;
@@ -1433,20 +1437,20 @@ static inline int splice_chunks_await_ops(
 
 VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VALUE postfix, VALUE chunk_prefix, VALUE chunk_postfix, VALUE chunk_size) {
   Backend_t *backend;
-  GetBackend(self, backend);
   int total = 0;
   int err = 0;
   VALUE switchpoint_result = Qnil;
   op_context_t *ctx = 0;
   struct io_uring_sqe *sqe = 0;
   int maxlen;
-
   VALUE underlying_io;
   VALUE str = Qnil;
   VALUE chunk_len_value = Qnil;
-
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
+  int pipefd[2] = { -1, -1 };
+
+  GetBackend(self, backend);
 
   underlying_io = rb_ivar_get(src, ID_ivar_io);
   if (underlying_io != Qnil) src = underlying_io;
@@ -1461,7 +1465,6 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
   maxlen = NUM2INT(chunk_size);
 
-  int pipefd[2] = { -1, -1 };
   if (pipe(pipefd) == -1) {
     err = errno;
     goto syscallerror;
