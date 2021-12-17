@@ -354,9 +354,9 @@ class IOClassMethodsTest < MiniTest::Test
     skip unless IS_LINUX
 
     counter = 0
-    timer = spin { throttled_loop(200) { counter += 1 } }
+    timer = spin { throttled_loop(20) { counter += 1 } }
 
-    IO.popen('sleep 0.05') { |io| io.read(8192) }
+    IO.popen('sleep 0.5') { |io| io.read(8192) }
     assert(counter >= 5)
 
     result = nil
