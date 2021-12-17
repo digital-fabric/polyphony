@@ -1,3 +1,7 @@
+## 0.73.1 2021-12-17
+
+- Fix Gemfile.lock
+
 ## 0.73 2021-12-16
 
 - Refactor core extensions into separate files for each class
