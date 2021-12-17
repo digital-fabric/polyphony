@@ -106,14 +106,14 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
 
 void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_base *base, VALUE fiber, VALUE value, int prioritize) {
   int already_runnable;
+  runqueue_t *runqueue;
 
   if (rb_fiber_alive_p(fiber) != Qtrue) return;
   already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
 
   COND_TRACE(base, 4, SYM_fiber_schedule, fiber, value, prioritize ? Qtrue : Qfalse);
 
-  runqueue_t *runqueue = rb_ivar_get(fiber, ID_ivar_parked) == Qtrue ?
-    &base->parked_runqueue : &base->runqueue;
+  runqueue = rb_ivar_get(fiber, ID_ivar_parked) == Qtrue ? &base->parked_runqueue : &base->runqueue;
 
   (prioritize ? runqueue_unshift : runqueue_push)(runqueue, fiber, value, already_runnable);
   if (!already_runnable) {
@@ -238,17 +238,22 @@ inline void rectify_io_file_pos(rb_io_t *fptr) {
 
 inline double current_time() {
   struct timespec ts;
+  double t;
+  uint64_t ns;
+  
   clock_gettime(CLOCK_MONOTONIC, &ts);
-  long long ns = ts.tv_sec;
+  ns = ts.tv_sec;
   ns = ns * 1e9 + ts.tv_nsec;
-  double t = ns;
+  t = ns;
   return t / 1e9;
 }
 
 inline uint64_t current_time_ns() {
   struct timespec ts;
+  uint64_t ns;
+
   clock_gettime(CLOCK_MONOTONIC, &ts);
-  uint64_t ns = ts.tv_sec;
+  ns = ts.tv_sec;
   return ns * 1e9 + ts.tv_nsec;
 }
 
@@ -282,18 +287,22 @@ VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags) {
   case 1:
     return Backend_send(self, io, RARRAY_AREF(ary, 0), flags);
   default:
+    VALUE joined;
+    VALUE result;
     if (empty_string == Qnil) {
       empty_string = rb_str_new_literal("");
       rb_global_variable(&empty_string);
     }
-    VALUE joined = rb_ary_join(ary, empty_string);
-    VALUE result = Backend_send(self, io, joined, flags);
+    joined = rb_ary_join(ary, empty_string);
+    result = Backend_send(self, io, joined, flags);
     RB_GC_GUARD(joined);
     return result;
   }
 }
 
 inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
+  int flags;
+  int is_nonblocking;
   VALUE blocking_mode = rb_ivar_get(io, ID_ivar_blocking_mode);
   if (blocking == blocking_mode) return;
 
@@ -303,9 +312,9 @@ inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
   if (blocking != Qtrue)
     rb_w32_set_nonblock(fptr->fd);
 #elif defined(F_GETFL)
-  int flags = fcntl(fptr->fd, F_GETFL);
+  flags = fcntl(fptr->fd, F_GETFL);
   if (flags == -1) return;
-  int is_nonblocking = flags & O_NONBLOCK;
+  is_nonblocking = flags & O_NONBLOCK;
 
   if (blocking == Qtrue) {
     if (!is_nonblocking) return;
@@ -319,12 +328,14 @@ inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
 }
 
 inline void backend_run_idle_tasks(struct Backend_base *base) {
+  double now;
+
   if (base->idle_proc != Qnil)
     rb_funcall(base->idle_proc, ID_call, 0);
 
   if (base->idle_gc_period == 0) return;
 
-  double now = current_time();
+  now = current_time();
   if (now - base->idle_gc_last_time < base->idle_gc_period) return;
 
   base->idle_gc_last_time = now;

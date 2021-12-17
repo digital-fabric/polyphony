@@ -121,11 +121,12 @@ VALUE Queue_unshift(VALUE self, VALUE value) {
 
 VALUE Queue_shift(VALUE self) {
   Queue_t *queue;
-  GetQueue(self, queue);
-
   VALUE fiber = rb_fiber_current();
   VALUE thread = rb_thread_current();
   VALUE backend = rb_ivar_get(thread, ID_ivar_backend);
+  VALUE value;
+
+  GetQueue(self, queue);
 
   while (1) {
     if (queue->values.count) Fiber_make_runnable(fiber, Qnil);
@@ -138,7 +139,7 @@ VALUE Queue_shift(VALUE self) {
     RB_GC_GUARD(switchpoint_result);
     if (queue->values.count) break;
   }
-  VALUE value = ring_buffer_shift(&queue->values);
+  value = ring_buffer_shift(&queue->values);
   if ((queue->capacity) && (queue->capacity > queue->values.count))
     queue_schedule_first_blocked_fiber(&queue->push_queue);
   RB_GC_GUARD(value);
@@ -206,9 +207,11 @@ VALUE Queue_shift_each(VALUE self) {
 
 VALUE Queue_shift_all(VALUE self) {
   Queue_t *queue;
+  VALUE result;
+
   GetQueue(self, queue);
 
-  VALUE result = ring_buffer_shift_all(&queue->values);
+  result = ring_buffer_shift_all(&queue->values);
   if (queue->capacity) queue_schedule_blocked_fibers_to_capacity(queue);
   return result;
 }

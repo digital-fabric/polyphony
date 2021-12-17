@@ -17,10 +17,13 @@ VALUE Socket_double_chevron(VALUE self, VALUE msg) {
 }
 
 void Init_SocketExtensions() {
+  VALUE cSocket;
+  VALUE cTCPSocket;
+
   rb_require("socket");
 
-  VALUE cSocket = rb_const_get(rb_cObject, rb_intern("Socket"));
-  VALUE cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
+  cSocket = rb_const_get(rb_cObject, rb_intern("Socket"));
+  cTCPSocket = rb_const_get(rb_cObject, rb_intern("TCPSocket"));
 
   rb_define_method(cSocket, "send", Socket_send, 2);
   rb_define_method(cTCPSocket, "send", Socket_send, 2);

@@ -24,9 +24,11 @@ inline void runqueue_ring_buffer_clear(runqueue_ring_buffer *buffer) {
 static runqueue_entry nil_runqueue_entry = {(Qnil), (Qnil)};
 
 inline runqueue_entry runqueue_ring_buffer_shift(runqueue_ring_buffer *buffer) {
+  runqueue_entry value;
+
   if (buffer->count == 0) return nil_runqueue_entry;
 
-  runqueue_entry value = buffer->entries[buffer->head];
+  value = buffer->entries[buffer->head];
   buffer->head = (buffer->head + 1) % buffer->size;
   buffer->count--;
   return value;

@@ -59,14 +59,17 @@ VALUE Event_signal(int argc, VALUE *argv, VALUE self) {
 
 VALUE Event_await(VALUE self) {
   Event_t *event;
+  VALUE switchpoint_result;
+  VALUE backend;
+
   GetEvent(self, event);
 
   if (event->waiting_fiber != Qnil)
     rb_raise(rb_eRuntimeError, "Event is already awaited by another fiber");
 
-  VALUE backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
+  backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
   event->waiting_fiber = rb_fiber_current();
-  VALUE switchpoint_result = Backend_wait_event(backend, Qnil);
+  switchpoint_result = Backend_wait_event(backend, Qnil);
   event->waiting_fiber = Qnil;
 
   RAISE_IF_EXCEPTION(switchpoint_result);
