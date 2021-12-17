@@ -386,9 +386,9 @@ class ThrottledLoopTest < MiniTest::Test
     counter = 0
     t0 = Time.now
     f = spin do
-      throttled_loop(100) { buffer << (counter += 1) }
+      throttled_loop(10) { buffer << (counter += 1) }
     end
-    sleep 0.03
+    sleep 0.3
     assert_in_range 2..4, counter
   end
 
