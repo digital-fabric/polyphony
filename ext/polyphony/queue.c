@@ -129,10 +129,12 @@ VALUE Queue_shift(VALUE self) {
   GetQueue(self, queue);
 
   while (1) {
+    VALUE switchpoint_result;
+
     if (queue->values.count) Fiber_make_runnable(fiber, Qnil);
 
     ring_buffer_push(&queue->shift_queue, fiber);
-    VALUE switchpoint_result = Backend_wait_event(backend, Qnil);
+    switchpoint_result = Backend_wait_event(backend, Qnil);
     ring_buffer_delete(&queue->shift_queue, fiber);
 
     RAISE_IF_EXCEPTION(switchpoint_result);
