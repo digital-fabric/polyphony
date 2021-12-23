@@ -31,7 +31,7 @@ class ::Socket
   alias_method :orig_read, :read
   def read(maxlen = nil, buf = nil, buf_pos = 0)
     return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
-    return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
+    return Polyphony.backend_recv(self, +'', maxlen, 0) if maxlen
 
     buf = +''
     len = buf.bytesize
@@ -167,7 +167,7 @@ class ::TCPSocket
   alias_method :orig_read, :read
   def read(maxlen = nil, buf = nil, buf_pos = 0)
     return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
-    return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
+    return Polyphony.backend_recv(self, +'', maxlen, 0) if maxlen
 
     buf = +''
     len = buf.bytesize
@@ -259,7 +259,7 @@ class ::UNIXSocket
   alias_method :orig_read, :read
   def read(maxlen = nil, buf = nil, buf_pos = 0)
     return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
-    return Polyphony.backend_recv(self, buf || +'', maxlen, 0) if maxlen
+    return Polyphony.backend_recv(self, +'', maxlen, 0) if maxlen
 
     buf = +''
     len = buf.bytesize
