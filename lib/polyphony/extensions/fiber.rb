@@ -5,17 +5,40 @@ require_relative '../core/exceptions'
 module Polyphony
   # Fiber control API
   module FiberControl
+    # Returns the fiber's monitoring mailbox queue, used for receiving fiber
+    # monitoring messages.
+    #
+    # @return [Polyphony::Queue] Monitoring mailbox queue
     def monitor_mailbox
       @monitor_mailbox ||= Polyphony::Queue.new
     end
 
+    # call-seq:
+    #   fiber.stop(value = nil) -> fiber
+    #   Fiber.interrupt(value = nil) -> fiber
+    #
+    # Stops the fiber by raising a Polyphony::MoveOn exception. The given value
+    # will become the fiber's return value.
+    #
+    # @param value [any] Fiber's eventual return value
+    # @return [Fiber] fiber
     def interrupt(value = nil)
       return if @running == false
 
       schedule Polyphony::MoveOn.new(value)
+      self
     end
     alias_method :stop, :interrupt
 
+    # call-seq:
+    #   fiber.reset(value = nil) -> fiber
+    #   fiber.restart(value = nil) -> fiber
+    #
+    # Restarts the fiber, with the given value serving as the first value passed
+    # to the fiber's block.
+    #
+    # @param value [any] value passed to fiber block
+    # @return [Fiber] restarted fiber
     def restart(value = nil)
       raise "Can't restart main fiber" if @main
 
@@ -31,32 +54,58 @@ module Polyphony
     end
     alias_method :reset, :restart
 
+    # Stops a fiber by raising a Polyphony::Cancel exception.
+    #
+    # @return [Fiber] fiber
     def cancel
       return if @running == false
 
       schedule Polyphony::Cancel.new
+      self
     end
 
+    # Sets the graceful shutdown flag for the fiber.
+    #
+    # @param graceful [bool] Whether or not to perform a graceful shutdown
     def graceful_shutdown=(graceful)
       @graceful_shutdown = graceful
     end
 
+    # Returns the graceful shutdown flag for the fiber.
+    #
+    # @return [bool]
     def graceful_shutdown?
       @graceful_shutdown
     end
 
+    # Terminates the fiber, optionally setting the graceful shutdown flag.
+    #
+    # @param graceful [bool] Whether to perform a graceful shutdown
+    # @return [Fiber]
     def terminate(graceful = false)
       return if @running == false
 
       @graceful_shutdown = graceful
       schedule Polyphony::Terminate.new
+      self
     end
 
+    # call-seq:
+    #   fiber.raise(message) -> fiber
+    #   fiber.raise(exception_class) -> fiber
+    #   fiber.raise(exception_class, exception_message) -> fiber
+    #   fiber.raise(exception) -> fiber
+    #
+    # Raises an exception in the context of the fiber.
+    #
+    # @return [Fiber]
     def raise(*args)
       error = error_from_raise_args(args)
       schedule(error)
+      self
     end
 
+    # :no-doc:
     def error_from_raise_args(args)
       case (arg = args.shift)
       when String then RuntimeError.new(arg)
@@ -117,6 +166,17 @@ module Polyphony
 
   # Class methods for controlling fibers (namely await and select)
   module FiberControlClassMethods
+    # call-seq:
+    #   Fiber.await(*fibers) -> [*results]
+    #   Fiber.join(*fibers) -> [*results]
+    #
+    # Waits for all given fibers to terminate, then returns the respective
+    # return values for all terminated fibers. If any of the awaited fibers
+    # terminates with an uncaught exception, `Fiber.await` will await all the
+    # other fibers to terminate, then reraise the exception.
+    #
+    # @param *fibers [Array<Fiber>] fibers to wait for
+    # @return [Array<any>] return values of given fibers
     def await(*fibers)
       return [] if fibers.empty?
 
@@ -150,6 +210,12 @@ module Polyphony
     end
     alias_method :join, :await
 
+    # Waits for at least one of the given fibers to terminate, returning an
+    # array containing the first terminated fiber and its return value. If an
+    # exception occurs in one of the given fibers, it will be reraised.
+    #
+    # @param *fibers [Array<Fiber>] Fibers to wait for
+    # @return [Array] Array containing the first terminated fiber and its return value
     def select(*fibers)
       return nil if fibers.empty?
 

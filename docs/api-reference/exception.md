@@ -3,14 +3,18 @@ layout: page
 title: ::Exception
 parent: API Reference
 permalink: /api-reference/exception/
+source_url: https://github.com/digital-fabric/polyphony/blob/master/lib/polyphony/extensions/core.rb
+ruby_docs_url: https://rubyapi.org/3.0/o/exception
 ---
 # ::Exception
 
-[Ruby core Exception documentation](https://ruby-doc.org/core-2.7.0/Exception.html)
+[Ruby core Exception documentation](https://rubyapi.org/3.0/o/exception)
 
 The core `Exception` class is enhanced to provide a better backtrace that takes
 into account the fiber hierarchy. In addition, a `source_fiber` attribute allows
 tracking the fiber from which an uncaught exception was propagated.
+
+
 
 ## Class Methods
 
