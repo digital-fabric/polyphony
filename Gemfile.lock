@@ -59,9 +59,6 @@ GEM
     simplecov-html (0.10.2)
     unicode-display_width (1.8.0)
 
-PLATFORMS
-  x86_64-linux
-
 DEPENDENCIES
   httparty (= 0.17.1)
   localhost (~> 1.1.4)
