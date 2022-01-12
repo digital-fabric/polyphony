@@ -243,16 +243,14 @@ class BackendTest < MiniTest::Test
   end
 
   def test_timer_loop
-    skip unless IS_LINUX
-
-    i = 0
+    counter = 0
     f = spin do
-      @backend.timer_loop(0.01) { i += 1 }
+      @backend.timer_loop(0.01) { counter += 1 }
     end
     @backend.sleep(0.05)
     f.stop
     f.await # TODO: check why this test sometimes segfaults if we don't a<wait fiber
-    assert_in_range 4..6, i
+    assert_in_range 4..6, counter if IS_LINUX
   end
 
   class MyTimeoutException < Exception

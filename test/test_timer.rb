@@ -160,6 +160,6 @@ class TimerMiscTest < MiniTest::Test
     end
     sleep 0.05
     f.stop
-    assert_in_range 3..7, buffer.size
+    assert_in_range 3..7, buffer.size if IS_LINUX
   end
 end

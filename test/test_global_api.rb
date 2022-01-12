@@ -162,7 +162,7 @@ class MoveOnAfterTest < MiniTest::Test
     end
     t1 = Time.now
     assert_equal 1, o
-    assert_in_range 0.008..0.015, t1 - t0
+    assert_in_range 0.008..0.015, t1 - t0 if IS_LINUX
 
     t0 = Time.now
     o = move_on_after(0.05, with_value: 1) do
@@ -172,7 +172,7 @@ class MoveOnAfterTest < MiniTest::Test
     end
     t1 = Time.now
     assert_equal 2, o
-    assert_in_range 0.008..0.013, t1 - t0
+    assert_in_range 0.008..0.013, t1 - t0 if IS_LINUX
   end
 end
 
@@ -297,7 +297,7 @@ class SpinLoopTest < MiniTest::Test
     f = spin_loop(rate: 100) { buffer << (counter += 1) }
     sleep 0.02
     f.stop
-    assert_in_range 1..3, counter
+    assert_in_range 1..3, counter if IS_LINUX
   end
 
   def test_spin_loop_with_interval
@@ -307,7 +307,7 @@ class SpinLoopTest < MiniTest::Test
     f = spin_loop(interval: 0.01) { buffer << (counter += 1) }
     sleep 0.02
     f.stop
-    assert_in_range 1..3, counter
+    assert_in_range 1..3, counter if IS_LINUX
   end
 
   def test_spin_loop_break
@@ -382,8 +382,6 @@ end
 
 class ThrottledLoopTest < MiniTest::Test
   def test_throttled_loop
-    skip unless IS_LINUX
-
     buffer = []
     counter = 0
     t0 = Time.now
@@ -391,7 +389,7 @@ class ThrottledLoopTest < MiniTest::Test
       throttled_loop(10) { buffer << (counter += 1) }
     end
     sleep 0.3
-    assert_in_range 2..4, counter
+    assert_in_range 2..4, counter if IS_LINUX
   end
 
   def test_throttled_loop_with_count
@@ -419,8 +417,6 @@ class GlobalAPIEtcTest < MiniTest::Test
   end
 
   def test_every
-    skip unless IS_LINUX
-
     buffer = []
     t0 = Time.now
     f = spin do
@@ -428,12 +424,10 @@ class GlobalAPIEtcTest < MiniTest::Test
     end
     sleep 0.05
     f.stop
-    assert_in_range 4..6, buffer.size
+    assert_in_range 4..6, buffer.size if IS_LINUX
   end
 
   def test_every_with_slow_op
-    skip unless IS_LINUX
-
     buffer = []
     t0 = Time.now
     f = spin do
@@ -441,7 +435,7 @@ class GlobalAPIEtcTest < MiniTest::Test
     end
     sleep 0.15
     f.stop
-    assert_in_range 2..3, buffer.size
+    assert_in_range 2..3, buffer.size if IS_LINUX
   end
 
   def test_sleep
