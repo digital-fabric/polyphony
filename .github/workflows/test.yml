@@ -19,8 +19,10 @@ jobs:
       POLYPHONY_USE_LIBEV: "1"
 
     steps:
-    - uses: actions/checkout@v1
-    - uses: ruby/setup-ruby@v1
+    - name: Setup OS
+      uses: actions/checkout@v1
+    - name: Setup Ruby
+      uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{matrix.ruby}}
         bundler-cache: true # 'bundle install' and cache
