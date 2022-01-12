@@ -17,6 +17,7 @@ const char *op_type_to_str(enum op_type type) {
   case OP_ACCEPT: return "ACCEPT";
   case OP_CONNECT: return "CONNECT";
   case OP_CHAIN: return "CHAIN";
+  case OP_CLOSE: return "CLOSE";
   default: return "";
   };
 }

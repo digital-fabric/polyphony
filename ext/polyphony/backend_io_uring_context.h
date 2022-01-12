@@ -15,7 +15,8 @@ enum op_type {
   OP_POLL,
   OP_ACCEPT,
   OP_CONNECT,
-  OP_CHAIN
+  OP_CHAIN,
+  OP_CLOSE
 };
 
 typedef struct op_context {

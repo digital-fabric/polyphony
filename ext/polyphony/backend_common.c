@@ -206,6 +206,36 @@ inline VALUE io_enc_str(VALUE str, rb_io_t *fptr) {
   return str;
 }
 
+static inline void free_io_buffer(rb_io_buffer_t *buf)
+{
+  if (buf->ptr) {
+    ruby_xfree(buf->ptr);
+    buf->ptr = NULL;
+  }
+}
+
+static inline void clear_codeconv(rb_io_t *fptr) {
+  if (fptr->readconv) {
+    rb_econv_close(fptr->readconv);
+    fptr->readconv = NULL;
+  }
+  free_io_buffer(&fptr->cbuf);
+
+  if (fptr->writeconv) {
+    rb_econv_close(fptr->writeconv);
+    fptr->writeconv = NULL;
+  }
+  fptr->writeconv_initialized = 0;
+}
+
+void fptr_finalize(rb_io_t *fptr) {
+  fptr->fd = -1;
+  fptr->stdio_file = 0;
+  free_io_buffer(&fptr->rbuf);
+  free_io_buffer(&fptr->wbuf);
+  clear_codeconv(fptr);
+}
+
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 

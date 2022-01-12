@@ -68,6 +68,7 @@ void io_shrink_read_string(VALUE str, long n);
 void io_set_read_length(VALUE str, long n, int shrinkable);
 rb_encoding* io_read_encoding(rb_io_t *fptr);
 VALUE io_enc_str(VALUE str, rb_io_t *fptr);
+void fptr_finalize(rb_io_t *fptr);
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
