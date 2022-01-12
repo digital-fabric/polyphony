@@ -52,7 +52,7 @@ class KernelTest < MiniTest::Test
     timer = spin { throttled_loop(200) { counter += 1 } }
 
     `sleep 0.05`
-    assert_in_range 6..24, counter
+    assert_in_range 8..14, counter if IS_LINUX
 
     result = `echo "hello"`
     assert_equal "hello\n", result

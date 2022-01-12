@@ -382,6 +382,8 @@ end
 
 class ThrottledLoopTest < MiniTest::Test
   def test_throttled_loop
+    skip unless IS_LINUX
+
     buffer = []
     counter = 0
     t0 = Time.now
@@ -446,7 +448,7 @@ class GlobalAPIEtcTest < MiniTest::Test
     t0 = Time.now
     sleep 0.1
     elapsed = Time.now - t0
-    assert (0.05..0.15).include? elapsed if IS_LINUX
+    assert_in_range 0.05..0.15, elapsed if IS_LINUX
 
     f = spin { sleep }
     snooze
