@@ -51,8 +51,8 @@ class KernelTest < MiniTest::Test
     counter = 0
     timer = spin { throttled_loop(200) { counter += 1 } }
 
-    `sleep 0.01`
-    assert(counter >= 2)
+    `sleep 0.05`
+    assert_in_range 8..16, counter
 
     result = `echo "hello"`
     assert_equal "hello\n", result
