@@ -59,6 +59,12 @@ GEM
     simplecov-html (0.10.2)
     unicode-display_width (1.8.0)
 
+PLATFORMS
+  universal-darwin
+  universal-freebsd
+  universal-linux
+  universal-unknown
+
 DEPENDENCIES
   httparty (= 0.17.1)
   localhost (~> 1.1.4)
