@@ -9,9 +9,9 @@ class SocketTest < MiniTest::Test
     super
   end
 
-  def start_tcp_server_on_random_port
+  def start_tcp_server_on_random_port(host = '127.0.0.1')
     port = rand(1100..60000)
-    server = TCPServer.new('127.0.0.1', port)
+    server = TCPServer.new(host, port)
     [port, server]
   rescue Errno::EADDRINUSE
     retry
@@ -48,6 +48,29 @@ class SocketTest < MiniTest::Test
       result = client.read
     }
     assert result =~ /HTTP\/1.0 301 Moved Permanently/
+  end
+
+  def test_tcp_ipv6
+    port, server = start_tcp_server_on_random_port('::1')
+    server_fiber = spin do
+      while (socket = server.accept)
+        spin do
+          while (data = socket.gets(8192))
+            socket << data
+          end
+        end
+      end
+    end
+
+    snooze
+    client = TCPSocket.new('::1', port)
+    client.write("1234\n")
+    assert_equal "1234\n", client.recv(8192)
+    client.close
+  ensure
+    server_fiber&.stop
+    server_fiber&.await
+    server&.close
   end
 
   def test_read

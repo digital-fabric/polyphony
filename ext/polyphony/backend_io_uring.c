@@ -966,12 +966,11 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize) 
   return io_uring_backend_splice(backend, src, dest, chunksize, 1);
 }
 
-
 VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   Backend_t *backend;
   rb_io_t *fptr;
-  struct sockaddr_in addr;
-  char *host_buf = StringValueCStr(host);
+  struct sockaddr *ai_addr;
+  int ai_addrlen;
   VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
   VALUE resume_value = Qnil;
   op_context_t *ctx;
@@ -979,19 +978,17 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   int result;
   int completed;
 
+  ai_addrlen = backend_getaddrinfo(host, port, &ai_addr);
+
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
   GetOpenFile(sock, fptr);
   io_unset_nonblock(fptr, sock);
 
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = inet_addr(host_buf);
-  addr.sin_port = htons(NUM2INT(port));
-
   ctx = context_store_acquire(&backend->store, OP_CONNECT);
   sqe = io_uring_get_sqe(&backend->ring);
-  io_uring_prep_connect(sqe, fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
+  io_uring_prep_connect(sqe, fptr->fd, ai_addr, ai_addrlen);
   result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
   completed = context_store_release(&backend->store, ctx);
   RAISE_IF_EXCEPTION(resume_value);

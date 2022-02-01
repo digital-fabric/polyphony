@@ -432,3 +432,25 @@ void backend_setup_stats_symbols() {
   rb_global_variable(&SYM_poll_count);
   rb_global_variable(&SYM_pending_ops);
 }
+
+int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr) {
+  VALUE port_string;
+  struct addrinfo hints;
+  struct addrinfo *addrinfo_result;
+  int ret;
+
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC; /* allow IPv4 or IPv6 */
+  hints.ai_socktype = SOCK_STREAM;
+
+  port_string = rb_funcall(port, ID_to_s, 0);
+  ret = getaddrinfo(StringValueCStr(host), StringValueCStr(port_string), &hints, &addrinfo_result);
+  RB_GC_GUARD(port_string);
+  if (ret != 0) {
+    VALUE msg = rb_str_new2(gai_strerror(ret));
+    rb_funcall(rb_mKernel, ID_raise, 1, msg);
+    RB_GC_GUARD(msg);
+  }
+  *ai_addr = addrinfo_result->ai_addr;
+  return addrinfo_result->ai_addrlen;
+}

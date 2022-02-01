@@ -697,10 +697,13 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
-  struct sockaddr_in addr;
-  char *host_buf = StringValueCStr(host);
+  struct sockaddr *ai_addr;
+  int ai_addrlen;
   VALUE switchpoint_result = Qnil;
   VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
+
+  ai_addrlen = backend_getaddrinfo(host, port, &ai_addr);
+
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
@@ -708,12 +711,8 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   io_verify_blocking_mode(fptr, sock, Qfalse);
   watcher.fiber = Qnil;
 
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = inet_addr(host_buf);
-  addr.sin_port = htons(NUM2INT(port));
-
   backend->base.op_count++;
-  int result = connect(fptr->fd, (struct sockaddr *)&addr, sizeof(addr));
+  int result = connect(fptr->fd, ai_addr, ai_addrlen);
   if (result < 0) {
     int e = errno;
     if (e != EINPROGRESS) rb_syserr_fail(e, strerror(e));
@@ -1156,7 +1155,6 @@ noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
   while (1) {
     uint64_t now_ns = current_time_ns();
     if (next_time_ns == 0) next_time_ns = now_ns + interval_ns;
-    double sleep_duration = ((double)(next_time_ns - now_ns))/1e9;
 
     if (next_time_ns > now_ns) {
       double sleep_duration = ((double)(next_time_ns - now_ns))/1e9;
@@ -1370,7 +1368,7 @@ inline VALUE Backend_run_idle_tasks(VALUE self) {
   return self;
 }
 
-inline int splice_chunks_write(Backend_t *backend, int fd, VALUE str, struct libev_rw_io *watcher, VALUE *result) {
+static inline int splice_chunks_write(Backend_t *backend, int fd, VALUE str, struct libev_rw_io *watcher, VALUE *result) {
   char *buf = RSTRING_PTR(str);
   int len = RSTRING_LEN(str);
   int left = len;

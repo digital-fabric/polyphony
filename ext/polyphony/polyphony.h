@@ -57,6 +57,7 @@ extern ID ID_raise;
 extern ID ID_signal;
 extern ID ID_size;
 extern ID ID_switch_fiber;
+extern ID ID_to_s;
 extern ID ID_transfer;
 
 extern VALUE SYM_fiber_create;

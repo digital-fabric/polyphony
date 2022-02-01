@@ -1,6 +1,11 @@
 #ifndef BACKEND_COMMON_H
 #define BACKEND_COMMON_H
 
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
 #include "ruby.h"
 #include "ruby/io.h"
 #include "runqueue.h"
@@ -110,5 +115,6 @@ VALUE Backend_stats(VALUE self);
 void backend_run_idle_tasks(struct Backend_base *base);
 void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking);
 void backend_setup_stats_symbols();
+int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr);
 
 #endif /* BACKEND_COMMON_H */
