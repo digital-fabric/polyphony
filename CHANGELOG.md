@@ -1,3 +1,6 @@
+## 0.74 2022-02-01
+
+- Add support for IPv6 (#69)
 - Override TCPSocket.open
 
 ## 0.73.1 2021-12-17
