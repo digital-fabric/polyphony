@@ -40,6 +40,16 @@ class SocketTest < MiniTest::Test
     server&.close
   end
 
+  def test_tcpsocket_open_with_hostname
+    client = TCPSocket.open('google.com', 80)
+    client.write("GET / HTTP/1.0\r\nHost: google.com\r\n\r\n")
+    result = nil
+    move_on_after(1) {
+      result = client.read
+    }
+    assert result =~ /HTTP\/1.0 301 Moved Permanently/
+  end
+
   def test_read
     port, server = start_tcp_server_on_random_port
     server_fiber = spin do

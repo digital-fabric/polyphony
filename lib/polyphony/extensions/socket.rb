@@ -120,6 +120,10 @@ class ::TCPSocket
 
   attr_reader :io
 
+  def self.open(*args)
+    new(*args)
+  end
+
   def initialize(remote_host, remote_port, local_host = nil, local_port = nil)
     @io = Socket.new Socket::AF_INET, Socket::SOCK_STREAM
     if local_host && local_port

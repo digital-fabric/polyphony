@@ -1,3 +1,5 @@
+- Override TCPSocket.open
+
 ## 0.73.1 2021-12-17
 
 - Fix Gemfile.lock
