@@ -124,12 +124,9 @@ class ::TCPSocket
     new(*args)
   end
 
-  def address_family(host)
-    host =~ /\:\:/ ? Socket::AF_INET6 : Socket::AF_INET
-  end
-
   def initialize(remote_host, remote_port, local_host = nil, local_port = nil)
-    @io = Socket.new address_family(remote_host), Socket::SOCK_STREAM
+    remote_addr = Addrinfo.tcp(remote_host, remote_port)
+    @io = Socket.new remote_addr.afamily, Socket::SOCK_STREAM
     if local_host && local_port
       addr = Addrinfo.tcp(local_host, local_port)
       @io.bind(addr)
@@ -231,13 +228,10 @@ end
 
 # Override stock TCPServer code by encapsulating a Socket instance.
 class ::TCPServer
-  def address_family(host)
-    host =~ /\:\:/ ? Socket::AF_INET6 : Socket::AF_INET
-  end
-
   def initialize(hostname = nil, port = 0)
-    @io = Socket.new address_family(hostname), Socket::SOCK_STREAM
-    @io.bind(Addrinfo.tcp(hostname, port))
+    addr = Addrinfo.tcp(hostname, port)
+    @io = Socket.new addr.afamily, Socket::SOCK_STREAM
+    @io.bind(addr)
     @io.listen(0)
   end
 
