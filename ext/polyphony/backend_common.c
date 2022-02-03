@@ -416,6 +416,13 @@ VALUE Backend_stats(VALUE self) {
   return stats;
 }
 
+VALUE Backend_verify_blocking_mode(VALUE self, VALUE io, VALUE blocking) {
+  rb_io_t *fptr;
+  GetOpenFile(io, fptr);
+  io_verify_blocking_mode(fptr, io, blocking);
+  return self;
+}
+
 void backend_setup_stats_symbols() {
   SYM_runqueue_size       = ID2SYM(rb_intern("runqueue_size"));
   SYM_runqueue_length     = ID2SYM(rb_intern("runqueue_length"));

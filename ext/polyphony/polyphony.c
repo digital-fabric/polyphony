@@ -154,6 +154,7 @@ void Init_Polyphony() {
   rb_define_singleton_method(mPolyphony, "backend_waitpid", Polyphony_backend_waitpid, 1);
   rb_define_singleton_method(mPolyphony, "backend_write", Polyphony_backend_write, -1);
   rb_define_singleton_method(mPolyphony, "backend_close", Polyphony_backend_close, 1);
+  rb_define_singleton_method(mPolyphony, "backend_verify_blocking_mode", Backend_verify_blocking_mode, 2);
 
   rb_define_global_function("snooze", Polyphony_snooze, 0);
   rb_define_global_function("suspend", Polyphony_suspend, 0);
