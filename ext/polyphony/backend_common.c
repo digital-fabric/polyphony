@@ -64,7 +64,8 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   unsigned int idle_tasks_run_count = 0;
 
   base->switch_count++;
-  COND_TRACE(base, 2, SYM_fiber_switchpoint, current_fiber);
+  if (SHOULD_TRACE(base))
+    TRACE(base, 3, SYM_fiber_switchpoint, current_fiber, CALLER());
 
   while (1) {
     next = runqueue_shift(&base->runqueue);
