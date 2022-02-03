@@ -250,10 +250,18 @@ module Polyphony
     def schedule_priority_oob_fiber(&block)
       f = Fiber.new do
         Fiber.current.setup_raw
-        block.call
+        result = block.call
       rescue Exception => e
         Thread.current.schedule_and_wakeup(Thread.main.main_fiber, e)
+        result = e
+      ensure
+        Thread.backend.trace(:fiber_terminate, f, result)
+        suspend
       end
+      f.oob = true
+      location = block.source_location
+      f.set_caller(["#{location.join(':')}"])
+      Thread.backend.trace(:fiber_create, f)
       Thread.current.schedule_and_wakeup(f, nil)
     end
   end
@@ -449,7 +457,7 @@ class ::Fiber
 
   extend Polyphony::FiberControlClassMethods
 
-  attr_accessor :tag, :thread, :parent
+  attr_accessor :tag, :thread, :parent, :oob
   attr_reader :result
 
   def running?
@@ -466,7 +474,11 @@ class ::Fiber
   alias_method :to_s, :inspect
 
   def location
-    @caller ? @caller[0] : '(root)'
+    if @oob
+      "#{@caller[0]} (oob)"
+    else
+      @caller ? @caller[0] : '(root)'
+    end
   end
 
   def caller
@@ -476,6 +488,10 @@ class ::Fiber
     else
       spin_caller
     end
+  end
+
+  def set_caller(o)
+    @caller = o
   end
 
   def main?
