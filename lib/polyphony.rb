@@ -41,6 +41,8 @@ module Polyphony
         run_forked_block(&block)
       rescue SystemExit
         # fall through to ensure
+      rescue Polyphony::MoveOn
+        exit!
       rescue Exception => e
         STDERR << e.full_message
         exit!
