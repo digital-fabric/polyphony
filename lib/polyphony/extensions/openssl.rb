@@ -38,8 +38,10 @@ class ::OpenSSL::SSL::SSLSocket
 
   alias_method :orig_sysread, :sysread
   def sysread(maxlen, buf = +'')
+    # ensure socket is non blocking
+    Polyphony.backend_verify_blocking_mode(io, false)
     while true
-      case (result = read_nonblock(maxlen, buf, exception: false))
+      case (result = sysread_nonblock(maxlen, buf, exception: false))
       when :wait_readable then Polyphony.backend_wait_io(io, false)
       when :wait_writable then Polyphony.backend_wait_io(io, true)
       else return result
@@ -49,6 +51,8 @@ class ::OpenSSL::SSL::SSLSocket
 
   alias_method :orig_syswrite, :syswrite
   def syswrite(buf)
+    # ensure socket is non blocking
+    Polyphony.backend_verify_blocking_mode(io, false)
     while true
       case (result = write_nonblock(buf, exception: false))
       when :wait_readable then Polyphony.backend_wait_io(io, false)
