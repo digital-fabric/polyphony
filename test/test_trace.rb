@@ -10,7 +10,7 @@ class TraceTest < MiniTest::Test
 
     assert_equal [
       [:fiber_schedule, Fiber.current, nil, false],
-      [:fiber_switchpoint, Fiber.current],
+      [:fiber_switchpoint, Fiber.current, ["#{__FILE__}:#{__LINE__ - 4}:in `test_tracing_enabled'"] + caller],
       [:fiber_run, Fiber.current, nil]
     ], events
   ensure
@@ -22,8 +22,14 @@ class TraceTest < MiniTest::Test
     Thread.backend.trace_proc = proc { |*e| events << e }
 
     f = spin { sleep 0; :byebye }
+    l0 = __LINE__ + 1
     suspend
     sleep 0
+
+    Thread.backend.trace_proc = nil
+    
+    # remove caller info for :fiber_switchpoint events
+    events.each {|e| e.pop if e[0] == :fiber_switchpoint }
 
     assert_equal [
       [:fiber_create, f],
