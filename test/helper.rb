@@ -21,10 +21,6 @@ IS_LINUX = RUBY_PLATFORM =~ /linux/
 #   Minitest::Reporters::SpecReporter.new
 # ]
 
-class ::Fiber
-  attr_writer :auto_watcher
-end
-
 module ::Kernel
   def trace(*args)
     STDOUT.orig_write(format_trace(args))
@@ -59,7 +55,6 @@ class MiniTest::Test
       puts "Children left after #{self.name}: #{Fiber.current.children.inspect}"
       exit!
     end
-    Fiber.current.instance_variable_set(:@auto_watcher, nil)
   rescue => e
     puts e
     puts e.backtrace.join("\n")
