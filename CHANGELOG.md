@@ -1,3 +1,12 @@
+## 0.75 2022-02-04
+
+- Fix handling of MoveOn on main fiber of forked process
+- Ensure SSLSocket underlying socket is in nonblocking mode
+- Add `Polyphony.backend_verify_blocking_mode` API
+- Fix address resolution for hostnames with IPv6 address
+- Improve behaviour of OOB fiber
+- Include caller in `fiber_switchpoint` trace
+
 ## 0.74 2022-02-01
 
 - Add support for IPv6 (#69)
