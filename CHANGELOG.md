@@ -1,6 +1,6 @@
 ## 0.76 2022-02-06
 
-- Comment out `Backend_close` API
+- Comment out `Backend_close` API (#70)
 
 ## 0.75 2022-02-04
 
