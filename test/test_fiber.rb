@@ -923,18 +923,20 @@ class MailboxTest < MiniTest::Test
   def test_cross_thread_send_receive
     ping_receive_buffer = []
     pong_receive_buffer = []
+    master = Fiber.current
 
     pong = Thread.new do
-      sleep 0.05
-      loop do
+      master << :pong_ready
+      3.times do
         peer, data = receive
         pong_receive_buffer << data
         peer << 'pong'
       end
     end
 
+    assert_equal :pong_ready, receive
+
     ping = Thread.new do
-      sleep 0.05
       3.times do
         pong << [Fiber.current, 'ping']
         data = receive
@@ -943,7 +945,7 @@ class MailboxTest < MiniTest::Test
     end
 
     ping.join
-    pong.kill
+    pong.join
     ping = pong = nil
 
     assert_equal %w{pong pong pong}, ping_receive_buffer
