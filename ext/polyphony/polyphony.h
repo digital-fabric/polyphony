@@ -114,7 +114,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise);
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write);
 VALUE Backend_waitpid(VALUE self, VALUE pid);
 VALUE Backend_write_m(int argc, VALUE *argv, VALUE self);
-VALUE Backend_close(VALUE self, VALUE io);
+// VALUE Backend_close(VALUE self, VALUE io);
 
 VALUE Backend_poll(VALUE self, VALUE blocking);
 VALUE Backend_wait_event(VALUE self, VALUE raise_on_exception);
