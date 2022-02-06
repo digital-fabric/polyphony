@@ -1,3 +1,7 @@
+## 0.76 2022-02-06
+
+- Comment out `Backend_close` API
+
 ## 0.75 2022-02-04
 
 - Fix handling of MoveOn on main fiber of forked process
