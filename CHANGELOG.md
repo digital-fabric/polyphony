@@ -1,3 +1,7 @@
+## 0.77 2022-02-07
+
+- Fix behaviour of signal traps (#71)
+
 ## 0.76 2022-02-06
 
 - Comment out `Backend_close` API (#70)
