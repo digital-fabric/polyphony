@@ -3,6 +3,63 @@
 require_relative 'helper'
 
 class SignalTrapTest < Minitest::Test
+  def test_signal_handler_trace
+    i1, o1 = IO.pipe
+    i2, o2 = IO.pipe
+    pid = Process.pid
+    child_pid = Polyphony.fork do
+      i1.gets
+      Process.kill('SIGINT', pid)
+      sleep 0.1
+      o2.puts "done"
+      o2.close
+    end
+
+    events = []
+    begin
+      Thread.backend.trace_proc = proc { |*e| events << [e[0], e[1].tag] }
+      trap ('SIGINT') { }
+      
+      o1.orig_write("\n")
+      o1.close
+
+      msg = i2.gets
+      assert_equal "done\n", msg
+    ensure
+      Thread.backend.trace_proc = nil
+      trap ('SIGINT') { raise Interrupt }
+    end
+
+    Fiber.current.tag = :main
+
+    expected = [
+      [:fiber_switchpoint, :main],
+      [:fiber_event_poll_enter, :main],
+      [:fiber_create, :oob],
+      [:fiber_schedule, :oob],
+      [:fiber_event_poll_leave, :main],
+      [:fiber_run, :oob],
+      [:fiber_terminate, :oob],
+      [:fiber_switchpoint, :oob],
+      [:fiber_event_poll_enter, :oob],
+      [:fiber_schedule, :main],
+      [:fiber_event_poll_leave, :oob],
+      [:fiber_run, :main]
+    ]
+    if Thread.backend.kind == :libev
+      expected += [
+        [:fiber_schedule, :main],
+        [:fiber_switchpoint, :main],
+        [:fiber_run, :main]
+      ]
+    end
+
+    assert_equal expected, events
+  ensure
+    Process.kill('SIGTERM', child_pid) rescue nil
+    Process.wait(child_pid) rescue nil
+  end
+
   def test_int_signal
     Thread.new { sleep 0.001; Process.kill('INT', Process.pid) }
     assert_raises(Interrupt) { sleep 5 }

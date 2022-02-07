@@ -191,10 +191,14 @@ void io_uring_backend_poll(Backend_t *backend) {
     io_uring_submit(&backend->ring);
   }
 
+wait_cqe:
   backend->base.currently_polling = 1;
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
   backend->base.currently_polling = 0;
-  if (poll_ctx.result < 0) return;
+  if (poll_ctx.result < 0) {
+    if (poll_ctx.result == -EINTR && runqueue_empty_p(&backend->base.runqueue)) goto wait_cqe;
+    return;
+  }
 
   io_uring_backend_handle_completion(poll_ctx.cqe, backend);
   io_uring_cqe_seen(&backend->ring, poll_ctx.cqe);

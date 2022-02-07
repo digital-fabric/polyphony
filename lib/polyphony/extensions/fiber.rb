@@ -248,21 +248,27 @@ module Polyphony
     # also be scheduled with priority. This method is mainly used trapping
     # signals (see also the patched `Kernel#trap`)
     def schedule_priority_oob_fiber(&block)
-      f = Fiber.new do
+      oob_fiber = Fiber.new do
         Fiber.current.setup_raw
         result = block.call
       rescue Exception => e
         Thread.current.schedule_and_wakeup(Thread.main.main_fiber, e)
         result = e
       ensure
-        Thread.backend.trace(:fiber_terminate, f, result)
+        Thread.backend.trace(:fiber_terminate, Fiber.current, result)
         suspend
       end
-      f.oob = true
+      prepare_oob_fiber(oob_fiber, block)
+      Thread.backend.trace(:fiber_create, oob_fiber)
+      oob_fiber.schedule_with_priority(nil)
+    end
+
+    def prepare_oob_fiber(fiber, block)
+      fiber.oob = true
+      fiber.tag = :oob
+      fiber.thread = Thread.current
       location = block.source_location
-      f.set_caller(["#{location.join(':')}"])
-      Thread.backend.trace(:fiber_create, f)
-      Thread.current.schedule_and_wakeup(f, nil)
+      fiber.set_caller(["#{location.join(':')}"])
     end
   end
 

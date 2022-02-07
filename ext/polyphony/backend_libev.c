@@ -169,9 +169,14 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
   backend->base.poll_count++;
 
   COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_enter, rb_fiber_current());
+  
+ev_run:
   backend->base.currently_polling = 1;
+  errno = 0;
   ev_run(backend->ev_loop, blocking == Qtrue ? EVRUN_ONCE : EVRUN_NOWAIT);
   backend->base.currently_polling = 0;
+  if (errno == EINTR && runqueue_empty_p(&backend->base.runqueue)) goto ev_run;
+  
   COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_leave, rb_fiber_current());
 
   return self;
