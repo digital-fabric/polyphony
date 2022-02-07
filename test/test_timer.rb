@@ -78,7 +78,7 @@ class TimerCancelAfterTest < MiniTest::Test
 
   def test_timer_cancel_after_with_reset
     buf = []
-    @timer.cancel_after(0.13) do
+    @timer.cancel_after(0.15) do
       sleep 0.05
       buf << 1
       @timer.reset
