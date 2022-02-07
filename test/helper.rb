@@ -46,10 +46,11 @@ class MiniTest::Test
     Thread.current.backend.finalize
     Thread.current.backend = Polyphony::Backend.new
     sleep 0.001
+    @__stamp = Time.now
   end
 
   def teardown
-    # trace "* teardown #{self.name}"
+    # trace "* teardown #{self.name} (#{Time.now - @__stamp}s)"
     Fiber.current.shutdown_all_children
     if Fiber.current.children.size > 0
       puts "Children left after #{self.name}: #{Fiber.current.children.inspect}"
