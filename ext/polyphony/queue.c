@@ -2,6 +2,7 @@
 #include "ring_buffer.h"
 
 typedef struct queue {
+  unsigned int closed;
   ring_buffer values;
   ring_buffer shift_queue;
   ring_buffer push_queue;
@@ -9,6 +10,8 @@ typedef struct queue {
 } Queue_t;
 
 VALUE cQueue = Qnil;
+VALUE cClosedQueueError = Qnil;
+VALUE cThreadError = Qnil;
 
 static void Queue_mark(void *ptr) {
   Queue_t *queue = ptr;
@@ -49,6 +52,7 @@ static VALUE Queue_initialize(int argc, VALUE *argv, VALUE self) {
   Queue_t *queue;
   GetQueue(self, queue);
 
+  queue->closed = 0;
   ring_buffer_init(&queue->values);
   ring_buffer_init(&queue->shift_queue);
   ring_buffer_init(&queue->push_queue);
@@ -99,6 +103,9 @@ VALUE Queue_push(VALUE self, VALUE value) {
   Queue_t *queue;
   GetQueue(self, queue);
 
+  if (queue->closed)
+    rb_raise(cClosedQueueError, "queue closed");
+
   if (queue->capacity) capped_queue_block_push(queue);
 
   queue_schedule_first_blocked_fiber(&queue->shift_queue);
@@ -111,6 +118,9 @@ VALUE Queue_unshift(VALUE self, VALUE value) {
   Queue_t *queue;
   GetQueue(self, queue);
 
+  if (queue->closed)
+    rb_raise(cClosedQueueError, "queue closed");
+
   if (queue->capacity) capped_queue_block_push(queue);
 
   queue_schedule_first_blocked_fiber(&queue->shift_queue);
@@ -119,14 +129,25 @@ VALUE Queue_unshift(VALUE self, VALUE value) {
   return self;
 }
 
-VALUE Queue_shift(VALUE self) {
-  Queue_t *queue;
+VALUE Queue_shift_nonblock(Queue_t *queue) {
+  if (queue->values.count) {
+    VALUE value = ring_buffer_shift(&queue->values);
+    if ((queue->capacity) && (queue->capacity > queue->values.count))
+      queue_schedule_first_blocked_fiber(&queue->push_queue);
+    RB_GC_GUARD(value);
+    return value;
+  }
+  rb_raise(cThreadError, "queue empty");
+}
+
+VALUE Queue_shift_block(Queue_t *queue) {
   VALUE fiber = rb_fiber_current();
   VALUE thread = rb_thread_current();
   VALUE backend = rb_ivar_get(thread, ID_ivar_backend);
   VALUE value;
 
-  GetQueue(self, queue);
+  if (queue->closed && !queue->values.count)
+    rb_raise(cClosedQueueError, "queue closed");
 
   while (1) {
     VALUE switchpoint_result;
@@ -140,12 +161,23 @@ VALUE Queue_shift(VALUE self) {
     RAISE_IF_EXCEPTION(switchpoint_result);
     RB_GC_GUARD(switchpoint_result);
     if (queue->values.count) break;
+    if (queue->closed) return Qnil;
   }
   value = ring_buffer_shift(&queue->values);
   if ((queue->capacity) && (queue->capacity > queue->values.count))
     queue_schedule_first_blocked_fiber(&queue->push_queue);
   RB_GC_GUARD(value);
   return value;
+}
+
+VALUE Queue_shift(int argc,VALUE *argv, VALUE self) {
+  int nonblock = argc && RTEST(argv[0]);
+  Queue_t *queue;
+  GetQueue(self, queue);
+
+  return nonblock ?
+    Queue_shift_nonblock(queue) :
+    Queue_shift_block(queue);
 }
 
 VALUE Queue_delete(VALUE self, VALUE value) {
@@ -244,6 +276,13 @@ VALUE Queue_pending_p(VALUE self) {
   return (queue->shift_queue.count) ? Qtrue : Qfalse;
 }
 
+VALUE Queue_num_waiting(VALUE self) {
+  Queue_t *queue;
+  GetQueue(self, queue);
+
+  return INT2NUM(queue->shift_queue.count);
+}
+
 VALUE Queue_size_m(VALUE self) {
   Queue_t *queue;
   GetQueue(self, queue);
@@ -251,19 +290,53 @@ VALUE Queue_size_m(VALUE self) {
   return INT2NUM(queue->values.count);
 }
 
+VALUE Queue_closed_p(VALUE self) {
+  Queue_t *queue;
+  GetQueue(self, queue);
+
+  return (queue->closed) ? Qtrue : Qfalse;
+}
+
+VALUE Queue_close(VALUE self) {
+  Queue_t *queue;
+  GetQueue(self, queue);
+
+  if (queue->closed) goto end;
+  queue->closed = 1;
+
+  // release all fibers waiting on `#shift`
+  while (queue->shift_queue.count) {
+    VALUE fiber = ring_buffer_shift(&queue->shift_queue);
+    if (fiber == Qnil) break;
+    Fiber_make_runnable(fiber, Qnil);
+  }
+
+end:
+  return self;
+}
+
 void Init_Queue() {
+  cClosedQueueError = rb_const_get(rb_cObject, rb_intern("ClosedQueueError"));
+  cThreadError = rb_const_get(rb_cObject, rb_intern("ThreadError"));
+
   cQueue = rb_define_class_under(mPolyphony, "Queue", rb_cObject);
   rb_define_alloc_func(cQueue, Queue_allocate);
 
   rb_define_method(cQueue, "initialize", Queue_initialize, -1);
   rb_define_method(cQueue, "push", Queue_push, 1);
   rb_define_method(cQueue, "<<", Queue_push, 1);
+  rb_define_method(cQueue, "enq", Queue_push, 1);
   rb_define_method(cQueue, "unshift", Queue_unshift, 1);
 
-  rb_define_method(cQueue, "shift", Queue_shift, 0);
-  rb_define_method(cQueue, "pop", Queue_shift, 0);
+  rb_define_method(cQueue, "shift", Queue_shift, -1);
+  rb_define_method(cQueue, "pop", Queue_shift, -1);
+  rb_define_method(cQueue, "deq", Queue_shift, -1);
+
   rb_define_method(cQueue, "delete", Queue_delete, 1);
   rb_define_method(cQueue, "clear", Queue_clear, 0);
+
+  rb_define_method(cQueue, "size", Queue_size_m, 0);
+  rb_define_method(cQueue, "length", Queue_size_m, 0);
 
   rb_define_method(cQueue, "cap", Queue_cap, 1);
   rb_define_method(cQueue, "capped?", Queue_capped_p, 0);
@@ -273,5 +346,8 @@ void Init_Queue() {
   rb_define_method(cQueue, "flush_waiters", Queue_flush_waiters, 1);
   rb_define_method(cQueue, "empty?", Queue_empty_p, 0);
   rb_define_method(cQueue, "pending?", Queue_pending_p, 0);
-  rb_define_method(cQueue, "size", Queue_size_m, 0);
+  rb_define_method(cQueue, "num_waiting", Queue_num_waiting, 0);
+
+  rb_define_method(cQueue, "closed?", Queue_closed_p, 0);
+  rb_define_method(cQueue, "close", Queue_close, 0);
 }

@@ -74,7 +74,7 @@ void Fiber_make_runnable(VALUE fiber, VALUE value);
 
 VALUE Queue_push(VALUE self, VALUE value);
 VALUE Queue_unshift(VALUE self, VALUE value);
-VALUE Queue_shift(VALUE self);
+VALUE Queue_shift(int argc,VALUE *argv, VALUE self);
 VALUE Queue_shift_all(VALUE self);
 
 void Runqueue_push(VALUE self, VALUE fiber, VALUE value, int reschedule);

@@ -21,6 +21,44 @@ class QueueTest < MiniTest::Test
     assert_equal [1, 2, 3, 4], buf
   end
 
+  def test_chained_push
+    @queue << 5 << 6 << 7
+
+    buf = []
+    3.times { buf << @queue.shift }
+    assert_equal [5, 6, 7], buf
+  end
+
+  def test_push_aliases
+    @queue.push 1
+    @queue << 2
+    @queue.enq 3
+
+    buf = []
+    3.times { buf << @queue.shift }
+    assert_equal [1, 2, 3], buf
+  end
+
+  def test_pop_aliases
+    @queue << 1 << 2 << 3
+
+    assert_equal 1, @queue.pop
+    assert_equal 2, @queue.deq
+    assert_equal 3, @queue.shift
+
+    @queue << 1 << 2 << 3
+
+    assert_equal 1, @queue.pop(false)
+    assert_equal 2, @queue.deq(false)
+    assert_equal 3, @queue.shift(false)
+  end
+
+  def test_nonblocking_pop
+    assert_raises(ThreadError) { @queue.pop(true) }
+    assert_raises(ThreadError) { @queue.deq(true) }
+    assert_raises(ThreadError) { @queue.shift(true) }
+  end
+
   def test_unshift
     @queue.push 1
     @queue.push 2
@@ -112,22 +150,86 @@ class QueueTest < MiniTest::Test
 
   def test_queue_size
     assert_equal 0, @queue.size
+    assert_equal 0, @queue.length
 
     @queue.push 1
 
     assert_equal 1, @queue.size
+    assert_equal 1, @queue.length
 
     @queue.push 2
 
     assert_equal 2, @queue.size
+    assert_equal 2, @queue.length
 
     @queue.shift
 
     assert_equal 1, @queue.size
+    assert_equal 1, @queue.length
 
     @queue.shift
 
     assert_equal 0, @queue.size
+    assert_equal 0, @queue.length
+  end
+
+  def test_pending?
+    assert_equal false, @queue.pending?
+
+    buf = []
+    f = spin { buf << @queue.shift }
+    snooze
+    assert_equal true, @queue.pending?
+
+    @queue << 42
+    f.await
+    assert_equal [42], buf
+    assert_equal false, @queue.pending?
+  end
+
+  def test_num_waiting
+    assert_equal 0, @queue.num_waiting
+
+    f1 = spin { @queue.shift }
+    snooze # allow fiber to start
+    assert_equal 1, @queue.num_waiting
+
+    f2 = spin { @queue.shift }
+    snooze # allow fiber to start
+    assert_equal 2, @queue.num_waiting
+
+    @queue << 1
+    f1.await
+    assert_equal 1, @queue.num_waiting
+
+    @queue << 2
+    f2.await
+    assert_equal 0, @queue.num_waiting
+  end
+
+  def test_closed_queue
+    assert_equal false, @queue.closed?
+
+    buf = []
+    f = spin { buf << @queue.shift }
+    snooze # allow fiber to start
+
+    @queue.close
+    assert_equal true, @queue.closed?
+    cancel_after(1) { f.await }
+    assert_equal [nil], buf
+
+    assert_raises(ClosedQueueError) { @queue << 1 }
+    assert_raises(ClosedQueueError) { @queue.deq }
+    assert_raises(ThreadError) { @queue.pop(true) }
+
+    # test deq on closed non-empty queue
+    @queue = Polyphony::Queue.new
+    @queue << 42 << 43
+    @queue.close
+
+    assert_equal 42, @queue.deq(false)
+    assert_equal 43, @queue.deq(true)
   end
 end
 

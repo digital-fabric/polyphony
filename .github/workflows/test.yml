@@ -19,7 +19,7 @@ jobs:
       POLYPHONY_USE_LIBEV: "1"
 
     steps:
-    - name: Setup OS
+    - name: Setup machine
       uses: actions/checkout@v1
     - name: Setup Ruby
       uses: ruby/setup-ruby@v1

@@ -97,7 +97,7 @@ VALUE Fiber_receive(VALUE self) {
     mailbox = rb_funcall(cQueue, ID_new, 0);
     rb_ivar_set(self, ID_ivar_mailbox, mailbox);
   }
-  return Queue_shift(mailbox);
+  return Queue_shift(0, 0, mailbox);
 }
 
 VALUE Fiber_mailbox(VALUE self) {
