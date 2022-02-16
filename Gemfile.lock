@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    polyphony (0.77)
+    polyphony (0.78)
 
 GEM
   remote: https://rubygems.org/

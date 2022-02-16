@@ -1,3 +1,7 @@
+## 0.78 2022-02-16
+
+- Fix Polyphony::Queue API compatibility (#72)
+
 ## 0.77 2022-02-07
 
 - Fix behaviour of signal traps (#71)
