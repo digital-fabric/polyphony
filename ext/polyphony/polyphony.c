@@ -27,14 +27,7 @@ ID ID_W;
 ID ID_RW;
 
 VALUE Polyphony_snooze(VALUE self) {
-  VALUE ret;
-  VALUE fiber = rb_fiber_current();
-
-  Fiber_make_runnable(fiber, Qnil);
-  ret = Thread_switch_fiber(rb_thread_current());
-  RAISE_IF_EXCEPTION(ret);
-  RB_GC_GUARD(ret);
-  return ret;
+  return Backend_snooze(BACKEND());
 }
 
 static VALUE Polyphony_suspend(VALUE self) {

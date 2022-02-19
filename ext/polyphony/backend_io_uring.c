@@ -216,12 +216,12 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
     io_uring_submit(&backend->ring);
   }
 
-  COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_enter, rb_fiber_current());
+  COND_TRACE(&backend->base, 2, SYM_enter_poll, rb_fiber_current());
   
   if (is_blocking) io_uring_backend_poll(backend);
   io_uring_backend_handle_ready_cqes(backend);
   
-  COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_leave, rb_fiber_current());
+  COND_TRACE(&backend->base, 2, SYM_leave_poll, rb_fiber_current());
 
   return self;
 }
@@ -1108,7 +1108,7 @@ VALUE Backend_timer_loop(VALUE self, VALUE interval) {
       if (!completed) return resume_value;
     }
     else {
-      resume_value = backend_snooze();
+      resume_value = backend_snooze(&backend->base);
       RAISE_IF_EXCEPTION(resume_value);
     }
 
@@ -1589,6 +1589,22 @@ VALUE Backend_trace_proc_set(VALUE self, VALUE block) {
 
   backend->base.trace_proc = block;
   return self;
+}
+
+VALUE Backend_snooze(VALUE self) {
+  VALUE ret;
+  VALUE fiber = rb_fiber_current();
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  Fiber_make_runnable(fiber, Qnil);
+  ret = Thread_switch_fiber(rb_thread_current());
+
+  COND_TRACE(&backend->base, 4, SYM_unblock, rb_fiber_current(), ret, CALLER());
+
+  RAISE_IF_EXCEPTION(ret);
+  RB_GC_GUARD(ret);
+  return ret;
 }
 
 void Backend_park_fiber(VALUE self, VALUE fiber) {

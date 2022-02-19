@@ -168,7 +168,7 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
 
   backend->base.poll_count++;
 
-  COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_enter, rb_fiber_current());
+  COND_TRACE(&backend->base, 2, SYM_enter_poll, rb_fiber_current());
   
 ev_run:
   backend->base.currently_polling = 1;
@@ -177,7 +177,7 @@ ev_run:
   backend->base.currently_polling = 0;
   if (errno == EINTR && runqueue_empty_p(&backend->base.runqueue)) goto ev_run;
   
-  COND_TRACE(&backend->base, 2, SYM_fiber_event_poll_leave, rb_fiber_current());
+  COND_TRACE(&backend->base, 2, SYM_leave_poll, rb_fiber_current());
 
   return self;
 }
@@ -305,7 +305,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      switchpoint_result = backend_snooze();
+      switchpoint_result = backend_snooze(&backend->base);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
 
       if (n == 0) break; // EOF
@@ -375,7 +375,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      switchpoint_result = backend_snooze();
+      switchpoint_result = backend_snooze(&backend->base);
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
 
@@ -428,7 +428,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      switchpoint_result = backend_snooze();
+      switchpoint_result = backend_snooze(&backend->base);
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
 
@@ -483,7 +483,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   }
 
   if (watcher.fiber == Qnil) {
-    switchpoint_result = backend_snooze();
+    switchpoint_result = backend_snooze(&backend->base);
 
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
@@ -558,7 +558,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     }
   }
   if (watcher.fiber == Qnil) {
-    switchpoint_result = backend_snooze();
+    switchpoint_result = backend_snooze(&backend->base);
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
 
@@ -611,7 +611,7 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
     else {
       VALUE socket;
       rb_io_t *fp;
-      switchpoint_result = backend_snooze();
+      switchpoint_result = backend_snooze(&backend->base);
 
       if (TEST_EXCEPTION(switchpoint_result)) {
         close(fd); // close fd since we're raising an exception
@@ -669,7 +669,7 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
     }
     else {
       rb_io_t *fp;
-      switchpoint_result = backend_snooze();
+      switchpoint_result = backend_snooze(&backend->base);
 
       if (TEST_EXCEPTION(switchpoint_result)) {
         close(fd); // close fd since we're raising an exception
@@ -727,7 +727,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
   else {
-    switchpoint_result = backend_snooze();
+    switchpoint_result = backend_snooze(&backend->base);
 
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
@@ -774,7 +774,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   }
 
   if (watcher.fiber == Qnil) {
-    switchpoint_result = backend_snooze();
+    switchpoint_result = backend_snooze(&backend->base);
 
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
@@ -880,7 +880,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   }
 
   if (watcher.ctx.fiber == Qnil) {
-    switchpoint_result = backend_snooze();
+    switchpoint_result = backend_snooze(&backend->base);
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
 
@@ -935,7 +935,7 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   }
 
   if (watcher.ctx.fiber == Qnil) {
-    switchpoint_result = backend_snooze();
+    switchpoint_result = backend_snooze(&backend->base);
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
 
@@ -1009,7 +1009,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   }
 
   if (watcher.fiber == Qnil) {
-    switchpoint_result = backend_snooze();
+    switchpoint_result = backend_snooze(&backend->base);
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
 
@@ -1089,7 +1089,7 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
 done:
   if (watcher.fiber == Qnil) {
-    switchpoint_result = backend_snooze();
+    switchpoint_result = backend_snooze(&backend->base);
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
 
@@ -1171,7 +1171,7 @@ noreturn VALUE Backend_timer_loop(VALUE self, VALUE interval) {
       RAISE_IF_EXCEPTION(resume_value);
     }
     else {
-      resume_value = backend_snooze();
+      resume_value = backend_snooze(&backend->base);
       RAISE_IF_EXCEPTION(resume_value);
     }
 
@@ -1530,7 +1530,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   }
 
   if (watcher.ctx.fiber == Qnil) {
-    result = backend_snooze();
+    result = backend_snooze(&backend->base);
     if (TEST_EXCEPTION(result)) goto error;
   }
   RB_GC_GUARD(str);
@@ -1562,6 +1562,22 @@ VALUE Backend_trace_proc_set(VALUE self, VALUE block) {
 
   backend->base.trace_proc = block;
   return self;
+}
+
+VALUE Backend_snooze(VALUE self) {
+  VALUE ret;
+  VALUE fiber = rb_fiber_current();
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  Fiber_make_runnable(fiber, Qnil);
+  ret = Thread_switch_fiber(rb_thread_current());
+
+  COND_TRACE(&backend->base, 4, SYM_unblock, rb_fiber_current(), ret, CALLER());
+
+  RAISE_IF_EXCEPTION(ret);
+  RB_GC_GUARD(ret);
+  return ret;
 }
 
 void Backend_park_fiber(VALUE self, VALUE fiber) {

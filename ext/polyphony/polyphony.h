@@ -61,13 +61,13 @@ extern ID ID_switch_fiber;
 extern ID ID_to_s;
 extern ID ID_transfer;
 
-extern VALUE SYM_fiber_create;
-extern VALUE SYM_fiber_event_poll_enter;
-extern VALUE SYM_fiber_event_poll_leave;
-extern VALUE SYM_fiber_run;
-extern VALUE SYM_fiber_schedule;
-extern VALUE SYM_fiber_switchpoint;
-extern VALUE SYM_fiber_terminate;
+extern VALUE SYM_spin;
+extern VALUE SYM_enter_poll;
+extern VALUE SYM_leave_poll;
+extern VALUE SYM_unblock;
+extern VALUE SYM_schedule;
+extern VALUE SYM_block;
+extern VALUE SYM_terminate;
 
 VALUE Fiber_auto_watcher(VALUE self);
 void Fiber_make_runnable(VALUE fiber, VALUE value);
@@ -121,10 +121,13 @@ VALUE Backend_wait_event(VALUE self, VALUE raise_on_exception);
 VALUE Backend_wakeup(VALUE self);
 VALUE Backend_run_idle_tasks(VALUE self);
 VALUE Backend_switch_fiber(VALUE self);
+
 void Backend_schedule_fiber(VALUE thread, VALUE self, VALUE fiber, VALUE value, int prioritize);
 void Backend_unschedule_fiber(VALUE self, VALUE fiber);
 void Backend_park_fiber(VALUE self, VALUE fiber);
 void Backend_unpark_fiber(VALUE self, VALUE fiber);
+
+VALUE Backend_snooze(VALUE self);
 
 void Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 void Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);

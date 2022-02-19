@@ -65,7 +65,7 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
 
   base->switch_count++;
   if (SHOULD_TRACE(base))
-    TRACE(base, 3, SYM_fiber_switchpoint, current_fiber, CALLER());
+    TRACE(base, 3, SYM_block, current_fiber, CALLER());
 
   while (1) {
     next = runqueue_shift(&base->runqueue);
@@ -96,8 +96,6 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   if (next.fiber == Qnil) return Qnil;
 
   // run next fiber
-  COND_TRACE(base, 3, SYM_fiber_run, next.fiber, next.value);
-
   rb_ivar_set(next.fiber, ID_ivar_runnable, Qnil);
   RB_GC_GUARD(next.fiber);
   RB_GC_GUARD(next.value);
@@ -112,7 +110,7 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
   if (rb_fiber_alive_p(fiber) != Qtrue) return;
   already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
 
-  COND_TRACE(base, 4, SYM_fiber_schedule, fiber, value, prioritize ? Qtrue : Qfalse);
+  COND_TRACE(base, 5, SYM_schedule, fiber, value, prioritize ? Qtrue : Qfalse, CALLER());
 
   runqueue = rb_ivar_get(fiber, ID_ivar_parked) == Qtrue ? &base->parked_runqueue : &base->runqueue;
 
@@ -244,15 +242,24 @@ inline VALUE backend_await(struct Backend_base *backend) {
   VALUE ret;
   backend->pending_count++;
   ret = Thread_switch_fiber(rb_thread_current());
+
+  // run next fiber
+  COND_TRACE(backend, 4, SYM_unblock, rb_fiber_current(), ret, CALLER());
+
   backend->pending_count--;
   RB_GC_GUARD(ret);
   return ret;
 }
 
-inline VALUE backend_snooze() {
+inline VALUE backend_snooze(struct Backend_base *backend) {
   VALUE ret;
-  Fiber_make_runnable(rb_fiber_current(), Qnil);
-  ret = Thread_switch_fiber(rb_thread_current());
+  VALUE fiber = rb_fiber_current();
+  VALUE thread = rb_thread_current();
+  Fiber_make_runnable(fiber, Qnil);
+  ret = Thread_switch_fiber(thread);
+
+  COND_TRACE(backend, 4, SYM_unblock, fiber, ret, CALLER());
+  
   return ret;
 }
 

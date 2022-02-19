@@ -250,16 +250,17 @@ module Polyphony
     def schedule_priority_oob_fiber(&block)
       oob_fiber = Fiber.new do
         Fiber.current.setup_raw
+        Thread.backend.trace(:unblock, oob_fiber, nil, @caller)
         result = block.call
       rescue Exception => e
         Thread.current.schedule_and_wakeup(Thread.main.main_fiber, e)
         result = e
       ensure
-        Thread.backend.trace(:fiber_terminate, Fiber.current, result)
+        Thread.backend.trace(:terminate, Fiber.current, result)
         suspend
       end
       prepare_oob_fiber(oob_fiber, block)
-      Thread.backend.trace(:fiber_create, oob_fiber)
+      Thread.backend.trace(:spin, oob_fiber, caller)
       oob_fiber.schedule_with_priority(nil)
     end
 
@@ -355,12 +356,13 @@ module Polyphony
       @parent = parent
       @caller = caller
       @block = block
-      Thread.backend.trace(:fiber_create, self)
+      Thread.backend.trace(:spin, self, Kernel.caller[1..-1])
       schedule
     end
 
     def run(first_value)
       setup first_value
+      Thread.backend.trace(:unblock, self, first_value, @caller)
       result = @block.(first_value)
       finalize result
     rescue Polyphony::Restart => e
@@ -402,7 +404,7 @@ module Polyphony
 
     def finalize(result, uncaught_exception = false)
       result, uncaught_exception = finalize_children(result, uncaught_exception)
-      Thread.backend.trace(:fiber_terminate, self, result)
+      Thread.backend.trace(:terminate, self, result)
       @result = result
 
       inform_monitors(result, uncaught_exception)

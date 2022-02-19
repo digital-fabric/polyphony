@@ -23,11 +23,15 @@ VALUE Thread_fiber_unschedule(VALUE self, VALUE fiber) {
 }
 
 inline void Thread_schedule_fiber(VALUE self, VALUE fiber, VALUE value) {
-  schedule_fiber(self, fiber, value, 0);
+  Backend_schedule_fiber(self, rb_ivar_get(self, ID_ivar_backend), fiber, value, 0);
+
+  // schedule_fiber(self, fiber, value, 0);
 }
 
 inline void Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE value) {
-  schedule_fiber(self, fiber, value, 1);
+  Backend_schedule_fiber(self, rb_ivar_get(self, ID_ivar_backend), fiber, value, 1);
+
+  // schedule_fiber(self, fiber, value, 1);
 }
 
 VALUE Thread_switch_fiber(VALUE self) {

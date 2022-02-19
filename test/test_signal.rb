@@ -33,24 +33,24 @@ class SignalTrapTest < Minitest::Test
     Fiber.current.tag = :main
 
     expected = [
-      [:fiber_switchpoint, :main],
-      [:fiber_event_poll_enter, :main],
-      [:fiber_create, :oob],
-      [:fiber_schedule, :oob],
-      [:fiber_event_poll_leave, :main],
-      [:fiber_run, :oob],
-      [:fiber_terminate, :oob],
-      [:fiber_switchpoint, :oob],
-      [:fiber_event_poll_enter, :oob],
-      [:fiber_schedule, :main],
-      [:fiber_event_poll_leave, :oob],
-      [:fiber_run, :main]
+      [:block, :main],
+      [:enter_poll, :main],
+      [:spin, :oob],
+      [:schedule, :oob],
+      [:leave_poll, :main],
+      [:unblock, :oob],
+      [:terminate, :oob],
+      [:block, :oob],
+      [:enter_poll, :oob],
+      [:schedule, :main],
+      [:leave_poll, :oob],
+      [:unblock, :main]
     ]
     if Thread.backend.kind == :libev
       expected += [
-        [:fiber_schedule, :main],
-        [:fiber_switchpoint, :main],
-        [:fiber_run, :main]
+        [:schedule, :main],
+        [:block, :main],
+        [:unblock, :main]
       ]
     end
 

@@ -10,13 +10,13 @@ VALUE SYM_running;
 VALUE SYM_runnable;
 VALUE SYM_waiting;
 
-VALUE SYM_fiber_create;
-VALUE SYM_fiber_event_poll_enter;
-VALUE SYM_fiber_event_poll_leave;
-VALUE SYM_fiber_run;
-VALUE SYM_fiber_schedule;
-VALUE SYM_fiber_switchpoint;
-VALUE SYM_fiber_terminate;
+VALUE SYM_spin;
+VALUE SYM_enter_poll;
+VALUE SYM_leave_poll;
+VALUE SYM_unblock;
+VALUE SYM_schedule;
+VALUE SYM_block;
+VALUE SYM_terminate;
 
 static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
   VALUE arg = (argc == 0) ? Qnil : argv[0];
@@ -157,24 +157,24 @@ void Init_Fiber() {
   rb_global_variable(&SYM_runnable);
   rb_global_variable(&SYM_waiting);
 
-  ID_ivar_auto_watcher        = rb_intern("@auto_watcher");
-  ID_ivar_mailbox             = rb_intern("@mailbox");
-  ID_ivar_result              = rb_intern("@result");
-  ID_ivar_waiting_fibers      = rb_intern("@waiting_fibers");
+  ID_ivar_auto_watcher    = rb_intern("@auto_watcher");
+  ID_ivar_mailbox         = rb_intern("@mailbox");
+  ID_ivar_result          = rb_intern("@result");
+  ID_ivar_waiting_fibers  = rb_intern("@waiting_fibers");
 
-  SYM_fiber_create            = ID2SYM(rb_intern("fiber_create"));
-  SYM_fiber_event_poll_enter  = ID2SYM(rb_intern("fiber_event_poll_enter"));
-  SYM_fiber_event_poll_leave  = ID2SYM(rb_intern("fiber_event_poll_leave"));
-  SYM_fiber_run               = ID2SYM(rb_intern("fiber_run"));
-  SYM_fiber_schedule          = ID2SYM(rb_intern("fiber_schedule"));
-  SYM_fiber_switchpoint       = ID2SYM(rb_intern("fiber_switchpoint"));
-  SYM_fiber_terminate         = ID2SYM(rb_intern("fiber_terminate"));
+  SYM_spin                = ID2SYM(rb_intern("spin"));
+  SYM_enter_poll          = ID2SYM(rb_intern("enter_poll"));
+  SYM_leave_poll          = ID2SYM(rb_intern("leave_poll"));
+  SYM_unblock             = ID2SYM(rb_intern("unblock"));
+  SYM_schedule            = ID2SYM(rb_intern("schedule"));
+  SYM_block               = ID2SYM(rb_intern("block"));
+  SYM_terminate           = ID2SYM(rb_intern("terminate"));
 
-  rb_global_variable(&SYM_fiber_create);
-  rb_global_variable(&SYM_fiber_event_poll_enter);
-  rb_global_variable(&SYM_fiber_event_poll_leave);
-  rb_global_variable(&SYM_fiber_run);
-  rb_global_variable(&SYM_fiber_schedule);
-  rb_global_variable(&SYM_fiber_switchpoint);
-  rb_global_variable(&SYM_fiber_terminate);
+  rb_global_variable(&SYM_spin);
+  rb_global_variable(&SYM_enter_poll);
+  rb_global_variable(&SYM_leave_poll);
+  rb_global_variable(&SYM_unblock);
+  rb_global_variable(&SYM_schedule);
+  rb_global_variable(&SYM_block);
+  rb_global_variable(&SYM_terminate);
 }

@@ -132,7 +132,7 @@ class ThreadTest < MiniTest::Test
     Thread.backend.trace_proc = proc {|*r| records << r }
     suspend
     assert_equal [
-      [:fiber_switchpoint, Fiber.current, ["#{__FILE__}:#{__LINE__ - 2}:in `test_that_suspend_returns_immediately_if_no_watchers'"] + caller]
+      [:block, Fiber.current, ["#{__FILE__}:#{__LINE__ - 2}:in `test_that_suspend_returns_immediately_if_no_watchers'"] + caller]
     ], records
   ensure
     Thread.backend.trace_proc = nil

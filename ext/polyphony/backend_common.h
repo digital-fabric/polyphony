@@ -80,7 +80,7 @@ void fptr_finalize(rb_io_t *fptr);
 
 struct backend_stats backend_get_stats(VALUE self);
 VALUE backend_await(struct Backend_base *backend);
-VALUE backend_snooze();
+VALUE backend_snooze(struct Backend_base *backend);
 
 // macros for doing read loops
 #define READ_LOOP_PREPARE_STR() { \
