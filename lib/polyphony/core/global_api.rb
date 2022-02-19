@@ -236,8 +236,6 @@ module Polyphony
       end
     rescue LocalJumpError, StopIteration
       # break called or StopIteration raised
-    ensure
-      throttler&.stop
     end
 
     private
