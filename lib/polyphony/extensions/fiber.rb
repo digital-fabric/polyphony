@@ -56,11 +56,13 @@ module Polyphony
 
     # Stops a fiber by raising a Polyphony::Cancel exception.
     #
+    # @param exception [Class, Exception] exception or exception class
     # @return [Fiber] fiber
-    def cancel
+    def cancel(exception = Polyphony::Cancel)
       return if @running == false
 
-      schedule Polyphony::Cancel.new
+      value = (Class === exception) ? exception.new : exception
+      schedule value
       self
     end
 
