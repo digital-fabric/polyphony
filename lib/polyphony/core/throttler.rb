@@ -13,13 +13,13 @@ module Polyphony
       @next_time = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
     end
 
-    # Invokes the throttler with the given block. The throttler will
-    # automatically introduce a delay to keep to the maximum specified rate.
-    # The throttler instance is passed to the given block.
-    #
     # call-seq:
     #   throttler.call { ... }
     #   throttler.process { ... }
+    #
+    # Invokes the throttler with the given block. The throttler will
+    # automatically introduce a delay to keep to the maximum specified rate.
+    # The throttler instance is passed to the given block.
     #
     # @return [any] given block's return value
     def call

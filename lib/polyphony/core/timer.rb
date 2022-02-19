@@ -74,13 +74,6 @@ module Polyphony
       @timeouts.delete(fiber)
     end
 
-    # Runs the given block after setting up a cancellation timer for
-    # cancellation. If the cancellation timer elapses, the execution will be
-    # interrupted with an exception defaulting to `Polyphony::Cancel`.
-    #
-    # This method should be used when a timeout should cause an exception to be
-    # propagated down the call stack or up the fiber tree.
-    #
     # call-seq:
     #   timer.cancel_after(interval) { ... }
     #   timer.cancel_after(interval, with_exception: exception) { ... }
@@ -88,6 +81,13 @@ module Polyphony
     #   timer.cancel_after(interval) { |timeout| ... }
     #   timer.cancel_after(interval, with_exception: exception) { |timeout| ... }
     #   timer.cancel_after(interval, with_exception: [klass, message]) { |timeout| ... }
+    #
+    # Runs the given block after setting up a cancellation timer for
+    # cancellation. If the cancellation timer elapses, the execution will be
+    # interrupted with an exception defaulting to `Polyphony::Cancel`.
+    #
+    # This method should be used when a timeout should cause an exception to be
+    # propagated down the call stack or up the fiber tree.
     #
     # Example of normal use:
     #
@@ -124,6 +124,12 @@ module Polyphony
       @timeouts.delete(fiber)
     end
 
+    # call-seq:
+    #   timer.move_on_after(interval) { ... }
+    #   timer.move_on_after(interval, with_value: value) { ... }
+    #   timer.move_on_after(interval) { |canceller| ... }
+    #   timer.move_on_after(interval, with_value: value) { |canceller| ... }
+    #
     # Runs the given block after setting up a cancellation timer for
     # cancellation. If the cancellation timer elapses, the execution will be
     # interrupted with a `Polyphony::MoveOn` exception, which will be rescued,
@@ -132,12 +138,6 @@ module Polyphony
     # This method should be used when a timeout is to be handled locally,
     # without generating an exception that is to propagated down the call stack
     # or up the fiber tree.
-    #
-    # call-seq:
-    #   timer.move_on_after(interval) { ... }
-    #   timer.move_on_after(interval, with_value: value) { ... }
-    #   timer.move_on_after(interval) { |canceller| ... }
-    #   timer.move_on_after(interval, with_value: value) { |canceller| ... }
     #
     # Example of normal use:
     #

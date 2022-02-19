@@ -20,13 +20,6 @@ module Polyphony
       end
     end
 
-    # Runs the given block after setting up a cancellation timer for
-    # cancellation. If the cancellation timer elapses, the execution will be
-    # interrupted with an exception defaulting to `Polyphony::Cancel`.
-    #
-    # This method should be used when a timeout should cause an exception to be
-    # propagated down the call stack or up the fiber tree.
-    #
     # call-seq:
     #   cancel_after(interval) { ... }
     #   cancel_after(interval, with_exception: exception) { ... }
@@ -34,6 +27,13 @@ module Polyphony
     #   cancel_after(interval) { |timeout| ... }
     #   cancel_after(interval, with_exception: exception) { |timeout| ... }
     #   cancel_after(interval, with_exception: [klass, message]) { |timeout| ... }
+    #
+    # Runs the given block after setting up a cancellation timer for
+    # cancellation. If the cancellation timer elapses, the execution will be
+    # interrupted with an exception defaulting to `Polyphony::Cancel`.
+    #
+    # This method should be used when a timeout should cause an exception to be
+    # propagated down the call stack or up the fiber tree.
     #
     # Example of normal use:
     #
@@ -120,6 +120,12 @@ module Polyphony
       Polyphony.backend_timer_loop(interval, &block)
     end
 
+    # call-seq:
+    #   move_on_after(interval) { ... }
+    #   move_on_after(interval, with_value: value) { ... }
+    #   move_on_after(interval) { |canceller| ... }
+    #   move_on_after(interval, with_value: value) { |canceller| ... }
+    #
     # Runs the given block after setting up a cancellation timer for
     # cancellation. If the cancellation timer elapses, the execution will be
     # interrupted with a `Polyphony::MoveOn` exception, which will be rescued,
@@ -128,12 +134,6 @@ module Polyphony
     # This method should be used when a timeout is to be handled locally,
     # without generating an exception that is to propagated down the call stack
     # or up the fiber tree.
-    #
-    # call-seq:
-    #   move_on_after(interval) { ... }
-    #   move_on_after(interval, with_value: value) { ... }
-    #   move_on_after(interval) { |canceller| ... }
-    #   move_on_after(interval, with_value: value) { |canceller| ... }
     #
     # Example of normal use:
     #
@@ -207,17 +207,17 @@ module Polyphony
         Polyphony.backend_sleep(duration) : Polyphony.backend_wait_event(true)
     end
 
-    # Starts a throttled loop with the given rate. If `count:` is given, the
-    # loop is run for the given number of times. Otherwise, the loop is
-    # infinite. The loop rate (times per second) can be given as the rate
-    # parameter. The throttling can also be controlled by providing an
-    # `interval:` or `rate:` named parameter.
-    #
     # call-seq:
     #   throttled_loop(rate) { ... }
     #   throttled_loop(interval: value) { ... }
     #   throttled_loop(rate: value) { ... }
     #   throttled_loop(rate, count: value) { ... }
+    #
+    # Starts a throttled loop with the given rate. If `count:` is given, the
+    # loop is run for the given number of times. Otherwise, the loop is
+    # infinite. The loop rate (times per second) can be given as the rate
+    # parameter. The throttling can also be controlled by providing an
+    # `interval:` or `rate:` named parameter.
     #
     # @param rate [Number, nil] loop rate (times per second)
     # @param rate: [Number] loop rate (times per second)
