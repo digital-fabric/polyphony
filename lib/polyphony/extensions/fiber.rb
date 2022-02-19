@@ -16,6 +16,7 @@ module Polyphony
     # call-seq:
     #   fiber.stop(value = nil) -> fiber
     #   Fiber.interrupt(value = nil) -> fiber
+    #   Fiber.move_on(value = nil) -> fiber
     #
     # Stops the fiber by raising a Polyphony::MoveOn exception. The given value
     # will become the fiber's return value.
@@ -29,6 +30,7 @@ module Polyphony
       self
     end
     alias_method :stop, :interrupt
+    alias_method :move_on, :interrupt
 
     # call-seq:
     #   fiber.reset(value = nil) -> fiber
