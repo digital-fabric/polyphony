@@ -191,7 +191,9 @@ class BackendTest < MiniTest::Test
   Net = Polyphony::Net
 
   def test_accept
-    server = Net.listening_socket_from_options('127.0.0.1', 1234, reuse_addr: true)
+    server = Net.send(
+      :listening_socket_from_options, '127.0.0.1', 1234, reuse_addr: true
+    )
 
     clients = []
     server_fiber = spin_loop do
@@ -218,7 +220,9 @@ class BackendTest < MiniTest::Test
   end
 
   def test_accept_loop
-    server = Net.listening_socket_from_options('127.0.0.1', 1235, reuse_addr: true)
+    server = Net.send(
+      :listening_socket_from_options, '127.0.0.1', 1235, reuse_addr: true
+    )
 
     clients = []
     server_fiber = spin do

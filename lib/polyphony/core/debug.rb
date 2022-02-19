@@ -1,8 +1,15 @@
+# Kernel extensions
 module ::Kernel
+  # Prints a trace message to `STDOUT`, bypassing the Polyphony backend.
+  #
+  # @return [void]
   def trace(*args)
     STDOUT.orig_write(format_trace(args))
   end
 
+  # Formats a trace message.
+  #
+  # @return [String] trace message
   def format_trace(args)
     if args.size > 1 && args.first.is_a?(String)
       format("%s: %p\n", args.shift, args.size == 1 ? args.first : args)
