@@ -1,3 +1,7 @@
+## 0.79 2022-02-19
+
+- Overhaul trace events system (#73)
+
 ## 0.78 2022-02-16
 
 - Fix Polyphony::Queue API compatibility (#72)
