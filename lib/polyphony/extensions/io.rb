@@ -2,10 +2,12 @@
 
 require 'open3'
 
-# IO class method patches
+# IO extensions
 class ::IO
   class << self
     alias_method :orig_binread, :binread
+
+    # TODO: add docs to all methods in this file
     def binread(name, length = nil, offset = nil)
       File.open(name, 'rb:ASCII-8BIT') do |f|
         f.seek(offset) if offset

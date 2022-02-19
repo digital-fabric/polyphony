@@ -52,7 +52,6 @@ module Polyphony
 
     def run_forked_block(&block)
       Thread.current.setup
-      Fiber.current.setup_main_fiber
       Thread.current.backend.post_fork
 
       install_terminating_signal_handlers

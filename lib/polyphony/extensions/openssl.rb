@@ -10,6 +10,8 @@ class ::OpenSSL::SSL::SSLSocket
   end
 
   alias_method :orig_initialize, :initialize
+
+  # TODO: add docs to all methods in this file
   def initialize(socket, context = nil)
     socket = socket.respond_to?(:io) ? socket.io || socket : socket
     context ? orig_initialize(socket, context) : orig_initialize(socket)

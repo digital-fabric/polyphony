@@ -7,6 +7,8 @@ module ::Kernel
   alias_method :orig_sleep, :sleep
 
   alias_method :orig_backtick, :`
+
+  # TODO: add docs to all methods in this file
   def `(cmd)
     Open3.popen3(cmd) do |i, o, e, _t|
       i.close
@@ -72,10 +74,6 @@ module ::Kernel
     end
   end
 
-  def pipe_to_eof(src, dest)
-    src.read_loop { |data| dest << data }
-  end
-
   alias_method :orig_trap, :trap
   def trap(sig, command = nil, &block)
     return orig_trap(sig, command) if command.is_a? String
@@ -91,5 +89,12 @@ module ::Kernel
     orig_trap(sig) do
       Fiber.schedule_priority_oob_fiber(&block)
     end
+  end
+
+  private
+
+  # :no-doc:
+  def pipe_to_eof(src, dest)
+    src.read_loop { |data| dest << data }
   end
 end
