@@ -140,17 +140,6 @@ class MoveOnAfterTest < MiniTest::Test
     assert_in_range 0.014..0.02, t1 - t0 if IS_LINUX
   end
 
-  def test_move_on_after_without_block
-    t0 = Time.now
-    f = move_on_after(0.01, with_value: 'foo')
-    assert_kind_of Fiber, f
-    assert_equal Fiber.current, f.parent
-    v = sleep 1
-    t1 = Time.now
-    assert t1 - t0 < 0.1
-    assert_equal 'foo', v
-  end
-
   def test_nested_move_on_after
     skip unless IS_LINUX
 
@@ -185,18 +174,6 @@ class CancelAfterTest < MiniTest::Test
         sleep 1
         :foo
       end
-    end
-    t1 = Time.now
-    assert t1 - t0 < 0.1
-  end
-
-  def test_cancel_after_without_block
-    t0 = Time.now
-    f = cancel_after(0.01)
-    assert_kind_of Fiber, f
-    assert_equal Fiber.current, f.parent
-    assert_raises Polyphony::Cancel do
-      sleep 1
     end
     t1 = Time.now
     assert t1 - t0 < 0.1
