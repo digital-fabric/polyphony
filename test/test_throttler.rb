@@ -11,8 +11,6 @@ class ThrottlerTest < MiniTest::Test
     sleep 0.2
     f.stop
     assert_in_range 1..4, buffer.size if IS_LINUX
-  ensure
-    t.stop
   end
 
   def test_throttler_with_hash_of_rate
@@ -24,8 +22,6 @@ class ThrottlerTest < MiniTest::Test
     sleep 0.25
     f.stop
     assert_in_range 4..6, buffer.size if IS_LINUX
-  ensure
-    t.stop
   end
 
   def test_throttler_with_hash_of_interval
@@ -35,8 +31,6 @@ class ThrottlerTest < MiniTest::Test
     sleep 0.02
     f.stop
     assert_in_range 2..4, buffer.size if IS_LINUX
-  ensure
-    t.stop
   end
 
   def test_throttler_with_invalid_argument
