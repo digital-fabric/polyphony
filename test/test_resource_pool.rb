@@ -88,7 +88,7 @@ class ResourcePoolTest < MiniTest::Test
     assert_equal 2, pool.limit
     assert_equal 0, pool.size
 
-    pool.preheat!
+    pool.fill!
     assert_equal 2, pool.size
   end
 
