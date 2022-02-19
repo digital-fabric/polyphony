@@ -269,4 +269,31 @@ class SuperviseTest < MiniTest::Test
     snooze
     assert_equal [[f1, :foo], [f2, :bar]], buffer
   end
+
+  def test_detached_supervisor
+    buffer = []
+
+    s = nil
+    f = spin {
+      foo = spin do
+        sleep 0.1
+      ensure
+        buffer << :foo
+      end
+      bar = spin do
+        sleep 0.2
+      ensure
+        buffer << :bar
+      end
+
+      s = spin { supervise }.detach
+      Fiber.current.attach_all_children_to(s)
+
+      s.terminate(true)
+    }
+
+    f.await
+    s.await
+    assert_equal [:foo, :bar], buffer
+  end
 end
