@@ -130,4 +130,91 @@ class TraceTest < MiniTest::Test
   ensure
     Thread.backend.trace_proc = nil
   end
+
+  def test_event_firehose_with_threaded_receiver
+    buffer = []
+    this = Fiber.current
+    receiver = Thread.new {
+      this << :ok
+      loop {
+        e = receive
+        break if e == :stop
+        buffer << e
+      }
+    }
+    receive
+    
+    Polyphony::Trace.start_event_firehose { |e| receiver << e }
+
+    f1 = spin(:f1) do
+      receive
+    end
+
+    f1 << :foo
+    f1.await
+
+    Thread.backend.trace_proc = nil
+    receiver << :stop
+    receiver.await
+
+    buffer.each { |e| e.delete(:stamp); e.delete(:caller) }
+
+    main = Fiber.current
+    assert_equal(
+      [
+        { event: :spin,       fiber: f1,                  source_fiber: main  },
+        { event: :schedule,   fiber: f1,    value: nil,   source_fiber: main  },
+        { event: :block,      fiber: main                                     },
+        { event: :unblock,    fiber: f1,    value: nil                        },
+        { event: :schedule,   fiber: f1,    value: nil,   source_fiber: f1    },
+        { event: :block,      fiber: f1,                                      },
+        { event: :enter_poll                                                  },
+        { event: :leave_poll                                                  },
+        { event: :unblock,    fiber: f1,    value: nil                        },
+        { event: :terminate,  fiber: f1,    value: :foo                       },
+        { event: :schedule,   fiber: main,  value: nil,   source_fiber: f1    },
+        { event: :block,      fiber: f1                                       },
+        { event: :unblock,    fiber: main,  value: nil                        }
+      ], buffer
+    )
+  ensure
+    Thread.backend.trace_proc = nil
+  end
+
+  # def test_event_firehose_with_reentrancy
+  #   buffer = []
+  #   Polyphony::Trace.start_event_firehose { |e| buffer << e }
+
+  #   f1 = spin(:f1) do
+  #     receive
+  #   end
+
+  #   f1 << :foo
+  #   f1.await
+
+  #   Thread.backend.trace_proc = nil
+  #   buffer.each { |e| e.delete(:stamp); e.delete(:caller) }
+
+  #   main = Fiber.current
+  #   assert_equal(
+  #     [
+  #       { event: :spin,       fiber: f1,                  source_fiber: main  },
+  #       { event: :schedule,   fiber: f1,    value: nil,   source_fiber: main  },
+  #       { event: :block,      fiber: main                                     },
+  #       { event: :unblock,    fiber: f1,    value: nil                        },
+  #       { event: :schedule,   fiber: f1,    value: nil,   source_fiber: f1    },
+  #       { event: :block,      fiber: f1,                                      },
+  #       { event: :enter_poll                                                  },
+  #       { event: :leave_poll                                                  },
+  #       { event: :unblock,    fiber: f1,    value: nil                        },
+  #       { event: :terminate,  fiber: f1,    value: :foo                       },
+  #       { event: :schedule,   fiber: main,  value: nil,   source_fiber: f1    },
+  #       { event: :block,      fiber: f1                                       },
+  #       { event: :unblock,    fiber: main,  value: nil                        }
+  #     ], buffer
+  #   )
+  # ensure
+  #   Thread.backend.trace_proc = nil
+  # end
+
 end
