@@ -32,6 +32,7 @@ struct Backend_base {
   double idle_gc_last_time;
   VALUE idle_proc;
   VALUE trace_proc;
+  unsigned int in_trace_proc;
 };
 
 void backend_base_initialize(struct Backend_base *base);
@@ -46,8 +47,12 @@ void backend_trace(struct Backend_base *base, int argc, VALUE *argv);
 struct backend_stats backend_base_stats(struct Backend_base *base);
 
 // tracing
-#define SHOULD_TRACE(base) ((base)->trace_proc != Qnil)
-#define TRACE(base, ...)  rb_funcall((base)->trace_proc, ID_call, __VA_ARGS__)
+#define SHOULD_TRACE(base) ((base)->trace_proc != Qnil && !(base)->in_trace_proc)
+#define TRACE(base, ...) { \
+  (base)->in_trace_proc = 1; \
+  rb_funcall((base)->trace_proc, ID_call, __VA_ARGS__); \
+  (base)->in_trace_proc = 0; \
+}
 #define COND_TRACE(base, ...) if (SHOULD_TRACE(base)) { TRACE(base, __VA_ARGS__); }
 
 

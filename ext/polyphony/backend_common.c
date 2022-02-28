@@ -17,6 +17,7 @@ inline void backend_base_initialize(struct Backend_base *base) {
   base->idle_gc_last_time = 0;
   base->idle_proc = Qnil;
   base->trace_proc = Qnil;
+  base->in_trace_proc = 0;
 }
 
 inline void backend_base_finalize(struct Backend_base *base) {
@@ -137,7 +138,7 @@ inline void backend_base_unpark_fiber(struct Backend_base *base, VALUE fiber) {
 }
 
 inline void backend_trace(struct Backend_base *base, int argc, VALUE *argv) {
-  if (base->trace_proc == Qnil) return;
+  if (base->trace_proc == Qnil || base->in_trace_proc) return;
 
   rb_funcallv(base->trace_proc, ID_call, argc, argv);
 }
