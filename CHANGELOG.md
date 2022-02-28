@@ -1,3 +1,13 @@
+## 0.80 2022-02-28
+
+- Prevent reentry into `trace_proc`
+- Rename `__parser_read_method__` to `__read_method__`
+- Rename `ResourcePool#preheat!` to `#fill`.
+- Remove ability to use `#cancel_after` or `#move_on` without a block
+- Add #move_on alias to `Fiber#interrupt`
+- Allow specifying exception in `Fiber#cancel`
+- Remove deprecated `Polyphony::Channel` class
+
 ## 0.79 2022-02-19
 
 - Overhaul trace events system (#73)

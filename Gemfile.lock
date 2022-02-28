@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    polyphony (0.79)
+    polyphony (0.80)
 
 GEM
   remote: https://rubygems.org/
@@ -60,6 +60,7 @@ GEM
     unicode-display_width (1.8.0)
 
 PLATFORMS
+  ruby
   universal-darwin
   universal-freebsd
   universal-linux
