@@ -11,7 +11,7 @@ class BasicSocket
   # method to use for this object.
   #
   # @return [:backend_recv] use Polyphony.backend_recv to parse from socket
-  def __parser_read_method__
+  def __read_method__
     :backend_recv
   end
 end
