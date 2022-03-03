@@ -1,3 +1,7 @@
+## 0.81.1 2022-03-03
+
+- Fix `Backend_recv` regression
+
 ## 0.81 2022-03-03
 
 - Restore public visibility for `Polyphony::Process.kill_process`
