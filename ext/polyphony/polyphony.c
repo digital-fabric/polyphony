@@ -118,6 +118,12 @@ VALUE Polyphony_backend_write(int argc, VALUE *argv, VALUE self) {
   return Backend_write_m(argc, argv, BACKEND());
 }
 
+VALUE Polyphony_backend_test(VALUE self, VALUE io, VALUE str) {
+  struct raw_buffer buffer = { RSTRING_PTR(str), RSTRING_LEN(str) };
+  VALUE args[2] = { io, LONG2FIX((long)&buffer) };
+  return Polyphony_backend_write(2, args, self);
+}
+
 // VALUE Polyphony_backend_close(VALUE self, VALUE io) {
 //   return Backend_close(BACKEND(), io);
 // }
@@ -148,6 +154,8 @@ void Init_Polyphony() {
   rb_define_singleton_method(mPolyphony, "backend_write", Polyphony_backend_write, -1);
   // rb_define_singleton_method(mPolyphony, "backend_close", Polyphony_backend_close, 1);
   rb_define_singleton_method(mPolyphony, "backend_verify_blocking_mode", Backend_verify_blocking_mode, 2);
+
+  rb_define_singleton_method(mPolyphony, "backend_test", Polyphony_backend_test, 2);
 
   rb_define_global_function("snooze", Polyphony_snooze, 0);
   rb_define_global_function("suspend", Polyphony_suspend, 0);
