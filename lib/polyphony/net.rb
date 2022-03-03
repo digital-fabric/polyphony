@@ -53,6 +53,21 @@ module Polyphony
         end
       end
 
+      # Sets up ALPN negotiation for the given context. The ALPN handler for the
+      # context will select the first protocol from the list given by the client
+      # that appears in the list of given protocols, according to the specified
+      # order.
+      # 
+      # @param context [SSLContext] SSL context
+      # @param protocols [Array] array of supported protocols
+      # @return [void]
+      def setup_alpn(context, protocols)
+        context.alpn_protocols = protocols
+        context.alpn_select_cb = lambda do |peer_protocols|
+          (protocols & peer_protocols).first
+        end
+      end
+
       private
 
       # Creates a listening `Socket` instance.
@@ -113,21 +128,6 @@ module Polyphony
       def secure_server(socket, context, opts)
         setup_alpn(context, opts[:alpn_protocols]) if opts[:alpn_protocols]
         OpenSSL::SSL::SSLServer.new(socket, context)
-      end
-
-      # Sets up ALPN negotiation for the given context. The ALPN handler for the
-      # context will select the first protocol from the list given by the client
-      # that appears in the list of given protocols, according to the specified
-      # order.
-      # 
-      # @param context [SSLContext] SSL context
-      # @param protocols [Array] array of supported protocols
-      # @return [void]
-      def setup_alpn(context, protocols)
-        context.alpn_protocols = protocols
-        context.alpn_select_cb = lambda do |peer_protocols|
-          (protocols & peer_protocols).first
-        end
       end
     end
   end
