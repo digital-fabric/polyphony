@@ -24,8 +24,6 @@ module Polyphony
         kill_process(pid) unless terminated || pid.nil?
       end
 
-      private
-
       def kill_process(pid)
         cancel_after(5) do
           kill_and_await('TERM', pid)
@@ -33,6 +31,8 @@ module Polyphony
       rescue Polyphony::Cancel
         kill_and_await(-9, pid)
       end
+
+      private
 
       def kill_and_await(sig, pid)
         ::Process.kill(sig, pid)
