@@ -1,3 +1,8 @@
+## 0.81 2022-03-03
+
+- Restore public visibility for `Polyphony::Process.kill_process`
+- Restore public visibility for `Polyphony::Net.setup_alpn`
+
 ## 0.80 2022-02-28
 
 - Prevent reentry into `trace_proc`
