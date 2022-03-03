@@ -10,6 +10,7 @@ writer = Zlib::GzipWriter.new(w)
 writer << 'chunk'
 writer.flush
 p pos: writer.pos
-w.close
+# w.close
+writer.close
 
 p r.read
