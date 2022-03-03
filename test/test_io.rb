@@ -281,6 +281,41 @@ class IOTest < MiniTest::Test
   end
 end
 
+class IOWithRawBufferTest < MiniTest::Test
+  def setup
+    super
+    @i, @o = IO.pipe
+  end
+
+  def test_write_with_raw_buffer
+    Polyphony.__with_raw_buffer__(64) do |b|
+      Polyphony.__raw_buffer_set__(b, 'foobar')
+      @o << b
+      @o.close
+    end
+
+    str = @i.read
+    assert_equal 'foobar', str
+  end
+
+  def test_read_with_raw_buffer
+    @o << '*' * 65
+    @o.close
+    chunks = []
+    Polyphony.__with_raw_buffer__(64) do |b|
+      res = @i.read(64, b)
+      assert_equal 64, res
+      chunks << Polyphony.__raw_buffer_get__(b, res)
+
+      res = @i.read(64, b)
+      assert_equal 1, res
+      assert_equal 64, Polyphony.__raw_buffer_size__(b)
+      chunks << Polyphony.__raw_buffer_get__(b, res)
+    end
+    assert_equal ['*' * 64, '*'], chunks
+  end
+end
+
 class IOClassMethodsTest < MiniTest::Test
   def test_binread
     s = IO.binread(__FILE__)

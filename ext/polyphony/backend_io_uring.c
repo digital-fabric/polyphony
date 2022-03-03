@@ -104,7 +104,7 @@ static VALUE Backend_initialize(VALUE self) {
 
 static inline struct io_buffer get_io_buffer(VALUE in) {
   if (FIXNUM_P(in)) {
-    struct raw_buffer *raw = (struct raw_buffer *)(FIX2LONG(in));
+    struct raw_buffer *raw = FIX2PTR(in);
     return (struct io_buffer){ raw->base, raw->size, 1 };
   }
   return (struct io_buffer){ RSTRING_PTR(in), RSTRING_LEN(in), 0 };
@@ -585,7 +585,6 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
       rb_syserr_fail(-result, strerror(-result));
     else {
       buffer.base += result;
-      buffer.size -= result;
       left -= result;
     }
   }

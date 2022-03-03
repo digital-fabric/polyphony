@@ -118,9 +118,49 @@ VALUE Polyphony_backend_write(int argc, VALUE *argv, VALUE self) {
   return Backend_write_m(argc, argv, BACKEND());
 }
 
+VALUE Polyphony_with_raw_buffer(VALUE self, VALUE size) {
+  struct raw_buffer buffer;
+  buffer.size = NUM2INT(size);
+  buffer.base = malloc(buffer.size);
+  if (!buffer.base)
+    rb_raise(rb_eRuntimeError, "Failed to allocate buffer");
+
+  VALUE return_value = rb_yield(PTR2FIX(&buffer));
+  free(buffer.base);
+  return return_value;
+}
+
+VALUE Polyphony_raw_buffer_get(int argc, VALUE *argv, VALUE self) {
+  VALUE buf = Qnil;
+  VALUE len = Qnil;
+  rb_scan_args(argc, argv, "11", &buf, &len);
+
+  struct raw_buffer *buffer = FIX2PTR(buf);
+  int length = (len == Qnil) ? buffer->size : FIX2INT(len);
+  
+  if (length > buffer->size) length = buffer->size;
+  return rb_utf8_str_new(buffer->base, length);
+}
+
+VALUE Polyphony_raw_buffer_set(VALUE self, VALUE buf, VALUE str) {
+  struct raw_buffer *buffer = FIX2PTR(buf);
+  int len = RSTRING_LEN(str);
+  if (len > buffer->size)
+    rb_raise(rb_eRuntimeError, "Given string does not fit in given buffer");
+  
+  memcpy(buffer->base, RSTRING_PTR(str), len);
+  buffer->size = len;
+  return self;
+}
+
+VALUE Polyphony_raw_buffer_size(VALUE self, VALUE buf) {
+  struct raw_buffer *buffer = FIX2PTR(buf);
+  return INT2FIX(buffer->size);
+}
+
 VALUE Polyphony_backend_test(VALUE self, VALUE io, VALUE str) {
   struct raw_buffer buffer = { RSTRING_PTR(str), RSTRING_LEN(str) };
-  VALUE args[2] = { io, LONG2FIX((long)&buffer) };
+  VALUE args[2] = { io, PTR2FIX(&buffer) };
   return Polyphony_backend_write(2, args, self);
 }
 
@@ -155,6 +195,10 @@ void Init_Polyphony() {
   // rb_define_singleton_method(mPolyphony, "backend_close", Polyphony_backend_close, 1);
   rb_define_singleton_method(mPolyphony, "backend_verify_blocking_mode", Backend_verify_blocking_mode, 2);
 
+  rb_define_singleton_method(mPolyphony, "__with_raw_buffer__", Polyphony_with_raw_buffer, 1);
+  rb_define_singleton_method(mPolyphony, "__raw_buffer_get__", Polyphony_raw_buffer_get, -1);
+  rb_define_singleton_method(mPolyphony, "__raw_buffer_set__", Polyphony_raw_buffer_set, 2);
+  rb_define_singleton_method(mPolyphony, "__raw_buffer_size__", Polyphony_raw_buffer_size, 1);
   rb_define_singleton_method(mPolyphony, "backend_test", Polyphony_backend_test, 2);
 
   rb_define_global_function("snooze", Polyphony_snooze, 0);
