@@ -1,3 +1,8 @@
+## 0.82 2022-03-04
+
+- Use `POLYPHONY_LIBEV` instead of `POLYPHONY_USE_LIBEV` environment variable
+- Add support for working with raw buffers (#78)
+
 ## 0.81.1 2022-03-03
 
 - Fix `Backend_recv` regression
