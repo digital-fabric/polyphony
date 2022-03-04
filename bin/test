@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -e
-clear && POLYPHONY_USE_LIBEV=1 rake recompile && ruby test/run.rb
+clear && POLYPHONY_LIBEV=1 rake recompile && ruby test/run.rb
 clear && rake recompile && ruby test/run.rb
