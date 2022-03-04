@@ -470,3 +470,21 @@ int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr) {
   *ai_addr = addrinfo_result->ai_addr;
   return addrinfo_result->ai_addrlen;
 }
+
+struct io_buffer get_io_buffer(VALUE in) {
+  if (FIXNUM_P(in)) {
+    struct raw_buffer *raw = FIX2PTR(in);
+    return (struct io_buffer){ raw->base, raw->size, 1 };
+  }
+  return (struct io_buffer){ RSTRING_PTR(in), RSTRING_LEN(in), 0 };
+}
+
+VALUE coerce_io_string_or_buffer(VALUE buf) {
+  switch (TYPE(buf)) {
+    case T_STRING:
+    case T_FIXNUM:
+      return buf;
+    default:
+      return StringValue(buf);
+  }
+}

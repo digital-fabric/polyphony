@@ -270,20 +270,39 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   Backend_t *backend;
   struct libev_io watcher;
   rb_io_t *fptr;
-  long dynamic_len = length == Qnil;
-  long len = dynamic_len ? 4096 : NUM2INT(length);
+
+  struct io_buffer buffer = get_io_buffer(str);
   long buf_pos = NUM2INT(pos);
-  if (str != Qnil) {
-    int current_len = RSTRING_LEN(str);
-    if (buf_pos < 0 || buf_pos > current_len) buf_pos = current_len;
-  }
-  else buf_pos = 0;
-  int shrinkable = io_setstrbuf(&str, buf_pos + len);
-  char *buf = RSTRING_PTR(str) + buf_pos;
+  int shrinkable_string = 0;
+  int expandable_buffer = 0;
   long total = 0;
   VALUE switchpoint_result = Qnil;
   int read_to_eof = RTEST(to_eof);
   VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
+
+  if (buffer.raw) {
+    if (buf_pos < 0 || buf_pos > buffer.size) buf_pos = buffer.size;
+    buffer.base += buf_pos;
+    buffer.size -= buf_pos;
+  }
+  else {
+    expandable_buffer = length == Qnil;
+    long expected_read_length = expandable_buffer ? 4096 : FIX2INT(length);
+    long string_cap = rb_str_capacity(str);
+    if (buf_pos < 0 || buf_pos > buffer.size) buf_pos = buffer.size;
+
+    if (string_cap < expected_read_length + buf_pos) {
+      shrinkable_string = io_setstrbuf(&str, expected_read_length + buf_pos);
+      buffer.base = RSTRING_PTR(str) + buf_pos;
+      buffer.size = expected_read_length;
+    }
+    else {
+      buffer.base += buf_pos;
+      buffer.size = string_cap - buf_pos;
+      if (buffer.size > expected_read_length)
+        buffer.size = expected_read_length;
+    }
+  }
 
   GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
@@ -295,8 +314,8 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
 
   while (1) {
     backend->base.op_count++;
-    ssize_t n = read(fptr->fd, buf, len - total);
-    if (n < 0) {
+    ssize_t result = read(fptr->fd, buffer.base, buffer.size);
+    if (result < 0) {
       int e = errno;
       if (e != EWOULDBLOCK && e != EAGAIN) rb_syserr_fail(e, strerror(e));
 
@@ -308,32 +327,39 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
       switchpoint_result = backend_snooze(&backend->base);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
 
-      if (n == 0) break; // EOF
-      total = total + n;
+      if (!result) break; // EOF
+
+      total += result;
       if (!read_to_eof) break;
 
-      if (total == len) {
-        if (!dynamic_len) break;
+      if (result == buffer.size) {
+        if (!expandable_buffer) break;
 
-        rb_str_resize(str, buf_pos + total);
-        rb_str_modify_expand(str, len);
-        buf = RSTRING_PTR(str) + buf_pos + total;
-        shrinkable = 0;
-        len += len;
+        // resize buffer to double its capacity
+        rb_str_resize(str, total + buf_pos);
+        rb_str_modify_expand(str, rb_str_capacity(str));
+        shrinkable_string = 0;
+        buffer.base = RSTRING_PTR(str) + total + buf_pos;
+        buffer.size = rb_str_capacity(str) - total - buf_pos;
       }
-      else buf += n;
+      else {
+        buffer.base += result;
+        buffer.size -= result;
+        if (!buffer.size) break;
+      }
     }
   }
 
-  io_set_read_length(str, buf_pos + total, shrinkable);
-  io_enc_str(str, fptr);
-
-  if (total == 0) return Qnil;
+  if (!buffer.raw) {
+    io_set_read_length(str, buf_pos + total, shrinkable_string);
+    io_enc_str(str, fptr);
+  }
+  if (!total) return Qnil;
 
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return str;
+  return buffer.raw ? INT2FIX(total) : str;
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -453,9 +479,9 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
   VALUE underlying_io;
-  char *buf = StringValuePtr(str);
-  long len = RSTRING_LEN(str);
-  long left = len;
+
+  struct io_buffer buffer = get_io_buffer(str);
+  long left = buffer.size;
 
   underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
@@ -467,8 +493,8 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
 
   while (left > 0) {
     backend->base.op_count++;
-    ssize_t n = write(fptr->fd, buf, left);
-    if (n < 0) {
+    ssize_t result = write(fptr->fd, buffer.base, left);
+    if (result < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
@@ -477,8 +503,8 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      buf += n;
-      left -= n;
+      buffer.base += result;
+      left -= result;
     }
   }
 
@@ -491,7 +517,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2NUM(len);
+  return INT2NUM(buffer.size);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }

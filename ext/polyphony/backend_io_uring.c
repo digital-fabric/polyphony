@@ -102,24 +102,6 @@ static VALUE Backend_initialize(VALUE self) {
   return self;
 }
 
-static inline struct io_buffer get_io_buffer(VALUE in) {
-  if (FIXNUM_P(in)) {
-    struct raw_buffer *raw = FIX2PTR(in);
-    return (struct io_buffer){ raw->base, raw->size, 1 };
-  }
-  return (struct io_buffer){ RSTRING_PTR(in), RSTRING_LEN(in), 0 };
-}
-
-static inline VALUE coerce_io_string_or_buffer(VALUE buf) {
-  switch (TYPE(buf)) {
-    case T_STRING:
-    case T_FIXNUM:
-      return buf;
-    default:
-      return StringValue(buf);
-  }
-}
-
 VALUE Backend_finalize(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -437,7 +419,6 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
     io_set_read_length(str, buf_pos + total, shrinkable_string);
     io_enc_str(str, fptr);
   }
-
   if (!total) return Qnil;
 
   return buffer.raw ? INT2FIX(total) : str;

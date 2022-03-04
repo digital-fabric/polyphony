@@ -59,6 +59,9 @@ struct backend_stats backend_base_stats(struct Backend_base *base);
 #define FIX2PTR(v) ((void *)(FIX2LONG(v)))
 #define PTR2FIX(p) LONG2FIX((long)p)
 
+struct io_buffer get_io_buffer(VALUE in);
+VALUE coerce_io_string_or_buffer(VALUE buf);
+
 #ifdef POLYPHONY_USE_PIDFD_OPEN
 int pidfd_open(pid_t pid, unsigned int flags);
 #endif
