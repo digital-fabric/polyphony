@@ -120,13 +120,13 @@ VALUE Polyphony_backend_write(int argc, VALUE *argv, VALUE self) {
 
 VALUE Polyphony_with_raw_buffer(VALUE self, VALUE size) {
   struct raw_buffer buffer;
-  buffer.size = NUM2INT(size);
-  buffer.base = malloc(buffer.size);
-  if (!buffer.base)
+  buffer.len = NUM2INT(size);
+  buffer.ptr = malloc(buffer.len);
+  if (!buffer.ptr)
     rb_raise(rb_eRuntimeError, "Failed to allocate buffer");
 
   VALUE return_value = rb_yield(PTR2FIX(&buffer));
-  free(buffer.base);
+  free(buffer.ptr);
   return return_value;
 }
 
@@ -136,26 +136,26 @@ VALUE Polyphony_raw_buffer_get(int argc, VALUE *argv, VALUE self) {
   rb_scan_args(argc, argv, "11", &buf, &len);
 
   struct raw_buffer *buffer = FIX2PTR(buf);
-  int length = (len == Qnil) ? buffer->size : FIX2INT(len);
+  int length = (len == Qnil) ? buffer->len : FIX2INT(len);
   
-  if (length > buffer->size) length = buffer->size;
-  return rb_utf8_str_new(buffer->base, length);
+  if (length > buffer->len) length = buffer->len;
+  return rb_utf8_str_new(buffer->ptr, length);
 }
 
 VALUE Polyphony_raw_buffer_set(VALUE self, VALUE buf, VALUE str) {
   struct raw_buffer *buffer = FIX2PTR(buf);
   int len = RSTRING_LEN(str);
-  if (len > buffer->size)
+  if (len > buffer->len)
     rb_raise(rb_eRuntimeError, "Given string does not fit in given buffer");
   
-  memcpy(buffer->base, RSTRING_PTR(str), len);
-  buffer->size = len;
+  memcpy(buffer->ptr, RSTRING_PTR(str), len);
+  buffer->len = len;
   return self;
 }
 
 VALUE Polyphony_raw_buffer_size(VALUE self, VALUE buf) {
   struct raw_buffer *buffer = FIX2PTR(buf);
-  return INT2FIX(buffer->size);
+  return INT2FIX(buffer->len);
 }
 
 VALUE Polyphony_backend_test(VALUE self, VALUE io, VALUE str) {

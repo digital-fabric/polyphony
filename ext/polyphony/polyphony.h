@@ -135,15 +135,4 @@ VALUE Thread_switch_fiber(VALUE thread);
 
 VALUE Polyphony_snooze(VALUE self);
 
-struct raw_buffer {
-  char *base;
-  int size;
-};
-
-struct io_buffer {
-  char *base;
-  int size;
-  int raw;
-};
-
 #endif /* POLYPHONY_H */

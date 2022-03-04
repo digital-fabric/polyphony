@@ -474,7 +474,7 @@ int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr) {
 struct io_buffer get_io_buffer(VALUE in) {
   if (FIXNUM_P(in)) {
     struct raw_buffer *raw = FIX2PTR(in);
-    return (struct io_buffer){ raw->base, raw->size, 1 };
+    return (struct io_buffer){ raw->ptr, raw->len, 1 };
   }
   return (struct io_buffer){ RSTRING_PTR(in), RSTRING_LEN(in), 0 };
 }

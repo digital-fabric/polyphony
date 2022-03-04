@@ -56,6 +56,18 @@ struct backend_stats backend_base_stats(struct Backend_base *base);
 #define COND_TRACE(base, ...) if (SHOULD_TRACE(base)) { TRACE(base, __VA_ARGS__); }
 
 // raw buffers
+
+struct raw_buffer {
+  char *ptr;
+  int len;
+};
+
+struct io_buffer {
+  char *ptr;
+  int len;
+  int raw;
+};
+
 #define FIX2PTR(v) ((void *)(FIX2LONG(v)))
 #define PTR2FIX(p) LONG2FIX((long)p)
 

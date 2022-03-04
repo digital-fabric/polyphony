@@ -281,26 +281,26 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   if (buffer.raw) {
-    if (buf_pos < 0 || buf_pos > buffer.size) buf_pos = buffer.size;
-    buffer.base += buf_pos;
-    buffer.size -= buf_pos;
+    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
+    buffer.ptr += buf_pos;
+    buffer.len -= buf_pos;
   }
   else {
     expandable_buffer = length == Qnil;
     long expected_read_length = expandable_buffer ? 4096 : FIX2INT(length);
     long string_cap = rb_str_capacity(str);
-    if (buf_pos < 0 || buf_pos > buffer.size) buf_pos = buffer.size;
+    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
 
     if (string_cap < expected_read_length + buf_pos) {
       shrinkable_string = io_setstrbuf(&str, expected_read_length + buf_pos);
-      buffer.base = RSTRING_PTR(str) + buf_pos;
-      buffer.size = expected_read_length;
+      buffer.ptr = RSTRING_PTR(str) + buf_pos;
+      buffer.len = expected_read_length;
     }
     else {
-      buffer.base += buf_pos;
-      buffer.size = string_cap - buf_pos;
-      if (buffer.size > expected_read_length)
-        buffer.size = expected_read_length;
+      buffer.ptr += buf_pos;
+      buffer.len = string_cap - buf_pos;
+      if (buffer.len > expected_read_length)
+        buffer.len = expected_read_length;
     }
   }
 
@@ -314,7 +314,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
 
   while (1) {
     backend->base.op_count++;
-    ssize_t result = read(fptr->fd, buffer.base, buffer.size);
+    ssize_t result = read(fptr->fd, buffer.ptr, buffer.len);
     if (result < 0) {
       int e = errno;
       if (e != EWOULDBLOCK && e != EAGAIN) rb_syserr_fail(e, strerror(e));
@@ -332,20 +332,20 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
       total += result;
       if (!read_to_eof) break;
 
-      if (result == buffer.size) {
+      if (result == buffer.len) {
         if (!expandable_buffer) break;
 
         // resize buffer to double its capacity
         rb_str_resize(str, total + buf_pos);
         rb_str_modify_expand(str, rb_str_capacity(str));
         shrinkable_string = 0;
-        buffer.base = RSTRING_PTR(str) + total + buf_pos;
-        buffer.size = rb_str_capacity(str) - total - buf_pos;
+        buffer.ptr = RSTRING_PTR(str) + total + buf_pos;
+        buffer.len = rb_str_capacity(str) - total - buf_pos;
       }
       else {
-        buffer.base += result;
-        buffer.size -= result;
-        if (!buffer.size) break;
+        buffer.ptr += result;
+        buffer.len -= result;
+        if (!buffer.len) break;
       }
     }
   }
@@ -481,7 +481,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   VALUE underlying_io;
 
   struct io_buffer buffer = get_io_buffer(str);
-  long left = buffer.size;
+  long left = buffer.len;
 
   underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
@@ -493,7 +493,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
 
   while (left > 0) {
     backend->base.op_count++;
-    ssize_t result = write(fptr->fd, buffer.base, left);
+    ssize_t result = write(fptr->fd, buffer.ptr, left);
     if (result < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -503,7 +503,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      buffer.base += result;
+      buffer.ptr += result;
       left -= result;
     }
   }
@@ -517,7 +517,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2NUM(buffer.size);
+  return INT2NUM(buffer.len);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
