@@ -309,51 +309,6 @@ class BackendTest < MiniTest::Test
     assert_equal [1], buffer
   end
 
-  def test_splice
-    i1, o1 = IO.pipe
-    i2, o2 = IO.pipe
-    len = nil
-
-    spin {
-      len = o2.splice(i1, 1000)
-      o2.close
-    }
-
-    o1.write('foobar')
-    result = i2.read
-
-    assert_equal 'foobar', result
-    assert_equal 6, len
-  end
-
-  def test_splice_to_eof
-    i1, o1 = IO.pipe
-    i2, o2 = IO.pipe
-    len = nil
-
-    f = spin {
-      len = o2.splice_to_eof(i1, 1000)
-      o2.close
-    }
-
-    o1.write('foo')
-    result = i2.readpartial(1000)
-    assert_equal 'foo', result
-
-    o1.write('bar')
-    result = i2.readpartial(1000)
-    assert_equal 'bar', result
-    o1.close
-    f.await
-    assert_equal 6, len
-  ensure
-    if f.alive?
-      f.interrupt
-      f.await
-    end
-  end
-
-
   def test_splice_chunks
     body = 'abcd' * 4
     chunk_size = 12
