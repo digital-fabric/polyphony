@@ -769,9 +769,9 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
   VALUE underlying_io;
-  char *buf = StringValuePtr(str);
-  long len = RSTRING_LEN(str);
-  long left = len;
+
+  struct io_buffer buffer = get_io_buffer(str);
+  long left = buffer.len;
   int flags_int = NUM2INT(flags);
 
   underlying_io = rb_ivar_get(io, ID_ivar_io);
@@ -784,8 +784,8 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
 
   while (left > 0) {
     backend->base.op_count++;
-    ssize_t n = send(fptr->fd, buf, left, flags_int);
-    if (n < 0) {
+    ssize_t result = send(fptr->fd, buffer.ptr, left, flags_int);
+    if (result < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
@@ -794,8 +794,8 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      buf += n;
-      left -= n;
+      buffer.ptr += result;
+      left -= result;
     }
   }
 
@@ -808,7 +808,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2NUM(len);
+  return INT2NUM(buffer.len);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }

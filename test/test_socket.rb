@@ -193,6 +193,55 @@ class SocketTest < MiniTest::Test
   end
 end
 
+class SocketWithRawBufferTest < MiniTest::Test
+  def start_tcp_server_on_random_port(host = '127.0.0.1')
+    port = rand(1100..60000)
+    server = TCPServer.new(host, port)
+    [port, server]
+  rescue Errno::EADDRINUSE
+    retry
+  end  
+
+  def setup
+    super
+
+    port, server = start_tcp_server_on_random_port
+    connector = spin { @o = TCPSocket.new('127.0.0.1', port) }
+    @i = server.accept
+  end
+
+  def test_send_with_raw_buffer
+    Polyphony.__with_raw_buffer__(64) do |b|
+      Polyphony.__raw_buffer_set__(b, 'foobar')
+      @o << b
+      @o.close
+    end
+
+    str = @i.read
+    assert_equal 'foobar', str
+  end
+
+  def test_recv_with_raw_buffer
+    @o << '*' * 65
+    @o.close
+    chunks = []
+    Polyphony.__with_raw_buffer__(64) do |b|
+      res = @i.recv(64, 0, b)
+      assert_equal 64, res
+      chunks << Polyphony.__raw_buffer_get__(b, res)
+
+      res = @i.recv(64, 0, b)
+      assert_equal 1, res
+      assert_equal 64, Polyphony.__raw_buffer_size__(b)
+      chunks << Polyphony.__raw_buffer_get__(b, res)
+
+      res = @i.recv(64, 0, b)
+      assert_nil res
+    end
+    assert_equal ['*' * 64, '*'], chunks
+  end
+end
+
 if IS_LINUX
   class HTTPClientTest < MiniTest::Test
 

@@ -657,21 +657,36 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
 VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
   Backend_t *backend;
   rb_io_t *fptr;
-  long dynamic_len = length == Qnil;
-  long len = dynamic_len ? 4096 : NUM2INT(length);
+  struct io_buffer buffer = get_io_buffer(str);
   long buf_pos = NUM2INT(pos);
-  int shrinkable;
-  char *buf;
+  int shrinkable_string = 0;
+  int expandable_buffer = 0;
   long total = 0;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);;
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
-  if (str != Qnil) {
-    int current_len = RSTRING_LEN(str);
-    if (buf_pos < 0 || buf_pos > current_len) buf_pos = current_len;
+  if (buffer.raw) {
+    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
+    buffer.ptr += buf_pos;
+    buffer.len -= buf_pos;
   }
-  else buf_pos = 0;
-  shrinkable = io_setstrbuf(&str, buf_pos + len);
-  buf = RSTRING_PTR(str) + buf_pos;
+  else {
+    expandable_buffer = length == Qnil;
+    long expected_read_length = expandable_buffer ? 4096 : FIX2INT(length);
+    long string_cap = rb_str_capacity(str);
+    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
+
+    if (string_cap < expected_read_length + buf_pos) {
+      shrinkable_string = io_setstrbuf(&str, expected_read_length + buf_pos);
+      buffer.ptr = RSTRING_PTR(str) + buf_pos;
+      buffer.len = expected_read_length;
+    }
+    else {
+      buffer.ptr += buf_pos;
+      buffer.len = string_cap - buf_pos;
+      if (buffer.len > expected_read_length)
+        buffer.len = expected_read_length;
+    }
+  }
 
   GetBackend(self, backend);
   if (underlying_io != Qnil) io = underlying_io;
@@ -687,7 +702,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
     int result;
     int completed;
 
-    io_uring_prep_recv(sqe, fptr->fd, buf, len - total, 0);
+    io_uring_prep_recv(sqe, fptr->fd, buffer.ptr, buffer.len, 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -706,12 +721,13 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
     }
   }
 
-  io_set_read_length(str, buf_pos + total, shrinkable);
-  io_enc_str(str, fptr);
-
+  if (!buffer.raw) {
+    io_set_read_length(str, buf_pos + total, shrinkable_string);
+    io_enc_str(str, fptr);
+  }
   if (!total) return Qnil;
 
-  return str;
+  return buffer.raw ? INT2FIX(total) : str;
 }
 
 VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
@@ -821,10 +837,10 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   Backend_t *backend;
   rb_io_t *fptr;
   VALUE underlying_io;
-  char *buf;
-  long len;
-  long left;
-  int flags_int;
+
+  struct io_buffer buffer = get_io_buffer(str);
+  long left = buffer.len;
+  int flags_int = NUM2INT(flags);
 
   underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
@@ -833,11 +849,6 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   GetOpenFile(io, fptr);
   io_unset_nonblock(fptr, io);
 
-  buf = StringValuePtr(str);
-  len = RSTRING_LEN(str);
-  left = len;
-  flags_int = NUM2INT(flags);
-
   while (left > 0) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_SEND);
@@ -845,7 +856,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
     int result;
     int completed;
 
-    io_uring_prep_send(sqe, fptr->fd, buf, left, flags_int);
+    io_uring_prep_send(sqe, fptr->fd, buffer.ptr, left, flags_int);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -859,12 +870,12 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
     if (result < 0)
       rb_syserr_fail(-result, strerror(-result));
     else {
-      buf += result;
+      buffer.ptr += result;
       left -= result;
     }
   }
 
-  return INT2NUM(len);
+  return INT2NUM(buffer.len);
 }
 
 VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE socket_class, int loop) {
