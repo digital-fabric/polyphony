@@ -137,7 +137,7 @@ int gzip_write_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
   return len;
 }
 
-int gzip_write_footer(ulong crc32, ulong total_in, char *buffer, int maxlen) {
+int gzip_write_footer(unsigned long crc32, unsigned long total_in, char *buffer, int maxlen) {
   assert(maxlen >= 8);
 
   gzfile_set32(crc32, buffer);
@@ -163,9 +163,9 @@ struct z_stream_ctx {
   unsigned char out[CHUNK];
 
   enum stream_mode mode;
-  ulong crc32;
-  ulong read_total;
-  ulong write_total;
+  unsigned long crc32;
+  unsigned long read_total;
+  unsigned long write_total;
 };
 
 void z_stream_io_loop(struct z_stream_ctx *ctx) {
