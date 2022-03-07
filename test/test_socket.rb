@@ -208,6 +208,7 @@ class SocketWithRawBufferTest < MiniTest::Test
     port, server = start_tcp_server_on_random_port
     connector = spin { @o = TCPSocket.new('127.0.0.1', port) }
     @i = server.accept
+    connector.await
   end
 
   def test_send_with_raw_buffer
