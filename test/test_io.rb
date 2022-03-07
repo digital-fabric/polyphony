@@ -547,3 +547,38 @@ class IOClassMethodsTest < MiniTest::Test
     assert_equal ['foo', 'bar'], buf
   end
 end
+
+class IOExtensionsTest < MiniTest::Test
+  def test_deflate
+    i, o = IO.pipe
+    r, w = IO.pipe
+
+    spin {
+      IO.deflate(i, w)
+      w.close
+    }
+
+    o << 'foobar' * 20
+    o.close
+
+    data = r.read
+    msg = Zlib::Inflate.inflate(data)
+    assert_equal 'foobar' * 20, msg
+  end
+
+  def test_inflate
+    i, o = IO.pipe
+    r, w = IO.pipe
+
+    spin {
+      data = Zlib::Deflate.deflate('foobar' * 20)
+      o << data
+      o.close
+    }
+
+    IO.inflate(i, w)
+    w.close
+    msg = r.read
+    assert_equal 'foobar' * 20, msg
+  end
+end

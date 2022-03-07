@@ -113,6 +113,7 @@ VALUE Backend_timer_loop(VALUE self, VALUE interval);
 VALUE Backend_wait_event(VALUE self, VALUE raise);
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write);
 VALUE Backend_waitpid(VALUE self, VALUE pid);
+VALUE Backend_write(VALUE self, VALUE io, VALUE str);
 VALUE Backend_write_m(int argc, VALUE *argv, VALUE self);
 // VALUE Backend_close(VALUE self, VALUE io);
 

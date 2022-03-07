@@ -3,6 +3,7 @@
 require 'rubygems'
 require 'mkmf'
 
+dir_config 'polyphony_ext'
 
 KERNEL_INFO_RE = /Linux (\d)\.(\d+)\.(?:\d+)\-(?:\d+\-)?(\w+)/
 def get_config
@@ -24,6 +25,8 @@ end
 
 config = get_config
 puts "Building Polyphony... (#{config.inspect})"
+
+require_relative 'zlib_conf'
 
 $defs << '-DPOLYPHONY_USE_PIDFD_OPEN' if config[:pidfd_open]
 if config[:io_uring]
@@ -53,5 +56,4 @@ CONFIG['optflags'] << ' -fno-strict-aliasing' unless RUBY_PLATFORM =~ /mswin/
 
 have_func('rb_fiber_transfer', 'ruby.h')
 
-dir_config 'polyphony_ext'
 create_makefile 'polyphony_ext'
