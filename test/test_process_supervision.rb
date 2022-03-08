@@ -65,7 +65,7 @@ class ProcessSupervisionTest < MiniTest::Test
 
     supervisor = spin { supervise(watcher) }
 
-    sleep 0.1
+    sleep 0.2
     supervisor.terminate
     supervisor.await
 
