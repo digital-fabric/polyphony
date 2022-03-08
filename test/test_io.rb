@@ -581,4 +581,22 @@ class IOExtensionsTest < MiniTest::Test
     msg = r.read
     assert_equal 'foobar' * 20, msg
   end
+
+  def test_gzip
+    i, o = IO.pipe
+    r, w = IO.pipe
+
+    spin {
+      IO.gzip(i, w)
+      # w.splice(i, 8192)
+      w.close
+    }
+
+    o << IO.read(__FILE__)
+    o.close
+
+    gz = Zlib::GzipReader.new(r)
+    data = gz.read
+    assert_equal IO.read(__FILE__), data
+  end
 end

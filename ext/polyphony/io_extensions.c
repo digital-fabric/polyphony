@@ -20,6 +20,7 @@ enum write_method {
 #define CHUNK 16384
 #define MAX_WRITE_STR_LEN 16384
 #define DEFAULT_LEVEL 9
+#define DEFAULT_MEM_LEVEL 8
 
 inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method method, struct raw_buffer *buffer) {
   VALUE len = Backend_read(backend, io, PTR2FIX(buffer), Qnil, Qfalse, INT2FIX(0));
@@ -94,7 +95,7 @@ static void gzfile_set32(unsigned long n, unsigned char *dst) {
   *dst     = (n >> 24) & 0xff;
 }
 
-int gzip_write_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
+int gzip_prepare_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
   int len = 0;
   unsigned char flags = 0, extraflags = 0;
 
@@ -137,7 +138,7 @@ int gzip_write_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
   return len;
 }
 
-int gzip_write_footer(unsigned long crc32, unsigned long total_in, char *buffer, int maxlen) {
+int gzip_prepare_footer(unsigned long crc32, unsigned long total_in, char *buffer, int maxlen) {
   assert(maxlen >= 8);
 
   gzfile_set32(crc32, buffer);
@@ -164,8 +165,8 @@ struct z_stream_ctx {
 
   enum stream_mode mode;
   unsigned long crc32;
-  unsigned long read_total;
-  unsigned long write_total;
+  unsigned long in_total;
+  unsigned long out_total;
 };
 
 void z_stream_io_loop(struct z_stream_ctx *ctx) {
@@ -177,31 +178,35 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
   struct raw_buffer in_buffer = {ctx->in, CHUNK};
   struct raw_buffer out_buffer = {ctx->out, CHUNK};
 
-
   while (1) {
     ctx->strm.next_in = ctx->in;
-    ctx->strm.avail_in = read_to_raw_buffer(ctx->backend, ctx->src, RM_BACKEND_READ, &in_buffer);
-    if (!ctx->strm.avail_in) break;
+    int read_len = ctx->strm.avail_in = read_to_raw_buffer(ctx->backend, ctx->src, RM_BACKEND_READ, &in_buffer);
+    if (!read_len) break;
 
-    ctx->read_total += ctx->strm.avail_in;
+    int eof = read_len < CHUNK;
+
+    ctx->crc32 = crc32(ctx->crc32, ctx->in, read_len);
+    ctx->in_total += read_len;
 
     while (1) {
       avail_out_pre = ctx->strm.avail_out = CHUNK - pos;
       ctx->strm.next_out = ctx->out + pos;
-      ret = fun(&ctx->strm, Z_PARTIAL_FLUSH); /* no bad return value */
+      ret = fun(&ctx->strm, eof ? Z_FINISH : Z_NO_FLUSH);
       assert(ret != Z_STREAM_ERROR);
       int written = avail_out_pre - ctx->strm.avail_out;
 
       out_buffer.len = pos + written;
-      ret = write_from_raw_buffer(ctx->backend, ctx->dest, WM_BACKEND_WRITE, &out_buffer);
-      printf("write %d => %d\n", out_buffer.len, ret);
-      ctx->write_total += ret - pos;
-      assert(ret == pos + written);
+
+      int write_ret = write_from_raw_buffer(ctx->backend, ctx->dest, WM_BACKEND_WRITE, &out_buffer);
+      ctx->out_total += write_ret - pos;
+      assert(write_ret == pos + written);
       pos = 0;
 
       // if there's still room in the out buffer that means the input buffer has been exhausted
       if (ctx->strm.avail_out) break;
     }
+
+    if (eof) return;
   }
 
   //flush
@@ -212,12 +217,10 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
   ret = fun(&ctx->strm, Z_FINISH); /* no bad return value */
   assert(ret != Z_STREAM_ERROR);
   int written = avail_out_pre - ctx->strm.avail_out;
-  
   out_buffer.len = pos + written;
   if (out_buffer.len) {
     ret = write_from_raw_buffer(ctx->backend, ctx->dest, WM_BACKEND_WRITE, &out_buffer);
-    ctx->write_total += ret - pos;
-    printf("write (flush) %d => %d\n", out_buffer.len, ret);
+    ctx->out_total += ret - pos;
   }
 }
 
@@ -263,21 +266,21 @@ VALUE IO_gzip(VALUE self, VALUE src, VALUE dest) {
   ctx.strm.zfree = Z_NULL;
   ctx.strm.opaque = Z_NULL;
 
-  ctx.starting_pos = gzip_write_header(&header_ctx, ctx.out, sizeof(ctx.out));
+  ctx.starting_pos = gzip_prepare_header(&header_ctx, ctx.out, sizeof(ctx.out));
 
   ctx.mode = SM_DEFLATE;
   ctx.crc32 = 0;
-  ctx.read_total = 0;
-  ctx.write_total = 0;
+  ctx.in_total = 0;
+  ctx.out_total = 0;
 
-  ret = deflateInit(&ctx.strm, level);
+  ret = deflateInit2(&ctx.strm, level, Z_DEFLATED, -MAX_WBITS, DEFAULT_MEM_LEVEL, Z_DEFAULT_STRATEGY);
   if (ret != Z_OK) return INT2FIX(ret);
 
   z_stream_io_loop(&ctx);
 
-  int footer_len = gzip_write_footer(ctx.crc32, ctx.read_total, ctx.out, sizeof(ctx.out));
-  printf("footer_len read_total: %ld, write_total: %ld\n", ctx.read_total, ctx.write_total);
+  int footer_len = gzip_prepare_footer(ctx.crc32, ctx.in_total, ctx.out, sizeof(ctx.out));
   struct raw_buffer footer_buffer = {ctx.out, footer_len};
+
   write_from_raw_buffer(ctx.backend, dest, WM_BACKEND_WRITE, &footer_buffer);
 
   deflateEnd(&ctx.strm);

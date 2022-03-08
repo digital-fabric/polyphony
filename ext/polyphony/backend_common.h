@@ -58,12 +58,12 @@ struct backend_stats backend_base_stats(struct Backend_base *base);
 // raw buffers
 
 struct raw_buffer {
-  char *ptr;
+  unsigned char *ptr;
   int len;
 };
 
 struct io_buffer {
-  char *ptr;
+  unsigned char *ptr;
   int len;
   int raw;
 };
