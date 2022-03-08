@@ -13,6 +13,16 @@ class PipeTest < MiniTest::Test
     assert_equal false, pipe.closed?
   end
 
+  def test_polyphony_pipe_method
+    pipe = Polyphony.pipe
+
+    fds = pipe.fds
+    assert_equal 2, fds.size
+    assert_kind_of Integer, fds[0]
+    assert_kind_of Integer, fds[1]
+    assert_equal false, pipe.closed?
+  end
+
   def test_pipe_splice
     src = Polyphony::Pipe.new
     dest = Polyphony::Pipe.new

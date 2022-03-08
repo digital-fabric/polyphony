@@ -18,6 +18,10 @@ require_relative './polyphony/adapters/process'
 # Polyphony API
 module Polyphony
   class << self
+    def pipe
+      Pipe.new
+    end
+
     def fork(&block)
       Kernel.fork do
         # A race condition can arise if a TERM or INT signal is received before
