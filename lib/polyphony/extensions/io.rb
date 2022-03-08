@@ -73,6 +73,14 @@ class ::IO
 
       Open3.popen2(cmd) { |_i, o, _t| yield o }
     end
+
+    def splice(src, dest, maxlen)
+      Polyphony.backend_splice(src, dest, maxlen)
+    end
+
+    def splice_to_eof(src, dest, chunk_size = 8192)
+      Polyphony.backend_splice_to_eof(src, dest, chunk_size)
+    end
   end
 end
 
@@ -257,11 +265,11 @@ class ::IO
     end
   end
 
-  def splice(src, maxlen)
+  def splice_from(src, maxlen)
     Polyphony.backend_splice(src, self, maxlen)
   end
 
-  def splice_to_eof(src, chunksize = 8192)
+  def splice_to_eof_from(src, chunksize = 8192)
     Polyphony.backend_splice_to_eof(src, self, chunksize)
   end
 end
