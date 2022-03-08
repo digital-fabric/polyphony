@@ -114,14 +114,14 @@ VALUE backend_snooze(struct Backend_base *backend);
 
 #define READ_LOOP_YIELD_STR() { \
   io_set_read_length(str, total, shrinkable); \
-  io_enc_str(str, fptr); \
+  if (fptr) io_enc_str(str, fptr); \
   rb_yield(str); \
   READ_LOOP_PREPARE_STR(); \
 }
 
 #define READ_LOOP_PASS_STR_TO_RECEIVER(receiver, method_id) { \
   io_set_read_length(str, total, shrinkable); \
-  io_enc_str(str, fptr); \
+  if (fptr) io_enc_str(str, fptr); \
   rb_funcall_passing_block(receiver, method_id, 1, &str); \
   READ_LOOP_PREPARE_STR(); \
 }

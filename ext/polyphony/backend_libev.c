@@ -352,7 +352,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
 
   if (!buffer.raw) {
     io_set_read_length(str, buf_pos + total, shrinkable_string);
-    io_enc_str(str, fptr);
+    if (fptr) io_enc_str(str, fptr);
   }
   if (!total) return Qnil;
 

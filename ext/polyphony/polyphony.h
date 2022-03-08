@@ -36,6 +36,7 @@
 #define BACKEND() (rb_ivar_get(rb_thread_current(), ID_ivar_backend))
 
 extern VALUE mPolyphony;
+extern VALUE cPipe;
 extern VALUE cQueue;
 extern VALUE cEvent;
 extern VALUE cTimeoutException;
@@ -86,6 +87,8 @@ void Runqueue_clear(VALUE self);
 long Runqueue_len(VALUE self);
 int Runqueue_empty_p(VALUE self);
 int Runqueue_should_poll_nonblocking(VALUE self);
+
+int Pipe_get_fd(VALUE self, int write_mode);
 
 #ifdef POLYPHONY_BACKEND_LIBEV
 #define Backend_recv_loop Backend_read_loop

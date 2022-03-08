@@ -330,17 +330,20 @@ VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
 }
 
 static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int rectify_file_pos) {
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
-
-  GetOpenFile(io, *fptr);
-  io_unset_nonblock(*fptr, io);
-  if (rectify_file_pos) {
-    // rb_io_check_byte_readable(*fptr);
-    rectify_io_file_pos(*fptr);
+  if (rb_obj_class(io) == cPipe) {
+    *fptr = NULL;
+    return Pipe_get_fd(io, write_mode);
   }
+  else {
+    VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
+    if (underlying_io != Qnil) io = underlying_io;
 
-  return (*fptr)->fd;
+    GetOpenFile(io, *fptr);
+    io_unset_nonblock(*fptr, io);
+    if (rectify_file_pos) rectify_io_file_pos(*fptr);
+
+    return (*fptr)->fd;
+  }
 }
 
 VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, VALUE pos) {
@@ -388,7 +391,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
     int result;
     int completed;
     
-    io_uring_prep_read(sqe, fptr->fd, buffer.ptr, buffer.len, -1);
+    io_uring_prep_read(sqe, fd, buffer.ptr, buffer.len, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -427,7 +430,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
 
   if (!buffer.raw) {
     io_set_read_length(str, buf_pos + total, shrinkable_string);
-    io_enc_str(str, fptr);
+    if (fptr) io_enc_str(str, fptr);
   }
   if (!total) return Qnil;
 
@@ -457,7 +460,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
     ssize_t result;
     int completed;
 
-    io_uring_prep_read(sqe, fptr->fd, buf, len, -1);
+    io_uring_prep_read(sqe, fd, buf, len, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -507,7 +510,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
     ssize_t result;
     int completed;
 
-    io_uring_prep_read(sqe, fptr->fd, buf, len, -1);
+    io_uring_prep_read(sqe, fd, buf, len, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -552,7 +555,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
     int result;
     int completed;
 
-    io_uring_prep_write(sqe, fptr->fd, buffer.ptr, left, 0);
+    io_uring_prep_write(sqe, fd, buffer.ptr, left, 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -604,7 +607,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     int result;
     int completed;
 
-    io_uring_prep_writev(sqe, fptr->fd, iov_ptr, iov_count, -1);
+    io_uring_prep_writev(sqe, fd, iov_ptr, iov_count, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -697,7 +700,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
     int result;
     int completed;
 
-    io_uring_prep_recv(sqe, fptr->fd, buffer.ptr, buffer.len, 0);
+    io_uring_prep_recv(sqe, fd, buffer.ptr, buffer.len, 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -718,7 +721,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
 
   if (!buffer.raw) {
     io_set_read_length(str, buf_pos + total, shrinkable_string);
-    io_enc_str(str, fptr);
+    if (fptr) io_enc_str(str, fptr);
   }
   if (!total) return Qnil;
 
@@ -748,7 +751,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
     int result;
     int completed;
 
-    io_uring_prep_recv(sqe, fptr->fd, buf, len, 0);
+    io_uring_prep_recv(sqe, fd, buf, len, 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -797,7 +800,7 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
     int result;
     int completed;
 
-    io_uring_prep_recv(sqe, fptr->fd, buf, len, 0);
+    io_uring_prep_recv(sqe, fd, buf, len, 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -841,7 +844,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
     int result;
     int completed;
 
-    io_uring_prep_send(sqe, fptr->fd, buffer.ptr, left, flags_int);
+    io_uring_prep_send(sqe, fd, buffer.ptr, left, flags_int);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -1000,7 +1003,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   fd = fd_from_io(sock, &fptr, 1, 0);
   ctx = context_store_acquire(&backend->store, OP_CONNECT);
   sqe = io_uring_get_sqe(&backend->ring);
-  io_uring_prep_connect(sqe, fptr->fd, ai_addr, ai_addrlen);
+  io_uring_prep_connect(sqe, fd, ai_addr, ai_addrlen);
   result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
   completed = context_store_release(&backend->store, ctx);
   RAISE_IF_EXCEPTION(resume_value);
@@ -1041,13 +1044,13 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 //   GetBackend(self, backend);
 //   GetOpenFile(io, fptr);
 
-//   if (fptr->fd < 0) return Qnil;
+//   if (fd < 0) return Qnil;
 
 //   io_unset_nonblock(fptr, io);
 
 //   ctx = context_store_acquire(&backend->store, OP_CLOSE);
 //   sqe = io_uring_get_sqe(&backend->ring);
-//   io_uring_prep_close(sqe, fptr->fd);
+//   io_uring_prep_close(sqe, fd);
 //   result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
 //   completed = context_store_release(&backend->store, ctx);
 //   RAISE_IF_EXCEPTION(resume_value);
@@ -1057,7 +1060,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 //   if (result < 0) rb_syserr_fail(-result, strerror(-result));
 
 //   fptr_finalize(fptr);
-//   // fptr->fd = -1;
+//   // fd = -1;
 //   return io;
 // }
 
@@ -1250,7 +1253,7 @@ struct io_uring_sqe *Backend_chain_prepare_write(Backend_t *backend, VALUE io, V
 
   fd = fd_from_io(io, &fptr, 1, 0);
   sqe = io_uring_get_sqe(&backend->ring);
-  io_uring_prep_write(sqe, fptr->fd, StringValuePtr(str), RSTRING_LEN(str), 0);
+  io_uring_prep_write(sqe, fd, StringValuePtr(str), RSTRING_LEN(str), 0);
   return sqe;
 }
 
@@ -1263,7 +1266,7 @@ struct io_uring_sqe *Backend_chain_prepare_send(Backend_t *backend, VALUE io, VA
   fd = fd_from_io(io, &fptr, 1, 0);
 
   sqe = io_uring_get_sqe(&backend->ring);
-  io_uring_prep_send(sqe, fptr->fd, StringValuePtr(str), RSTRING_LEN(str), NUM2INT(flags));
+  io_uring_prep_send(sqe, fd, StringValuePtr(str), RSTRING_LEN(str), NUM2INT(flags));
   return sqe;
 }
 
