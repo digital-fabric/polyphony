@@ -329,8 +329,23 @@ VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
   return resumed_value;
 }
 
+static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode) {
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
+  if (underlying_io != Qnil) io = underlying_io;
+
+  GetOpenFile(io, *fptr);
+  io_unset_nonblock(*fptr, io);
+  if (!write_mode) {
+    rb_io_check_byte_readable(*fptr);
+    rectify_io_file_pos(*fptr);
+  }
+
+  return (*fptr)->fd;
+}
+
 VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, VALUE pos) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
   struct io_buffer buffer = get_io_buffer(str);
   long buf_pos = NUM2INT(pos);
@@ -338,7 +353,6 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   int expandable_buffer = 0;
   long total = 0;
   int read_to_eof = RTEST(to_eof);
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   if (buffer.raw) {
     if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
@@ -365,11 +379,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   }
 
   GetBackend(self, backend);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
-  rb_io_check_byte_readable(fptr);
-  io_unset_nonblock(fptr, io);
-  rectify_io_file_pos(fptr);
+  fd = fd_from_io(io, &fptr, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -426,6 +436,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
 
 VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
   VALUE str;
   long total;
@@ -437,11 +448,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
-  rb_io_check_byte_readable(fptr);
-  io_unset_nonblock(fptr, io);
-  rectify_io_file_pos(fptr);
+  fd = fd_from_io(io, &fptr, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -478,6 +485,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
 
 VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
   VALUE str;
   long total;
@@ -490,11 +498,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
-  rb_io_check_byte_readable(fptr);
-  io_unset_nonblock(fptr, io);
-  rectify_io_file_pos(fptr);
+  fd = fd_from_io(io, &fptr, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -531,18 +535,15 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
 
 VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
   VALUE underlying_io;
 
   struct io_buffer buffer = get_io_buffer(str);
   long left = buffer.len;
 
-  underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
-  io = rb_io_get_write_io(io);
-  GetOpenFile(io, fptr);
-  io_unset_nonblock(fptr, io);
+  fd = fd_from_io(io, &fptr, 1);
 
   while (left > 0) {
     VALUE resume_value = Qnil;
@@ -575,6 +576,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
 
 VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
   VALUE underlying_io;
   long total_length = 0;
@@ -583,12 +585,8 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   struct iovec *iov_ptr = 0;
   int iov_count = argc;
 
-  underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
-  io = rb_io_get_write_io(io);
-  GetOpenFile(io, fptr);
-  io_unset_nonblock(fptr, io);
+  fd = fd_from_io(io, &fptr, 1);
 
   iov = malloc(iov_count * sizeof(struct iovec));
   for (int i = 0; i < argc; i++) {
@@ -656,6 +654,7 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
 
 VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
   struct io_buffer buffer = get_io_buffer(str);
   long buf_pos = NUM2INT(pos);
@@ -689,11 +688,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
   }
 
   GetBackend(self, backend);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
-  rb_io_check_byte_readable(fptr);
-  io_unset_nonblock(fptr, io);
-  rectify_io_file_pos(fptr);
+  fd = fd_from_io(io, &fptr, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -732,6 +727,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
 
 VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
   VALUE str;
   long total;
@@ -743,11 +739,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
-  rb_io_check_byte_readable(fptr);
-  io_unset_nonblock(fptr, io);
-  rectify_io_file_pos(fptr);
+  fd = fd_from_io(io, &fptr, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -783,6 +775,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
 
 VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
   VALUE str;
   long total;
@@ -795,11 +788,7 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
-  rb_io_check_byte_readable(fptr);
-  io_unset_nonblock(fptr, io);
-  rectify_io_file_pos(fptr);
+  fd = fd_from_io(io, &fptr, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -835,19 +824,15 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
 
 VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
-  VALUE underlying_io;
 
   struct io_buffer buffer = get_io_buffer(str);
   long left = buffer.len;
   int flags_int = NUM2INT(flags);
 
-  underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
-  io = rb_io_get_write_io(io);
-  GetOpenFile(io, fptr);
-  io_unset_nonblock(fptr, io);
+  fd = fd_from_io(io, &fptr, 1);
 
   while (left > 0) {
     VALUE resume_value = Qnil;
@@ -879,15 +864,15 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
 }
 
 VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE socket_class, int loop) {
-  rb_io_t *fptr;
+  int server_fd;
+  rb_io_t *server_fptr;
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE socket = Qnil;
   VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
   if (underlying_sock != Qnil) server_socket = underlying_sock;
 
-  GetOpenFile(server_socket, fptr);
-  io_unset_nonblock(fptr, server_socket);
+  server_fd = fd_from_io(server_socket, &server_fptr, 1);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -896,7 +881,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE soc
     int fd;
     int completed;
 
-    io_uring_prep_accept(sqe, fptr->fd, &addr, &len, 0);
+    io_uring_prep_accept(sqe, server_fd, &addr, &len, 0);
 
     fd = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -946,22 +931,16 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
 }
 
 VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE maxlen, int loop) {
+  int src_fd;
+  int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   VALUE underlying_io;
   int total = 0;
   VALUE resume_value = Qnil;
 
-  underlying_io = rb_ivar_get(src, ID_ivar_io);
-  if (underlying_io != Qnil) src = underlying_io;
-  GetOpenFile(src, src_fptr);
-  io_unset_nonblock(src_fptr, src);
-
-  underlying_io = rb_ivar_get(dest, ID_ivar_io);
-  if (underlying_io != Qnil) dest = underlying_io;
-  dest = rb_io_get_write_io(dest);
-  GetOpenFile(dest, dest_fptr);
-  io_unset_nonblock(dest_fptr, dest);
+  src_fd = fd_from_io(src, &src_fptr, 1);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1);
 
   while (1) {
     op_context_t *ctx = context_store_acquire(&backend->store, OP_SPLICE);
@@ -969,7 +948,7 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
     int result;
     int completed;
 
-    io_uring_prep_splice(sqe, src_fptr->fd, -1, dest_fptr->fd, -1, NUM2INT(maxlen), 0);
+    io_uring_prep_splice(sqe, src_fd, -1, dest_fd, -1, NUM2INT(maxlen), 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -1002,6 +981,7 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize) 
 
 VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
   struct sockaddr *ai_addr;
   int ai_addrlen;
@@ -1017,9 +997,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
-  GetOpenFile(sock, fptr);
-  io_unset_nonblock(fptr, sock);
-
+  fd = fd_from_io(sock, &fptr, 1);
   ctx = context_store_acquire(&backend->store, OP_CONNECT);
   sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_connect(sqe, fptr->fd, ai_addr, ai_addrlen);
@@ -1035,16 +1013,13 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
 
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
   VALUE resume_value;
 
-  if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
-  GetOpenFile(io, fptr);
-  io_unset_nonblock(fptr, io);
-
-  resume_value = io_uring_backend_wait_fd(backend, fptr->fd, RTEST(write));
+  fd = fd_from_io(io, &fptr, 1);
+  resume_value = io_uring_backend_wait_fd(backend, fd, RTEST(write));
 
   RAISE_IF_EXCEPTION(resume_value);
   RB_GC_GUARD(resume_value);
@@ -1267,31 +1242,24 @@ VALUE Backend_kind(VALUE self) {
 }
 
 struct io_uring_sqe *Backend_chain_prepare_write(Backend_t *backend, VALUE io, VALUE str) {
+  int fd;
   rb_io_t *fptr;
   VALUE underlying_io;
   struct io_uring_sqe *sqe;
 
-  underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
-  io = rb_io_get_write_io(io);
-  GetOpenFile(io, fptr);
-  io_unset_nonblock(fptr, io);
-
+  fd = fd_from_io(io, &fptr, 1);
   sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_write(sqe, fptr->fd, StringValuePtr(str), RSTRING_LEN(str), 0);
   return sqe;
 }
 
 struct io_uring_sqe *Backend_chain_prepare_send(Backend_t *backend, VALUE io, VALUE str, VALUE flags) {
+  int fd;
   rb_io_t *fptr;
   VALUE underlying_io;
   struct io_uring_sqe *sqe;
 
-  underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
-  io = rb_io_get_write_io(io);
-  GetOpenFile(io, fptr);
-  io_unset_nonblock(fptr, io);
+  fd = fd_from_io(io, &fptr, 1);
 
   sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_send(sqe, fptr->fd, StringValuePtr(str), RSTRING_LEN(str), NUM2INT(flags));
@@ -1299,24 +1267,17 @@ struct io_uring_sqe *Backend_chain_prepare_send(Backend_t *backend, VALUE io, VA
 }
 
 struct io_uring_sqe *Backend_chain_prepare_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE maxlen) {
+  int src_fd;
+  int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   VALUE underlying_io;
   struct io_uring_sqe *sqe;
 
-  underlying_io = rb_ivar_get(src, ID_ivar_io);
-  if (underlying_io != Qnil) src = underlying_io;
-  GetOpenFile(src, src_fptr);
-  io_unset_nonblock(src_fptr, src);
-
-  underlying_io = rb_ivar_get(dest, ID_ivar_io);
-  if (underlying_io != Qnil) dest = underlying_io;
-  dest = rb_io_get_write_io(dest);
-  GetOpenFile(dest, dest_fptr);
-  io_unset_nonblock(dest_fptr, dest);
-
+  src_fd = fd_from_io(src, &src_fptr, 1);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1);
   sqe = io_uring_get_sqe(&backend->ring);
-  io_uring_prep_splice(sqe, src_fptr->fd, -1, dest_fptr->fd, -1, NUM2INT(maxlen), 0);
+  io_uring_prep_splice(sqe, src_fd, -1, dest_fd, -1, NUM2INT(maxlen), 0);
   return sqe;
 }
 
@@ -1509,25 +1470,17 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   op_context_t *ctx = 0;
   struct io_uring_sqe *sqe = 0;
   int maxlen;
-  VALUE underlying_io;
   VALUE str = Qnil;
   VALUE chunk_len_value = Qnil;
+  int src_fd;
+  int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   int pipefd[2] = { -1, -1 };
 
   GetBackend(self, backend);
-
-  underlying_io = rb_ivar_get(src, ID_ivar_io);
-  if (underlying_io != Qnil) src = underlying_io;
-  GetOpenFile(src, src_fptr);
-  io_verify_blocking_mode(src_fptr, src, Qtrue);
-
-  underlying_io = rb_ivar_get(dest, ID_ivar_io);
-  if (underlying_io != Qnil) dest = underlying_io;
-  dest = rb_io_get_write_io(dest);
-  GetOpenFile(dest, dest_fptr);
-  io_verify_blocking_mode(dest_fptr, dest, Qtrue);
+  src_fd = fd_from_io(src, &src_fptr, 1);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1);
 
   maxlen = NUM2INT(chunk_size);
 
@@ -1538,7 +1491,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
   if (prefix != Qnil) {
     splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
-    splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, prefix);
+    splice_chunks_prep_write(ctx, sqe, dest_fd, prefix);
     backend->base.op_count++;
   }
 
@@ -1548,7 +1501,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     VALUE chunk_postfix_str = Qnil;
 
     splice_chunks_get_sqe(backend, &ctx, &sqe, OP_SPLICE);
-    splice_chunks_prep_splice(ctx, sqe, src_fptr->fd, pipefd[1], maxlen);
+    splice_chunks_prep_splice(ctx, sqe, src_fd, pipefd[1], maxlen);
     backend->base.op_count++;
 
     SPLICE_CHUNKS_AWAIT_OPS(backend, &ctx, &chunk_len, &switchpoint_result);
@@ -1561,18 +1514,18 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     if (chunk_prefix != Qnil) {
       chunk_prefix_str = (TYPE(chunk_prefix) == T_STRING) ? chunk_prefix : rb_funcall(chunk_prefix, ID_call, 1, chunk_len_value);
       splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
-      splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, chunk_prefix_str);
+      splice_chunks_prep_write(ctx, sqe, dest_fd, chunk_prefix_str);
       backend->base.op_count++;
     }
 
     splice_chunks_get_sqe(backend, &ctx, &sqe, OP_SPLICE);
-    splice_chunks_prep_splice(ctx, sqe, pipefd[0], dest_fptr->fd, chunk_len);
+    splice_chunks_prep_splice(ctx, sqe, pipefd[0], dest_fd, chunk_len);
     backend->base.op_count++;
 
     if (chunk_postfix != Qnil) {
       chunk_postfix_str = (TYPE(chunk_postfix) == T_STRING) ? chunk_postfix : rb_funcall(chunk_postfix, ID_call, 1, chunk_len_value);
       splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
-      splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, chunk_postfix_str);
+      splice_chunks_prep_write(ctx, sqe, dest_fd, chunk_postfix_str);
       backend->base.op_count++;
     }
 
@@ -1582,7 +1535,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
   if (postfix != Qnil) {
     splice_chunks_get_sqe(backend, &ctx, &sqe, OP_WRITE);
-    splice_chunks_prep_write(ctx, sqe, dest_fptr->fd, postfix);
+    splice_chunks_prep_write(ctx, sqe, dest_fd, postfix);
     backend->base.op_count++;
   }
   if (ctx) {
