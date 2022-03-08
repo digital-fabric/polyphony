@@ -329,14 +329,14 @@ VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
   return resumed_value;
 }
 
-static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode) {
+static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int rectify_file_pos) {
   VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
   if (underlying_io != Qnil) io = underlying_io;
 
   GetOpenFile(io, *fptr);
   io_unset_nonblock(*fptr, io);
-  if (!write_mode) {
-    rb_io_check_byte_readable(*fptr);
+  if (rectify_file_pos) {
+    // rb_io_check_byte_readable(*fptr);
     rectify_io_file_pos(*fptr);
   }
 
@@ -379,7 +379,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   }
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 0);
+  fd = fd_from_io(io, &fptr, 0, 1);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -448,7 +448,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 0);
+  fd = fd_from_io(io, &fptr, 0, 1);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -498,7 +498,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 0);
+  fd = fd_from_io(io, &fptr, 0, 1);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -543,7 +543,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   long left = buffer.len;
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 1);
+  fd = fd_from_io(io, &fptr, 1, 0);
 
   while (left > 0) {
     VALUE resume_value = Qnil;
@@ -586,7 +586,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   int iov_count = argc;
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 1);
+  fd = fd_from_io(io, &fptr, 1, 0);
 
   iov = malloc(iov_count * sizeof(struct iovec));
   for (int i = 0; i < argc; i++) {
@@ -688,7 +688,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
   }
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 0);
+  fd = fd_from_io(io, &fptr, 0, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -739,7 +739,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 0);
+  fd = fd_from_io(io, &fptr, 0, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -788,7 +788,7 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 0);
+  fd = fd_from_io(io, &fptr, 0, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -832,7 +832,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   int flags_int = NUM2INT(flags);
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 1);
+  fd = fd_from_io(io, &fptr, 1, 0);
 
   while (left > 0) {
     VALUE resume_value = Qnil;
@@ -872,7 +872,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE soc
   VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
   if (underlying_sock != Qnil) server_socket = underlying_sock;
 
-  server_fd = fd_from_io(server_socket, &server_fptr, 1);
+  server_fd = fd_from_io(server_socket, &server_fptr, 0, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -939,8 +939,8 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
   int total = 0;
   VALUE resume_value = Qnil;
 
-  src_fd = fd_from_io(src, &src_fptr, 1);
-  dest_fd = fd_from_io(dest, &dest_fptr, 1);
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
 
   while (1) {
     op_context_t *ctx = context_store_acquire(&backend->store, OP_SPLICE);
@@ -997,7 +997,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
-  fd = fd_from_io(sock, &fptr, 1);
+  fd = fd_from_io(sock, &fptr, 1, 0);
   ctx = context_store_acquire(&backend->store, OP_CONNECT);
   sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_connect(sqe, fptr->fd, ai_addr, ai_addrlen);
@@ -1016,10 +1016,11 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   int fd;
   rb_io_t *fptr;
   VALUE resume_value;
+  int write_mode = RTEST(write);
 
   GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 1);
-  resume_value = io_uring_backend_wait_fd(backend, fd, RTEST(write));
+  fd = fd_from_io(io, &fptr, write_mode, 0);
+  resume_value = io_uring_backend_wait_fd(backend, fd, write_mode);
 
   RAISE_IF_EXCEPTION(resume_value);
   RB_GC_GUARD(resume_value);
@@ -1247,7 +1248,7 @@ struct io_uring_sqe *Backend_chain_prepare_write(Backend_t *backend, VALUE io, V
   VALUE underlying_io;
   struct io_uring_sqe *sqe;
 
-  fd = fd_from_io(io, &fptr, 1);
+  fd = fd_from_io(io, &fptr, 1, 0);
   sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_write(sqe, fptr->fd, StringValuePtr(str), RSTRING_LEN(str), 0);
   return sqe;
@@ -1259,7 +1260,7 @@ struct io_uring_sqe *Backend_chain_prepare_send(Backend_t *backend, VALUE io, VA
   VALUE underlying_io;
   struct io_uring_sqe *sqe;
 
-  fd = fd_from_io(io, &fptr, 1);
+  fd = fd_from_io(io, &fptr, 1, 0);
 
   sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_send(sqe, fptr->fd, StringValuePtr(str), RSTRING_LEN(str), NUM2INT(flags));
@@ -1274,8 +1275,8 @@ struct io_uring_sqe *Backend_chain_prepare_splice(Backend_t *backend, VALUE src,
   VALUE underlying_io;
   struct io_uring_sqe *sqe;
 
-  src_fd = fd_from_io(src, &src_fptr, 1);
-  dest_fd = fd_from_io(dest, &dest_fptr, 1);
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
   sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_splice(sqe, src_fd, -1, dest_fd, -1, NUM2INT(maxlen), 0);
   return sqe;
@@ -1479,8 +1480,8 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   int pipefd[2] = { -1, -1 };
 
   GetBackend(self, backend);
-  src_fd = fd_from_io(src, &src_fptr, 1);
-  dest_fd = fd_from_io(dest, &dest_fptr, 1);
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
 
   maxlen = NUM2INT(chunk_size);
 
