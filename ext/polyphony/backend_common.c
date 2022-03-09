@@ -340,6 +340,28 @@ VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags) {
   }
 }
 
+inline void set_fd_blocking_mode(int fd, int blocking) {
+  int flags;
+  int is_nonblocking;
+
+#ifdef _WIN32
+  if (!blocking) rb_w32_set_nonblock(fd);
+#elif defined(F_GETFL)
+  flags = fcntl(fd, F_GETFL);
+  if (flags == -1) return;
+  is_nonblocking = flags & O_NONBLOCK;
+
+  if (blocking) {
+    if (!is_nonblocking) return;
+    flags &= ~O_NONBLOCK;
+  } else {
+    if (is_nonblocking) return;
+    flags |= O_NONBLOCK;
+  }
+  fcntl(fd, F_SETFL, flags);
+#endif
+}
+
 inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
   int flags;
   int is_nonblocking;
@@ -347,24 +369,7 @@ inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
   if (blocking == blocking_mode) return;
 
   rb_ivar_set(io, ID_ivar_blocking_mode, blocking);
-
-#ifdef _WIN32
-  if (blocking != Qtrue)
-    rb_w32_set_nonblock(fptr->fd);
-#elif defined(F_GETFL)
-  flags = fcntl(fptr->fd, F_GETFL);
-  if (flags == -1) return;
-  is_nonblocking = flags & O_NONBLOCK;
-
-  if (blocking == Qtrue) {
-    if (!is_nonblocking) return;
-    flags &= ~O_NONBLOCK;
-  } else {
-    if (is_nonblocking) return;
-    flags |= O_NONBLOCK;
-  }
-  fcntl(fptr->fd, F_SETFL, flags);
-#endif
+  set_fd_blocking_mode(fptr->fd, blocking == Qtrue);
 }
 
 inline void backend_run_idle_tasks(struct Backend_base *base) {

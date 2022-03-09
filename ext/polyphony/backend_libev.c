@@ -266,9 +266,28 @@ VALUE libev_wait_fd(Backend_t *backend, int fd, int events, int raise_exception)
   return switchpoint_result;
 }
 
+static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int rectify_file_pos) {
+  if (rb_obj_class(io) == cPipe) {
+    *fptr = NULL;
+    Pipe_verify_blocking_mode(io, Qfalse);
+    return Pipe_get_fd(io, write_mode);
+  }
+  else {
+    VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
+    if (underlying_io != Qnil) io = underlying_io;
+
+    GetOpenFile(io, *fptr);
+    io_verify_blocking_mode(*fptr, io, Qfalse);
+    if (rectify_file_pos) rectify_io_file_pos(*fptr);
+
+    return (*fptr)->fd;
+  }
+}
+
 VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, VALUE pos) {
   Backend_t *backend;
   struct libev_io watcher;
+  int fd;
   rb_io_t *fptr;
 
   struct io_buffer buffer = get_io_buffer(str);
@@ -278,7 +297,6 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   long total = 0;
   VALUE switchpoint_result = Qnil;
   int read_to_eof = RTEST(to_eof);
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   if (buffer.raw) {
     if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
@@ -305,21 +323,17 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   }
 
   GetBackend(self, backend);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
-  rb_io_check_byte_readable(fptr);
-  io_verify_blocking_mode(fptr, io, Qfalse);
-  rectify_io_file_pos(fptr);
+  fd = fd_from_io(io, &fptr, 0, 1);
   watcher.fiber = Qnil;
 
   while (1) {
     backend->base.op_count++;
-    ssize_t result = read(fptr->fd, buffer.ptr, buffer.len);
+    ssize_t result = read(fd, buffer.ptr, buffer.len);
     if (result < 0) {
       int e = errno;
       if (e != EWOULDBLOCK && e != EAGAIN) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_READ);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_READ);
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
@@ -371,6 +385,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
 VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
+  int fd;
   rb_io_t *fptr;
   VALUE str;
   long total;
@@ -378,26 +393,21 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   int shrinkable;
   char *buf;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
-  rb_io_check_byte_readable(fptr);
-  io_verify_blocking_mode(fptr, io, Qfalse);
-  rectify_io_file_pos(fptr);
+  fd = fd_from_io(io, &fptr, 0, 1);
   watcher.fiber = Qnil;
 
   while (1) {
     backend->base.op_count++;
-    ssize_t n = read(fptr->fd, buf, len);
+    ssize_t n = read(fd, buf, len);
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_READ);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_READ);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
@@ -423,6 +433,7 @@ error:
 VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   Backend_t *backend;
   struct libev_io watcher;
+  int fd;
   rb_io_t *fptr;
   VALUE str;
   long total;
@@ -430,27 +441,22 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   int shrinkable;
   char *buf;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
   ID method_id = SYM2ID(method);
 
   READ_LOOP_PREPARE_STR();
 
   GetBackend(self, backend);
-  if (underlying_io != Qnil) io = underlying_io;
-  GetOpenFile(io, fptr);
-  rb_io_check_byte_readable(fptr);
-  io_verify_blocking_mode(fptr, io, Qfalse);
-  rectify_io_file_pos(fptr);
+  fd = fd_from_io(io, &fptr, 0, 1);
   watcher.fiber = Qnil;
 
   while (1) {
     backend->base.op_count++;
-    ssize_t n = read(fptr->fd, buf, len);
+    ssize_t n = read(fd, buf, len);
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_READ);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_READ);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
@@ -476,29 +482,25 @@ error:
 VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   Backend_t *backend;
   struct libev_io watcher;
+  int fd;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io;
 
   struct io_buffer buffer = get_io_buffer(str);
   long left = buffer.len;
 
-  underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
-  io = rb_io_get_write_io(io);
-  GetOpenFile(io, fptr);
-  io_verify_blocking_mode(fptr, io, Qfalse);
+  fd = fd_from_io(io, &fptr, 1, 0);
   watcher.fiber = Qnil;
 
   while (left > 0) {
     backend->base.op_count++;
-    ssize_t result = write(fptr->fd, buffer.ptr, left);
+    ssize_t result = write(fd, buffer.ptr, left);
     if (result < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_WRITE);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
@@ -525,21 +527,17 @@ error:
 VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   Backend_t *backend;
   struct libev_io watcher;
+  int fd;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io;
   long total_length = 0;
   long total_written = 0;
   struct iovec *iov = 0;
   struct iovec *iov_ptr = 0;
   int iov_count = argc;
 
-  underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
-  io = rb_io_get_write_io(io);
-  GetOpenFile(io, fptr);
-  io_verify_blocking_mode(fptr, io, Qfalse);
+  fd = fd_from_io(io, &fptr, 1, 0);
   watcher.fiber = Qnil;
 
   iov = malloc(iov_count * sizeof(struct iovec));
@@ -553,7 +551,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 
   while (1) {
     backend->base.op_count++;
-    ssize_t n = writev(fptr->fd, iov_ptr, iov_count);
+    ssize_t n = writev(fd, iov_ptr, iov_count);
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) {
@@ -561,7 +559,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
         rb_syserr_fail(e, strerror(e));
       }
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_WRITE);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
@@ -611,26 +609,25 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
 VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
   Backend_t *backend;
   struct libev_io watcher;
-  rb_io_t *fptr;
+  int server_fd;
+  rb_io_t *server_fptr;
   int fd;
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
-  if (underlying_sock != Qnil) server_socket = underlying_sock;
 
   GetBackend(self, backend);
-  GetOpenFile(server_socket, fptr);
-  io_verify_blocking_mode(fptr, server_socket, Qfalse);
+  server_fd = fd_from_io(server_socket, &server_fptr, 0, 0);
   watcher.fiber = Qnil;
+
   while (1) {
     backend->base.op_count++;
-    fd = accept(fptr->fd, &addr, &len);
+    fd = accept(server_fd, &addr, &len);
     if (fd < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_READ);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, server_fd, &watcher, EV_READ);
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
@@ -668,28 +665,25 @@ error:
 VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   Backend_t *backend;
   struct libev_io watcher;
-  rb_io_t *fptr;
-  int fd;
+  int server_fd;
+  rb_io_t *server_fptr;
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE switchpoint_result = Qnil;
   VALUE socket = Qnil;
-  VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
-  if (underlying_sock != Qnil) server_socket = underlying_sock;
 
   GetBackend(self, backend);
-  GetOpenFile(server_socket, fptr);
-  io_verify_blocking_mode(fptr, server_socket, Qfalse);
+  server_fd = fd_from_io(server_socket, &server_fptr, 0, 0);
   watcher.fiber = Qnil;
 
   while (1) {
     backend->base.op_count++;
-    fd = accept(fptr->fd, &addr, &len);
+    int fd = accept(server_fd, &addr, &len);
     if (fd < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_READ);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, server_fd, &watcher, EV_READ);
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
@@ -727,28 +721,25 @@ error:
 VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   Backend_t *backend;
   struct libev_io watcher;
+  int fd;
   rb_io_t *fptr;
   struct sockaddr *ai_addr;
   int ai_addrlen;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
 
   ai_addrlen = backend_getaddrinfo(host, port, &ai_addr);
 
-  if (underlying_sock != Qnil) sock = underlying_sock;
-
   GetBackend(self, backend);
-  GetOpenFile(sock, fptr);
-  io_verify_blocking_mode(fptr, sock, Qfalse);
+  fd = fd_from_io(sock, &fptr, 1, 0);
   watcher.fiber = Qnil;
 
   backend->base.op_count++;
-  int result = connect(fptr->fd, ai_addr, ai_addrlen);
+  int result = connect(fd, ai_addr, ai_addrlen);
   if (result < 0) {
     int e = errno;
     if (e != EINPROGRESS) rb_syserr_fail(e, strerror(e));
 
-    switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_WRITE);
+    switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
 
     if (TEST_EXCEPTION(switchpoint_result)) goto error;
   }
@@ -766,30 +757,26 @@ error:
 VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   Backend_t *backend;
   struct libev_io watcher;
+  int fd;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io;
 
   struct io_buffer buffer = get_io_buffer(str);
   long left = buffer.len;
   int flags_int = NUM2INT(flags);
 
-  underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
   GetBackend(self, backend);
-  io = rb_io_get_write_io(io);
-  GetOpenFile(io, fptr);
-  io_verify_blocking_mode(fptr, io, Qfalse);
+  fd = fd_from_io(io, &fptr, 1, 0);
   watcher.fiber = Qnil;
 
   while (left > 0) {
     backend->base.op_count++;
-    ssize_t result = send(fptr->fd, buffer.ptr, left, flags_int);
+    ssize_t result = send(fd, buffer.ptr, left, flags_int);
     if (result < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, fptr->fd, &watcher, EV_WRITE);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
@@ -863,41 +850,30 @@ VALUE libev_wait_rw_fd_with_watcher(Backend_t *backend, int r_fd, int w_fd, stru
   return switchpoint_result;
 }
 
-
-
-
 #ifdef POLYPHONY_LINUX
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_rw_io watcher;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io;
+  int src_fd;
+  int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   int len;
 
   GetBackend(self, backend);
-
-  underlying_io = rb_ivar_get(src, ID_ivar_io);
-  if (underlying_io != Qnil) src = underlying_io;
-  GetOpenFile(src, src_fptr);
-  io_verify_blocking_mode(src_fptr, src, Qfalse);
-
-  underlying_io = rb_ivar_get(dest, ID_ivar_io);
-  if (underlying_io != Qnil) dest = underlying_io;
-  dest = rb_io_get_write_io(dest);
-  GetOpenFile(dest, dest_fptr);
-  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
-
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
   watcher.ctx.fiber = Qnil;
+
   while (1) {
     backend->base.op_count++;
-    len = splice(src_fptr->fd, 0, dest_fptr->fd, 0, NUM2INT(maxlen), 0);
+    len = splice(src_fd, 0, dest_fd, 0, NUM2INT(maxlen), 0);
     if (len < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fptr->fd, dest_fptr->fd, &watcher);
+      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, &watcher);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
@@ -922,34 +898,26 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_rw_io watcher;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io;
+  int src_fd;
+  int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   int len;
   int total = 0;
 
   GetBackend(self, backend);
-
-  underlying_io = rb_ivar_get(src, ID_ivar_io);
-  if (underlying_io != Qnil) src = underlying_io;
-  GetOpenFile(src, src_fptr);
-  io_verify_blocking_mode(src_fptr, src, Qfalse);
-
-  underlying_io = rb_ivar_get(dest, ID_ivar_io);
-  if (underlying_io != Qnil) dest = underlying_io;
-  dest = rb_io_get_write_io(dest);
-  GetOpenFile(dest, dest_fptr);
-  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
-
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
   watcher.ctx.fiber = Qnil;
+
   while (1) {
     backend->base.op_count++;
-    len = splice(src_fptr->fd, 0, dest_fptr->fd, 0, NUM2INT(maxlen), 0);
+    len = splice(src_fd, 0, dest_fd, 0, NUM2INT(maxlen), 0);
     if (len < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fptr->fd, dest_fptr->fd, &watcher);
+      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, &watcher);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else if (len == 0) {
@@ -977,7 +945,8 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io;
+  int src_fd;
+  int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   int len = NUM2INT(maxlen);
@@ -987,28 +956,18 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   int total = 0;
 
   GetBackend(self, backend);
-
-  underlying_io = rb_ivar_get(src, ID_ivar_io);
-  if (underlying_io != Qnil) src = underlying_io;
-  GetOpenFile(src, src_fptr);
-  io_verify_blocking_mode(src_fptr, src, Qfalse);
-
-  underlying_io = rb_ivar_get(dest, ID_ivar_io);
-  if (underlying_io != Qnil) dest = underlying_io;
-  dest = rb_io_get_write_io(dest);
-  GetOpenFile(dest, dest_fptr);
-  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
-
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
   watcher.fiber = Qnil;
 
   while (1) {
     backend->base.op_count++;
-    ssize_t n = read(src_fptr->fd, buf, len);
+    ssize_t n = read(src_fd, buf, len);
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, src_fptr->fd, &watcher, EV_READ);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, src_fd, &watcher, EV_READ);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
@@ -1019,12 +978,12 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   while (left > 0) {
     backend->base.op_count++;
-    ssize_t n = write(dest_fptr->fd, buf, left);
+    ssize_t n = write(dest_fd, buf, left);
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fptr->fd, &watcher, EV_WRITE);
+      switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fd, &watcher, EV_WRITE);
 
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
@@ -1052,7 +1011,8 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
   VALUE switchpoint_result = Qnil;
-  VALUE underlying_io;
+  int src_fd;
+  int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   int len = NUM2INT(maxlen);
@@ -1062,30 +1022,20 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   int total = 0;
 
   GetBackend(self, backend);
-
-  underlying_io = rb_ivar_get(src, ID_ivar_io);
-  if (underlying_io != Qnil) src = underlying_io;
-  GetOpenFile(src, src_fptr);
-  io_verify_blocking_mode(src_fptr, src, Qfalse);
-
-  underlying_io = rb_ivar_get(dest, ID_ivar_io);
-  if (underlying_io != Qnil) dest = underlying_io;
-  dest = rb_io_get_write_io(dest);
-  GetOpenFile(dest, dest_fptr);
-  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
-
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
   watcher.fiber = Qnil;
 
   while (1) {
     char *ptr = buf;
     while (1) {
       backend->base.op_count++;
-      ssize_t n = read(src_fptr->fd, ptr, len);
+      ssize_t n = read(src_fd, ptr, len);
       if (n < 0) {
         int e = errno;
         if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-        switchpoint_result = libev_wait_fd_with_watcher(backend, src_fptr->fd, &watcher, EV_READ);
+        switchpoint_result = libev_wait_fd_with_watcher(backend, src_fd, &watcher, EV_READ);
         if (TEST_EXCEPTION(switchpoint_result)) goto error;
       }
       else if (n == 0) goto done;
@@ -1098,12 +1048,12 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
     while (left > 0) {
       backend->base.op_count++;
-      ssize_t n = write(dest_fptr->fd, ptr, left);
+      ssize_t n = write(dest_fd, ptr, left);
       if (n < 0) {
         int e = errno;
         if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-        switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fptr->fd, &watcher, EV_WRITE);
+        switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fd, &watcher, EV_WRITE);
         if (TEST_EXCEPTION(switchpoint_result)) goto error;
       }
       else {
@@ -1131,15 +1081,15 @@ error:
 
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   Backend_t *backend;
+  int fd;
   rb_io_t *fptr;
-  int events = RTEST(write) ? EV_WRITE : EV_READ;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
-  if (underlying_io != Qnil) io = underlying_io;
+  int write_mode = RTEST(write);
+  int events = write_mode ? EV_WRITE : EV_READ;
   GetBackend(self, backend);
-  GetOpenFile(io, fptr);
+  fd = fd_from_io(io, &fptr, write_mode, 0);
 
   backend->base.op_count++;
-  return libev_wait_fd(backend, fptr->fd, events, 1);
+  return libev_wait_fd(backend, fd, events, 1);
 }
 
 struct libev_timer {
@@ -1486,19 +1436,13 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   int err = 0;
   VALUE result = Qnil;
 
+  int src_fd;
+  int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
 
-  VALUE underlying_io = rb_ivar_get(src, ID_ivar_io);
-  if (underlying_io != Qnil) src = underlying_io;
-  GetOpenFile(src, src_fptr);
-  io_verify_blocking_mode(src_fptr, src, Qfalse);
-
-  underlying_io = rb_ivar_get(dest, ID_ivar_io);
-  if (underlying_io != Qnil) dest = underlying_io;
-  dest = rb_io_get_write_io(dest);
-  GetOpenFile(dest, dest_fptr);
-  io_verify_blocking_mode(dest_fptr, dest, Qfalse);
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
 
   struct libev_rw_io watcher;
   watcher.ctx.fiber = Qnil;
@@ -1516,12 +1460,12 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   fcntl(pipefd[1], F_SETFL, O_NONBLOCK);
 
   if (prefix != Qnil) {
-    err = splice_chunks_write(backend, dest_fptr->fd, prefix, &watcher, &result);
+    err = splice_chunks_write(backend, dest_fd, prefix, &watcher, &result);
     if (err == -1) goto error; else if (err) goto syscallerror;
   }
   while (1) {
     int chunk_len = 0;
-    err = splice_chunks_splice(backend, src_fptr->fd, pipefd[1], maxlen, &watcher, &result, &chunk_len);
+    err = splice_chunks_splice(backend, src_fd, pipefd[1], maxlen, &watcher, &result, &chunk_len);
     if (err == -1) goto error; else if (err) goto syscallerror;
     if (chunk_len == 0) break;
 
@@ -1530,14 +1474,14 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
     if (chunk_prefix != Qnil) {
       VALUE str = (TYPE(chunk_prefix) == T_STRING) ? chunk_prefix : rb_funcall(chunk_prefix, ID_call, 1, chunk_len_value);
-      int err = splice_chunks_write(backend, dest_fptr->fd, str, &watcher, &result);
+      int err = splice_chunks_write(backend, dest_fd, str, &watcher, &result);
       if (err == -1) goto error; else if (err) goto syscallerror;
     }
 
     int left = chunk_len;
     while (left > 0) {
       int len;
-      err = splice_chunks_splice(backend, pipefd[0], dest_fptr->fd, left, &watcher, &result, &len);
+      err = splice_chunks_splice(backend, pipefd[0], dest_fd, left, &watcher, &result, &len);
       if (err == -1) goto error; else if (err) goto syscallerror;
 
       left -= len;
@@ -1545,13 +1489,13 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
     if (chunk_postfix != Qnil) {
       VALUE str = (TYPE(chunk_postfix) == T_STRING) ? chunk_postfix : rb_funcall(chunk_postfix, ID_call, 1, chunk_len_value);
-      int err = splice_chunks_write(backend, dest_fptr->fd, str, &watcher, &result);
+      int err = splice_chunks_write(backend, dest_fd, str, &watcher, &result);
       if (err == -1) goto error; else if (err) goto syscallerror;
     }
   }
 
   if (postfix != Qnil) {
-    int err = splice_chunks_write(backend, dest_fptr->fd, postfix, &watcher, &result);
+    int err = splice_chunks_write(backend, dest_fd, postfix, &watcher, &result);
     if (err == -1) goto error; else if (err) goto syscallerror;
   }
 

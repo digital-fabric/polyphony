@@ -88,6 +88,7 @@ long Runqueue_len(VALUE self);
 int Runqueue_empty_p(VALUE self);
 int Runqueue_should_poll_nonblocking(VALUE self);
 
+void Pipe_verify_blocking_mode(VALUE self, VALUE blocking);
 int Pipe_get_fd(VALUE self, int write_mode);
 
 #ifdef POLYPHONY_BACKEND_LIBEV

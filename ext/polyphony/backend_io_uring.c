@@ -330,14 +330,11 @@ VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
 }
 
 static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int rectify_file_pos) {
-  INSPECT("fd_from_io", io);
   if (rb_obj_class(io) == cPipe) {
-    printf("  io is a Polyphony::Pipe\n");
     *fptr = NULL;
     return Pipe_get_fd(io, write_mode);
   }
   else {
-    printf("  io is a IO\n");
     VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
     if (underlying_io != Qnil) io = underlying_io;
 
@@ -449,7 +446,6 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   long len = NUM2INT(maxlen);
   int shrinkable;
   char *buf;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   READ_LOOP_PREPARE_STR();
 
@@ -498,7 +494,6 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   long len = 8192;
   int shrinkable;
   char *buf;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
   ID method_id = SYM2ID(method);
 
   READ_LOOP_PREPARE_STR();
@@ -543,7 +538,6 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
-  VALUE underlying_io;
 
   struct io_buffer buffer = get_io_buffer(str);
   long left = buffer.len;
@@ -584,7 +578,6 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
-  VALUE underlying_io;
   long total_length = 0;
   long total_written = 0;
   struct iovec *iov = 0;
@@ -667,7 +660,6 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
   int shrinkable_string = 0;
   int expandable_buffer = 0;
   long total = 0;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   if (buffer.raw) {
     if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
@@ -740,7 +732,6 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
   long len = NUM2INT(maxlen);
   int shrinkable;
   char *buf;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 
   READ_LOOP_PREPARE_STR();
 
@@ -788,7 +779,6 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
   long len = 8192;
   int shrinkable;
   char *buf;
-  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
   ID method_id = SYM2ID(method);
 
   READ_LOOP_PREPARE_STR();
@@ -875,8 +865,6 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE soc
   struct sockaddr addr;
   socklen_t len = (socklen_t)sizeof addr;
   VALUE socket = Qnil;
-  VALUE underlying_sock = rb_ivar_get(server_socket, ID_ivar_io);
-  if (underlying_sock != Qnil) server_socket = underlying_sock;
 
   server_fd = fd_from_io(server_socket, &server_fptr, 0, 0);
 
@@ -941,16 +929,11 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
   int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
-  VALUE underlying_io;
   int total = 0;
   VALUE resume_value = Qnil;
 
-  printf("* io_uring_backend_splice\n");
-
   src_fd = fd_from_io(src, &src_fptr, 0, 0);
   dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
-
-  printf("splice src_fd: %d dest_fd: %d\n", src_fd, dest_fd);
 
   while (1) {
     op_context_t *ctx = context_store_acquire(&backend->store, OP_SPLICE);
@@ -965,10 +948,8 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
     RAISE_IF_EXCEPTION(resume_value);
     if (!completed) return resume_value;
 
-    printf("splice result: %d\n", result);
-    if (result < 0) {
+    if (result < 0)
       rb_syserr_fail(-result, strerror(-result));
-    }
 
     total += result;
     if (result == 0 || !loop) return INT2NUM(total);
@@ -980,7 +961,6 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   GetBackend(self, backend);
-
   return io_uring_backend_splice(backend, src, dest, maxlen, 0);
 }
 
@@ -997,7 +977,6 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   rb_io_t *fptr;
   struct sockaddr *ai_addr;
   int ai_addrlen;
-  VALUE underlying_sock = rb_ivar_get(sock, ID_ivar_io);
   VALUE resume_value = Qnil;
   op_context_t *ctx;
   struct io_uring_sqe *sqe;
@@ -1005,8 +984,6 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   int completed;
 
   ai_addrlen = backend_getaddrinfo(host, port, &ai_addr);
-
-  if (underlying_sock != Qnil) sock = underlying_sock;
 
   GetBackend(self, backend);
   fd = fd_from_io(sock, &fptr, 1, 0);
@@ -1042,16 +1019,11 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 // VALUE Backend_close(VALUE self, VALUE io) {
 //   Backend_t *backend;
 //   rb_io_t *fptr;
-//   VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
 //   VALUE resume_value = Qnil;
 //   op_context_t *ctx;
 //   struct io_uring_sqe *sqe;
 //   int result;
 //   int completed;
-
-//   if (underlying_io != Qnil) io = underlying_io;
-//   GetBackend(self, backend);
-//   GetOpenFile(io, fptr);
 
 //   if (fd < 0) return Qnil;
 
@@ -1257,7 +1229,6 @@ VALUE Backend_kind(VALUE self) {
 struct io_uring_sqe *Backend_chain_prepare_write(Backend_t *backend, VALUE io, VALUE str) {
   int fd;
   rb_io_t *fptr;
-  VALUE underlying_io;
   struct io_uring_sqe *sqe;
 
   fd = fd_from_io(io, &fptr, 1, 0);
@@ -1269,7 +1240,6 @@ struct io_uring_sqe *Backend_chain_prepare_write(Backend_t *backend, VALUE io, V
 struct io_uring_sqe *Backend_chain_prepare_send(Backend_t *backend, VALUE io, VALUE str, VALUE flags) {
   int fd;
   rb_io_t *fptr;
-  VALUE underlying_io;
   struct io_uring_sqe *sqe;
 
   fd = fd_from_io(io, &fptr, 1, 0);
@@ -1284,7 +1254,6 @@ struct io_uring_sqe *Backend_chain_prepare_splice(Backend_t *backend, VALUE src,
   int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
-  VALUE underlying_io;
   struct io_uring_sqe *sqe;
 
   src_fd = fd_from_io(src, &src_fptr, 0, 0);

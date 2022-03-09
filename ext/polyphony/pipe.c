@@ -50,6 +50,18 @@ static VALUE Pipe_initialize(int argc, VALUE *argv, VALUE self) {
   return self;
 }
 
+void Pipe_verify_blocking_mode(VALUE self, VALUE blocking) {
+  Pipe_t *pipe_struct;
+  VALUE blocking_mode = rb_ivar_get(self, ID_ivar_blocking_mode);
+  if (blocking == blocking_mode) return;
+
+  rb_ivar_set(self, ID_ivar_blocking_mode, blocking);
+  GetPipe(self, pipe_struct);
+
+  set_fd_blocking_mode(pipe_struct->fds[0], blocking == Qtrue);
+  set_fd_blocking_mode(pipe_struct->fds[1], blocking == Qtrue);
+}
+
 int Pipe_get_fd(VALUE self, int write_mode) {
   Pipe_t *pipe;
   GetPipe(self, pipe);
