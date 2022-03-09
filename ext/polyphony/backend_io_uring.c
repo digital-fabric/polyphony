@@ -330,11 +330,14 @@ VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
 }
 
 static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int rectify_file_pos) {
+  INSPECT("fd_from_io", io);
   if (rb_obj_class(io) == cPipe) {
+    printf("  io is a Polyphony::Pipe\n");
     *fptr = NULL;
     return Pipe_get_fd(io, write_mode);
   }
   else {
+    printf("  io is a IO\n");
     VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
     if (underlying_io != Qnil) io = underlying_io;
 
@@ -941,6 +944,8 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
   VALUE underlying_io;
   int total = 0;
   VALUE resume_value = Qnil;
+
+  printf("* io_uring_backend_splice\n");
 
   src_fd = fd_from_io(src, &src_fptr, 0, 0);
   dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
