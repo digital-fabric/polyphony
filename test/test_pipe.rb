@@ -28,7 +28,7 @@ class PipeTest < MiniTest::Test
     dest = Polyphony::Pipe.new
 
     spin {
-      trace(test_pipe_splice: 1, src: src, dest: dest)
+      trace(test_pipe_splice: 1, src: src.fds, dest: dest.fds)
       IO.splice(src, dest, 8192)
       trace(test_pipe_splice: 2)
       dest.close
