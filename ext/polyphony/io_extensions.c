@@ -185,52 +185,62 @@ struct z_stream_ctx {
   VALUE backend;
   VALUE src;
   VALUE dest;
-  z_stream strm;
-  int starting_pos;
-  unsigned char in[CHUNK];
-  unsigned char out[CHUNK];
 
   enum stream_mode mode;
-  unsigned long crc32;
+  z_stream strm;
+
+  unsigned char in[CHUNK];
+  unsigned char out[CHUNK];
+  int in_pos;
+  int out_pos;
   unsigned long in_total;
   unsigned long out_total;
+
+  unsigned long crc32;
 };
 
-void z_stream_io_loop(struct z_stream_ctx *ctx) {
-  int pos = ctx->starting_pos;
-  int (*fun)(z_streamp, int) = (ctx->mode == SM_DEFLATE) ? deflate : inflate;
+typedef int (*zlib_func)(z_streamp, int);
+
+inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun) {
   int ret;
-  int avail_out_pre;
-  
-  struct raw_buffer in_buffer = {ctx->in, CHUNK};
-  struct raw_buffer out_buffer = {ctx->out, CHUNK};
+  int written;
+  struct raw_buffer out_buffer;
+
+  int avail_out_pre = ctx->strm.avail_out = CHUNK - ctx->out_pos;
+  ctx->strm.next_out = ctx->out + ctx->out_pos;
+  ret = fun(&ctx->strm, Z_FINISH);
+  assert(ret != Z_STREAM_ERROR);
+  written = avail_out_pre - ctx->strm.avail_out;
+  out_buffer.ptr = ctx->out;
+  out_buffer.len = ctx->out_pos + written;
+  if (out_buffer.len) {
+    ret = write_from_raw_buffer(ctx->backend, ctx->dest, WM_BACKEND_WRITE, &out_buffer);
+    if (ctx->mode == SM_INFLATE)
+      ctx->crc32 = crc32(ctx->crc32, out_buffer.ptr + ctx->out_pos, written);
+    ctx->out_total += ret - ctx->out_pos;
+  }
+  ctx->out_pos = 0;
+  return ctx->strm.avail_out;
+}
+
+void z_stream_io_loop(struct z_stream_ctx *ctx) {
+  zlib_func fun = (ctx->mode == SM_DEFLATE) ? deflate : inflate;  
 
   while (1) {
+    struct raw_buffer in_buffer = {ctx->in, CHUNK};
     ctx->strm.next_in = ctx->in;
     int read_len = ctx->strm.avail_in = read_to_raw_buffer(ctx->backend, ctx->src, RM_BACKEND_READ, &in_buffer);
     if (!read_len) break;
-
     int eof = read_len < CHUNK;
 
-    ctx->crc32 = crc32(ctx->crc32, ctx->in, read_len);
+    if (ctx->mode == SM_DEFLATE)
+      ctx->crc32 = crc32(ctx->crc32, ctx->in, read_len);
     ctx->in_total += read_len;
 
     while (1) {
-      avail_out_pre = ctx->strm.avail_out = CHUNK - pos;
-      ctx->strm.next_out = ctx->out + pos;
-      ret = fun(&ctx->strm, eof ? Z_FINISH : Z_NO_FLUSH);
-      assert(ret != Z_STREAM_ERROR);
-      int written = avail_out_pre - ctx->strm.avail_out;
-
-      out_buffer.len = pos + written;
-
-      int write_ret = write_from_raw_buffer(ctx->backend, ctx->dest, WM_BACKEND_WRITE, &out_buffer);
-      ctx->out_total += write_ret - pos;
-      assert(write_ret == pos + written);
-      pos = 0;
-
-      // if there's still room in the out buffer that means the input buffer has been exhausted
-      if (ctx->strm.avail_out) break;
+      // z_stream_write_out returns strm.avail_out. If there's still room in the
+      // out buffer that means the input buffer has been exhausted.
+      if (z_stream_write_out(ctx, fun)) break;
     }
 
     if (eof) return;
@@ -239,16 +249,22 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
   //flush
   ctx->strm.avail_in = 0;
   ctx->strm.next_in = ctx->in;
-  avail_out_pre = ctx->strm.avail_out = CHUNK - pos;
-  ctx->strm.next_out = ctx->out + pos;
-  ret = fun(&ctx->strm, Z_FINISH); /* no bad return value */
-  assert(ret != Z_STREAM_ERROR);
-  int written = avail_out_pre - ctx->strm.avail_out;
-  out_buffer.len = pos + written;
-  if (out_buffer.len) {
-    ret = write_from_raw_buffer(ctx->backend, ctx->dest, WM_BACKEND_WRITE, &out_buffer);
-    ctx->out_total += ret - pos;
-  }
+  z_stream_write_out(ctx, fun);
+}
+
+inline void setup_ctx(struct z_stream_ctx *ctx, enum stream_mode mode, VALUE src, VALUE dest) {
+  ctx->backend = BACKEND();
+  ctx->src = src;
+  ctx->dest = dest;
+  ctx->mode = mode;
+  ctx->strm.zalloc = Z_NULL;
+  ctx->strm.zfree = Z_NULL;
+  ctx->strm.opaque = Z_NULL;
+  ctx->in_pos = 0;
+  ctx->out_pos = 0;
+  ctx->in_total = 0;
+  ctx->out_total = 0;
+  ctx->crc32 = 0;
 }
 
 VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
@@ -270,36 +286,24 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
   int level = DEFAULT_LEVEL;
   int ret;
 
-  ctx.backend = BACKEND();
-  ctx.src = src;
-  ctx.dest = dest;
-  ctx.strm.zalloc = Z_NULL;
-  ctx.strm.zfree = Z_NULL;
-  ctx.strm.opaque = Z_NULL;
-
-  ctx.starting_pos = gzip_prepare_header(&header_ctx, ctx.out, sizeof(ctx.out));
-
-  ctx.mode = SM_DEFLATE;
-  ctx.crc32 = 0;
-  ctx.in_total = 0;
-  ctx.out_total = 0;
+  setup_ctx(&ctx, SM_DEFLATE, src, dest);
+  ctx.out_pos = gzip_prepare_header(&header_ctx, ctx.out, sizeof(ctx.out));
 
   ret = deflateInit2(&ctx.strm, level, Z_DEFLATED, -MAX_WBITS, DEFAULT_MEM_LEVEL, Z_DEFAULT_STRATEGY);
   if (ret != Z_OK) return INT2FIX(ret);
-
   z_stream_io_loop(&ctx);
-
   int footer_len = gzip_prepare_footer(ctx.crc32, ctx.in_total, ctx.out, sizeof(ctx.out));
   struct raw_buffer footer_buffer = {ctx.out, footer_len};
-
   write_from_raw_buffer(ctx.backend, dest, WM_BACKEND_WRITE, &footer_buffer);
-
   deflateEnd(&ctx.strm);
  
-  return self;
+  return INT2FIX(ctx.out_total);
 }
 
 VALUE IO_gunzip(VALUE self, VALUE src, VALUE dest) {
+  struct z_stream_ctx ctx;
+  setup_ctx(&ctx, SM_DEFLATE, src, dest);
+
   return self;
 }
 
@@ -308,48 +312,29 @@ VALUE IO_deflate(VALUE self, VALUE src, VALUE dest) {
   int level = DEFAULT_LEVEL;
   int ret;
 
-  ctx.backend = BACKEND();
-  ctx.src = src;
-  ctx.dest = dest;
-  ctx.strm.zalloc = Z_NULL;
-  ctx.strm.zfree = Z_NULL;
-  ctx.strm.opaque = Z_NULL;
-  ctx.starting_pos = 0;
-  ctx.mode = SM_DEFLATE;
+  setup_ctx(&ctx, SM_DEFLATE, src, dest);
   ret = deflateInit(&ctx.strm, level);
   if (ret != Z_OK) return INT2FIX(ret);
-
   z_stream_io_loop(&ctx);
-
   deflateEnd(&ctx.strm);
  
-  return self;
+  return INT2FIX(ctx.out_total);
 }
 
 VALUE IO_inflate(VALUE self, VALUE src, VALUE dest) {
   struct z_stream_ctx ctx;
+  int ret;
 
-  ctx.backend = BACKEND();
-  ctx.src = src;
-  ctx.dest = dest;
-  ctx.strm.zalloc = Z_NULL;
-  ctx.strm.zfree = Z_NULL;
-  ctx.strm.opaque = Z_NULL;
-  ctx.starting_pos = 0;
-  ctx.mode = SM_INFLATE;
-  int ret = inflateInit(&ctx.strm);
+  setup_ctx(&ctx, SM_INFLATE, src, dest);
+  ret = inflateInit(&ctx.strm);
   if (ret != Z_OK) return INT2FIX(ret);
-
   z_stream_io_loop(&ctx);
-
   inflateEnd(&ctx.strm);
  
-  return self;
+  return INT2FIX(ctx.out_total);
 }
 
 void Init_IOExtensions() {
-  // mPolyphony = rb_define_module("Polyphony");
-
   rb_define_singleton_method(rb_cIO, "gzip", IO_gzip, -1);
   rb_define_singleton_method(rb_cIO, "gunzip", IO_gunzip, 2);
   rb_define_singleton_method(rb_cIO, "deflate", IO_deflate, 2);
