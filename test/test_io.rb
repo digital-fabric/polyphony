@@ -627,20 +627,132 @@ class IOExtensionsTest < MiniTest::Test
   end
 
   def test_gzip
-    i, o = IO.pipe
-    r, w = IO.pipe
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
+    now = nil
 
     spin {
-      IO.gzip(i, w)
-      # w.splice(i, 8192)
-      w.close
+      now = Time.now.to_i
+      IO.gzip(src, dest)
+      dest.close
     }
 
-    o << IO.read(__FILE__)
-    o.close
+    src << IO.read(__FILE__)
+    src.close
 
-    gz = Zlib::GzipReader.new(r)
+    gz = Zlib::GzipReader.new(dest)
     data = gz.read
     assert_equal IO.read(__FILE__), data
+    assert_equal now, gz.mtime.to_i
+    assert_nil gz.orig_name
+    assert_nil gz.comment
   end
+
+  def test_gzip_with_mtime_int
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
+
+    spin {
+      IO.gzip(src, dest, mtime: 42)
+      dest.close
+    }
+
+    src << IO.read(__FILE__)
+    src.close
+
+    gz = Zlib::GzipReader.new(dest)
+    data = gz.read
+    assert_equal IO.read(__FILE__), data
+    assert_equal Time.at(42), gz.mtime
+  end
+
+  def test_gzip_with_mtime_false
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
+
+    spin {
+      IO.gzip(src, dest, mtime: false)
+      dest.close
+    }
+
+    src << IO.read(__FILE__)
+    src.close
+
+    gz = Zlib::GzipReader.new(dest)
+    data = gz.read
+    assert_equal IO.read(__FILE__), data
+    assert_equal Time.at(0), gz.mtime
+  end
+
+  def test_gzip_with_mtime_time
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
+    t = Time.at(Time.now.to_i) - rand(300000)
+
+    spin {
+      IO.gzip(src, dest, mtime: t)
+      dest.close
+    }
+
+    src << IO.read(__FILE__)
+    src.close
+
+    gz = Zlib::GzipReader.new(dest)
+    data = gz.read
+    assert_equal IO.read(__FILE__), data
+    assert_equal t, gz.mtime
+  end
+
+  def test_gzip_with_orig_name
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
+
+    spin {
+      IO.gzip(src, dest, orig_name: '/foo/bar')
+      dest.close
+    }
+
+    src << IO.read(__FILE__)
+    src.close
+
+    gz = Zlib::GzipReader.new(dest)
+    data = gz.read
+    assert_equal IO.read(__FILE__), data
+    assert_equal '/foo/bar', gz.orig_name
+  end
+
+  def test_gzip_with_comment
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
+
+    spin {
+      IO.gzip(src, dest, comment: 'hello!')
+      dest.close
+    }
+
+    src << IO.read(__FILE__)
+    src.close
+
+    gz = Zlib::GzipReader.new(dest)
+    data = gz.read
+    assert_equal IO.read(__FILE__), data
+    assert_equal 'hello!', gz.comment
+  end
+
+  # def test_gunzip
+  #   i, o = IO.pipe
+  #   r, w = IO.pipe
+
+  #   spin {
+  #     IO.gunzip(i, w)
+  #     w.close
+  #   }
+
+  #   gz = Zlib::GzipWriter.new(o)
+  #   gz << IO.read(__FILE__)
+  #   gz.close
+
+  #   data = r.read
+  #   assert_equal IO.read(__FILE__), data
+  # end
 end

@@ -5,7 +5,12 @@
 #include "assert.h"
 
 ID ID_read_method;
+ID ID_to_i;
 ID ID_write_method;
+
+VALUE SYM_mtime;
+VALUE SYM_orig_name;
+VALUE SYM_comment;
 
 enum read_method {
   RM_BACKEND_READ,
@@ -21,6 +26,28 @@ enum write_method {
 #define MAX_WRITE_STR_LEN 16384
 #define DEFAULT_LEVEL 9
 #define DEFAULT_MEM_LEVEL 8
+
+/* from zutil.h */
+#define OS_MSDOS    0x00
+#define OS_AMIGA    0x01
+#define OS_VMS      0x02
+#define OS_UNIX     0x03
+#define OS_ATARI    0x05
+#define OS_OS2      0x06
+#define OS_MACOS    0x07
+#define OS_TOPS20   0x0a
+#define OS_WIN32    0x0b
+
+#define OS_VMCMS    0x04
+#define OS_ZSYSTEM  0x08
+#define OS_CPM      0x09
+#define OS_QDOS     0x0c
+#define OS_RISCOS   0x0d
+#define OS_UNKNOWN  0xff
+
+#ifndef OS_CODE
+#define OS_CODE  OS_UNIX
+#endif
 
 inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method method, struct raw_buffer *buffer) {
   VALUE len = Backend_read(backend, io, PTR2FIX(buffer), Qnil, Qfalse, INT2FIX(0));
@@ -46,11 +73,9 @@ static inline int write_c_string_from_str(VALUE str, struct raw_buffer *buffer) 
 }
 
 struct gzip_header_ctx {
-  int os_code;        /* for header */
-  time_t mtime;       /* for header */
-  VALUE orig_name;    /* for header; must be a String */
-  VALUE comment;      /* for header; must be a String */
-  unsigned long crc;
+  VALUE mtime;
+  VALUE orig_name;
+  VALUE comment;
 };
 
 #define GZ_MAGIC1             0x1f
@@ -95,21 +120,24 @@ static void gzfile_set32(unsigned long n, unsigned char *dst) {
   *dst     = (n >> 24) & 0xff;
 }
 
+static inline time_t time_from_object(VALUE o) {
+  if (o == Qfalse) return 0;
+  if (o == Qnil) return time(0); // now
+  if (FIXNUM_P(o)) return FIX2INT(o);
+  return FIX2INT(rb_funcall(o, rb_intern("to_i"), 0));
+}
+
 int gzip_prepare_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
   int len = 0;
   unsigned char flags = 0, extraflags = 0;
 
   assert(maxlen >= 10);
 
-  if (!NIL_P(ctx->orig_name)) {
-	  flags |= GZ_FLAG_ORIG_NAME;
-  }
-  if (!NIL_P(ctx->comment)) {
-	  flags |= GZ_FLAG_COMMENT;
-  }
-  // if (!(ctx->z.flags & GZFILE_FLAG_MTIME_IS_SET)) {
-	//   ctx->mtime = time(0);
-  // }
+  if (!NIL_P(ctx->orig_name)) flags |= GZ_FLAG_ORIG_NAME;
+  if (!NIL_P(ctx->comment))   flags |= GZ_FLAG_COMMENT;
+
+  if (ctx->mtime)
+    ctx->mtime = time_from_object(ctx->mtime);
 
   // if (ctx->level == Z_BEST_SPEED) {
 	//   extraflags |= GZ_EXTRAFLAG_FAST;
@@ -118,14 +146,13 @@ int gzip_prepare_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
 	//   extraflags |= GZ_EXTRAFLAG_SLOW;
   // }
 
-
   buffer[0] = GZ_MAGIC1;
   buffer[1] = GZ_MAGIC2;
   buffer[2] = GZ_METHOD_DEFLATE;
   buffer[3] = flags;
   gzfile_set32((unsigned long)ctx->mtime, &buffer[4]);
   buffer[8] = extraflags;
-  buffer[9] = ctx->os_code;
+  buffer[9] = OS_CODE;
 
   len = 10;
 
@@ -224,35 +251,19 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
   }
 }
 
-/* from zutil.h */
-#define OS_MSDOS    0x00
-#define OS_AMIGA    0x01
-#define OS_VMS      0x02
-#define OS_UNIX     0x03
-#define OS_ATARI    0x05
-#define OS_OS2      0x06
-#define OS_MACOS    0x07
-#define OS_TOPS20   0x0a
-#define OS_WIN32    0x0b
+VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
+  VALUE src;
+  VALUE dest;
+  VALUE opts = Qnil;
+  int opts_present;
 
-#define OS_VMCMS    0x04
-#define OS_ZSYSTEM  0x08
-#define OS_CPM      0x09
-#define OS_QDOS     0x0c
-#define OS_RISCOS   0x0d
-#define OS_UNKNOWN  0xff
+  rb_scan_args(argc, argv, "21", &src, &dest, &opts);
+  opts_present = opts != Qnil;
 
-#ifndef OS_CODE
-#define OS_CODE  OS_UNIX
-#endif
-
-VALUE IO_gzip(VALUE self, VALUE src, VALUE dest) {
   struct gzip_header_ctx header_ctx = {
-    OS_CODE,
-    0,
-    Qnil,
-    Qnil,
-    0
+    opts_present ? rb_hash_aref(opts, SYM_mtime) : Qnil,
+    opts_present ? rb_hash_aref(opts, SYM_orig_name) : Qnil,
+    opts_present ? rb_hash_aref(opts, SYM_comment) : Qnil
   };
 
   struct z_stream_ctx ctx;
@@ -339,11 +350,16 @@ VALUE IO_inflate(VALUE self, VALUE src, VALUE dest) {
 void Init_IOExtensions() {
   // mPolyphony = rb_define_module("Polyphony");
 
-  rb_define_singleton_method(rb_cIO, "gzip", IO_gzip, 2);
+  rb_define_singleton_method(rb_cIO, "gzip", IO_gzip, -1);
   rb_define_singleton_method(rb_cIO, "gunzip", IO_gunzip, 2);
   rb_define_singleton_method(rb_cIO, "deflate", IO_deflate, 2);
   rb_define_singleton_method(rb_cIO, "inflate", IO_inflate, 2);
 
-  ID_read_method =  rb_intern("__read_method__");
+  ID_read_method  =  rb_intern("__read_method__");
+  ID_to_i         =  rb_intern("to_i");
   ID_write_method = rb_intern("__write_method__");
+
+  SYM_mtime     = ID2SYM(rb_intern("mtime"));
+  SYM_orig_name = ID2SYM(rb_intern("orig_name"));
+  SYM_comment   = ID2SYM(rb_intern("comment"));
 }
