@@ -17,7 +17,7 @@ class BackendTest < MiniTest::Test
 
   def test_sleep
     count = 0
-    t0 = Time.now
+    t0 = monotonic_clock
     spin {
       @backend.sleep 0.01
       count += 1
@@ -26,7 +26,7 @@ class BackendTest < MiniTest::Test
       @backend.sleep 0.01
       count += 1
     }.await
-    assert_in_range 0.02..0.06, Time.now - t0 if IS_LINUX
+    assert_in_range 0.02..0.06, monotonic_clock - t0 if IS_LINUX
     assert_equal 3, count
   end
 
@@ -467,7 +467,7 @@ class BackendChainTest < MiniTest::Test
     i, o = IO.pipe
     backend = Thread.current.backend
     while true
-      len = o.splice(from, 8192)
+      len = o.splice_from(from, 8192)
       break if len == 0
 
       backend.chain(

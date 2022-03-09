@@ -37,6 +37,10 @@ module ::Kernel
       format("%p\n", args.size == 1 ? args.first : args)
     end
   end
+
+  def monotonic_clock
+    ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
+  end
 end
 
 class MiniTest::Test

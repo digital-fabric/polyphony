@@ -103,38 +103,38 @@ end
 
 class MoveOnAfterTest < MiniTest::Test
   def test_move_on_after
-    t0 = Time.now
+    t0 = monotonic_clock
     v = move_on_after(0.01) do
       sleep 1
       :foo
     end
-    t1 = Time.now
+    t1 = monotonic_clock
 
     assert t1 - t0 < 0.1
     assert_nil v
   end
 
   def test_move_on_after_with_value
-    t0 = Time.now
+    t0 = monotonic_clock
     v = move_on_after(0.01, with_value: :bar) do
       sleep 1
       :foo
     end
-    t1 = Time.now
+    t1 = monotonic_clock
 
     assert t1 - t0 < 0.1
     assert_equal :bar, v
   end
 
   def test_move_on_after_with_reset
-    t0 = Time.now
+    t0 = monotonic_clock
     v = move_on_after(0.01, with_value: :moved_on) do |timeout|
       sleep 0.007
       timeout.reset
       sleep 0.007
       nil
     end
-    t1 = Time.now
+    t1 = monotonic_clock
 
     assert_nil v
     assert_in_range 0.014..0.02, t1 - t0 if IS_LINUX
@@ -143,23 +143,23 @@ class MoveOnAfterTest < MiniTest::Test
   def test_nested_move_on_after
     skip unless IS_LINUX
 
-    t0 = Time.now
+    t0 = monotonic_clock
     o = move_on_after(0.01, with_value: 1) do
       move_on_after(0.02, with_value: 2) do
         sleep 1
       end
     end
-    t1 = Time.now
+    t1 = monotonic_clock
     assert_equal 1, o
     assert_in_range 0.008..0.015, t1 - t0 if IS_LINUX
 
-    t0 = Time.now
+    t0 = monotonic_clock
     o = move_on_after(0.05, with_value: 1) do
       move_on_after(0.01, with_value: 2) do
         sleep 1
       end
     end
-    t1 = Time.now
+    t1 = monotonic_clock
     assert_equal 2, o
     assert_in_range 0.008..0.013, t1 - t0 if IS_LINUX
   end
@@ -167,7 +167,7 @@ end
 
 class CancelAfterTest < MiniTest::Test
   def test_cancel_after
-    t0 = Time.now
+    t0 = monotonic_clock
 
     assert_raises Polyphony::Cancel do
       cancel_after(0.01) do
@@ -175,12 +175,12 @@ class CancelAfterTest < MiniTest::Test
         :foo
       end
     end
-    t1 = Time.now
+    t1 = monotonic_clock
     assert t1 - t0 < 0.1
   end
 
   def test_cancel_after_with_reset
-    t0 = Time.now
+    t0 = monotonic_clock
     cancel_after(0.01) do |f|
       assert_kind_of Fiber, f
       assert_equal Fiber.current, f.parent
@@ -188,7 +188,7 @@ class CancelAfterTest < MiniTest::Test
       f.reset
       sleep 0.007
     end
-    t1 = Time.now
+    t1 = monotonic_clock
     assert_in_range 0.014..0.024, t1 - t0 if IS_LINUX
   end
 
@@ -270,7 +270,7 @@ class SpinLoopTest < MiniTest::Test
   def test_spin_loop_with_rate
     buffer = []
     counter = 0
-    t0 = Time.now
+    t0 = monotonic_clock
     f = spin_loop(rate: 100) { buffer << (counter += 1) }
     sleep 0.02
     f.stop
@@ -280,7 +280,7 @@ class SpinLoopTest < MiniTest::Test
   def test_spin_loop_with_interval
     buffer = []
     counter = 0
-    t0 = Time.now
+    t0 = monotonic_clock
     f = spin_loop(interval: 0.01) { buffer << (counter += 1) }
     sleep 0.02
     f.stop
@@ -361,7 +361,7 @@ class ThrottledLoopTest < MiniTest::Test
   def test_throttled_loop
     buffer = []
     counter = 0
-    t0 = Time.now
+    t0 = monotonic_clock
     f = spin do
       throttled_loop(10) { buffer << (counter += 1) }
     end
@@ -372,12 +372,12 @@ class ThrottledLoopTest < MiniTest::Test
   def test_throttled_loop_with_count
     buffer = []
     counter = 0
-    t0 = Time.now
+    t0 = monotonic_clock
     f = spin do
       throttled_loop(50, count: 5) { buffer << (counter += 1) }
     end
     f.await
-    t1 = Time.now
+    t1 = monotonic_clock
     assert_in_range 0.075..0.15, t1 - t0 if IS_LINUX
     assert_equal [1, 2, 3, 4, 5], buffer
   end
@@ -395,7 +395,7 @@ class GlobalAPIEtcTest < MiniTest::Test
 
   def test_every
     buffer = []
-    t0 = Time.now
+    t0 = monotonic_clock
     f = spin do
       every(0.01) { buffer << 1 }
     end
@@ -406,7 +406,7 @@ class GlobalAPIEtcTest < MiniTest::Test
 
   def test_every_with_slow_op
     buffer = []
-    t0 = Time.now
+    t0 = monotonic_clock
     f = spin do
       every(0.01) { sleep 0.05; buffer << 1 }
     end
@@ -416,9 +416,9 @@ class GlobalAPIEtcTest < MiniTest::Test
   end
 
   def test_sleep
-    t0 = Time.now
+    t0 = monotonic_clock
     sleep 0.1
-    elapsed = Time.now - t0
+    elapsed = monotonic_clock - t0
     assert_in_range 0.05..0.15, elapsed if IS_LINUX
 
     f = spin { sleep }
