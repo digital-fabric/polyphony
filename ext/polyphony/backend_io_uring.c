@@ -945,6 +945,8 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
   src_fd = fd_from_io(src, &src_fptr, 0, 0);
   dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
 
+  printf("splice src_fd: %d dest_fd: %d\n", src_fd, dest_fd);
+
   while (1) {
     op_context_t *ctx = context_store_acquire(&backend->store, OP_SPLICE);
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
@@ -958,8 +960,10 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
     RAISE_IF_EXCEPTION(resume_value);
     if (!completed) return resume_value;
 
-    if (result < 0)
+    printf("splice result: %d\n", result);
+    if (result < 0) {
       rb_syserr_fail(-result, strerror(-result));
+    }
 
     total += result;
     if (result == 0 || !loop) return INT2NUM(total);
