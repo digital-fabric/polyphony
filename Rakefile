@@ -24,3 +24,17 @@ task :docs do
 end
 
 CLEAN.include "**/*.o", "**/*.so", "**/*.so.*", "**/*.a", "**/*.bundle", "**/*.jar", "pkg", "tmp"
+
+task :release do
+  require_relative './lib/polyphony/version'
+  version = Polyphony::VERSION
+  
+  puts 'Building polyphony...'
+  `gem build polyphony.gemspec`
+
+  puts "Pushing polyphony #{version}..."
+  `gem push extralite-#{version}.gem`
+
+  puts "Cleaning up..."
+  `rm *.gem`
+end
