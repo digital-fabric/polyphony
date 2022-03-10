@@ -632,7 +632,7 @@ class IOExtensionsTest < MiniTest::Test
     now = nil
 
     spin {
-      now = Time.now.to_i
+      now = Time.now
       IO.gzip(src, dest)
       dest.close
     }
@@ -643,7 +643,7 @@ class IOExtensionsTest < MiniTest::Test
     gz = Zlib::GzipReader.new(dest)
     data = gz.read
     assert_equal IO.read(__FILE__), data
-    assert_equal now, gz.mtime.to_i
+    assert_in_range (now-1)..(now+1), gz.mtime
     assert_nil gz.orig_name
     assert_nil gz.comment
   end
