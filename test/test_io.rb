@@ -615,7 +615,7 @@ class IOExtensionsTest < MiniTest::Test
     r, w = IO.pipe
 
     spin {
-      data = Zlib::Deflate.deflate('foobar' * 20)
+      data = Zlib::Deflate.deflate('foobar', 9)
       o << data
       o.close
     }
@@ -623,7 +623,7 @@ class IOExtensionsTest < MiniTest::Test
     IO.inflate(i, w)
     w.close
     msg = r.read
-    assert_equal 'foobar' * 20, msg
+    assert_equal 'foobar', msg
   end
 
   def test_gzip
@@ -739,20 +739,99 @@ class IOExtensionsTest < MiniTest::Test
     assert_equal 'hello!', gz.comment
   end
 
-  # def test_gunzip
-  #   i, o = IO.pipe
-  #   r, w = IO.pipe
+  def test_gunzip
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
 
-  #   spin {
-  #     IO.gunzip(i, w)
-  #     w.close
-  #   }
+    spin {
+      IO.gunzip(src, dest)
+      dest.close
+    }
 
-  #   gz = Zlib::GzipWriter.new(o)
-  #   gz << IO.read(__FILE__)
-  #   gz.close
+    gz = Zlib::GzipWriter.new(src, 9)
+    gz << 'foobar'#IO.read(__FILE__)
+    gz.close
 
-  #   data = r.read
-  #   assert_equal IO.read(__FILE__), data
-  # end
+    data = dest.read
+    # assert_equal IO.read(__FILE__), data
+    assert_equal 'foobar', data
+  end
+
+  def test_gunzip_multi
+    src1 = Polyphony.pipe
+    src2 = Polyphony.pipe
+    dest = Polyphony.pipe
+
+    spin {
+      IO.gunzip(src1, dest)
+      IO.gunzip(src2, dest)
+      dest.close
+    }
+
+    gz1 = Zlib::GzipWriter.new(src1)
+    gz1 << 'foobar'
+    gz1.close
+
+    gz1 = Zlib::GzipWriter.new(src2)
+    gz1 << 'raboof'
+    gz1.close
+
+    data = dest.read
+    assert_equal 'foobarraboof', data
+  end
+
+  def test_gzip_gunzip
+    gzipped = Polyphony.pipe
+    gunzipped = Polyphony.pipe
+
+    spin { File.open(__FILE__, 'r') { |f| IO.gzip(f, gzipped) }; gzipped.close }
+    spin { IO.gunzip(gzipped, gunzipped); gunzipped.close }
+
+    data = gunzipped.read
+    assert_equal IO.read(__FILE__), data
+  end
+
+  def test_gunzip_with_empty_info
+    gzipped = Polyphony.pipe
+    gunzipped = Polyphony.pipe
+    info = {}
+
+    spin {
+      File.open(__FILE__, 'r') { |f| IO.gzip(f, gzipped, mtime: false) }
+      gzipped.close
+    }
+    spin { IO.gunzip(gzipped, gunzipped, info); gunzipped.close }
+
+    data = gunzipped.read
+    assert_equal IO.read(__FILE__), data
+    assert_equal Time.at(0), info[:mtime]
+    assert_nil info[:orig_name]
+    assert_nil info[:comment]
+  end
+
+  def test_gunzip_with_info
+    src = Polyphony.pipe
+    gzipped = Polyphony.pipe
+    gunzipped = Polyphony.pipe
+
+    src_info = {
+      mtime: 42,
+      orig_name: 'foo.bar',
+      comment: 'hello!'
+    }
+
+    dest_info = {}
+
+    spin { IO.gzip(src, gzipped, src_info); gzipped.close }
+    spin { IO.gunzip(gzipped, gunzipped, dest_info); gunzipped.close }
+
+    src << 'foobar'
+    src.close
+
+    data = gunzipped.read
+    assert_equal 'foobar', data
+    assert_equal Time.at(42), dest_info[:mtime]
+    assert_equal 'foo.bar', dest_info[:orig_name]
+    assert_equal 'hello!', dest_info[:comment]
+  end
 end

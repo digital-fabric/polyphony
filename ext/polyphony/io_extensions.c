@@ -4,6 +4,7 @@
 #include "zlib.h"
 #include "assert.h"
 
+ID ID_at;
 ID ID_read_method;
 ID ID_to_i;
 ID ID_write_method;
@@ -21,6 +22,12 @@ enum write_method {
   WM_BACKEND_WRITE,
   WM_BACKEND_SEND
 };
+
+#define print_buffer(prefix, ptr, len) { \
+  printf("%s buffer (%d): ", prefix, (int)len); \
+  for (int i = 0; i < len; i++) printf("%02X ", ptr[i]); \
+  printf("\n"); \
+}
 
 #define CHUNK 16384
 #define MAX_WRITE_STR_LEN 16384
@@ -78,6 +85,11 @@ struct gzip_header_ctx {
   VALUE comment;
 };
 
+struct gzip_footer_ctx {
+  int crc32;
+  int isize;
+};
+
 #define GZ_MAGIC1             0x1f
 #define GZ_MAGIC2             0x8b
 #define GZ_METHOD_DEFLATE     8
@@ -91,33 +103,20 @@ struct gzip_header_ctx {
 #define GZ_EXTRAFLAG_FAST     0x4
 #define GZ_EXTRAFLAG_SLOW     0x2
 
-#define ZSTREAM_FLAG_READY      (1 << 0)
-#define ZSTREAM_FLAG_IN_STREAM  (1 << 1)
-#define ZSTREAM_FLAG_FINISHED   (1 << 2)
-#define ZSTREAM_FLAG_CLOSING    (1 << 3)
-#define ZSTREAM_FLAG_GZFILE     (1 << 4) /* disallows yield from expand_buffer for
-                                        gzip*/
-#define ZSTREAM_REUSE_BUFFER    (1 << 5)
-#define ZSTREAM_IN_PROGRESS     (1 << 6)
-#define ZSTREAM_FLAG_UNUSED     (1 << 7)
-
-#define ZSTREAM_READY(z)       ((z)->flags |= ZSTREAM_FLAG_READY)
-#define ZSTREAM_IS_READY(z)    ((z)->flags & ZSTREAM_FLAG_READY)
-#define ZSTREAM_IS_FINISHED(z) ((z)->flags & ZSTREAM_FLAG_FINISHED)
-#define ZSTREAM_IS_CLOSING(z)  ((z)->flags & ZSTREAM_FLAG_CLOSING)
-#define ZSTREAM_IS_GZFILE(z)   ((z)->flags & ZSTREAM_FLAG_GZFILE)
-#define ZSTREAM_BUF_FILLED(z)  (NIL_P((z)->buf) ? 0 : RSTRING_LEN((z)->buf))
-
-#define GZFILE_FLAG_SYNC             ZSTREAM_FLAG_UNUSED
-#define GZFILE_FLAG_HEADER_FINISHED  (ZSTREAM_FLAG_UNUSED << 1)
-#define GZFILE_FLAG_FOOTER_FINISHED  (ZSTREAM_FLAG_UNUSED << 2)
-#define GZFILE_FLAG_MTIME_IS_SET     (ZSTREAM_FLAG_UNUSED << 3)
-
-static void gzfile_set32(unsigned long n, unsigned char *dst) {
+static inline void gzfile_set32(unsigned long n, unsigned char *dst) {
   *(dst++) = n & 0xff;
   *(dst++) = (n >> 8) & 0xff;
   *(dst++) = (n >> 16) & 0xff;
   *dst     = (n >> 24) & 0xff;
+}
+
+static inline unsigned long gzfile_get32(unsigned char *src) {
+  unsigned long n;
+  n  = *(src++) & 0xff;
+  n |= (*(src++) & 0xff) << 8;
+  n |= (*(src++) & 0xff) << 16;
+  n |= (*(src++) & 0xffU) << 24;
+  return n;
 }
 
 static inline time_t time_from_object(VALUE o) {
@@ -138,13 +137,6 @@ int gzip_prepare_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
 
   if (ctx->mtime)
     ctx->mtime = time_from_object(ctx->mtime);
-
-  // if (ctx->level == Z_BEST_SPEED) {
-	//   extraflags |= GZ_EXTRAFLAG_FAST;
-  // }
-  // else if (ctx->level == Z_BEST_COMPRESSION) {
-	//   extraflags |= GZ_EXTRAFLAG_SLOW;
-  // }
 
   buffer[0] = GZ_MAGIC1;
   buffer[1] = GZ_MAGIC2;
@@ -174,8 +166,6 @@ int gzip_prepare_footer(unsigned long crc32, unsigned long total_in, char *buffe
   return 8;
 }
 
-/******************************************************************************/
-
 enum stream_mode {
   SM_DEFLATE,
   SM_INFLATE
@@ -201,14 +191,64 @@ struct z_stream_ctx {
 
 typedef int (*zlib_func)(z_streamp, int);
 
-inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun) {
+void read_gzip_header_str(struct raw_buffer *buffer, VALUE *str, int *in_pos, unsigned long *total_read) {
+  int null_pos;
+  // find null terminator
+  for (null_pos = *in_pos; null_pos < *total_read; null_pos++) {
+    if (!buffer->ptr[null_pos]) break;
+  }
+  if (null_pos == *total_read)
+    rb_raise(rb_eRuntimeError, "Invalid gzip header");
+  
+  *str = rb_str_new_cstr(buffer->ptr + *in_pos);
+  *in_pos = null_pos + 1;
+}
+
+void gzip_read_header(struct z_stream_ctx *ctx, struct gzip_header_ctx *header_ctx) {
+  struct raw_buffer in_buffer = { ctx->in, CHUNK };
+  int flags;
+
+  while (ctx->in_total < 10) {
+    int read = read_to_raw_buffer(ctx->backend, ctx->src, RM_BACKEND_READ, &in_buffer);
+    if (read == 0) goto error;
+    ctx->in_total += read;
+  }
+  // print_buffer("read gzip header", ctx->in, ctx->in_total);
+  if (ctx->in[0] != GZ_MAGIC1) goto error;
+  if (ctx->in[1] != GZ_MAGIC2) goto error;
+  if (ctx->in[2] != GZ_METHOD_DEFLATE) goto error;
+  flags = ctx->in[3];
+
+  unsigned long mtime = gzfile_get32(ctx->in + 4);
+  header_ctx->mtime = INT2FIX(mtime);
+
+  ctx->in_pos = 10;
+
+  if (flags & GZ_FLAG_ORIG_NAME)
+    read_gzip_header_str(&in_buffer, &header_ctx->orig_name, &ctx->in_pos, &ctx->in_total);
+  else
+    header_ctx->orig_name = Qnil;
+  if (flags & GZ_FLAG_COMMENT)
+    read_gzip_header_str(&in_buffer, &header_ctx->comment, &ctx->in_pos, &ctx->in_total);
+  else
+    header_ctx->comment = Qnil;
+  return;
+
+error:
+  rb_raise(rb_eRuntimeError, "Invalid gzip header");
+}
+
+// void gzip_read_footer(struct z_stream_ctx *ctx, struct gzip_footer_ctx *footer_ctx) {  
+// }
+
+inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, int eof) {
   int ret;
   int written;
   struct raw_buffer out_buffer;
 
   int avail_out_pre = ctx->strm.avail_out = CHUNK - ctx->out_pos;
   ctx->strm.next_out = ctx->out + ctx->out_pos;
-  ret = fun(&ctx->strm, Z_FINISH);
+  ret = fun(&ctx->strm, eof ? Z_FINISH : Z_NO_FLUSH);
   assert(ret != Z_STREAM_ERROR);
   written = avail_out_pre - ctx->strm.avail_out;
   out_buffer.ptr = ctx->out;
@@ -226,6 +266,19 @@ inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun) {
 void z_stream_io_loop(struct z_stream_ctx *ctx) {
   zlib_func fun = (ctx->mode == SM_DEFLATE) ? deflate : inflate;  
 
+  if (ctx->in_total > ctx->in_pos) {
+    // In bytes already read for parsing gzip header, so we need to process the
+    // rest.
+    ctx->strm.next_in = ctx->in + ctx->in_pos;
+    ctx->strm.avail_in = ctx->in_total -= ctx->in_pos;
+
+    while (1) {
+      // z_stream_write_out returns strm.avail_out. If there's still room in the
+      // out buffer that means the input buffer has been exhausted.
+      if (z_stream_write_out(ctx, fun, 0)) break;
+    }
+  }
+
   while (1) {
     struct raw_buffer in_buffer = {ctx->in, CHUNK};
     ctx->strm.next_in = ctx->in;
@@ -237,10 +290,12 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
       ctx->crc32 = crc32(ctx->crc32, ctx->in, read_len);
     ctx->in_total += read_len;
 
+    // print_buffer("read stream", ctx->in, read_len);
+
     while (1) {
       // z_stream_write_out returns strm.avail_out. If there's still room in the
       // out buffer that means the input buffer has been exhausted.
-      if (z_stream_write_out(ctx, fun)) break;
+      if (z_stream_write_out(ctx, fun, eof)) break;
     }
 
     if (eof) return;
@@ -249,7 +304,7 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
   //flush
   ctx->strm.avail_in = 0;
   ctx->strm.next_in = ctx->in;
-  z_stream_write_out(ctx, fun);
+  z_stream_write_out(ctx, fun, 1);
 }
 
 inline void setup_ctx(struct z_stream_ctx *ctx, enum stream_mode mode, VALUE src, VALUE dest) {
@@ -300,10 +355,39 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
   return INT2FIX(ctx.out_total);
 }
 
-VALUE IO_gunzip(VALUE self, VALUE src, VALUE dest) {
-  struct z_stream_ctx ctx;
-  setup_ctx(&ctx, SM_DEFLATE, src, dest);
+inline VALUE FIX2TIME(VALUE v) {
+  return rb_funcall(rb_cTime, ID_at, 1, v);
+}
 
+VALUE IO_gunzip(int argc, VALUE *argv, VALUE self) {
+  VALUE src;
+  VALUE dest;
+  VALUE info = Qnil;
+
+  rb_scan_args(argc, argv, "21", &src, &dest, &info);
+
+  struct gzip_header_ctx header_ctx;
+  // struct gzip_footer_ctx footer_ctx;
+  struct z_stream_ctx ctx;
+  int ret;
+
+  setup_ctx(&ctx, SM_INFLATE, src, dest);
+  gzip_read_header(&ctx, &header_ctx);
+
+  if (info != Qnil) {
+    rb_hash_aset(info, SYM_mtime, FIX2TIME(header_ctx.mtime));
+    rb_hash_aset(info, SYM_orig_name, header_ctx.orig_name);
+    rb_hash_aset(info, SYM_comment, header_ctx.comment);
+  }
+
+  ret = inflateInit2(&ctx.strm, -MAX_WBITS);
+  if (ret != Z_OK) return INT2FIX(ret);
+  z_stream_io_loop(&ctx);
+  inflateEnd(&ctx.strm);
+
+  // gzip_read_footer(&ctx, &footer_ctx);
+  // TODO: verify crc32
+  // TODO: verify total length
   return self;
 }
 
@@ -336,12 +420,13 @@ VALUE IO_inflate(VALUE self, VALUE src, VALUE dest) {
 
 void Init_IOExtensions() {
   rb_define_singleton_method(rb_cIO, "gzip", IO_gzip, -1);
-  rb_define_singleton_method(rb_cIO, "gunzip", IO_gunzip, 2);
+  rb_define_singleton_method(rb_cIO, "gunzip", IO_gunzip, -1);
   rb_define_singleton_method(rb_cIO, "deflate", IO_deflate, 2);
   rb_define_singleton_method(rb_cIO, "inflate", IO_inflate, 2);
 
-  ID_read_method  =  rb_intern("__read_method__");
-  ID_to_i         =  rb_intern("to_i");
+  ID_at           = rb_intern("at");
+  ID_read_method  = rb_intern("__read_method__");
+  ID_to_i         = rb_intern("to_i");
   ID_write_method = rb_intern("__write_method__");
 
   SYM_mtime     = ID2SYM(rb_intern("mtime"));
