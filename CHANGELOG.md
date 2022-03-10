@@ -1,3 +1,9 @@
+## 0.83 2022-03-10
+
+- Implement `Polyphony::Pipe` class, `Polyphony.pipe` method (#83)
+- Add `IO.splice`, `IO.splice_to_eof` (#82)
+- Implement compression/decompression methods (#77)
+
 ## 0.82 2022-03-04
 
 - Use `POLYPHONY_LIBEV` instead of `POLYPHONY_USE_LIBEV` environment variable
