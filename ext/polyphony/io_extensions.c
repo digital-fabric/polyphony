@@ -56,12 +56,12 @@ enum write_method {
 #define OS_CODE  OS_UNIX
 #endif
 
-inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method method, struct raw_buffer *buffer) {
+static inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method method, struct raw_buffer *buffer) {
   VALUE len = Backend_read(backend, io, PTR2FIX(buffer), Qnil, Qfalse, INT2FIX(0));
   return (len == Qnil) ? 0 : FIX2INT(len);
 }
 
-inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_method method, struct raw_buffer *buffer) {
+static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_method method, struct raw_buffer *buffer) {
   VALUE len = Backend_write(backend, io, PTR2FIX(buffer));
   return FIX2INT(len);
 }
@@ -241,7 +241,7 @@ error:
 // void gzip_read_footer(struct z_stream_ctx *ctx, struct gzip_footer_ctx *footer_ctx) {  
 // }
 
-inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, int eof) {
+static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, int eof) {
   int ret;
   int written;
   struct raw_buffer out_buffer;
@@ -307,7 +307,7 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
   z_stream_write_out(ctx, fun, 1);
 }
 
-inline void setup_ctx(struct z_stream_ctx *ctx, enum stream_mode mode, VALUE src, VALUE dest) {
+static inline void setup_ctx(struct z_stream_ctx *ctx, enum stream_mode mode, VALUE src, VALUE dest) {
   ctx->backend = BACKEND();
   ctx->src = src;
   ctx->dest = dest;
@@ -355,9 +355,7 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
   return INT2FIX(ctx.out_total);
 }
 
-inline VALUE FIX2TIME(VALUE v) {
-  return rb_funcall(rb_cTime, ID_at, 1, v);
-}
+# define FIX2TIME(v) (rb_funcall(rb_cTime, ID_at, 1, v))
 
 VALUE IO_gunzip(int argc, VALUE *argv, VALUE self) {
   VALUE src;
