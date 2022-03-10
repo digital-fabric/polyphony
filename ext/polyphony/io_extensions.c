@@ -1,5 +1,12 @@
-#include <time.h>
+/*
+  Relevant resources:
 
+  zlib manual: https://zlib.net/manual.html
+  gzip format: https://www.ietf.org/rfc/rfc1952.txt
+  ruby zlib src: https://github.com/ruby/zlib/blob/master/ext/zlib/zlib.c
+*/
+
+#include <time.h>
 #include "polyphony.h"
 #include "zlib.h"
 #include "assert.h"
