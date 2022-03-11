@@ -1,3 +1,9 @@
+## 0.84 2022-03-11
+
+- Implement `IO.tee` (#82)
+- Implement `IO#tee_from` (#81)
+- Bundle liburing as git submodule
+
 ## 0.83 2022-03-10
 
 - Implement `Polyphony::Pipe` class, `Polyphony.pipe` method (#83)
