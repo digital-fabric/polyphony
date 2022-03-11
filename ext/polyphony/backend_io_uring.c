@@ -971,6 +971,41 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize) 
   return io_uring_backend_splice(backend, src, dest, chunksize, 1);
 }
 
+VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  Backend_t *backend;
+  GetBackend(self, backend);
+
+  int src_fd;
+  int dest_fd;
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+  VALUE resume_value = Qnil;
+
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
+
+  while (1) {
+    op_context_t *ctx = context_store_acquire(&backend->store, OP_SPLICE);
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    int result;
+    int completed;
+
+    io_uring_prep_tee(sqe, src_fd, dest_fd, NUM2INT(maxlen), 0);
+
+    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    completed = context_store_release(&backend->store, ctx);
+    RAISE_IF_EXCEPTION(resume_value);
+    if (!completed) return resume_value;
+
+    if (result < 0)
+      rb_syserr_fail(-result, strerror(-result));
+
+    return INT2NUM(result);
+  }
+
+  RB_GC_GUARD(resume_value);
+}
+
 VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   Backend_t *backend;
   int fd;
@@ -1619,6 +1654,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
   rb_define_method(cBackend, "splice", Backend_splice, 3);
   rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
+  rb_define_method(cBackend, "tee", Backend_tee, 3);
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);

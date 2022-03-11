@@ -164,4 +164,8 @@ class Polyphony::Pipe
   def splice_to_eof_from(src, chunksize = 8192)
     Polyphony.backend_splice_to_eof(src, self, chunksize)
   end
+
+  def tee_from(src, maxlen)
+    Polyphony.backend_tee(src, self, maxlen)
+  end
 end

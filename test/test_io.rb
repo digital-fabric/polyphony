@@ -367,6 +367,65 @@ class IOTest < MiniTest::Test
       f.await
     end
   end
+
+  def test_tee_from
+    skip "tested only on Linux" unless RUBY_PLATFORM =~ /linux/
+    
+    src = Polyphony.pipe
+    dest1 = Polyphony.pipe
+    dest2 = Polyphony.pipe
+
+    len1 = len2 = nil
+
+    spin {
+      len1 = dest1.tee_from(src, 1000)
+      dest1.close
+      len2 = IO.splice(src, dest2, 1000)
+      dest2.close
+    }
+
+    src << 'foobar'
+    src.close
+    result1 = dest1.read
+    result2 = dest2.read
+
+    assert_equal 'foobar', result1
+    assert_equal 6, len1
+
+    assert_equal 'foobar', result2
+    assert_equal 6, len2
+  end
+
+  def test_tee_class_method
+    skip "tested only on Linux" unless RUBY_PLATFORM =~ /linux/
+    
+    src = Polyphony.pipe
+    dest1 = Polyphony.pipe
+    dest2 = Polyphony.pipe
+
+    len1 = len2 = nil
+
+    spin {
+      len1 = IO.tee(src, dest1, 1000)
+      dest1.close
+      len2 = IO.splice(src, dest2, 1000)
+      dest2.close
+    }
+
+    src << 'foobar'
+    src.close
+    result1 = dest1.read
+    result2 = dest2.read
+
+    assert_equal 'foobar', result1
+    assert_equal 6, len1
+
+    assert_equal 'foobar', result2
+    assert_equal 6, len2
+  end
+
+
+
 end
 
 class IOWithRawBufferTest < MiniTest::Test

@@ -940,7 +940,52 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
+
+VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  Backend_t *backend;
+  struct libev_rw_io watcher;
+  VALUE switchpoint_result = Qnil;
+  int src_fd;
+  int dest_fd;
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+  int len;
+
+  GetBackend(self, backend);
+  src_fd = fd_from_io(src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
+  watcher.ctx.fiber = Qnil;
+
+  while (1) {
+    backend->base.op_count++;
+    len = tee(src_fd, dest_fd, NUM2INT(maxlen), 0);
+    if (len < 0) {
+      int e = errno;
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, &watcher);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      break;
+    }
+  }
+
+  if (watcher.ctx.fiber == Qnil) {
+    switchpoint_result = backend_snooze(&backend->base);
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
+
+  RB_GC_GUARD(watcher.ctx.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return INT2NUM(len);
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
 #else
+
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;

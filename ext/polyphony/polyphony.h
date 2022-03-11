@@ -112,6 +112,7 @@ VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags);
 VALUE Backend_sleep(VALUE self, VALUE duration);
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen);
 VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize);
+VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen);
 VALUE Backend_timeout(int argc,VALUE *argv, VALUE self);
 VALUE Backend_timer_loop(VALUE self, VALUE interval);
 VALUE Backend_wait_event(VALUE self, VALUE raise);
