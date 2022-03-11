@@ -33,7 +33,7 @@ task :release do
   `gem build polyphony.gemspec`
 
   puts "Pushing polyphony #{version}..."
-  `gem push extralite-#{version}.gem`
+  `gem push polyphony-#{version}.gem`
 
   puts "Cleaning up..."
   `rm *.gem`
