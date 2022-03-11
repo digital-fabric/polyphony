@@ -28,6 +28,22 @@ puts "Building Polyphony... (#{config.inspect})"
 
 require_relative 'zlib_conf'
 
+if config[:io_uring]
+  liburing_path = File.expand_path('../../vendor/liburing', __dir__)
+  FileUtils.cd liburing_path do
+    system('./configure', exception: true)
+    FileUtils.cd File.join(liburing_path, 'src') do
+      system('make', 'liburing.a', exception: true)
+    end
+  end
+
+  if !find_header 'liburing.h', File.expand_path('../../vendor/liburing/src/include', __dir__)
+    raise "Couldn't find liburing.h"
+  end
+
+  $LDFLAGS << " -L#{File.expand_path('../../vendor/liburing/src', __dir__)} -l uring"
+end
+
 $defs << '-DPOLYPHONY_USE_PIDFD_OPEN' if config[:pidfd_open]
 if config[:io_uring]
   $defs << "-DPOLYPHONY_BACKEND_LIBURING"
@@ -55,5 +71,6 @@ $defs << '-DPOLYPHONY_PLAYGROUND' if ENV['POLYPHONY_PLAYGROUND']
 CONFIG['optflags'] << ' -fno-strict-aliasing' unless RUBY_PLATFORM =~ /mswin/
 
 have_func('rb_fiber_transfer', 'ruby.h')
+
 
 create_makefile 'polyphony_ext'
