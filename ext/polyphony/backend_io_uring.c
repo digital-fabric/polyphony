@@ -14,7 +14,7 @@
 #include <errno.h>
 
 #include "polyphony.h"
-#include "../liburing/liburing.h"
+#include "liburing.h"
 #include "backend_io_uring_context.h"
 #include "ruby/thread.h"
 #include "ruby/io.h"
@@ -304,7 +304,7 @@ int io_uring_backend_defer_submit_and_await(
     // op was not completed (an exception was raised), so we need to cancel it
     ctx->result = -ECANCELED;
     sqe = io_uring_get_sqe(&backend->ring);
-    io_uring_prep_cancel(sqe, ctx, 0);
+    io_uring_prep_cancel(sqe, (__u64)ctx, 0);
     backend->pending_sqes = 0;
     io_uring_submit(&backend->ring);
   }
@@ -1125,7 +1125,7 @@ VALUE Backend_timeout_ensure(VALUE arg) {
     timeout_ctx->ctx->result = -ECANCELED;
     // op was not completed, so we need to cancel it
     sqe = io_uring_get_sqe(&timeout_ctx->backend->ring);
-    io_uring_prep_cancel(sqe, timeout_ctx->ctx, 0);
+    io_uring_prep_cancel(sqe, (__u64)timeout_ctx->ctx, 0);
     timeout_ctx->backend->pending_sqes = 0;
     io_uring_submit(&timeout_ctx->backend->ring);
   }
@@ -1318,7 +1318,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
         ctx->ref_count = sqe_count;
         ctx->result = -ECANCELED;
         sqe = io_uring_get_sqe(&backend->ring);
-        io_uring_prep_cancel(sqe, ctx, 0);
+        io_uring_prep_cancel(sqe, (__u64)ctx, 0);
         backend->pending_sqes = 0;
         io_uring_submit(&backend->ring);
       }
@@ -1349,7 +1349,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
     // op was not completed (an exception was raised), so we need to cancel it
     ctx->result = -ECANCELED;
     sqe = io_uring_get_sqe(&backend->ring);
-    io_uring_prep_cancel(sqe, ctx, 0);
+    io_uring_prep_cancel(sqe, (__u64)ctx, 0);
     backend->pending_sqes = 0;
     io_uring_submit(&backend->ring);
     RAISE_IF_EXCEPTION(resume_value);
@@ -1416,7 +1416,7 @@ static inline void splice_chunks_cancel(Backend_t *backend, op_context_t *ctx) {
   
   ctx->result = -ECANCELED;
   sqe = io_uring_get_sqe(&backend->ring);
-  io_uring_prep_cancel(sqe, ctx, 0);
+  io_uring_prep_cancel(sqe, (__u64)ctx, 0);
   backend->pending_sqes = 0;
   io_uring_submit(&backend->ring);
 }
