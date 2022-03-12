@@ -552,7 +552,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
     int result;
     int completed;
 
-    io_uring_prep_write(sqe, fd, buffer.ptr, left, 0);
+    io_uring_prep_write(sqe, fd, buffer.ptr, left, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
