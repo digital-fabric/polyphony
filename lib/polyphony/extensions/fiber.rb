@@ -390,12 +390,14 @@ module Polyphony
     def shutdown_all_children(graceful = false)
       return self unless @children
 
+      pending = []
       @children.keys.each do |c|
         next if c.dead?
 
         c.terminate(graceful)
-        c.await
+        pending << c
       end
+      Fiber.await(*pending)
       self
     end
 
