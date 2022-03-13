@@ -96,6 +96,10 @@ class ::IO
     :backend_read
   end
 
+  def __write_method__
+    :backend_write
+  end
+
   # def each(sep = $/, limit = nil, chomp: nil)
   #   sep, limit = $/, sep if sep.is_a?(Integer)
   # end

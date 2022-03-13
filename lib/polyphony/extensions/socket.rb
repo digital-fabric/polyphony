@@ -14,6 +14,10 @@ class BasicSocket
   def __read_method__
     :backend_recv
   end
+
+  def __write_method__
+    :backend_send
+  end
 end
 
 # Socket extensions # TODO: rewrite in C

@@ -6,6 +6,10 @@ class Polyphony::Pipe
     :backend_read
   end
 
+  def __write_method__
+    :backend_write
+  end
+
   def getbyte
     char = getc
     char ? char.getbyte(0) : nil

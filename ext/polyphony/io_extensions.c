@@ -13,24 +13,68 @@
 
 ID ID_at;
 ID ID_read_method;
+ID ID_readpartial;
 ID ID_to_i;
 ID ID_write_method;
+ID ID_write;
 
+VALUE SYM_backend_read;
+VALUE SYM_backend_recv;
+VALUE SYM_backend_send;
+VALUE SYM_backend_write;
+VALUE SYM_call;
+VALUE SYM_comment;
 VALUE SYM_mtime;
 VALUE SYM_orig_name;
-VALUE SYM_comment;
+VALUE SYM_readpartial;
 
 enum read_method {
   RM_BACKEND_READ,
-  RM_BACKEND_RECV
+  RM_BACKEND_RECV,
+  RM_READPARTIAL,
+  RM_CALL
 };
 
 enum write_method {
   WM_BACKEND_WRITE,
-  WM_BACKEND_SEND
+  WM_BACKEND_SEND,
+  WM_WRITE,
+  WM_CALL
 };
 
-#define print_buffer(prefix, ptr, len) { \
+enum read_method detect_read_method(VALUE io) {
+  if (rb_respond_to(io, ID_read_method)) {
+    VALUE method = rb_funcall(io, ID_read_method, 0);
+    if (method == SYM_readpartial)  return RM_READPARTIAL;
+    if (method == SYM_backend_read) return RM_BACKEND_READ;
+    if (method == SYM_backend_recv) return RM_BACKEND_RECV;
+    if (method == SYM_call)         return RM_CALL;
+
+    rb_raise(rb_eRuntimeError, "Given io instance uses unsupported read method");
+  }
+  else if (rb_respond_to(io, ID_call))
+    return RM_CALL;
+  else
+    rb_raise(rb_eRuntimeError, "Given io instance should be a callable or respond to #__read_method__");
+}
+
+enum write_method detect_write_method(VALUE io) {
+  if (rb_respond_to(io, ID_write_method)) {
+    VALUE method = rb_funcall(io, ID_write_method, 0);
+    if (method == SYM_readpartial)    return WM_WRITE;
+    if (method == SYM_backend_write)  return WM_BACKEND_WRITE;
+    if (method == SYM_backend_send)   return WM_BACKEND_SEND;
+    if (method == SYM_call)           return WM_CALL;
+
+    rb_raise(rb_eRuntimeError, "Given io instance uses unsupported write method");
+  }
+  else if (rb_respond_to(io, ID_call))
+    return WM_CALL;
+  else
+    rb_raise(rb_eRuntimeError, "Given io instance should be a callable or respond to #__write_method__");
+}
+
+#define PRINT_BUFFER(prefix, ptr, len) { \
   printf("%s buffer (%d): ", prefix, (int)len); \
   for (int i = 0; i < len; i++) printf("%02X ", ptr[i]); \
   printf("\n"); \
@@ -63,14 +107,64 @@ enum write_method {
 #define OS_CODE  OS_UNIX
 #endif
 
+
 static inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method method, struct raw_buffer *buffer) {
-  VALUE len = Backend_read(backend, io, PTR2FIX(buffer), Qnil, Qfalse, INT2FIX(0));
-  return (len == Qnil) ? 0 : FIX2INT(len);
+  switch (method) {
+    case RM_BACKEND_READ: {
+      VALUE len = Backend_read(backend, io, PTR2FIX(buffer), Qnil, Qfalse, INT2FIX(0));
+      return (len == Qnil) ? 0 : FIX2INT(len);
+    }
+    case RM_BACKEND_RECV: {
+      VALUE len = Backend_recv(backend, io, PTR2FIX(buffer), Qnil, INT2FIX(0));
+      return (len == Qnil) ? 0 : FIX2INT(len);
+    }
+    case RM_READPARTIAL: {
+      VALUE str = rb_funcall(io, ID_readpartial, 1, INT2FIX(buffer->len));
+      int len = RSTRING_LEN(str);
+      if (len) memcpy(buffer->ptr, RSTRING_PTR(str), len);
+      RB_GC_GUARD(str);
+      return len;
+    }
+    case RM_CALL: {
+      VALUE str = rb_funcall(io, ID_call, INT2FIX(buffer->len));
+      if (TYPE(str) != T_STRING)
+        rb_raise(rb_eRuntimeError, "io#call must return a string");
+      int len = RSTRING_LEN(str);
+      if (len > buffer->len) len = buffer->len;
+      if (len) memcpy(buffer->ptr, RSTRING_PTR(str), len);
+      RB_GC_GUARD(str);
+      return len;
+    }
+  }
 }
 
 static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_method method, struct raw_buffer *buffer) {
-  VALUE len = Backend_write(backend, io, PTR2FIX(buffer));
-  return FIX2INT(len);
+  switch (method) {
+    case WM_BACKEND_WRITE: {
+      VALUE len = Backend_write(backend, io, PTR2FIX(buffer));
+      return FIX2INT(len);
+    }
+    case WM_BACKEND_SEND: {
+      VALUE len = Backend_send(backend, io, PTR2FIX(buffer), INT2FIX(0));
+      return FIX2INT(len);
+    }
+    case WM_WRITE: {
+      VALUE str = rb_str_new(0, buffer->len);
+      memcpy(RSTRING_PTR(str), buffer->ptr, buffer->len);
+      rb_str_modify_expand(str, buffer->len);
+      rb_funcall(io, ID_write, 1, str);
+      RB_GC_GUARD(str);
+      return buffer->len;
+    }
+    case WM_CALL: {
+      VALUE str = rb_str_new(0, buffer->len);
+      memcpy(RSTRING_PTR(str), buffer->ptr, buffer->len);
+      rb_str_modify_expand(str, buffer->len);
+      rb_funcall(io, ID_call, 1, str);
+      RB_GC_GUARD(str);
+      return buffer->len;
+    }
+  }
 }
 
 static inline int write_c_string_from_str(VALUE str, struct raw_buffer *buffer) {
@@ -183,6 +277,9 @@ struct z_stream_ctx {
   VALUE src;
   VALUE dest;
 
+  enum read_method src_read_method;
+  enum write_method dest_write_method;
+
   enum stream_mode mode;
   z_stream strm;
 
@@ -216,11 +313,11 @@ void gzip_read_header(struct z_stream_ctx *ctx, struct gzip_header_ctx *header_c
   int flags;
 
   while (ctx->in_total < 10) {
-    int read = read_to_raw_buffer(ctx->backend, ctx->src, RM_BACKEND_READ, &in_buffer);
+    int read = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer);
     if (read == 0) goto error;
     ctx->in_total += read;
   }
-  // print_buffer("read gzip header", ctx->in, ctx->in_total);
+  // PRINT_BUFFER("read gzip header", ctx->in, ctx->in_total);
   if (ctx->in[0] != GZ_MAGIC1) goto error;
   if (ctx->in[1] != GZ_MAGIC2) goto error;
   if (ctx->in[2] != GZ_METHOD_DEFLATE) goto error;
@@ -261,7 +358,7 @@ static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, in
   out_buffer.ptr = ctx->out;
   out_buffer.len = ctx->out_pos + written;
   if (out_buffer.len) {
-    ret = write_from_raw_buffer(ctx->backend, ctx->dest, WM_BACKEND_WRITE, &out_buffer);
+    ret = write_from_raw_buffer(ctx->backend, ctx->dest, ctx->dest_write_method, &out_buffer);
     if (ctx->mode == SM_INFLATE)
       ctx->crc32 = crc32(ctx->crc32, out_buffer.ptr + ctx->out_pos, written);
     ctx->out_total += ret - ctx->out_pos;
@@ -289,7 +386,7 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
   while (1) {
     struct raw_buffer in_buffer = {ctx->in, CHUNK};
     ctx->strm.next_in = ctx->in;
-    int read_len = ctx->strm.avail_in = read_to_raw_buffer(ctx->backend, ctx->src, RM_BACKEND_READ, &in_buffer);
+    int read_len = ctx->strm.avail_in = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer);
     if (!read_len) break;
     int eof = read_len < CHUNK;
 
@@ -297,7 +394,7 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
       ctx->crc32 = crc32(ctx->crc32, ctx->in, read_len);
     ctx->in_total += read_len;
 
-    // print_buffer("read stream", ctx->in, read_len);
+    // PRINT_BUFFER("read stream", ctx->in, read_len);
 
     while (1) {
       // z_stream_write_out returns strm.avail_out. If there's still room in the
@@ -318,6 +415,8 @@ static inline void setup_ctx(struct z_stream_ctx *ctx, enum stream_mode mode, VA
   ctx->backend = BACKEND();
   ctx->src = src;
   ctx->dest = dest;
+  ctx->src_read_method = detect_read_method(src);
+  ctx->dest_write_method = detect_write_method(dest);
   ctx->mode = mode;
   ctx->strm.zalloc = Z_NULL;
   ctx->strm.zfree = Z_NULL;
@@ -356,7 +455,7 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
   z_stream_io_loop(&ctx);
   int footer_len = gzip_prepare_footer(ctx.crc32, ctx.in_total, ctx.out, sizeof(ctx.out));
   struct raw_buffer footer_buffer = {ctx.out, footer_len};
-  write_from_raw_buffer(ctx.backend, dest, WM_BACKEND_WRITE, &footer_buffer);
+  write_from_raw_buffer(ctx.backend, dest, ctx.dest_write_method, &footer_buffer);
   deflateEnd(&ctx.strm);
  
   return INT2FIX(ctx.out_total);
@@ -431,10 +530,18 @@ void Init_IOExtensions() {
 
   ID_at           = rb_intern("at");
   ID_read_method  = rb_intern("__read_method__");
+  ID_readpartial  = rb_intern("readpartial");
   ID_to_i         = rb_intern("to_i");
   ID_write_method = rb_intern("__write_method__");
+  ID_write        = rb_intern("write");
 
-  SYM_mtime     = ID2SYM(rb_intern("mtime"));
-  SYM_orig_name = ID2SYM(rb_intern("orig_name"));
-  SYM_comment   = ID2SYM(rb_intern("comment"));
+  SYM_backend_read  = ID2SYM(rb_intern("backend_read"));
+  SYM_backend_recv  = ID2SYM(rb_intern("backend_recv"));
+  SYM_backend_send  = ID2SYM(rb_intern("backend_send"));
+  SYM_backend_write = ID2SYM(rb_intern("backend_write"));
+  SYM_call          = ID2SYM(rb_intern("call"));
+  SYM_comment       = ID2SYM(rb_intern("comment"));
+  SYM_mtime         = ID2SYM(rb_intern("mtime"));
+  SYM_orig_name     = ID2SYM(rb_intern("orig_name"));
+  SYM_readpartial   = ID2SYM(rb_intern("readpartial"));
 }
