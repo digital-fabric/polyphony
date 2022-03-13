@@ -140,7 +140,6 @@ static inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method m
 }
 
 static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_method method, struct raw_buffer *buffer) {
-  printf("write_from_raw_buffer len: %d\n", buffer->len);
   switch (method) {
     case WM_BACKEND_WRITE: {
       VALUE len = Backend_write(backend, io, PTR2FIX(buffer));
