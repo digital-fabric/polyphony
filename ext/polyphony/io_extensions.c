@@ -84,6 +84,7 @@ enum write_method detect_write_method(VALUE io) {
 #define MAX_WRITE_STR_LEN 16384
 #define DEFAULT_LEVEL 9
 #define DEFAULT_MEM_LEVEL 8
+#define GZIP_FOOTER_LEN 8
 
 /* from zutil.h */
 #define OS_MSDOS    0x00
@@ -139,6 +140,7 @@ static inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method m
 }
 
 static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_method method, struct raw_buffer *buffer) {
+  printf("write_from_raw_buffer len: %d\n", buffer->len);
   switch (method) {
     case WM_BACKEND_WRITE: {
       VALUE len = Backend_write(backend, io, PTR2FIX(buffer));
@@ -259,12 +261,12 @@ int gzip_prepare_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
 }
 
 int gzip_prepare_footer(unsigned long crc32, unsigned long total_in, char *buffer, int maxlen) {
-  assert(maxlen >= 8);
+  assert(maxlen >= GZIP_FOOTER_LEN);
 
   gzfile_set32(crc32, buffer);
   gzfile_set32(total_in, buffer + 4);
 
-  return 8;
+  return GZIP_FOOTER_LEN;
 }
 
 enum stream_mode {
@@ -281,6 +283,7 @@ struct z_stream_ctx {
   enum write_method dest_write_method;
 
   enum stream_mode mode;
+  int f_gzip_footer; // should a gzip footer be generated
   z_stream strm;
 
   unsigned char in[CHUNK];
@@ -342,9 +345,6 @@ error:
   rb_raise(rb_eRuntimeError, "Invalid gzip header");
 }
 
-// void gzip_read_footer(struct z_stream_ctx *ctx, struct gzip_footer_ctx *footer_ctx) {  
-// }
-
 static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, int eof) {
   int ret;
   int written;
@@ -357,6 +357,12 @@ static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, in
   written = avail_out_pre - ctx->strm.avail_out;
   out_buffer.ptr = ctx->out;
   out_buffer.len = ctx->out_pos + written;
+
+  if (eof && ctx->f_gzip_footer && (CHUNK - out_buffer.len >= GZIP_FOOTER_LEN)) {
+    gzip_prepare_footer(ctx->crc32, ctx->in_total, out_buffer.ptr + out_buffer.len, 8);
+    out_buffer.len += GZIP_FOOTER_LEN;
+  }
+
   if (out_buffer.len) {
     ret = write_from_raw_buffer(ctx->backend, ctx->dest, ctx->dest_write_method, &out_buffer);
     if (ctx->mode == SM_INFLATE)
@@ -368,7 +374,7 @@ static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, in
 }
 
 void z_stream_io_loop(struct z_stream_ctx *ctx) {
-  zlib_func fun = (ctx->mode == SM_DEFLATE) ? deflate : inflate;  
+  zlib_func fun = (ctx->mode == SM_DEFLATE) ? deflate : inflate;
 
   if (ctx->in_total > ctx->in_pos) {
     // In bytes already read for parsing gzip header, so we need to process the
@@ -418,6 +424,7 @@ static inline void setup_ctx(struct z_stream_ctx *ctx, enum stream_mode mode, VA
   ctx->src_read_method = detect_read_method(src);
   ctx->dest_write_method = detect_write_method(dest);
   ctx->mode = mode;
+  ctx->f_gzip_footer = 0;
   ctx->strm.zalloc = Z_NULL;
   ctx->strm.zfree = Z_NULL;
   ctx->strm.opaque = Z_NULL;
@@ -448,14 +455,12 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
   int ret;
 
   setup_ctx(&ctx, SM_DEFLATE, src, dest);
+  ctx.f_gzip_footer = 1; // write gzip footer
   ctx.out_pos = gzip_prepare_header(&header_ctx, ctx.out, sizeof(ctx.out));
 
   ret = deflateInit2(&ctx.strm, level, Z_DEFLATED, -MAX_WBITS, DEFAULT_MEM_LEVEL, Z_DEFAULT_STRATEGY);
   if (ret != Z_OK) return INT2FIX(ret);
   z_stream_io_loop(&ctx);
-  int footer_len = gzip_prepare_footer(ctx.crc32, ctx.in_total, ctx.out, sizeof(ctx.out));
-  struct raw_buffer footer_buffer = {ctx.out, footer_len};
-  write_from_raw_buffer(ctx.backend, dest, ctx.dest_write_method, &footer_buffer);
   deflateEnd(&ctx.strm);
  
   return INT2FIX(ctx.out_total);
