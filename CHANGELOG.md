@@ -1,3 +1,13 @@
+## 0.85 2022-03-13
+
+- Reduce write ops in `IO.gzip` (#77)
+- Add support for read/write method detection for compression/decompression
+  methods (#77)
+- Improve `Fiber#shutdown_all_children`
+- Improve io_uring `wait_event` implementation (share single I/O poll across
+  multiple fibers)
+- Fix io_uring `write` file offset
+
 ## 0.84 2022-03-11
 
 - Implement `IO.tee` (#82)
