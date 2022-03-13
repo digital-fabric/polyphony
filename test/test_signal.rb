@@ -16,10 +16,12 @@ class SignalTrapTest < Minitest::Test
     end
 
     events = []
+    Fiber.current.tag = :main
+
     begin
       Thread.backend.trace_proc = proc { |*e| events << [e[0], e[1].tag] }
       trap ('SIGINT') { }
-      
+
       o1.orig_write("\n")
       o1.close
 
@@ -29,8 +31,6 @@ class SignalTrapTest < Minitest::Test
       Thread.backend.trace_proc = nil
       trap ('SIGINT') { raise Interrupt }
     end
-
-    Fiber.current.tag = :main
 
     expected = [
       [:block, :main],
