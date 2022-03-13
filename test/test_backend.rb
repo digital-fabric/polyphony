@@ -254,7 +254,7 @@ class BackendTest < MiniTest::Test
     @backend.sleep(0.05)
     f.stop
     f.await # TODO: check why this test sometimes segfaults if we don't a<wait fiber
-    assert_in_range 4..6, counter if IS_LINUX
+    assert_in_range 3..6, counter if IS_LINUX
   end
 
   class MyTimeoutException < Exception
