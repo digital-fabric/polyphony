@@ -41,8 +41,10 @@ typedef struct Backend_t {
   op_context_store_t  store;
   unsigned int        pending_sqes;
   unsigned int        prepared_limit;
-  int                 event_fd;
   int                 ring_initialized;
+
+  int                 event_fd;
+  op_context_t        *event_fd_ctx;
 } Backend_t;
 
 static void Backend_mark(void *ptr) {
@@ -83,6 +85,7 @@ static VALUE Backend_initialize(VALUE self) {
   backend->pending_sqes = 0;
   backend->ring_initialized = 0;
   backend->event_fd = -1;
+  backend->event_fd_ctx = NULL;
 
   context_store_initialize(&backend->store);
 
@@ -183,13 +186,21 @@ done:
   return;
 }
 
+inline void io_uring_backend_immediate_submit(Backend_t *backend) {
+  backend->pending_sqes = 0;
+  io_uring_submit(&backend->ring);
+}
+
+inline void io_uring_backend_defer_submit(Backend_t *backend) {
+  backend->pending_sqes += 1;
+  if (backend->pending_sqes >= backend->prepared_limit)
+    io_uring_backend_immediate_submit(backend);
+}
+
 void io_uring_backend_poll(Backend_t *backend) {
   poll_context_t poll_ctx;
   poll_ctx.ring = &backend->ring;
-  if (backend->pending_sqes) {
-    backend->pending_sqes = 0;
-    io_uring_submit(&backend->ring);
-  }
+  if (backend->pending_sqes) io_uring_backend_immediate_submit(backend);
 
 wait_cqe:
   backend->base.currently_polling = 1;
@@ -211,10 +222,7 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
 
   backend->base.poll_count++;
 
-  if (!is_blocking && backend->pending_sqes) {
-    backend->pending_sqes = 0;
-    io_uring_submit(&backend->ring);
-  }
+  if (!is_blocking && backend->pending_sqes) io_uring_backend_immediate_submit(backend);
 
   COND_TRACE(&backend->base, 2, SYM_enter_poll, rb_fiber_current());
   
@@ -263,21 +271,12 @@ VALUE Backend_wakeup(VALUE self) {
     // NOP which would cause the io_uring_enter syscall to return
     struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_nop(sqe);
-    backend->pending_sqes = 0;
-    io_uring_submit(&backend->ring);
+    io_uring_backend_immediate_submit(backend);
 
     return Qtrue;
   }
 
   return Qnil;
-}
-
-inline void io_uring_backend_defer_submit(Backend_t *backend) {
-  backend->pending_sqes += 1;
-  if (backend->pending_sqes >= backend->prepared_limit) {
-    backend->pending_sqes = 0;
-    io_uring_submit(&backend->ring);
-  }
 }
 
 int io_uring_backend_defer_submit_and_await(
@@ -305,8 +304,7 @@ int io_uring_backend_defer_submit_and_await(
     ctx->result = -ECANCELED;
     sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_cancel(sqe, (__u64)ctx, 0);
-    backend->pending_sqes = 0;
-    io_uring_submit(&backend->ring);
+    io_uring_backend_immediate_submit(backend);
   }
 
   if (value_ptr) (*value_ptr) = switchpoint_result;
@@ -1161,8 +1159,7 @@ VALUE Backend_timeout_ensure(VALUE arg) {
     // op was not completed, so we need to cancel it
     sqe = io_uring_get_sqe(&timeout_ctx->backend->ring);
     io_uring_prep_cancel(sqe, (__u64)timeout_ctx->ctx, 0);
-    timeout_ctx->backend->pending_sqes = 0;
-    io_uring_submit(&timeout_ctx->backend->ring);
+    io_uring_backend_immediate_submit(timeout_ctx->backend);
   }
   context_store_release(&timeout_ctx->backend->store, timeout_ctx->ctx);
   return Qnil;
@@ -1237,6 +1234,13 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   return rb_ary_new_from_args(2, INT2NUM(ret), INT2NUM(WEXITSTATUS(status)));
 }
 
+/*
+Blocks a fiber indefinitely. This is accomplished by using an eventfd that will
+never be signalled. The eventfd is needed so we could do a blocking polling for
+completions even when no other I/O operations are pending.
+
+The eventfd is refcounted in order to allow multiple fibers to be blocked.
+*/
 VALUE Backend_wait_event(VALUE self, VALUE raise) {
   Backend_t *backend;
   VALUE resume_value;
@@ -1251,7 +1255,32 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
     }
   }
 
-  resume_value = io_uring_backend_wait_fd(backend, backend->event_fd, 0);
+  if (!backend->event_fd_ctx) {
+    struct io_uring_sqe *sqe;
+
+    backend->event_fd_ctx = context_store_acquire(&backend->store, OP_POLL);
+    sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_poll_add(sqe, backend->event_fd, POLLIN);
+    backend->base.op_count++;
+    io_uring_sqe_set_data(sqe, backend->event_fd_ctx);
+    io_uring_backend_defer_submit(backend);
+  }
+  else
+    backend->event_fd_ctx->ref_count += 1;
+
+  resume_value = backend_await((struct Backend_base *)backend);
+  context_store_release(&backend->store, backend->event_fd_ctx);
+
+  if (backend->event_fd_ctx->ref_count == 1) {
+
+    // last fiber to use the eventfd, so we cancel the ongoing poll
+    struct io_uring_sqe *sqe;
+    sqe = io_uring_get_sqe(&backend->ring);
+    io_uring_prep_cancel(sqe, (__u64)backend->event_fd_ctx, 0);
+    io_uring_backend_immediate_submit(backend);
+    backend->event_fd_ctx = NULL;
+  }
+
   if (RTEST(raise)) RAISE_IF_EXCEPTION(resume_value);
   RB_GC_GUARD(resume_value);
   return resume_value;
@@ -1354,8 +1383,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
         ctx->result = -ECANCELED;
         sqe = io_uring_get_sqe(&backend->ring);
         io_uring_prep_cancel(sqe, (__u64)ctx, 0);
-        backend->pending_sqes = 0;
-        io_uring_submit(&backend->ring);
+        io_uring_backend_immediate_submit(backend);
       }
       else {
         ctx->ref_count = 1;
@@ -1385,8 +1413,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
     ctx->result = -ECANCELED;
     sqe = io_uring_get_sqe(&backend->ring);
     io_uring_prep_cancel(sqe, (__u64)ctx, 0);
-    backend->pending_sqes = 0;
-    io_uring_submit(&backend->ring);
+    io_uring_backend_immediate_submit(backend);
     RAISE_IF_EXCEPTION(resume_value);
     return resume_value;
   }
@@ -1452,8 +1479,7 @@ static inline void splice_chunks_cancel(Backend_t *backend, op_context_t *ctx) {
   ctx->result = -ECANCELED;
   sqe = io_uring_get_sqe(&backend->ring);
   io_uring_prep_cancel(sqe, (__u64)ctx, 0);
-  backend->pending_sqes = 0;
-  io_uring_submit(&backend->ring);
+  io_uring_backend_immediate_submit(backend);
 }
 
 static inline int splice_chunks_await_ops(
