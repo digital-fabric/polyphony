@@ -42,7 +42,7 @@ enum write_method {
   WM_CALL
 };
 
-enum read_method detect_read_method(VALUE io) {
+static enum read_method detect_read_method(VALUE io) {
   if (rb_respond_to(io, ID_read_method)) {
     VALUE method = rb_funcall(io, ID_read_method, 0);
     if (method == SYM_readpartial)  return RM_READPARTIAL;
@@ -58,7 +58,7 @@ enum read_method detect_read_method(VALUE io) {
     rb_raise(rb_eRuntimeError, "Given io instance should be a callable or respond to #__read_method__");
 }
 
-enum write_method detect_write_method(VALUE io) {
+static enum write_method detect_write_method(VALUE io) {
   if (rb_respond_to(io, ID_write_method)) {
     VALUE method = rb_funcall(io, ID_write_method, 0);
     if (method == SYM_readpartial)    return WM_WRITE;
