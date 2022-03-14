@@ -1,3 +1,7 @@
+## 0.86 2022-03-14
+
+- Fix gemspec
+
 ## 0.85 2022-03-13
 
 - Reduce write ops in `IO.gzip` (#77)
