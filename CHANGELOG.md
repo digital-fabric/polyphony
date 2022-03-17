@@ -1,3 +1,7 @@
+## 0.87 2022-03-17
+
+- Fix compilation on non-Linux OSes
+
 ## 0.86 2022-03-14
 
 - Fix gemspec
