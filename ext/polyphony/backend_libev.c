@@ -1645,6 +1645,9 @@ void Init_Backend() {
 
   rb_define_method(cBackend, "splice", Backend_splice, 3);
   rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
+  #ifdef POLYPHONY_LINUX
+  rb_define_method(cBackend, "tee", Backend_tee, 3);
+  #endif
 
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);

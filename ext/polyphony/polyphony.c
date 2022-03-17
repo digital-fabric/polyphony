@@ -94,9 +94,11 @@ VALUE Polyphony_backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE c
   return Backend_splice_to_eof(BACKEND(), src, dest, chunksize);
 }
 
+#ifdef POLYPHONY_LINUX
 VALUE Polyphony_backend_tee(VALUE self, VALUE src, VALUE dest, VALUE chunksize) {
   return Backend_tee(BACKEND(), src, dest, chunksize);
 }
+#endif
 
 VALUE Polyphony_backend_timeout(int argc,VALUE *argv, VALUE self) {
   return Backend_timeout(argc, argv, BACKEND());
@@ -190,7 +192,11 @@ void Init_Polyphony() {
   rb_define_singleton_method(mPolyphony, "backend_sleep", Polyphony_backend_sleep, 1);
   rb_define_singleton_method(mPolyphony, "backend_splice", Polyphony_backend_splice, 3);
   rb_define_singleton_method(mPolyphony, "backend_splice_to_eof", Polyphony_backend_splice_to_eof, 3);
+ 
+  #ifdef POLYPHONY_LINUX
   rb_define_singleton_method(mPolyphony, "backend_tee", Polyphony_backend_tee, 3);
+  #endif
+  
   rb_define_singleton_method(mPolyphony, "backend_timeout", Polyphony_backend_timeout, -1);
   rb_define_singleton_method(mPolyphony, "backend_timer_loop", Polyphony_backend_timer_loop, 1);
   rb_define_singleton_method(mPolyphony, "backend_wait_event", Polyphony_backend_wait_event, 1);
