@@ -526,11 +526,43 @@ VALUE IO_inflate(VALUE self, VALUE src, VALUE dest) {
   return INT2FIX(ctx.out_total);
 }
 
+VALUE IO_http1_splice_chunked(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  enum write_method method = detect_write_method(dest);
+  VALUE backend = BACKEND();
+  VALUE pipe = rb_funcall(cPipe, ID_new, 0);
+  unsigned char out[128];
+  struct raw_buffer buffer = { out, 0 };
+
+  while (1) {
+    int len = FIX2INT(Backend_splice(backend, src, pipe, maxlen));
+    if (!len) break;
+
+    // write chunk header
+    buffer.len += sprintf(buffer.ptr + buffer.len, "%x\r\n", len);
+    write_from_raw_buffer(backend, dest, method, &buffer);
+    buffer.len = 0;
+    while (len) {
+      int spliced = FIX2INT(Backend_splice(backend, pipe, dest, INT2FIX(len)));
+      len -= spliced;
+    }
+    buffer.len += sprintf(buffer.ptr + buffer.len, "\r\n");
+  }
+  buffer.len += sprintf(buffer.ptr + buffer.len, "0\r\n\r\n");
+  write_from_raw_buffer(backend, dest, method, &buffer);
+
+  Pipe_close(pipe);
+  RB_GC_GUARD(pipe);
+
+  return self;
+}
+
 void Init_IOExtensions() {
   rb_define_singleton_method(rb_cIO, "gzip", IO_gzip, -1);
   rb_define_singleton_method(rb_cIO, "gunzip", IO_gunzip, -1);
   rb_define_singleton_method(rb_cIO, "deflate", IO_deflate, 2);
   rb_define_singleton_method(rb_cIO, "inflate", IO_inflate, 2);
+
+  rb_define_singleton_method(rb_cIO, "http1_splice_chunked", IO_http1_splice_chunked, 3);
 
   ID_at           = rb_intern("at");
   ID_read_method  = rb_intern("__read_method__");
