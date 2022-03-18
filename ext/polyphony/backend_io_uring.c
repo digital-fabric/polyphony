@@ -262,6 +262,22 @@ inline struct backend_stats backend_get_stats(VALUE self) {
   return backend_base_stats(&backend->base);
 }
 
+static inline struct io_uring_sqe *io_uring_backend_get_sqe(Backend_t *backend) {
+  struct io_uring_sqe *sqe;
+try:
+  sqe = io_uring_get_sqe(&backend->ring);
+  if (sqe) goto done;
+
+  if (backend->pending_sqes)
+    io_uring_backend_immediate_submit(backend);
+  else {
+    VALUE resume_value = backend_snooze(&backend->base);
+    RAISE_IF_EXCEPTION(resume_value);
+  }
+done:
+  return sqe;
+}
+
 VALUE Backend_wakeup(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -269,7 +285,7 @@ VALUE Backend_wakeup(VALUE self) {
   if (backend->base.currently_polling) {
     // Since we're currently blocking while waiting for a completion, we add a
     // NOP which would cause the io_uring_enter syscall to return
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     io_uring_prep_nop(sqe);
     io_uring_backend_immediate_submit(backend);
 
@@ -302,7 +318,7 @@ int io_uring_backend_defer_submit_and_await(
 
     // op was not completed (an exception was raised), so we need to cancel it
     ctx->result = -ECANCELED;
-    sqe = io_uring_get_sqe(&backend->ring);
+    sqe = io_uring_backend_get_sqe(backend);
     io_uring_prep_cancel(sqe, (__u64)ctx, 0);
     io_uring_backend_immediate_submit(backend);
   }
@@ -317,7 +333,7 @@ VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
   op_context_t *ctx = context_store_acquire(&backend->store, OP_POLL);
   VALUE resumed_value = Qnil;
 
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+  struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_poll_add(sqe, fd, write ? POLLOUT : POLLIN);
 
   io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resumed_value);
@@ -385,7 +401,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_READ);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
     
@@ -453,7 +469,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_READ);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     ssize_t result;
     int completed;
 
@@ -502,7 +518,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_READ);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     ssize_t result;
     int completed;
 
@@ -546,7 +562,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   while (left > 0) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_WRITE);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
 
@@ -597,7 +613,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_WRITEV);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
 
@@ -689,7 +705,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_RECV);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
 
@@ -739,7 +755,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_RECV);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
 
@@ -787,7 +803,7 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_RECV);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
 
@@ -831,7 +847,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   while (left > 0) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_SEND);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
 
@@ -869,7 +885,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE soc
   while (1) {
     VALUE resume_value = Qnil;
     op_context_t *ctx = context_store_acquire(&backend->store, OP_ACCEPT);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int fd;
     int completed;
 
@@ -935,7 +951,7 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
 
   while (1) {
     op_context_t *ctx = context_store_acquire(&backend->store, OP_SPLICE);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
 
@@ -984,7 +1000,7 @@ VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   while (1) {
     op_context_t *ctx = context_store_acquire(&backend->store, OP_SPLICE);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
 
@@ -1021,7 +1037,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   GetBackend(self, backend);
   fd = fd_from_io(sock, &fptr, 1, 0);
   ctx = context_store_acquire(&backend->store, OP_CONNECT);
-  sqe = io_uring_get_sqe(&backend->ring);
+  sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_connect(sqe, fd, ai_addr, ai_addrlen);
   result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
   completed = context_store_release(&backend->store, ctx);
@@ -1063,7 +1079,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 //   io_unset_nonblock(fptr, io);
 
 //   ctx = context_store_acquire(&backend->store, OP_CLOSE);
-//   sqe = io_uring_get_sqe(&backend->ring);
+//   sqe = io_uring_backend_get_sqe(backend);
 //   io_uring_prep_close(sqe, fd);
 //   result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
 //   completed = context_store_release(&backend->store, ctx);
@@ -1094,7 +1110,7 @@ inline struct __kernel_timespec duration_to_timespec(VALUE duration) {
 // returns true if completed, 0 otherwise
 int io_uring_backend_submit_timeout_and_await(Backend_t *backend, double duration, VALUE *resume_value) {
   struct __kernel_timespec ts = double_to_timespec(duration);
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&backend->ring);
+  struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
   op_context_t *ctx = context_store_acquire(&backend->store, OP_TIMEOUT);
   
   io_uring_prep_timeout(sqe, &ts, 0, 0);
@@ -1183,7 +1199,7 @@ VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
   GetBackend(self, backend);
   timeout = rb_funcall(cTimeoutException, ID_new, 0);
 
-  sqe = io_uring_get_sqe(&backend->ring);
+  sqe = io_uring_backend_get_sqe(backend);
   ctx = context_store_acquire(&backend->store, OP_TIMEOUT);
   ctx->resume_value = timeout;
   io_uring_prep_timeout(sqe, &ts, 0, 0);
@@ -1259,7 +1275,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
     struct io_uring_sqe *sqe;
 
     backend->event_fd_ctx = context_store_acquire(&backend->store, OP_POLL);
-    sqe = io_uring_get_sqe(&backend->ring);
+    sqe = io_uring_backend_get_sqe(backend);
     io_uring_prep_poll_add(sqe, backend->event_fd, POLLIN);
     backend->base.op_count++;
     io_uring_sqe_set_data(sqe, backend->event_fd_ctx);
@@ -1275,7 +1291,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
 
     // last fiber to use the eventfd, so we cancel the ongoing poll
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&backend->ring);
+    sqe = io_uring_backend_get_sqe(backend);
     io_uring_prep_cancel(sqe, (__u64)backend->event_fd_ctx, 0);
     io_uring_backend_immediate_submit(backend);
     backend->event_fd_ctx = NULL;
@@ -1296,7 +1312,7 @@ struct io_uring_sqe *Backend_chain_prepare_write(Backend_t *backend, VALUE io, V
   struct io_uring_sqe *sqe;
 
   fd = fd_from_io(io, &fptr, 1, 0);
-  sqe = io_uring_get_sqe(&backend->ring);
+  sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_write(sqe, fd, StringValuePtr(str), RSTRING_LEN(str), 0);
   return sqe;
 }
@@ -1308,7 +1324,7 @@ struct io_uring_sqe *Backend_chain_prepare_send(Backend_t *backend, VALUE io, VA
 
   fd = fd_from_io(io, &fptr, 1, 0);
 
-  sqe = io_uring_get_sqe(&backend->ring);
+  sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_send(sqe, fd, StringValuePtr(str), RSTRING_LEN(str), NUM2INT(flags));
   return sqe;
 }
@@ -1322,7 +1338,7 @@ struct io_uring_sqe *Backend_chain_prepare_splice(Backend_t *backend, VALUE src,
 
   src_fd = fd_from_io(src, &src_fptr, 0, 0);
   dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
-  sqe = io_uring_get_sqe(&backend->ring);
+  sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_splice(sqe, src_fd, -1, dest_fd, -1, NUM2INT(maxlen), 0);
   return sqe;
 }
@@ -1381,7 +1397,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
 
         ctx->ref_count = sqe_count;
         ctx->result = -ECANCELED;
-        sqe = io_uring_get_sqe(&backend->ring);
+        sqe = io_uring_backend_get_sqe(backend);
         io_uring_prep_cancel(sqe, (__u64)ctx, 0);
         io_uring_backend_immediate_submit(backend);
       }
@@ -1411,7 +1427,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
 
     // op was not completed (an exception was raised), so we need to cancel it
     ctx->result = -ECANCELED;
-    sqe = io_uring_get_sqe(&backend->ring);
+    sqe = io_uring_backend_get_sqe(backend);
     io_uring_prep_cancel(sqe, (__u64)ctx, 0);
     io_uring_backend_immediate_submit(backend);
     RAISE_IF_EXCEPTION(resume_value);
@@ -1470,14 +1486,14 @@ static inline void splice_chunks_get_sqe(
   }
   else
     *ctx = context_store_acquire(&backend->store, type);
-  (*sqe) = io_uring_get_sqe(&backend->ring);
+  (*sqe) = io_uring_backend_get_sqe(backend);
 }
 
 static inline void splice_chunks_cancel(Backend_t *backend, op_context_t *ctx) {
   struct io_uring_sqe *sqe;
   
   ctx->result = -ECANCELED;
-  sqe = io_uring_get_sqe(&backend->ring);
+  sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_cancel(sqe, (__u64)ctx, 0);
   io_uring_backend_immediate_submit(backend);
 }
