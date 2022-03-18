@@ -1,3 +1,7 @@
+## 0.88 2022-03-18
+
+- Improve IO stream compression utilities (release GVL, cleanup on exception)
+
 ## 0.87 2022-03-17
 
 - Fix compilation on non-Linux OSes
