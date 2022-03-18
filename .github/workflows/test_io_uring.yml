@@ -33,4 +33,4 @@ jobs:
     - name: Compile C-extension
       run: bundle exec rake compile
     - name: Run tests
-      run:  bundle exec rake test
+      run:  bundle exec ruby test/run.rb --verbose
