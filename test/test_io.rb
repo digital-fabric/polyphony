@@ -656,13 +656,17 @@ class IOExtensionsTest < MiniTest::Test
     i, o = IO.pipe
     r, w = IO.pipe
 
-    spin {
-      IO.deflate(i, w)
+    ret = nil
+    f = spin {
+      ret = IO.deflate(i, w)
       w.close
     }
 
     o << 'foobar' * 20
     o.close
+
+    f.await
+    assert_equal 17, ret
 
     data = r.read
     msg = Zlib::Inflate.inflate(data)
@@ -679,7 +683,8 @@ class IOExtensionsTest < MiniTest::Test
       o.close
     }
 
-    IO.inflate(i, w)
+    ret = IO.inflate(i, w)
+    assert_equal 6, ret
     w.close
     msg = r.read
     assert_equal 'foobar', msg
@@ -690,7 +695,7 @@ class IOExtensionsTest < MiniTest::Test
     dest = Polyphony.pipe
     now = nil
 
-    spin {
+    f = spin {
       now = Time.now
       IO.gzip(src, dest)
       dest.close
@@ -698,6 +703,7 @@ class IOExtensionsTest < MiniTest::Test
 
     src << IO.read(__FILE__)
     src.close
+    f.await
 
     gz = Zlib::GzipReader.new(dest)
     data = gz.read
@@ -705,6 +711,26 @@ class IOExtensionsTest < MiniTest::Test
     assert_in_range (now-2)..(now+1), gz.mtime
     assert_nil gz.orig_name
     assert_nil gz.comment
+  end
+
+  def test_gzip_return_value
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
+    now = nil
+    ret = nil
+
+    f = spin {
+      now = Time.now
+      ret = IO.gzip(src, dest)
+      dest.close
+    }
+
+    src << IO.read(__FILE__)
+    src.close
+    f.await
+
+    gzipped = dest.read
+    assert_equal gzipped.bytesize, ret
   end
 
   def test_gzip_with_mtime_int
@@ -801,19 +827,21 @@ class IOExtensionsTest < MiniTest::Test
   def test_gunzip
     src = Polyphony.pipe
     dest = Polyphony.pipe
+    ret = nil
 
-    spin {
-      IO.gunzip(src, dest)
+    f = spin {
+      ret = IO.gunzip(src, dest)
       dest.close
     }
 
     gz = Zlib::GzipWriter.new(src, 9)
-    gz << 'foobar'#IO.read(__FILE__)
+    gz << IO.read(__FILE__)
     gz.close
+    f.await
 
     data = dest.read
-    # assert_equal IO.read(__FILE__), data
-    assert_equal 'foobar', data
+    assert_equal IO.read(__FILE__).bytesize, ret
+    assert_equal IO.read(__FILE__), data
   end
 
   def test_gunzip_multi

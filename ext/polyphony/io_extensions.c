@@ -10,6 +10,8 @@
 #include "polyphony.h"
 #include "zlib.h"
 #include "assert.h"
+#include "ruby/thread.h"
+
 
 ID ID_at;
 ID ID_read_method;
@@ -344,6 +346,26 @@ error:
   rb_raise(rb_eRuntimeError, "Invalid gzip header");
 }
 
+struct process_z_stream_ctx {
+  z_stream *strm;
+  int flags;
+  zlib_func fun;
+  int ret;
+};
+
+void *do_process_z_stream_without_gvl(void *ptr) {
+  struct process_z_stream_ctx *ctx = (struct process_z_stream_ctx *)ptr;
+
+  ctx->ret = (ctx->fun)(ctx->strm, ctx->flags);
+  return NULL;
+}
+
+static inline int process_without_gvl(zlib_func fun, z_stream *strm, int flags) {
+  struct process_z_stream_ctx ctx = { strm, flags, fun, 0 };
+  rb_thread_call_without_gvl2(do_process_z_stream_without_gvl, (void *)&ctx, RUBY_UBF_IO, 0);
+  return ctx.ret;
+}
+
 static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, int eof) {
   int ret;
   int written;
@@ -351,7 +373,7 @@ static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, in
 
   int avail_out_pre = ctx->strm.avail_out = CHUNK - ctx->out_pos;
   ctx->strm.next_out = ctx->out + ctx->out_pos;
-  ret = fun(&ctx->strm, eof ? Z_FINISH : Z_NO_FLUSH);
+  ret = process_without_gvl(fun, &ctx->strm, eof ? Z_FINISH : Z_NO_FLUSH);
   assert(ret != Z_STREAM_ERROR);
   written = avail_out_pre - ctx->strm.avail_out;
   out_buffer.ptr = ctx->out;
@@ -372,7 +394,7 @@ static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, in
   return ctx->strm.avail_out;
 }
 
-void z_stream_io_loop(struct z_stream_ctx *ctx) {
+VALUE z_stream_io_loop(struct z_stream_ctx *ctx) {
   zlib_func fun = (ctx->mode == SM_DEFLATE) ? deflate : inflate;
 
   if (ctx->in_total > ctx->in_pos) {
@@ -407,13 +429,15 @@ void z_stream_io_loop(struct z_stream_ctx *ctx) {
       if (z_stream_write_out(ctx, fun, eof)) break;
     }
 
-    if (eof) return;
+    if (eof) goto done;
   }
 
   //flush
   ctx->strm.avail_in = 0;
   ctx->strm.next_in = ctx->in;
   z_stream_write_out(ctx, fun, 1);
+done:
+  return Qnil;
 }
 
 static inline void setup_ctx(struct z_stream_ctx *ctx, enum stream_mode mode, VALUE src, VALUE dest) {
@@ -434,6 +458,17 @@ static inline void setup_ctx(struct z_stream_ctx *ctx, enum stream_mode mode, VA
   ctx->crc32 = 0;
 }
 
+VALUE z_stream_cleanup(struct z_stream_ctx *ctx) {
+  if (ctx->mode == SM_DEFLATE)
+    deflateEnd(&ctx->strm);
+  else
+    inflateEnd(&ctx->strm);
+}
+
+#define SAFE(f) (VALUE (*)(VALUE))(f)
+#define Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx) \
+  rb_ensure(SAFE(z_stream_io_loop), (VALUE)&ctx, SAFE(z_stream_cleanup), (VALUE)&ctx)
+
 VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
   VALUE src;
   VALUE dest;
@@ -450,22 +485,23 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
   };
 
   struct z_stream_ctx ctx;
-  int level = DEFAULT_LEVEL;
   int ret;
 
   setup_ctx(&ctx, SM_DEFLATE, src, dest);
   ctx.f_gzip_footer = 1; // write gzip footer
-  ctx.out_pos = gzip_prepare_header(&header_ctx, ctx.out, sizeof(ctx.out));
+  ctx.out_total = ctx.out_pos = gzip_prepare_header(&header_ctx, ctx.out, sizeof(ctx.out));
 
-  ret = deflateInit2(&ctx.strm, level, Z_DEFLATED, -MAX_WBITS, DEFAULT_MEM_LEVEL, Z_DEFAULT_STRATEGY);
-  if (ret != Z_OK) return INT2FIX(ret);
-  z_stream_io_loop(&ctx);
-  deflateEnd(&ctx.strm);
- 
+  ret = deflateInit2(&ctx.strm, DEFAULT_LEVEL, Z_DEFLATED, -MAX_WBITS, DEFAULT_MEM_LEVEL, Z_DEFAULT_STRATEGY);
+  if (ret != Z_OK)
+    rb_raise(rb_eRuntimeError, "zlib error: %s\n", ctx.strm.msg);
+  Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx); 
   return INT2FIX(ctx.out_total);
 }
 
 # define FIX2TIME(v) (rb_funcall(rb_cTime, ID_at, 1, v))
+
+VALUE io_gunzip_safe(struct z_stream_ctx *ctx) {
+}
 
 VALUE IO_gunzip(int argc, VALUE *argv, VALUE self) {
   VALUE src;
@@ -482,21 +518,25 @@ VALUE IO_gunzip(int argc, VALUE *argv, VALUE self) {
   setup_ctx(&ctx, SM_INFLATE, src, dest);
   gzip_read_header(&ctx, &header_ctx);
 
+  ret = inflateInit2(&ctx.strm, -MAX_WBITS);
+  if (ret != Z_OK)
+    rb_raise(rb_eRuntimeError, "zlib error: %s\n", ctx.strm.msg);
+
+  Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx);
+
+  // gzip_read_footer(&ctx, &footer_ctx);
+  // TODO: verify crc32
+  // TODO: verify total length
+
   if (info != Qnil) {
     rb_hash_aset(info, SYM_mtime, FIX2TIME(header_ctx.mtime));
     rb_hash_aset(info, SYM_orig_name, header_ctx.orig_name);
     rb_hash_aset(info, SYM_comment, header_ctx.comment);
   }
+  RB_GC_GUARD(header_ctx.orig_name);
+  RB_GC_GUARD(header_ctx.comment);
 
-  ret = inflateInit2(&ctx.strm, -MAX_WBITS);
-  if (ret != Z_OK) return INT2FIX(ret);
-  z_stream_io_loop(&ctx);
-  inflateEnd(&ctx.strm);
-
-  // gzip_read_footer(&ctx, &footer_ctx);
-  // TODO: verify crc32
-  // TODO: verify total length
-  return self;
+  return INT2FIX(ctx.out_total);
 }
 
 VALUE IO_deflate(VALUE self, VALUE src, VALUE dest) {
@@ -506,9 +546,10 @@ VALUE IO_deflate(VALUE self, VALUE src, VALUE dest) {
 
   setup_ctx(&ctx, SM_DEFLATE, src, dest);
   ret = deflateInit(&ctx.strm, level);
-  if (ret != Z_OK) return INT2FIX(ret);
-  z_stream_io_loop(&ctx);
-  deflateEnd(&ctx.strm);
+  if (ret != Z_OK)
+    rb_raise(rb_eRuntimeError, "zlib error: %s\n", ctx.strm.msg);
+
+  Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx);
  
   return INT2FIX(ctx.out_total);
 }
@@ -519,9 +560,10 @@ VALUE IO_inflate(VALUE self, VALUE src, VALUE dest) {
 
   setup_ctx(&ctx, SM_INFLATE, src, dest);
   ret = inflateInit(&ctx.strm);
-  if (ret != Z_OK) return INT2FIX(ret);
-  z_stream_io_loop(&ctx);
-  inflateEnd(&ctx.strm);
+  if (ret != Z_OK)
+    rb_raise(rb_eRuntimeError, "zlib error: %s\n", ctx.strm.msg);
+
+  Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx);
  
   return INT2FIX(ctx.out_total);
 }
