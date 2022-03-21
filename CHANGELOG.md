@@ -1,3 +1,7 @@
+## 0.89 2022-03-21
+
+- Implement compression/decompression to/from strings (#86)
+
 ## 0.88 2022-03-18
 
 - Improve IO stream compression utilities (release GVL, cleanup on exception)
