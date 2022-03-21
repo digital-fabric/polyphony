@@ -151,6 +151,7 @@ static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_meth
   switch (method) {
     case WM_STRING: {
       rb_str_buf_cat(io, (char *)buffer->ptr, buffer->len);
+      return buffer->len;
     }
     case WM_BACKEND_WRITE: {
       VALUE len = Backend_write(backend, io, PTR2FIX(buffer));
@@ -325,23 +326,32 @@ void read_gzip_header_str(struct raw_buffer *buffer, VALUE *str, unsigned int *i
 }
 
 void gzip_read_header(struct z_stream_ctx *ctx, struct gzip_header_ctx *header_ctx) {
-  struct raw_buffer in_buffer = { ctx->in, CHUNK };
+  struct raw_buffer in_buffer;
   int flags;
 
-  while (ctx->in_total < 10) {
-    int read = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer);
-    if (read == 0) goto error;
-    ctx->in_total += read;
+  if (ctx->src_read_method == RM_STRING) {
+    in_buffer.ptr = (unsigned char *)RSTRING_PTR(ctx->src);
+    in_buffer.len = RSTRING_LEN(ctx->src);
+    ctx->in_total = in_buffer.len;
   }
+  else {
+    in_buffer.ptr = ctx->in;
+    in_buffer.len = CHUNK;
+    while (ctx->in_total < 10) {
+      int read = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer);
+      if (read == 0) goto error;
+      ctx->in_total += read;
+    }
+  }
+
   // PRINT_BUFFER("read gzip header", ctx->in, ctx->in_total);
-  if (ctx->in[0] != GZ_MAGIC1) goto error;
-  if (ctx->in[1] != GZ_MAGIC2) goto error;
-  if (ctx->in[2] != GZ_METHOD_DEFLATE) goto error;
-  flags = ctx->in[3];
+  if (in_buffer.ptr[0] != GZ_MAGIC1) goto error;
+  if (in_buffer.ptr[1] != GZ_MAGIC2) goto error;
+  if (in_buffer.ptr[2] != GZ_METHOD_DEFLATE) goto error;
+  flags = in_buffer.ptr[3];
 
-  unsigned long mtime = gzfile_get32(ctx->in + 4);
+  unsigned long mtime = gzfile_get32(in_buffer.ptr + 4);
   header_ctx->mtime = INT2FIX(mtime);
-
   ctx->in_pos = 10;
 
   if (flags & GZ_FLAG_ORIG_NAME)
@@ -409,9 +419,10 @@ static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, in
 VALUE z_stream_io_loop(struct z_stream_ctx *ctx) {
   zlib_func fun = (ctx->mode == SM_DEFLATE) ? deflate : inflate;
 
-  if (ctx->in_total > ctx->in_pos) {
+  if ((ctx->src_read_method != RM_STRING) && (ctx->in_total > ctx->in_pos)) {
     // In bytes already read for parsing gzip header, so we need to process the
     // rest.
+
     ctx->strm.next_in = ctx->in + ctx->in_pos;
     ctx->strm.avail_in = ctx->in_total -= ctx->in_pos;
 
@@ -423,14 +434,27 @@ VALUE z_stream_io_loop(struct z_stream_ctx *ctx) {
   }
 
   while (1) {
-    struct raw_buffer in_buffer = {ctx->in, CHUNK};
-    ctx->strm.next_in = ctx->in;
-    int read_len = ctx->strm.avail_in = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer);
-    if (!read_len) break;
-    int eof = read_len < CHUNK;
+    int eof;
+    int read_len;
+    if (ctx->src_read_method == RM_STRING) {
+      struct raw_buffer in_buffer = {
+        (unsigned char *)RSTRING_PTR(ctx->src) + ctx->in_pos,
+        RSTRING_LEN(ctx->src) - ctx->in_pos
+      };
+      ctx->strm.next_in = in_buffer.ptr;
+      read_len = ctx->strm.avail_in = in_buffer.len;
+      eof = 1;
+      if (ctx->mode == SM_DEFLATE) ctx->crc32 = crc32(ctx->crc32, in_buffer.ptr, read_len);
+    }
+    else {
+      struct raw_buffer in_buffer = {ctx->in, CHUNK};
+      ctx->strm.next_in = ctx->in;
+      read_len = ctx->strm.avail_in = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer);
+      if (!read_len) break;
+      eof = read_len < CHUNK;
+      if (ctx->mode == SM_DEFLATE) ctx->crc32 = crc32(ctx->crc32, ctx->in, read_len);
+    }
 
-    if (ctx->mode == SM_DEFLATE)
-      ctx->crc32 = crc32(ctx->crc32, ctx->in, read_len);
     ctx->in_total += read_len;
 
     // PRINT_BUFFER("read stream", ctx->in, read_len);

@@ -673,6 +673,58 @@ class IOExtensionsTest < MiniTest::Test
     assert_equal 'foobar' * 20, msg
   end
 
+  def test_deflate_to_string
+    i, o = IO.pipe
+    r, w = IO.pipe
+    str = +''
+
+    ret = nil
+    f = spin {
+      ret = IO.deflate(i, str)
+      w << str
+      w.close
+    }
+
+    o << 'foobar' * 20
+    o.close
+
+    f.await
+    assert_equal 17, ret
+
+    data = r.read
+    msg = Zlib::Inflate.inflate(data)
+    assert_equal 'foobar' * 20, msg
+  end
+
+  def test_deflate_to_frozen_string
+    i, o = IO.pipe
+    str = '' # frozen
+
+    f = spin {
+      o << 'foobar' * 20
+      o.close
+    }
+
+    assert_raises(FrozenError) { IO.deflate(i, str) }
+  end
+
+  def test_deflate_from_string
+    r, w = IO.pipe
+    str = 'foobar' * 10000
+    ret = nil
+    
+    f = spin {
+      ret = IO.deflate(str, w)
+      w.close
+    }
+    f.await
+    assert_equal 118, ret
+
+    data = r.read
+    msg = Zlib::Inflate.inflate(data)
+    assert_equal str, msg
+  end
+
   def test_inflate
     i, o = IO.pipe
     r, w = IO.pipe
@@ -684,6 +736,33 @@ class IOExtensionsTest < MiniTest::Test
     }
 
     ret = IO.inflate(i, w)
+    assert_equal 6, ret
+    w.close
+    msg = r.read
+    assert_equal 'foobar', msg
+  end
+
+  def test_inflate_to_string
+    i, o = IO.pipe
+    str = +''
+
+    spin {
+      data = Zlib::Deflate.deflate('foobar', 9)
+      o << data
+      o.close
+    }
+
+    ret = IO.inflate(i, str)
+    assert_equal 6, ret
+    assert_equal 6, str.bytesize
+    assert_equal 'foobar', str
+  end
+
+  def test_inflate_from_string
+    r, w = IO.pipe
+    str = Zlib::Deflate.deflate('foobar', 9)
+
+    ret = IO.inflate(str, w)
     assert_equal 6, ret
     w.close
     msg = r.read
@@ -711,6 +790,44 @@ class IOExtensionsTest < MiniTest::Test
     assert_in_range (now-2)..(now+1), gz.mtime
     assert_nil gz.orig_name
     assert_nil gz.comment
+  end
+
+  def test_gzip_to_string
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
+    str = +''
+    now = nil
+
+    f = spin {
+      now = Time.now
+      IO.gzip(src, str)
+      dest << str
+      dest.close
+    }
+
+    src << IO.read(__FILE__)
+    src.close
+    f.await
+
+    gz = Zlib::GzipReader.new(dest)
+    data = gz.read
+    assert_equal IO.read(__FILE__), data
+    assert_in_range (now-2)..(now+1), gz.mtime
+    assert_nil gz.orig_name
+    assert_nil gz.comment
+  end
+
+  def test_gzip_from_string
+    str = IO.read(__FILE__)
+    dest = Polyphony.pipe
+    now = nil
+
+    IO.gzip(str, dest)
+    dest.close
+
+    gz = Zlib::GzipReader.new(dest)
+    data = gz.read
+    assert_equal IO.read(__FILE__), data
   end
 
   def test_gzip_return_value
@@ -844,6 +961,36 @@ class IOExtensionsTest < MiniTest::Test
     assert_equal IO.read(__FILE__), data
   end
 
+  def test_gunzip_to_string
+    src = Polyphony.pipe
+    str = +''
+    ret = nil
+
+    f = spin {
+      ret = IO.gunzip(src, str)
+    }
+
+    gz = Zlib::GzipWriter.new(src, 9)
+    gz << IO.read(__FILE__)
+    gz.close
+    f.await
+
+    assert_equal IO.read(__FILE__).bytesize, ret
+    assert_equal IO.read(__FILE__), str
+  end
+
+  def test_gunzip_from_string
+    src_data = 'foobar' * 1000
+    str = Zlib.gzip(src_data, level: 9)
+    dest = Polyphony.pipe
+    ret = IO.gunzip(str, dest)
+    dest.close
+
+    dest_data = dest.read
+    assert_equal src_data.bytesize, ret
+    assert_equal src_data, dest_data
+  end
+
   def test_gunzip_multi
     src1 = Polyphony.pipe
     src2 = Polyphony.pipe
@@ -920,5 +1067,25 @@ class IOExtensionsTest < MiniTest::Test
     assert_equal Time.at(42), dest_info[:mtime]
     assert_equal 'foo.bar', dest_info[:orig_name]
     assert_equal 'hello!', dest_info[:comment]
+  end
+
+  def test_deflate_inflate_strings
+    src_data = IO.read(__FILE__)
+    deflated = +''
+    IO.deflate(src_data, deflated)
+    inflated = +''
+    IO.inflate(deflated, inflated)
+
+    assert_equal src_data, inflated
+  end
+
+  def test_gzip_gunzip_strings
+    src_data = IO.read(__FILE__)
+    gzipped = +''
+    IO.gzip(src_data, gzipped)
+    gunzipped = +''
+    IO.gunzip(gzipped, gunzipped)
+
+    assert_equal src_data, gunzipped
   end
 end
