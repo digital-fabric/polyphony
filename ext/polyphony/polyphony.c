@@ -145,7 +145,7 @@ VALUE Polyphony_raw_buffer_get(int argc, VALUE *argv, VALUE self) {
   int length = (len == Qnil) ? buffer->len : FIX2INT(len);
   
   if (length > buffer->len) length = buffer->len;
-  return rb_utf8_str_new(buffer->ptr, length);
+  return rb_utf8_str_new((char *)buffer->ptr, length);
 }
 
 VALUE Polyphony_raw_buffer_set(VALUE self, VALUE buf, VALUE str) {
@@ -162,12 +162,6 @@ VALUE Polyphony_raw_buffer_set(VALUE self, VALUE buf, VALUE str) {
 VALUE Polyphony_raw_buffer_size(VALUE self, VALUE buf) {
   struct raw_buffer *buffer = FIX2PTR(buf);
   return INT2FIX(buffer->len);
-}
-
-VALUE Polyphony_backend_test(VALUE self, VALUE io, VALUE str) {
-  struct raw_buffer buffer = { RSTRING_PTR(str), RSTRING_LEN(str) };
-  VALUE args[2] = { io, PTR2FIX(&buffer) };
-  return Polyphony_backend_write(2, args, self);
 }
 
 // VALUE Polyphony_backend_close(VALUE self, VALUE io) {
@@ -210,7 +204,6 @@ void Init_Polyphony() {
   rb_define_singleton_method(mPolyphony, "__raw_buffer_get__", Polyphony_raw_buffer_get, -1);
   rb_define_singleton_method(mPolyphony, "__raw_buffer_set__", Polyphony_raw_buffer_set, 2);
   rb_define_singleton_method(mPolyphony, "__raw_buffer_size__", Polyphony_raw_buffer_size, 1);
-  rb_define_singleton_method(mPolyphony, "backend_test", Polyphony_backend_test, 2);
 
   rb_define_global_function("snooze", Polyphony_snooze, 0);
   rb_define_global_function("suspend", Polyphony_suspend, 0);

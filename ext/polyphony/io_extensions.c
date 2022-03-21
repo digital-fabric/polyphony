@@ -12,7 +12,6 @@
 #include "assert.h"
 #include "ruby/thread.h"
 
-
 ID ID_at;
 ID ID_read_method;
 ID ID_readpartial;
@@ -31,6 +30,7 @@ VALUE SYM_orig_name;
 VALUE SYM_readpartial;
 
 enum read_method {
+  RM_STRING,
   RM_BACKEND_READ,
   RM_BACKEND_RECV,
   RM_READPARTIAL,
@@ -38,13 +38,15 @@ enum read_method {
 };
 
 enum write_method {
+  WM_STRING,
   WM_BACKEND_WRITE,
   WM_BACKEND_SEND,
   WM_WRITE,
   WM_CALL
 };
 
-static enum read_method detect_read_method(VALUE io) {
+static inline enum read_method detect_read_method(VALUE io) {
+  if (TYPE(io) == T_STRING) return RM_STRING;
   if (rb_respond_to(io, ID_read_method)) {
     VALUE method = rb_funcall(io, ID_read_method, 0);
     if (method == SYM_readpartial)  return RM_READPARTIAL;
@@ -60,7 +62,8 @@ static enum read_method detect_read_method(VALUE io) {
     rb_raise(rb_eRuntimeError, "Given io instance should be a callable or respond to #__read_method__");
 }
 
-static enum write_method detect_write_method(VALUE io) {
+static inline enum write_method detect_write_method(VALUE io) {
+  if (TYPE(io) == T_STRING) return WM_STRING;
   if (rb_respond_to(io, ID_write_method)) {
     VALUE method = rb_funcall(io, ID_write_method, 0);
     if (method == SYM_readpartial)    return WM_WRITE;
@@ -138,11 +141,17 @@ static inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method m
       RB_GC_GUARD(str);
       return len;
     }
+    default: {
+      rb_raise(rb_eRuntimeError, "Invalid read method");
+    }
   }
 }
 
 static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_method method, struct raw_buffer *buffer) {
   switch (method) {
+    case WM_STRING: {
+      rb_str_buf_cat(io, (char *)buffer->ptr, buffer->len);
+    }
     case WM_BACKEND_WRITE: {
       VALUE len = Backend_write(backend, io, PTR2FIX(buffer));
       return FIX2INT(len);
@@ -166,6 +175,9 @@ static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_meth
       rb_funcall(io, ID_call, 1, str);
       RB_GC_GUARD(str);
       return buffer->len;
+    }
+    default: {
+      rb_raise(rb_eRuntimeError, "Invalid write method");
     }
   }
 }
@@ -230,7 +242,7 @@ static inline time_t time_from_object(VALUE o) {
   return FIX2INT(rb_funcall(o, rb_intern("to_i"), 0));
 }
 
-int gzip_prepare_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
+int gzip_prepare_header(struct gzip_header_ctx *ctx, unsigned char *buffer, int maxlen) {
   int len = 0;
   unsigned char flags = 0, extraflags = 0;
 
@@ -261,7 +273,7 @@ int gzip_prepare_header(struct gzip_header_ctx *ctx, char *buffer, int maxlen) {
   return len;
 }
 
-int gzip_prepare_footer(unsigned long crc32, unsigned long total_in, char *buffer, int maxlen) {
+static inline int gzip_prepare_footer(unsigned long crc32, unsigned long total_in, unsigned char *buffer, int maxlen) {
   assert(maxlen >= GZIP_FOOTER_LEN);
 
   gzfile_set32(crc32, buffer);
@@ -289,8 +301,8 @@ struct z_stream_ctx {
 
   unsigned char in[CHUNK];
   unsigned char out[CHUNK];
-  int in_pos;
-  int out_pos;
+  unsigned int in_pos;
+  unsigned int out_pos;
   unsigned long in_total;
   unsigned long out_total;
 
@@ -299,8 +311,8 @@ struct z_stream_ctx {
 
 typedef int (*zlib_func)(z_streamp, int);
 
-void read_gzip_header_str(struct raw_buffer *buffer, VALUE *str, int *in_pos, unsigned long *total_read) {
-  int null_pos;
+void read_gzip_header_str(struct raw_buffer *buffer, VALUE *str, unsigned int *in_pos, unsigned long *total_read) {
+  unsigned long null_pos;
   // find null terminator
   for (null_pos = *in_pos; null_pos < *total_read; null_pos++) {
     if (!buffer->ptr[null_pos]) break;
@@ -308,7 +320,7 @@ void read_gzip_header_str(struct raw_buffer *buffer, VALUE *str, int *in_pos, un
   if (null_pos == *total_read)
     rb_raise(rb_eRuntimeError, "Invalid gzip header");
   
-  *str = rb_str_new_cstr(buffer->ptr + *in_pos);
+  *str = rb_str_new_cstr((char *)buffer->ptr + *in_pos);
   *in_pos = null_pos + 1;
 }
 
@@ -458,11 +470,12 @@ static inline void setup_ctx(struct z_stream_ctx *ctx, enum stream_mode mode, VA
   ctx->crc32 = 0;
 }
 
-VALUE z_stream_cleanup(struct z_stream_ctx *ctx) {
+static inline VALUE z_stream_cleanup(struct z_stream_ctx *ctx) {
   if (ctx->mode == SM_DEFLATE)
     deflateEnd(&ctx->strm);
   else
     inflateEnd(&ctx->strm);
+  return Qnil;
 }
 
 #define SAFE(f) (VALUE (*)(VALUE))(f)
@@ -499,9 +512,6 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
 }
 
 # define FIX2TIME(v) (rb_funcall(rb_cTime, ID_at, 1, v))
-
-VALUE io_gunzip_safe(struct z_stream_ctx *ctx) {
-}
 
 VALUE IO_gunzip(int argc, VALUE *argv, VALUE self) {
   VALUE src;
@@ -580,16 +590,16 @@ VALUE IO_http1_splice_chunked(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
     if (!len) break;
 
     // write chunk header
-    buffer.len += sprintf(buffer.ptr + buffer.len, "%x\r\n", len);
+    buffer.len += sprintf((char *)buffer.ptr + buffer.len, "%x\r\n", len);
     write_from_raw_buffer(backend, dest, method, &buffer);
     buffer.len = 0;
     while (len) {
       int spliced = FIX2INT(Backend_splice(backend, pipe, dest, INT2FIX(len)));
       len -= spliced;
     }
-    buffer.len += sprintf(buffer.ptr + buffer.len, "\r\n");
+    buffer.len += sprintf((char *)buffer.ptr + buffer.len, "\r\n");
   }
-  buffer.len += sprintf(buffer.ptr + buffer.len, "0\r\n\r\n");
+  buffer.len += sprintf((char *)buffer.ptr + buffer.len, "0\r\n\r\n");
   write_from_raw_buffer(backend, dest, method, &buffer);
 
   Pipe_close(pipe);

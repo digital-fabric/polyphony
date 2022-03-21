@@ -363,8 +363,6 @@ inline void set_fd_blocking_mode(int fd, int blocking) {
 }
 
 inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
-  int flags;
-  int is_nonblocking;
   VALUE blocking_mode = rb_ivar_get(io, ID_ivar_blocking_mode);
   if (blocking == blocking_mode) return;
 
@@ -481,7 +479,7 @@ struct io_buffer get_io_buffer(VALUE in) {
     struct raw_buffer *raw = FIX2PTR(in);
     return (struct io_buffer){ raw->ptr, raw->len, 1 };
   }
-  return (struct io_buffer){ RSTRING_PTR(in), RSTRING_LEN(in), 0 };
+  return (struct io_buffer){ (unsigned char *)RSTRING_PTR(in), RSTRING_LEN(in), 0 };
 }
 
 VALUE coerce_io_string_or_buffer(VALUE buf) {
