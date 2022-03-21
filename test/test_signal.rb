@@ -22,6 +22,7 @@ class SignalTrapTest < Minitest::Test
       Thread.backend.trace_proc = proc { |*e| events << [e[0], e[1].tag] }
       trap ('SIGINT') { }
 
+      sleep 0.1
       o1.orig_write("\n")
       o1.close
 
