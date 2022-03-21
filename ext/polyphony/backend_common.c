@@ -140,7 +140,9 @@ inline void backend_base_unpark_fiber(struct Backend_base *base, VALUE fiber) {
 inline void backend_trace(struct Backend_base *base, int argc, VALUE *argv) {
   if (base->trace_proc == Qnil || base->in_trace_proc) return;
 
+  base->in_trace_proc = 1;
   rb_funcallv(base->trace_proc, ID_call, argc, argv);
+  base->in_trace_proc = 0;
 }
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN
