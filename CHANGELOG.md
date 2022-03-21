@@ -1,3 +1,7 @@
+## 0.90 2022-03-21
+
+- Fix possible compilation error on Ruby 2.7.5 (#79)
+
 ## 0.89 2022-03-21
 
 - Implement compression/decompression to/from strings (#86)
