@@ -71,7 +71,8 @@ $defs << '-DPOLYPHONY_PLAYGROUND' if ENV['POLYPHONY_PLAYGROUND']
 
 CONFIG['optflags'] << ' -fno-strict-aliasing' unless RUBY_PLATFORM =~ /mswin/
 
-have_func('rb_fiber_transfer', 'ruby.h')
-
+if RUBY_VERSION >= '3.1'
+  have_func('rb_fiber_transfer', 'ruby.h')
+end
 
 create_makefile 'polyphony_ext'
