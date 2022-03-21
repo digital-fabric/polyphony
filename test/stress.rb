@@ -3,7 +3,7 @@
 count = ARGV[0] ? ARGV[0].to_i : 100
 test_name = ARGV[1]
 
-$test_cmd = +'ruby test/run.rb  --name test_cross_thread_send_receive'
+$test_cmd = +'ruby test/run.rb  --name test_signal_handler_trace'
 if test_name
   $test_cmd << " --name #{test_name}"
 end

@@ -22,7 +22,6 @@ class SignalTrapTest < Minitest::Test
       Thread.backend.trace_proc = proc { |*e| events << [e[0], e[1].tag] }
       trap ('SIGINT') { }
 
-      sleep 0.1
       o1.orig_write("\n")
       o1.close
 
@@ -33,11 +32,15 @@ class SignalTrapTest < Minitest::Test
       trap ('SIGINT') { raise Interrupt }
     end
 
+    # remove [:spin, :oob], [:schedule, :oob], since they are generated inside
+    # the signal handler, which occur while the trace proc is running.
+    events = events.reject do |e|
+      e == [:spin, :oob] || e == [:schedule, :oob]
+    end
+
     expected = [
       [:block, :main],
       [:enter_poll, :main],
-      [:spin, :oob],
-      [:schedule, :oob],
       [:leave_poll, :main],
       [:unblock, :oob],
       [:terminate, :oob],
