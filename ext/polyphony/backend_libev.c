@@ -311,7 +311,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
 
     if (string_cap < expected_read_length + buf_pos) {
       shrinkable_string = io_setstrbuf(&str, expected_read_length + buf_pos);
-      buffer.ptr = RSTRING_PTR(str) + buf_pos;
+      buffer.ptr = (unsigned char *)RSTRING_PTR(str) + buf_pos;
       buffer.len = expected_read_length;
     }
     else {
@@ -353,7 +353,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
         rb_str_resize(str, total + buf_pos);
         rb_str_modify_expand(str, rb_str_capacity(str));
         shrinkable_string = 0;
-        buffer.ptr = RSTRING_PTR(str) + total + buf_pos;
+        buffer.ptr = (unsigned char *)RSTRING_PTR(str) + total + buf_pos;
         buffer.len = rb_str_capacity(str) - total - buf_pos;
       }
       else {
