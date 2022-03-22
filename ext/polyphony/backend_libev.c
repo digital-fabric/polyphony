@@ -291,7 +291,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   rb_io_t *fptr;
 
   struct io_buffer buffer = get_io_buffer(str);
-  long buf_pos = NUM2INT(pos);
+  long buf_pos = FIX2INT(pos);
   int shrinkable_string = 0;
   int expandable_buffer = 0;
   long total = 0;
@@ -389,7 +389,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   rb_io_t *fptr;
   VALUE str;
   long total;
-  long len = NUM2INT(maxlen);
+  long len = FIX2INT(maxlen);
   int shrinkable;
   char *buf;
   VALUE switchpoint_result = Qnil;
@@ -519,7 +519,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2NUM(buffer.len);
+  return INT2FIX(buffer.len);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -590,7 +590,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   RB_GC_GUARD(switchpoint_result);
 
   free(iov);
-  return INT2NUM(total_written);
+  return INT2FIX(total_written);
 error:
   free(iov);
   return RAISE_EXCEPTION(switchpoint_result);
@@ -763,7 +763,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
 
   struct io_buffer buffer = get_io_buffer(str);
   long left = buffer.len;
-  int flags_int = NUM2INT(flags);
+  int flags_int = FIX2INT(flags);
 
   GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 1, 0);
@@ -795,7 +795,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2NUM(buffer.len);
+  return INT2FIX(buffer.len);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -868,7 +868,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   while (1) {
     backend->base.op_count++;
-    len = splice(src_fd, 0, dest_fd, 0, NUM2INT(maxlen), 0);
+    len = splice(src_fd, 0, dest_fd, 0, FIX2INT(maxlen), 0);
     if (len < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -889,7 +889,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   RB_GC_GUARD(watcher.ctx.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2NUM(len);
+  return INT2FIX(len);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -912,7 +912,7 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   while (1) {
     backend->base.op_count++;
-    len = splice(src_fd, 0, dest_fd, 0, NUM2INT(maxlen), 0);
+    len = splice(src_fd, 0, dest_fd, 0, FIX2INT(maxlen), 0);
     if (len < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -936,7 +936,7 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   RB_GC_GUARD(watcher.ctx.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2NUM(total);
+  return INT2FIX(total);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -958,7 +958,7 @@ VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   while (1) {
     backend->base.op_count++;
-    len = tee(src_fd, dest_fd, NUM2INT(maxlen), 0);
+    len = tee(src_fd, dest_fd, FIX2INT(maxlen), 0);
     if (len < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -979,7 +979,7 @@ VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   RB_GC_GUARD(watcher.ctx.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2NUM(len);
+  return INT2FIX(len);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -994,7 +994,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
-  int len = NUM2INT(maxlen);
+  int len = FIX2INT(maxlen);
   VALUE str = rb_str_new(0, len);
   char *buf = RSTRING_PTR(str);
   int left = 0;
@@ -1047,7 +1047,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   RB_GC_GUARD(switchpoint_result);
   RB_GC_GUARD(str);
 
-  return INT2NUM(total);
+  return INT2FIX(total);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -1060,7 +1060,7 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
-  int len = NUM2INT(maxlen);
+  int len = FIX2INT(maxlen);
   VALUE str = rb_str_new(0, len);
   char *buf = RSTRING_PTR(str);
   int left = 0;
@@ -1118,7 +1118,7 @@ done:
   RB_GC_GUARD(switchpoint_result);
   RB_GC_GUARD(str);
 
-  return INT2NUM(total);
+  return INT2FIX(total);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -1263,7 +1263,7 @@ VALUE Backend_timeout(int argc,VALUE *argv, VALUE self) {
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
-  int pid_int = NUM2INT(pid);
+  int pid_int = FIX2INT(pid);
   int fd = pidfd_open(pid_int, 0);
   if (fd >= 0) {
     Backend_t *backend;
@@ -1286,7 +1286,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
     int e = errno;
     rb_syserr_fail(e, strerror(e));
   }
-  return rb_ary_new_from_args(2, INT2NUM(ret), INT2NUM(WEXITSTATUS(status)));
+  return rb_ary_new_from_args(2, INT2FIX(ret), INT2FIX(WEXITSTATUS(status)));
 }
 #else
 struct libev_child {
@@ -1299,7 +1299,7 @@ void Backend_child_callback(EV_P_ ev_child *w, int revents) {
   int exit_status = WEXITSTATUS(w->rstatus);
   VALUE status;
 
-  status = rb_ary_new_from_args(2, INT2NUM(w->rpid), INT2NUM(exit_status));
+  status = rb_ary_new_from_args(2, INT2FIX(w->rpid), INT2FIX(exit_status));
   Fiber_make_runnable(watcher->fiber, status);
 }
 
@@ -1310,7 +1310,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   GetBackend(self, backend);
 
   watcher.fiber = rb_fiber_current();
-  ev_child_init(&watcher.child, Backend_child_callback, NUM2INT(pid), 0);
+  ev_child_init(&watcher.child, Backend_child_callback, FIX2INT(pid), 0);
   ev_child_start(backend->ev_loop, &watcher.child);
   backend->base.op_count++;
 
@@ -1491,7 +1491,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
   struct libev_rw_io watcher;
   watcher.ctx.fiber = Qnil;
-  int maxlen = NUM2INT(chunk_size);
+  int maxlen = FIX2INT(chunk_size);
   VALUE str = Qnil;
   VALUE chunk_len_value = Qnil;
 
@@ -1515,7 +1515,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     if (chunk_len == 0) break;
 
     total += chunk_len;
-    chunk_len_value = INT2NUM(chunk_len);
+    chunk_len_value = INT2FIX(chunk_len);
 
     if (chunk_prefix != Qnil) {
       VALUE str = (TYPE(chunk_prefix) == T_STRING) ? chunk_prefix : rb_funcall(chunk_prefix, ID_call, 1, chunk_len_value);
@@ -1553,7 +1553,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   RB_GC_GUARD(result);
   if (pipefd[0] != -1) close(pipefd[0]);
   if (pipefd[1] != -1) close(pipefd[1]);
-  return INT2NUM(total);
+  return INT2FIX(total);
 syscallerror:
   if (pipefd[0] != -1) close(pipefd[0]);
   if (pipefd[1] != -1) close(pipefd[1]);

@@ -126,7 +126,7 @@ VALUE Polyphony_backend_write(int argc, VALUE *argv, VALUE self) {
 
 VALUE Polyphony_with_raw_buffer(VALUE self, VALUE size) {
   struct raw_buffer buffer;
-  buffer.len = NUM2INT(size);
+  buffer.len = FIX2INT(size);
   buffer.ptr = malloc(buffer.len);
   if (!buffer.ptr)
     rb_raise(rb_eRuntimeError, "Failed to allocate buffer");

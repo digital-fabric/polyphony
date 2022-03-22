@@ -418,13 +418,13 @@ VALUE Backend_stats(VALUE self) {
   struct backend_stats backend_stats = backend_get_stats(self);
 
   VALUE stats = rb_hash_new();
-  rb_hash_aset(stats, SYM_runqueue_size, INT2NUM(backend_stats.runqueue_size));
-  rb_hash_aset(stats, SYM_runqueue_length, INT2NUM(backend_stats.runqueue_length));
-  rb_hash_aset(stats, SYM_runqueue_max_length, INT2NUM(backend_stats.runqueue_max_length));
-  rb_hash_aset(stats, SYM_op_count, INT2NUM(backend_stats.op_count));
-  rb_hash_aset(stats, SYM_switch_count, INT2NUM(backend_stats.switch_count));
-  rb_hash_aset(stats, SYM_poll_count, INT2NUM(backend_stats.poll_count));
-  rb_hash_aset(stats, SYM_pending_ops, INT2NUM(backend_stats.pending_ops));
+  rb_hash_aset(stats, SYM_runqueue_size, INT2FIX(backend_stats.runqueue_size));
+  rb_hash_aset(stats, SYM_runqueue_length, INT2FIX(backend_stats.runqueue_length));
+  rb_hash_aset(stats, SYM_runqueue_max_length, INT2FIX(backend_stats.runqueue_max_length));
+  rb_hash_aset(stats, SYM_op_count, INT2FIX(backend_stats.op_count));
+  rb_hash_aset(stats, SYM_switch_count, INT2FIX(backend_stats.switch_count));
+  rb_hash_aset(stats, SYM_poll_count, INT2FIX(backend_stats.poll_count));
+  rb_hash_aset(stats, SYM_pending_ops, INT2FIX(backend_stats.pending_ops));
   RB_GC_GUARD(stats);
   return stats;
 }

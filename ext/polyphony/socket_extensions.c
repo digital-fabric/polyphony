@@ -6,13 +6,13 @@ VALUE Socket_send(VALUE self, VALUE msg, VALUE flags) {
 
 VALUE Socket_write(int argc, VALUE *argv, VALUE self) {
   VALUE ary = rb_ary_new_from_values(argc, argv);
-  VALUE result = Backend_sendv(BACKEND(), self, ary, INT2NUM(0));
+  VALUE result = Backend_sendv(BACKEND(), self, ary, INT2FIX(0));
   RB_GC_GUARD(ary);
   return result;
 }
 
 VALUE Socket_double_chevron(VALUE self, VALUE msg) {
-  Backend_send(BACKEND(), self, msg, INT2NUM(0));
+  Backend_send(BACKEND(), self, msg, INT2FIX(0));
   return self;
 }
 

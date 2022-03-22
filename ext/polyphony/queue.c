@@ -210,7 +210,7 @@ VALUE Queue_capped_p(VALUE self) {
   Queue_t *queue;
   GetQueue(self, queue);
 
-  return queue->capacity ? UINT2NUM(queue->capacity) : Qnil;
+  return queue->capacity ? INT2FIX(queue->capacity) : Qnil;
 }
 
 VALUE Queue_clear(VALUE self) {
@@ -280,14 +280,14 @@ VALUE Queue_num_waiting(VALUE self) {
   Queue_t *queue;
   GetQueue(self, queue);
 
-  return INT2NUM(queue->shift_queue.count);
+  return INT2FIX(queue->shift_queue.count);
 }
 
 VALUE Queue_size_m(VALUE self) {
   Queue_t *queue;
   GetQueue(self, queue);
 
-  return INT2NUM(queue->values.count);
+  return INT2FIX(queue->values.count);
 }
 
 VALUE Queue_closed_p(VALUE self) {
