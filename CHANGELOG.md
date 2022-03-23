@@ -1,3 +1,9 @@
+## 0.91 2022-03-23
+
+- Add pipe examples
+- Implement `Backend#double_splice_to_eof` (io_ring only)
+- Improve safety of tracing
+
 ## 0.90 2022-03-21
 
 - Fix possible compilation error on Ruby 2.7.5 (#79)
