@@ -369,7 +369,7 @@ class IOTest < MiniTest::Test
   end
 
   def test_double_splice_to_eof
-    if Thread.current.backend.kind == :io_uring
+    if Thread.current.backend.kind != :io_uring
       skip "IO.double_splice_to_eof available only with io_uring"
     end
 
