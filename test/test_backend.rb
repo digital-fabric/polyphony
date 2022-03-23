@@ -191,8 +191,10 @@ class BackendTest < MiniTest::Test
   Net = Polyphony::Net
 
   def test_accept
+    port = rand(1234..4321)
+
     server = Net.send(
-      :listening_socket_from_options, '127.0.0.1', 1234, reuse_addr: true
+      :listening_socket_from_options, '127.0.0.1', port, reuse_addr: true
     )
 
     clients = []
@@ -201,12 +203,12 @@ class BackendTest < MiniTest::Test
       clients << c
     end
 
-    c1 = TCPSocket.new('127.0.0.1', 1234)
+    c1 = TCPSocket.new('127.0.0.1', port)
     sleep 0.01
 
     assert_equal 1, clients.size
 
-    c2 = TCPSocket.new('127.0.0.1', 1234)
+    c2 = TCPSocket.new('127.0.0.1', port)
     sleep 0.01
 
     assert_equal 2, clients.size
@@ -220,8 +222,9 @@ class BackendTest < MiniTest::Test
   end
 
   def test_accept_loop
+    port = rand(1234..4321)
     server = Net.send(
-      :listening_socket_from_options, '127.0.0.1', 1235, reuse_addr: true
+      :listening_socket_from_options, '127.0.0.1', port, reuse_addr: true
     )
 
     clients = []
@@ -229,12 +232,12 @@ class BackendTest < MiniTest::Test
       @backend.accept_loop(server, TCPSocket) { |c| clients << c }
     end
 
-    c1 = TCPSocket.new('127.0.0.1', 1235)
+    c1 = TCPSocket.new('127.0.0.1', port)
     sleep 0.01
 
     assert_equal 1, clients.size
 
-    c2 = TCPSocket.new('127.0.0.1', 1235)
+    c2 = TCPSocket.new('127.0.0.1', port)
     sleep 0.01
 
     assert_equal 2, clients.size
