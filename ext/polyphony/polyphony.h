@@ -35,6 +35,9 @@
 
 #define BACKEND() (rb_ivar_get(rb_thread_current(), ID_ivar_backend))
 
+// SAFE is used to cast functions used in rb_ensure
+#define SAFE(f) (VALUE (*)(VALUE))(f)
+
 extern VALUE mPolyphony;
 extern VALUE cPipe;
 extern VALUE cQueue;
@@ -113,6 +116,10 @@ VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags);
 VALUE Backend_sleep(VALUE self, VALUE duration);
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen);
 VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize);
+
+#ifdef POLYPHONY_BACKEND_LIBURING
+VALUE Backend_double_splice_to_eof(VALUE self, VALUE src, VALUE dest);
+#endif
 
 #ifdef POLYPHONY_LINUX
 VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen);

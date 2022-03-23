@@ -502,7 +502,6 @@ static inline VALUE z_stream_cleanup(struct z_stream_ctx *ctx) {
   return Qnil;
 }
 
-#define SAFE(f) (VALUE (*)(VALUE))(f)
 #define Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx) \
   rb_ensure(SAFE(z_stream_io_loop), (VALUE)&ctx, SAFE(z_stream_cleanup), (VALUE)&ctx)
 

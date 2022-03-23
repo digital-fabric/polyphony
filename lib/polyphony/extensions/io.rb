@@ -83,6 +83,10 @@ class ::IO
     end
 
     if RUBY_PLATFORM =~ /linux/
+      def double_splice_to_eof(src, dest)
+        Polyphony.backend_double_splice_to_eof(src, dest)
+      end
+    
       def tee(src, dest, maxlen)
         Polyphony.backend_tee(src, dest, maxlen)
       end

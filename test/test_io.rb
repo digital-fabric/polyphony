@@ -368,6 +368,31 @@ class IOTest < MiniTest::Test
     end
   end
 
+  def test_double_splice_to_eof
+    if Thread.current.backend.kind == :io_uring
+      skip "IO.double_splice_to_eof available only with io_uring"
+    end
+
+    src = Polyphony.pipe
+    dest = Polyphony.pipe
+    ret = nil
+    data = 'foobar' * 10
+
+    f1 = spin {
+      ret = IO.double_splice_to_eof(src, dest)
+      dest.close
+    }
+
+    src << data
+    src.close
+
+    f1.await
+
+    spliced = dest.read
+    assert_equal data, spliced
+    assert_equal data.bytesize, ret
+  end
+
   def test_tee_from
     skip "tested only on Linux" unless RUBY_PLATFORM =~ /linux/
     

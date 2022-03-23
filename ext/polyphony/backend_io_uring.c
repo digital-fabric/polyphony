@@ -984,6 +984,112 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize) 
   return io_uring_backend_splice(backend, src, dest, chunksize, 1);
 }
 
+struct double_splice_ctx {
+  Backend_t *backend;
+  VALUE src;
+  VALUE dest;
+  int pipefd[2];
+};
+
+#define DOUBLE_SPLICE_MAXLEN (1 << 16)
+
+static inline op_context_t *prepare_double_splice_ctx(Backend_t *backend, int src_fd, int dest_fd) {
+  op_context_t *ctx = context_store_acquire(&backend->store, OP_SPLICE);
+  struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
+  io_uring_prep_splice(sqe, src_fd, -1, dest_fd, -1, DOUBLE_SPLICE_MAXLEN, 0);
+  io_uring_sqe_set_data(sqe, ctx);
+  io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
+  backend->base.op_count += 1;
+  backend->pending_sqes += 1;
+
+  return ctx;
+}
+
+static inline void io_uring_backend_cancel(Backend_t *backend, op_context_t *ctx) {
+  struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
+  ctx->result = -ECANCELED;
+  io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+}
+
+VALUE double_splice_to_eof_safe(struct double_splice_ctx *ctx) {
+  int src_fd;
+  int dest_fd;
+  rb_io_t *src_fptr;
+  rb_io_t *dest_fptr;
+  int total = 0;
+  VALUE resume_value = Qnil;
+
+  src_fd = fd_from_io(ctx->src, &src_fptr, 0, 0);
+  dest_fd = fd_from_io(ctx->dest, &dest_fptr, 1, 0);
+
+  op_context_t *ctx_src = prepare_double_splice_ctx(ctx->backend, src_fd, ctx->pipefd[1]);
+  op_context_t *ctx_dest = prepare_double_splice_ctx(ctx->backend, ctx->pipefd[0], dest_fd);
+
+  if (ctx->backend->pending_sqes >= ctx->backend->prepared_limit)
+    io_uring_backend_immediate_submit(ctx->backend);
+
+  while (1) {
+    resume_value = backend_await((struct Backend_base *)ctx->backend);
+
+    if ((ctx_src && ctx_src->ref_count == 2 && ctx_dest && ctx_dest->ref_count == 2) || TEST_EXCEPTION(resume_value)) {
+      if (ctx_src) {
+        context_store_release(&ctx->backend->store, ctx_src);
+        io_uring_backend_cancel(ctx->backend, ctx_src);
+      }
+      if (ctx_dest) {
+        context_store_release(&ctx->backend->store, ctx_dest);
+        io_uring_backend_cancel(ctx->backend, ctx_dest);
+      }
+      io_uring_backend_immediate_submit(ctx->backend);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
+
+    if (ctx_src && ctx_src->ref_count == 1) {
+      context_store_release(&ctx->backend->store, ctx_src);
+      if (ctx_src->result == 0) {
+        // close write end of pipe
+        close(ctx->pipefd[1]);
+        ctx_src = NULL;
+      }
+      else {
+        ctx_src = prepare_double_splice_ctx(ctx->backend, src_fd, ctx->pipefd[1]);
+      }
+    }
+    if (ctx_dest && ctx_dest->ref_count == 1) {
+      context_store_release(&ctx->backend->store, ctx_dest);
+      if (ctx_dest->result == 0)
+        break;
+      else {
+        total += ctx_dest->result;
+        ctx_dest = prepare_double_splice_ctx(ctx->backend, ctx->pipefd[0], dest_fd);
+      }
+    }
+
+    if (ctx->backend->pending_sqes >= ctx->backend->prepared_limit)
+      io_uring_backend_immediate_submit(ctx->backend);
+  }
+  RB_GC_GUARD(resume_value);
+  return INT2FIX(total);
+}
+
+VALUE double_splice_to_eof_cleanup(struct double_splice_ctx *ctx) {
+  if (ctx->pipefd[0]) close(ctx->pipefd[0]);
+  if (ctx->pipefd[1]) close(ctx->pipefd[1]);
+  return Qnil;
+}
+
+VALUE Backend_double_splice_to_eof(VALUE self, VALUE src, VALUE dest) {
+  struct double_splice_ctx ctx = { NULL, src, dest, 0, 0 };
+  GetBackend(self, ctx.backend);
+  if (pipe(ctx.pipefd) == -1) rb_syserr_fail(errno, strerror(errno));
+
+  return rb_ensure(
+    SAFE(double_splice_to_eof_safe), (VALUE)&ctx,
+    SAFE(double_splice_to_eof_cleanup), (VALUE)&ctx
+  );
+}
+
 VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -1693,9 +1799,12 @@ void Init_Backend() {
   rb_define_method(cBackend, "send", Backend_send, 3);
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
+
   rb_define_method(cBackend, "splice", Backend_splice, 3);
   rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
+  rb_define_method(cBackend, "double_splice_to_eof", Backend_double_splice_to_eof, 2);
   rb_define_method(cBackend, "tee", Backend_tee, 3);
+
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);
   rb_define_method(cBackend, "timer_loop", Backend_timer_loop, 1);
   rb_define_method(cBackend, "wait_event", Backend_wait_event, 1);
