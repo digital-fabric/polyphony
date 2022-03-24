@@ -26,8 +26,11 @@ runqueue_entry runqueue_ring_buffer_shift(runqueue_ring_buffer *buffer);
 void runqueue_ring_buffer_unshift(runqueue_ring_buffer *buffer, VALUE fiber, VALUE value);
 void runqueue_ring_buffer_push(runqueue_ring_buffer *buffer, VALUE fiber, VALUE value);
 
+void runqueue_ring_buffer_delete_at(runqueue_ring_buffer *buffer, unsigned int idx);
 void runqueue_ring_buffer_delete(runqueue_ring_buffer *buffer, VALUE fiber);
 int runqueue_ring_buffer_index_of(runqueue_ring_buffer *buffer, VALUE fiber);
+
+void runqueue_ring_buffer_set_resume_value_at(runqueue_ring_buffer *buffer, unsigned int idx, VALUE value);
 
 void runqueue_ring_buffer_migrate(runqueue_ring_buffer *src, runqueue_ring_buffer *dest, VALUE fiber);
 
