@@ -73,7 +73,7 @@ class TimerCancelAfterTest < MiniTest::Test
       end
     end
     t1 = Time.now
-    assert_in_range 0.01..0.04, t1 - t0 if IS_LINUX
+    assert_in_range 0.01..0.03, t1 - t0 if IS_LINUX
   end
 
   def test_timer_cancel_after_with_reset

@@ -151,8 +151,6 @@ static inline void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, 
   if (!ctx) return;
 
   // printf("cqe ctx %p id: %d result: %d (%s, ref_count: %d)\n", ctx, ctx->id, cqe->res, op_type_to_str(ctx->type), ctx->ref_count);
-  // if (ctx->resume_value != Qnil) INSPECT("  resume value", ctx->resume_value);
-
   ctx->result = cqe->res;
   if (ctx->ref_count == 2 && ctx->result != -ECANCELED && ctx->fiber)
     Fiber_make_runnable(ctx->fiber, ctx->resume_value);

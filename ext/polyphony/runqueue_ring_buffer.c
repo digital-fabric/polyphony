@@ -70,8 +70,6 @@ inline void runqueue_ring_buffer_mark(runqueue_ring_buffer *buffer) {
 }
 
 inline void runqueue_ring_buffer_delete_at(runqueue_ring_buffer *buffer, unsigned int idx) {
-  if (idx >= buffer->count) return;
-  
   for (unsigned int idx2 = idx; idx2 != buffer->tail; idx2 = (idx2 + 1) % buffer->size) {
     buffer->entries[idx2] = buffer->entries[(idx2 + 1) % buffer->size];
   }
@@ -87,13 +85,6 @@ inline void runqueue_ring_buffer_delete(runqueue_ring_buffer *buffer, VALUE fibe
       return;
     }
   }
-}
-
-inline void runqueue_ring_buffer_set_resume_value_at(runqueue_ring_buffer *buffer, unsigned int idx, VALUE value) {
-  if (idx >= buffer->count) return;
-
-  unsigned int ptr = (buffer->head + idx) % buffer->size;
-  buffer->entries[ptr].value = value;
 }
 
 inline int runqueue_ring_buffer_index_of(runqueue_ring_buffer *buffer, VALUE fiber) {

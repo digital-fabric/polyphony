@@ -15,19 +15,7 @@ inline void runqueue_mark(runqueue_t *runqueue) {
 }
 
 inline void runqueue_push(runqueue_t *runqueue, VALUE fiber, VALUE value, int reschedule) {
-  if (reschedule) {
-    int idx = runqueue_ring_buffer_index_of(&runqueue->entries, fiber);
-    
-    // check if the fiber is the last entry
-    if (idx == runqueue->entries.count - 1) {
-      // if it is, we can simply update the resume value, no need to do all that
-      // work for nothing.
-      runqueue_ring_buffer_set_resume_value_at(&runqueue->entries, idx, value);
-      return;
-    }
-    
-    runqueue_ring_buffer_delete_at(&runqueue->entries, idx);
-  }
+  if (reschedule) runqueue_ring_buffer_delete(&runqueue->entries, fiber);
   runqueue_ring_buffer_push(&runqueue->entries, fiber, value);
   if (runqueue->entries.count > runqueue->high_watermark)
     runqueue->high_watermark = runqueue->entries.count;
