@@ -19,13 +19,22 @@ def handle_client(conn)
 
     # Fiber.current.await_all_children
 
-    spin { IO.double_splice_to_eof(conn, dest) }
+    f = spin do
+      IO.double_splice_to_eof(conn, dest)
+      raise EOFError
+    end
     IO.double_splice_to_eof(dest, conn)
+    f.await
+  rescue EOFError, SystemCallError
+    # ignore
+  ensure
+    conn.close rescue nil
+    dest.close rescue nil
   end
-rescue SystemCallError
-  dest.close rescue nil
-  # ignore
 end
 
 puts "Serving TCP proxy on port 4321..."
-TCPServer.new('127.0.0.1', 4321).accept_loop { |c| handle_client(c) }
+server = TCPServer.new('127.0.0.1', 4321)
+while (conn = server.accept)
+  handle_client(conn)
+end
