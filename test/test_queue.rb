@@ -301,7 +301,7 @@ class CappedQueueTest < MiniTest::Test
     end
 
     Fiber.join(a, b, c)
-    assert_equal [:p1, :p4, :s1, :p5, :p2, :s4, :p3, :s5, :p6, :s2, :s3, :s6], buffer
+    assert_equal [:p1, :p4, :s1, :p2, :p5, :s4, :p6, :s2, :p3, :s5, :s6, :s3], buffer
   end
 
   def test_capped_clear

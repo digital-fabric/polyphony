@@ -250,8 +250,8 @@ class SpinLoopTest < MiniTest::Test
     assert_equal [1, 2, 3], buffer
     f.stop
     snooze
+    assert_equal [1, 2, 3, 4], buffer
     assert !f.running?
-    assert_equal [1, 2, 3], buffer
   end
 
   def test_spin_loop_location
