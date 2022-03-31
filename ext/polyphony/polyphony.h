@@ -115,10 +115,9 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE msg, VALUE flags);
 VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags);
 VALUE Backend_sleep(VALUE self, VALUE duration);
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen);
-VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize);
 
 #ifdef POLYPHONY_BACKEND_LIBURING
-VALUE Backend_double_splice_to_eof(VALUE self, VALUE src, VALUE dest);
+VALUE Backend_double_splice(VALUE self, VALUE src, VALUE dest);
 #endif
 
 #ifdef POLYPHONY_LINUX

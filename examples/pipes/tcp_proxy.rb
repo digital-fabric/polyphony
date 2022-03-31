@@ -11,19 +11,19 @@ def handle_client(conn)
     # w_buffer = Polyphony.pipe
     # r_buffer = Polyphony.pipe
     
-    # spin { IO.splice_to_eof(conn, w_buffer) }
-    # spin { IO.splice_to_eof(w_buffer, dest) }
+    # spin { IO.splice(conn, w_buffer, -1000) }
+    # spin { IO.splice(w_buffer, dest, -1000) }
 
-    # spin { IO.splice_to_eof(dest, r_buffer) }
-    # spin { IO.splice_to_eof(r_buffer, conn) }
+    # spin { IO.splice(dest, r_buffer, -1000) }
+    # spin { IO.splice(r_buffer, conn, -1000) }
 
     # Fiber.current.await_all_children
 
     f = spin do
-      IO.double_splice_to_eof(conn, dest)
+      IO.double_splice(conn, dest)
       raise EOFError
     end
-    IO.double_splice_to_eof(dest, conn)
+    IO.double_splice(dest, conn)
     f.await
   rescue EOFError, SystemCallError
     # ignore

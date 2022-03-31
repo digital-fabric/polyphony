@@ -90,13 +90,9 @@ VALUE Polyphony_backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) 
   return Backend_splice(BACKEND(), src, dest, maxlen);
 }
 
-VALUE Polyphony_backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize) {
-  return Backend_splice_to_eof(BACKEND(), src, dest, chunksize);
-}
-
 #ifdef POLYPHONY_BACKEND_LIBURING
-VALUE Polyphony_backend_double_splice_to_eof(VALUE self, VALUE src, VALUE dest) {
-  return Backend_double_splice_to_eof(BACKEND(), src, dest);
+VALUE Polyphony_backend_double_splice(VALUE self, VALUE src, VALUE dest) {
+  return Backend_double_splice(BACKEND(), src, dest);
 }
 #endif
 
@@ -191,10 +187,9 @@ void Init_Polyphony() {
   rb_define_singleton_method(mPolyphony, "backend_sendv", Polyphony_backend_sendv, 3);
   rb_define_singleton_method(mPolyphony, "backend_sleep", Polyphony_backend_sleep, 1);
   rb_define_singleton_method(mPolyphony, "backend_splice", Polyphony_backend_splice, 3);
-  rb_define_singleton_method(mPolyphony, "backend_splice_to_eof", Polyphony_backend_splice_to_eof, 3);
  
   #ifdef POLYPHONY_BACKEND_LIBURING
-  rb_define_singleton_method(mPolyphony, "backend_double_splice_to_eof", Polyphony_backend_double_splice_to_eof, 2);
+  rb_define_singleton_method(mPolyphony, "backend_double_splice", Polyphony_backend_double_splice, 2);
   #endif
 
   #ifdef POLYPHONY_LINUX

@@ -7,8 +7,8 @@ require 'polyphony'
 
 def handle_echo_client(conn)
   buffer = Polyphony.pipe
-  spin { buffer.splice_to_eof_from(conn) }
-  spin { conn.splice_to_eof_from(buffer) }
+  spin { buffer.splice_from(conn, -1000) }
+  spin { conn.splice_from(buffer, -1000) }
 end
 
 puts "Serving echo on port 1234..."

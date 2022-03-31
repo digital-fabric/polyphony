@@ -15,7 +15,7 @@ f1 = spin {
   client1 = server1.accept
   loop do
     if client2
-      Thread.current.backend.splice_to_eof(client1, client2)
+      Thread.current.backend.splice(client1, client2, -1000)
     end
   end
 }
@@ -24,7 +24,7 @@ f2 = spin {
   client2 = server2.accept
   loop do
     if client1
-      Thread.current.backend.splice_to_eof(client2, client1)
+      Thread.current.backend.splice(client2, client1, -1000)
     end
   end
 }

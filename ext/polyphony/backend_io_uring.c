@@ -937,13 +937,15 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   return self;
 }
 
-VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE maxlen, int loop) {
+VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, int maxlen) {
   int src_fd;
   int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   int total = 0;
   VALUE resume_value = Qnil;
+  int splice_to_eof = maxlen < 0;
+  if (splice_to_eof) maxlen = -maxlen;
 
   src_fd = fd_from_io(src, &src_fptr, 0, 0);
   dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
@@ -954,7 +956,7 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
     int result;
     int completed;
 
-    io_uring_prep_splice(sqe, src_fd, -1, dest_fd, -1, FIX2INT(maxlen), 0);
+    io_uring_prep_splice(sqe, src_fd, -1, dest_fd, -1, maxlen, 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -965,7 +967,7 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
       rb_syserr_fail(-result, strerror(-result));
 
     total += result;
-    if (result == 0 || !loop) return INT2FIX(total);
+    if (!result || !splice_to_eof) return INT2FIX(total);
   }
 
   RB_GC_GUARD(resume_value);
@@ -974,14 +976,7 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, VALUE m
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   GetBackend(self, backend);
-  return io_uring_backend_splice(backend, src, dest, maxlen, 0);
-}
-
-VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE chunksize) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  return io_uring_backend_splice(backend, src, dest, chunksize, 1);
+  return io_uring_backend_splice(backend, src, dest, FIX2INT(maxlen));
 }
 
 struct double_splice_ctx {
@@ -1011,7 +1006,7 @@ static inline void io_uring_backend_cancel(Backend_t *backend, op_context_t *ctx
   io_uring_prep_cancel(sqe, (__u64)ctx, 0);
 }
 
-VALUE double_splice_to_eof_safe(struct double_splice_ctx *ctx) {
+VALUE double_splice_safe(struct double_splice_ctx *ctx) {
   int src_fd;
   int dest_fd;
   rb_io_t *src_fptr;
@@ -1073,20 +1068,20 @@ VALUE double_splice_to_eof_safe(struct double_splice_ctx *ctx) {
   return INT2FIX(total);
 }
 
-VALUE double_splice_to_eof_cleanup(struct double_splice_ctx *ctx) {
+VALUE double_splice_cleanup(struct double_splice_ctx *ctx) {
   if (ctx->pipefd[0]) close(ctx->pipefd[0]);
   if (ctx->pipefd[1]) close(ctx->pipefd[1]);
   return Qnil;
 }
 
-VALUE Backend_double_splice_to_eof(VALUE self, VALUE src, VALUE dest) {
+VALUE Backend_double_splice(VALUE self, VALUE src, VALUE dest) {
   struct double_splice_ctx ctx = { NULL, src, dest, 0, 0 };
   GetBackend(self, ctx.backend);
   if (pipe(ctx.pipefd) == -1) rb_syserr_fail(errno, strerror(errno));
 
   return rb_ensure(
-    SAFE(double_splice_to_eof_safe), (VALUE)&ctx,
-    SAFE(double_splice_to_eof_cleanup), (VALUE)&ctx
+    SAFE(double_splice_safe), (VALUE)&ctx,
+    SAFE(double_splice_cleanup), (VALUE)&ctx
   );
 }
 
@@ -1801,8 +1796,7 @@ void Init_Backend() {
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
 
   rb_define_method(cBackend, "splice", Backend_splice, 3);
-  rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
-  rb_define_method(cBackend, "double_splice_to_eof", Backend_double_splice_to_eof, 2);
+  rb_define_method(cBackend, "double_splice", Backend_double_splice, 2);
   rb_define_method(cBackend, "tee", Backend_tee, 3);
 
   rb_define_method(cBackend, "timeout", Backend_timeout, -1);

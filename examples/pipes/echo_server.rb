@@ -5,10 +5,10 @@ require 'polyphony'
 
 def handle_client(conn)
   spin do
-    IO.double_splice_to_eof(conn, conn)
+    IO.double_splice(conn, conn)
     # buffer = Polyphony.pipe
-    # spin { IO.splice_to_eof(conn, buffer) }
-    # IO.splice_to_eof(buffer, conn)
+    # spin { IO.splice(conn, buffer, -1000) }
+    # IO.splice(buffer, conn, -1000)
   rescue SystemCallError
     # ignore
   ensure

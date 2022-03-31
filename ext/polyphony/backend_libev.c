@@ -860,50 +860,10 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
   int len;
-
-  GetBackend(self, backend);
-  src_fd = fd_from_io(src, &src_fptr, 0, 0);
-  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
-  watcher.ctx.fiber = Qnil;
-
-  while (1) {
-    backend->base.op_count++;
-    len = splice(src_fd, 0, dest_fd, 0, FIX2INT(maxlen), 0);
-    if (len < 0) {
-      int e = errno;
-      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
-
-      switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, &watcher);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
-    }
-    else {
-      break;
-    }
-  }
-
-  if (watcher.ctx.fiber == Qnil) {
-    switchpoint_result = backend_snooze(&backend->base);
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
-  }
-
-  RB_GC_GUARD(watcher.ctx.fiber);
-  RB_GC_GUARD(switchpoint_result);
-
-  return INT2FIX(len);
-error:
-  return RAISE_EXCEPTION(switchpoint_result);
-}
-
-VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
-  Backend_t *backend;
-  struct libev_rw_io watcher;
-  VALUE switchpoint_result = Qnil;
-  int src_fd;
-  int dest_fd;
-  rb_io_t *src_fptr;
-  rb_io_t *dest_fptr;
-  int len;
   int total = 0;
+  int maxlen_i = FIX2INT(maxlen);
+  int splice_to_eof = maxlen_i < 0;
+  if (splice_to_eof) maxlen_i = -maxlen_i;
 
   GetBackend(self, backend);
   src_fd = fd_from_io(src, &src_fptr, 0, 0);
@@ -912,19 +872,17 @@ VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   while (1) {
     backend->base.op_count++;
-    len = splice(src_fd, 0, dest_fd, 0, FIX2INT(maxlen), 0);
+    len = splice(src_fd, 0, dest_fd, 0, maxlen_i, 0);
     if (len < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
       switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, &watcher);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
-    }
-    else if (len == 0) {
-      break;
     }
     else {
       total += len;
+      if (!len || !splice_to_eof) break;
     }
   }
 
@@ -1052,76 +1010,6 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE Backend_splice_to_eof(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
-  Backend_t *backend;
-  struct libev_io watcher;
-  VALUE switchpoint_result = Qnil;
-  int src_fd;
-  int dest_fd;
-  rb_io_t *src_fptr;
-  rb_io_t *dest_fptr;
-  int len = FIX2INT(maxlen);
-  VALUE str = rb_str_new(0, len);
-  char *buf = RSTRING_PTR(str);
-  int left = 0;
-  int total = 0;
-
-  GetBackend(self, backend);
-  src_fd = fd_from_io(src, &src_fptr, 0, 0);
-  dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
-  watcher.fiber = Qnil;
-
-  while (1) {
-    char *ptr = buf;
-    while (1) {
-      backend->base.op_count++;
-      ssize_t n = read(src_fd, ptr, len);
-      if (n < 0) {
-        int e = errno;
-        if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
-
-        switchpoint_result = libev_wait_fd_with_watcher(backend, src_fd, &watcher, EV_READ);
-        if (TEST_EXCEPTION(switchpoint_result)) goto error;
-      }
-      else if (n == 0) goto done;
-      else {
-        total += n;
-        left = n;
-        break;
-      }
-    }
-
-    while (left > 0) {
-      backend->base.op_count++;
-      ssize_t n = write(dest_fd, ptr, left);
-      if (n < 0) {
-        int e = errno;
-        if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
-
-        switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fd, &watcher, EV_WRITE);
-        if (TEST_EXCEPTION(switchpoint_result)) goto error;
-      }
-      else {
-        ptr += n;
-        left -= n;
-      }
-    }
-  }
-
-done:
-  if (watcher.fiber == Qnil) {
-    switchpoint_result = backend_snooze(&backend->base);
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
-  }
-
-  RB_GC_GUARD(watcher.fiber);
-  RB_GC_GUARD(switchpoint_result);
-  RB_GC_GUARD(str);
-
-  return INT2FIX(total);
-error:
-  return RAISE_EXCEPTION(switchpoint_result);
-}
 #endif
 
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
@@ -1644,7 +1532,6 @@ void Init_Backend() {
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
 
   rb_define_method(cBackend, "splice", Backend_splice, 3);
-  rb_define_method(cBackend, "splice_to_eof", Backend_splice_to_eof, 3);
   #ifdef POLYPHONY_LINUX
   rb_define_method(cBackend, "tee", Backend_tee, 3);
   #endif

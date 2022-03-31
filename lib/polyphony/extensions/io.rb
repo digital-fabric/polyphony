@@ -78,13 +78,9 @@ class ::IO
       Polyphony.backend_splice(src, dest, maxlen)
     end
 
-    def splice_to_eof(src, dest, chunk_size = 8192)
-      Polyphony.backend_splice_to_eof(src, dest, chunk_size)
-    end
-
     if RUBY_PLATFORM =~ /linux/
-      def double_splice_to_eof(src, dest)
-        Polyphony.backend_double_splice_to_eof(src, dest)
+      def double_splice(src, dest)
+        Polyphony.backend_double_splice(src, dest)
       end
     
       def tee(src, dest, maxlen)
@@ -283,11 +279,9 @@ class ::IO
     Polyphony.backend_splice(src, self, maxlen)
   end
 
-  def splice_to_eof_from(src, chunksize = 8192)
-    Polyphony.backend_splice_to_eof(src, self, chunksize)
-  end
-
-  def tee_from(src, maxlen)
-    Polyphony.backend_tee(src, self, maxlen)
+  if RUBY_PLATFORM =~ /linux/
+    def tee_from(src, maxlen)
+      Polyphony.backend_tee(src, self, maxlen)
+    end
   end
 end

@@ -314,13 +314,13 @@ class IOTest < MiniTest::Test
     assert_equal 6, len
   end
 
-  def test_splice_to_eof_from
+  def test_splice_from_to_eof
     i1, o1 = IO.pipe
     i2, o2 = IO.pipe
     len = nil
 
     f = spin {
-      len = o2.splice_to_eof_from(i1, 1000)
+      len = o2.splice_from(i1, -1000)
       o2.close
     }
 
@@ -341,13 +341,13 @@ class IOTest < MiniTest::Test
     end
   end
 
-  def test_splice_to_eof_class_method
+  def test_splice_class_method_to_eof
     i1, o1 = IO.pipe
     i2, o2 = IO.pipe
     len = nil
 
     f = spin {
-      len = IO.splice_to_eof(i1, o2, 1000)
+      len = IO.splice(i1, o2, -1000)
       o2.close
     }
 
@@ -368,9 +368,9 @@ class IOTest < MiniTest::Test
     end
   end
 
-  def test_double_splice_to_eof
+  def test_double_splice
     if Thread.current.backend.kind != :io_uring
-      skip "IO.double_splice_to_eof available only with io_uring"
+      skip "IO.double_splice available only on io_uring backend"
     end
 
     src = Polyphony.pipe
@@ -379,7 +379,7 @@ class IOTest < MiniTest::Test
     data = 'foobar' * 10
 
     f1 = spin {
-      ret = IO.double_splice_to_eof(src, dest)
+      ret = IO.double_splice(src, dest)
       dest.close
     }
 
