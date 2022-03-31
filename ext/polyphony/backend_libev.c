@@ -850,7 +850,7 @@ VALUE libev_wait_rw_fd_with_watcher(Backend_t *backend, int r_fd, int w_fd, stru
   return switchpoint_result;
 }
 
-#ifndef POLYPHONY_LINUX
+#ifdef POLYPHONY_LINUX
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_rw_io watcher;
