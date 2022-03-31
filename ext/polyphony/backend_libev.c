@@ -850,7 +850,7 @@ VALUE libev_wait_rw_fd_with_watcher(Backend_t *backend, int r_fd, int w_fd, stru
   return switchpoint_result;
 }
 
-#ifdef POLYPHONY_LINUX
+#ifndef POLYPHONY_LINUX
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_rw_io watcher;
@@ -964,18 +964,23 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   watcher.fiber = Qnil;
 
   while (1) {
-    backend->base.op_count++;
-    ssize_t n = read(src_fd, buf, maxlen_i);
-    int done = !n || !splice_to_eof;
-    if (n < 0) {
-      int e = errno;
-      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+    int done;
+    while (1) {
+      backend->base.op_count++;
+      ssize_t n = read(src_fd, buf, maxlen_i);
+      if (n < 0) {
+        int e = errno;
+        if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, src_fd, &watcher, EV_READ);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+        switchpoint_result = libev_wait_fd_with_watcher(backend, src_fd, &watcher, EV_READ);
+        if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      }
+      else {
+        total += left = n;
+        done = !n || !splice_to_eof;
+        break;
+      }
     }
-    else
-      total += left = n;
 
     while (left > 0) {
       backend->base.op_count++;
@@ -1008,6 +1013,10 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   return INT2FIX(total);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
+}
+
+VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
+  return self;
 }
 #endif
 
