@@ -941,9 +941,7 @@ VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
-
 #else
-
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
@@ -952,11 +950,13 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   int dest_fd;
   rb_io_t *src_fptr;
   rb_io_t *dest_fptr;
-  int len = FIX2INT(maxlen);
-  VALUE str = rb_str_new(0, len);
-  char *buf = RSTRING_PTR(str);
   int left = 0;
   int total = 0;
+  int maxlen_i = FIX2INT(maxlen);
+  int splice_to_eof = maxlen_i < 0;
+  if (splice_to_eof) maxlen_i = -maxlen_i;
+  VALUE str = rb_str_new(0, maxlen_i);
+  char *buf = RSTRING_PTR(str);
 
   GetBackend(self, backend);
   src_fd = fd_from_io(src, &src_fptr, 0, 0);
@@ -965,7 +965,8 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   while (1) {
     backend->base.op_count++;
-    ssize_t n = read(src_fd, buf, len);
+    ssize_t n = read(src_fd, buf, maxlen_i);
+    int done = !n || !splice_to_eof;
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -973,27 +974,26 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
       switchpoint_result = libev_wait_fd_with_watcher(backend, src_fd, &watcher, EV_READ);
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
-    else {
-      total = left = n;
-      break;
-    }
-  }
+    else
+      total += left = n;
 
-  while (left > 0) {
-    backend->base.op_count++;
-    ssize_t n = write(dest_fd, buf, left);
-    if (n < 0) {
-      int e = errno;
-      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+    while (left > 0) {
+      backend->base.op_count++;
+      ssize_t n = write(dest_fd, buf, left);
+      if (n < 0) {
+        int e = errno;
+        if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
-      switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fd, &watcher, EV_WRITE);
+        switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fd, &watcher, EV_WRITE);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+        if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      }
+      else {
+        buf += n;
+        left -= n;
+      }
     }
-    else {
-      buf += n;
-      left -= n;
-    }
+    if (done) break;
   }
 
   if (watcher.fiber == Qnil) {
@@ -1009,7 +1009,6 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
-
 #endif
 
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
