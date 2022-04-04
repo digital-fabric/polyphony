@@ -1,3 +1,8 @@
+## 0.92 2022-04-04
+
+- Fix plice on non-Linux OS
+- Integrate functionality of `IO.splice_to_eof` into `IO.splice` (#87)
+
 ## 0.91 2022-03-23
 
 - Add pipe examples
