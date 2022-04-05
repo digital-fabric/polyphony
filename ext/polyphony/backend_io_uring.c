@@ -1075,7 +1075,7 @@ VALUE double_splice_cleanup(struct double_splice_ctx *ctx) {
 }
 
 VALUE Backend_double_splice(VALUE self, VALUE src, VALUE dest) {
-  struct double_splice_ctx ctx = { NULL, src, dest, 0, 0 };
+  struct double_splice_ctx ctx = { NULL, src, dest, {0, 0} };
   GetBackend(self, ctx.backend);
   if (pipe(ctx.pipefd) == -1) rb_syserr_fail(errno, strerror(errno));
 
