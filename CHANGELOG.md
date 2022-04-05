@@ -1,3 +1,7 @@
+## 0.93 2022-04-05
+
+- Add support for IO::Buffer in Ruby 3.1 (#80)
+
 ## 0.92 2022-04-04
 
 - Fix plice on non-Linux OS
