@@ -404,6 +404,23 @@ class BackendTest < MiniTest::Test
     sleep 0.01
     assert_equal 2, counter
   end
+
+  def test_read_write_with_io_buffer
+    skip "Works only on Ruby >= 3.1" if RUBY_VERSION < '3.1'
+
+    msg = 'Hello world'
+    i, o = IO.pipe
+    read_buffer = IO::Buffer.new(64)
+    f = spin { @backend.read(i, read_buffer, 64, true, 0) }
+    write_buffer = IO::Buffer.new(msg.bytesize)
+    write_buffer.set_string(msg, 0)
+    @backend.write(o, write_buffer)
+    o.close
+    return_value = f.await
+
+    assert_equal msg.bytesize, return_value
+    assert_equal msg, read_buffer.get_string(0, msg.bytesize)
+  end
 end
 
 class BackendChainTest < MiniTest::Test

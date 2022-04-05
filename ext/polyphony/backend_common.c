@@ -4,6 +4,9 @@
 #include "ruby/io.h"
 #include "polyphony.h"
 #include "backend_common.h"
+#ifdef HAVE_RUBY_IO_BUFFER_H
+#include "ruby/io/buffer.h"
+#endif
 
 inline void backend_base_initialize(struct Backend_base *base) {
   runqueue_initialize(&base->runqueue);
@@ -476,11 +479,24 @@ int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr) {
   return addrinfo_result->ai_addrlen;
 }
 
-struct io_buffer get_io_buffer(VALUE in) {
+struct io_buffer get_io_buffer(VALUE in, int rw) {
   if (FIXNUM_P(in)) {
     struct raw_buffer *raw = FIX2PTR(in);
     return (struct io_buffer){ raw->ptr, raw->len, 1 };
   }
+
+  #ifdef HAVE_RUBY_IO_BUFFER_H
+  if (rb_obj_is_kind_of(in, rb_cIOBuffer) == Qtrue) {
+    void *ptr;
+    size_t len;
+    if (rw)
+      rb_io_buffer_get_bytes_for_reading(in, (const void **)&ptr, &len);
+    else
+      rb_io_buffer_get_bytes_for_writing(in, &ptr, &len);
+    return (struct io_buffer){ ptr, len, 1 };
+  }
+  #endif
+
   return (struct io_buffer){ (unsigned char *)RSTRING_PTR(in), RSTRING_LEN(in), 0 };
 }
 

@@ -61,6 +61,8 @@ else
   $defs << '-DEV_USE_PORT'         if have_type('port_event_t', 'port.h')
   $defs << '-DHAVE_SYS_RESOURCE_H' if have_header('sys/resource.h')
 
+  $defs << "-DEV_STANDALONE" # prevent libev from assuming "config.h" exists
+
   $CFLAGS << " -Wno-comment"
   $CFLAGS << " -Wno-unused-result"
   $CFLAGS << " -Wno-dangling-else"
@@ -74,5 +76,7 @@ CONFIG['optflags'] << ' -fno-strict-aliasing' unless RUBY_PLATFORM =~ /mswin/
 if RUBY_VERSION >= '3.1'
   have_func('rb_fiber_transfer', 'ruby.h')
 end
+
+have_header('ruby/io/buffer.h')
 
 create_makefile 'polyphony_ext'

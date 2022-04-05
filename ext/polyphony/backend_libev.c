@@ -290,7 +290,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   int fd;
   rb_io_t *fptr;
 
-  struct io_buffer buffer = get_io_buffer(str);
+  struct io_buffer buffer = get_io_buffer(str, 0);
   long buf_pos = FIX2INT(pos);
   int shrinkable_string = 0;
   int expandable_buffer = 0;
@@ -486,7 +486,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
 
-  struct io_buffer buffer = get_io_buffer(str);
+  struct io_buffer buffer = get_io_buffer(str, 1);
   long left = buffer.len;
 
   GetBackend(self, backend);
@@ -761,7 +761,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
 
-  struct io_buffer buffer = get_io_buffer(str);
+  struct io_buffer buffer = get_io_buffer(str, 1);
   long left = buffer.len;
   int flags_int = FIX2INT(flags);
 
