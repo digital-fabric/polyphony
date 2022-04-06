@@ -66,12 +66,20 @@ struct backend_buffer_spec {
   unsigned char *ptr;
   int len;
   int raw;
+  int pos;
+  int expandable:1;
+  int shrinkable:1;
+  int reserved:30;
 };
 
 #define FIX2PTR(v) ((void *)(FIX2LONG(v)))
 #define PTR2FIX(p) LONG2FIX((long)p)
 
 struct backend_buffer_spec backend_get_buffer_spec(VALUE in, int rw);
+void backend_prepare_read_buffer(VALUE buffer, VALUE length, struct backend_buffer_spec *buffer_spec, int pos);
+void backend_grow_string_buffer(VALUE buffer, struct backend_buffer_spec *buffer_spec, int total);
+void backend_finalize_string_buffer(VALUE buffer, struct backend_buffer_spec *buffer_spec, int total, rb_io_t *fptr);
+
 VALUE coerce_io_string_or_buffer(VALUE buf);
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN

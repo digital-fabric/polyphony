@@ -479,7 +479,7 @@ int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr) {
   return addrinfo_result->ai_addrlen;
 }
 
-struct backend_buffer_spec backend_get_buffer_spec(VALUE in, int rw) {
+inline struct backend_buffer_spec backend_get_buffer_spec(VALUE in, int rw) {
   if (FIXNUM_P(in)) {
     struct buffer_spec *spec = FIX2PTR(in);
     return (struct backend_buffer_spec){ spec->ptr, spec->len, 1 };
@@ -498,6 +498,51 @@ struct backend_buffer_spec backend_get_buffer_spec(VALUE in, int rw) {
   #endif
 
   return (struct backend_buffer_spec){ (unsigned char *)RSTRING_PTR(in), RSTRING_LEN(in), 0 };
+}
+
+inline void backend_prepare_read_buffer(VALUE buffer, VALUE length, struct backend_buffer_spec *buffer_spec, int pos) {
+  buffer_spec->pos = pos;
+  buffer_spec->expandable = 0;
+  buffer_spec->shrinkable = 0;
+  if (buffer_spec->raw) {
+    if (buffer_spec->pos < 0 || buffer_spec->pos > buffer_spec->len)
+      buffer_spec->pos = buffer_spec->len;
+    buffer_spec->ptr += buffer_spec->pos;
+    buffer_spec->len -= buffer_spec->pos;
+  }
+  else {
+    buffer_spec->expandable = length == Qnil;
+    long expected_read_length = buffer_spec->expandable ? 4096 : FIX2INT(length);
+    long string_cap = rb_str_capacity(buffer);
+    if (buffer_spec->pos < 0 || buffer_spec->pos > buffer_spec->len)
+      buffer_spec->pos = buffer_spec->len;
+
+    if (string_cap < expected_read_length + buffer_spec->pos) {
+      buffer_spec->shrinkable = io_setstrbuf(&buffer, expected_read_length + buffer_spec->pos);
+      buffer_spec->ptr = (unsigned char *)RSTRING_PTR(buffer) + buffer_spec->pos;
+      buffer_spec->len = expected_read_length;
+    }
+    else {
+      buffer_spec->ptr += buffer_spec->pos;
+      buffer_spec->len = string_cap - buffer_spec->pos;
+      if (buffer_spec->len > expected_read_length)
+        buffer_spec->len = expected_read_length;
+    }
+  }
+}
+
+inline void backend_grow_string_buffer(VALUE buffer, struct backend_buffer_spec *buffer_spec, int total) {
+  // resize buffer to double its capacity
+  rb_str_resize(buffer, total + buffer_spec->pos);
+  rb_str_modify_expand(buffer, rb_str_capacity(buffer));
+  buffer_spec->shrinkable = 0;
+  buffer_spec->ptr = (unsigned char *)RSTRING_PTR(buffer) + total + buffer_spec->pos;
+  buffer_spec->len = rb_str_capacity(buffer) - total - buffer_spec->pos;
+}
+
+inline void backend_finalize_string_buffer(VALUE buffer, struct backend_buffer_spec *buffer_spec, int total, rb_io_t *fptr) {
+  io_set_read_length(buffer, buffer_spec->pos + total, buffer_spec->shrinkable);
+  if (fptr) io_enc_str(buffer, fptr);
 }
 
 VALUE coerce_io_string_or_buffer(VALUE buf) {

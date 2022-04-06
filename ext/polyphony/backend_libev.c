@@ -284,45 +284,19 @@ static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int recti
   }
 }
 
-VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, VALUE pos) {
+VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eof, VALUE pos) {
   Backend_t *backend;
   struct libev_io watcher;
   int fd;
   rb_io_t *fptr;
 
-  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 0);
-  long buf_pos = FIX2INT(pos);
-  int shrinkable_string = 0;
-  int expandable_buffer = 0;
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 0);
   long total = 0;
   VALUE switchpoint_result = Qnil;
   int read_to_eof = RTEST(to_eof);
 
-  if (buffer_spec.raw) {
-    if (buf_pos < 0 || buf_pos > buffer_spec.len) buf_pos = buffer_spec.len;
-    buffer_spec.ptr += buf_pos;
-    buffer_spec.len -= buf_pos;
-  }
-  else {
-    expandable_buffer = length == Qnil;
-    long expected_read_length = expandable_buffer ? 4096 : FIX2INT(length);
-    long string_cap = rb_str_capacity(str);
-    if (buf_pos < 0 || buf_pos > buffer_spec.len) buf_pos = buffer_spec.len;
-
-    if (string_cap < expected_read_length + buf_pos) {
-      shrinkable_string = io_setstrbuf(&str, expected_read_length + buf_pos);
-      buffer_spec.ptr = (unsigned char *)RSTRING_PTR(str) + buf_pos;
-      buffer_spec.len = expected_read_length;
-    }
-    else {
-      buffer_spec.ptr += buf_pos;
-      buffer_spec.len = string_cap - buf_pos;
-      if (buffer_spec.len > expected_read_length)
-        buffer_spec.len = expected_read_length;
-    }
-  }
-
   GetBackend(self, backend);
+  backend_prepare_read_buffer(buffer, length, &buffer_spec, FIX2INT(pos));
   fd = fd_from_io(io, &fptr, 0, 1);
   watcher.fiber = Qnil;
 
@@ -347,14 +321,10 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
       if (!read_to_eof) break;
 
       if (result == buffer_spec.len) {
-        if (!expandable_buffer) break;
-
-        // resize buffer to double its capacity
-        rb_str_resize(str, total + buf_pos);
-        rb_str_modify_expand(str, rb_str_capacity(str));
-        shrinkable_string = 0;
-        buffer_spec.ptr = (unsigned char *)RSTRING_PTR(str) + total + buf_pos;
-        buffer_spec.len = rb_str_capacity(str) - total - buf_pos;
+        if (buffer_spec.expandable)
+          backend_grow_string_buffer(buffer, &buffer_spec, total);
+        else
+          break;
       }
       else {
         buffer_spec.ptr += result;
@@ -364,22 +334,20 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
     }
   }
 
-  if (!buffer_spec.raw) {
-    io_set_read_length(str, buf_pos + total, shrinkable_string);
-    if (fptr) io_enc_str(str, fptr);
-  }
   if (!total) return Qnil;
+  
+  if (!buffer_spec.raw) backend_finalize_string_buffer(buffer, &buffer_spec, total, fptr);
 
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return buffer_spec.raw ? INT2FIX(total) : str;
+  return buffer_spec.raw ? INT2FIX(total) : buffer;
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
-  return Backend_read(self, io, str, length, Qnil, pos);
+VALUE Backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE pos) {
+  return Backend_read(self, io, buffer, length, Qnil, pos);
 }
 
 VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
