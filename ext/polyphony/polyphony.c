@@ -127,14 +127,14 @@ VALUE Polyphony_backend_write(int argc, VALUE *argv, VALUE self) {
 }
 
 VALUE Polyphony_with_raw_buffer(VALUE self, VALUE size) {
-  struct raw_buffer buffer;
-  buffer.len = FIX2INT(size);
-  buffer.ptr = malloc(buffer.len);
-  if (!buffer.ptr)
+  struct buffer_spec buffer_spec;
+  buffer_spec.len = FIX2INT(size);
+  buffer_spec.ptr = malloc(buffer_spec.len);
+  if (!buffer_spec.ptr)
     rb_raise(rb_eRuntimeError, "Failed to allocate buffer");
 
-  VALUE return_value = rb_yield(PTR2FIX(&buffer));
-  free(buffer.ptr);
+  VALUE return_value = rb_yield(PTR2FIX(&buffer_spec));
+  free(buffer_spec.ptr);
   return return_value;
 }
 
@@ -143,27 +143,27 @@ VALUE Polyphony_raw_buffer_get(int argc, VALUE *argv, VALUE self) {
   VALUE len = Qnil;
   rb_scan_args(argc, argv, "11", &buf, &len);
 
-  struct raw_buffer *buffer = FIX2PTR(buf);
-  int length = (len == Qnil) ? buffer->len : FIX2INT(len);
+  struct buffer_spec *buffer_spec = FIX2PTR(buf);
+  int length = (len == Qnil) ? buffer_spec->len : FIX2INT(len);
   
-  if (length > buffer->len) length = buffer->len;
-  return rb_utf8_str_new((char *)buffer->ptr, length);
+  if (length > buffer_spec->len) length = buffer_spec->len;
+  return rb_utf8_str_new((char *)buffer_spec->ptr, length);
 }
 
 VALUE Polyphony_raw_buffer_set(VALUE self, VALUE buf, VALUE str) {
-  struct raw_buffer *buffer = FIX2PTR(buf);
+  struct buffer_spec *buffer_spec = FIX2PTR(buf);
   int len = RSTRING_LEN(str);
-  if (len > buffer->len)
+  if (len > buffer_spec->len)
     rb_raise(rb_eRuntimeError, "Given string does not fit in given buffer");
   
-  memcpy(buffer->ptr, RSTRING_PTR(str), len);
-  buffer->len = len;
+  memcpy(buffer_spec->ptr, RSTRING_PTR(str), len);
+  buffer_spec->len = len;
   return self;
 }
 
 VALUE Polyphony_raw_buffer_size(VALUE self, VALUE buf) {
-  struct raw_buffer *buffer = FIX2PTR(buf);
-  return INT2FIX(buffer->len);
+  struct buffer_spec *buffer_spec = FIX2PTR(buf);
+  return INT2FIX(buffer_spec->len);
 }
 
 // VALUE Polyphony_backend_close(VALUE self, VALUE io) {

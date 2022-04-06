@@ -55,14 +55,14 @@ struct backend_stats backend_base_stats(struct Backend_base *base);
 }
 #define COND_TRACE(base, ...) if (SHOULD_TRACE(base)) { TRACE(base, __VA_ARGS__); }
 
-// raw buffers
+// buffers
 
-struct raw_buffer {
+struct buffer_spec {
   unsigned char *ptr;
   int len;
 };
 
-struct io_buffer {
+struct backend_buffer_spec {
   unsigned char *ptr;
   int len;
   int raw;
@@ -71,7 +71,7 @@ struct io_buffer {
 #define FIX2PTR(v) ((void *)(FIX2LONG(v)))
 #define PTR2FIX(p) LONG2FIX((long)p)
 
-struct io_buffer get_io_buffer(VALUE in, int rw);
+struct backend_buffer_spec backend_get_buffer_spec(VALUE in, int rw);
 VALUE coerce_io_string_or_buffer(VALUE buf);
 
 #ifdef POLYPHONY_USE_PIDFD_OPEN

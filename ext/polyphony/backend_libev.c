@@ -290,7 +290,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   int fd;
   rb_io_t *fptr;
 
-  struct io_buffer buffer = get_io_buffer(str, 0);
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 0);
   long buf_pos = FIX2INT(pos);
   int shrinkable_string = 0;
   int expandable_buffer = 0;
@@ -298,27 +298,27 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   VALUE switchpoint_result = Qnil;
   int read_to_eof = RTEST(to_eof);
 
-  if (buffer.raw) {
-    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
-    buffer.ptr += buf_pos;
-    buffer.len -= buf_pos;
+  if (buffer_spec.raw) {
+    if (buf_pos < 0 || buf_pos > buffer_spec.len) buf_pos = buffer_spec.len;
+    buffer_spec.ptr += buf_pos;
+    buffer_spec.len -= buf_pos;
   }
   else {
     expandable_buffer = length == Qnil;
     long expected_read_length = expandable_buffer ? 4096 : FIX2INT(length);
     long string_cap = rb_str_capacity(str);
-    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
+    if (buf_pos < 0 || buf_pos > buffer_spec.len) buf_pos = buffer_spec.len;
 
     if (string_cap < expected_read_length + buf_pos) {
       shrinkable_string = io_setstrbuf(&str, expected_read_length + buf_pos);
-      buffer.ptr = (unsigned char *)RSTRING_PTR(str) + buf_pos;
-      buffer.len = expected_read_length;
+      buffer_spec.ptr = (unsigned char *)RSTRING_PTR(str) + buf_pos;
+      buffer_spec.len = expected_read_length;
     }
     else {
-      buffer.ptr += buf_pos;
-      buffer.len = string_cap - buf_pos;
-      if (buffer.len > expected_read_length)
-        buffer.len = expected_read_length;
+      buffer_spec.ptr += buf_pos;
+      buffer_spec.len = string_cap - buf_pos;
+      if (buffer_spec.len > expected_read_length)
+        buffer_spec.len = expected_read_length;
     }
   }
 
@@ -328,7 +328,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
 
   while (1) {
     backend->base.op_count++;
-    ssize_t result = read(fd, buffer.ptr, buffer.len);
+    ssize_t result = read(fd, buffer_spec.ptr, buffer_spec.len);
     if (result < 0) {
       int e = errno;
       if (e != EWOULDBLOCK && e != EAGAIN) rb_syserr_fail(e, strerror(e));
@@ -346,25 +346,25 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
       total += result;
       if (!read_to_eof) break;
 
-      if (result == buffer.len) {
+      if (result == buffer_spec.len) {
         if (!expandable_buffer) break;
 
         // resize buffer to double its capacity
         rb_str_resize(str, total + buf_pos);
         rb_str_modify_expand(str, rb_str_capacity(str));
         shrinkable_string = 0;
-        buffer.ptr = (unsigned char *)RSTRING_PTR(str) + total + buf_pos;
-        buffer.len = rb_str_capacity(str) - total - buf_pos;
+        buffer_spec.ptr = (unsigned char *)RSTRING_PTR(str) + total + buf_pos;
+        buffer_spec.len = rb_str_capacity(str) - total - buf_pos;
       }
       else {
-        buffer.ptr += result;
-        buffer.len -= result;
-        if (!buffer.len) break;
+        buffer_spec.ptr += result;
+        buffer_spec.len -= result;
+        if (!buffer_spec.len) break;
       }
     }
   }
 
-  if (!buffer.raw) {
+  if (!buffer_spec.raw) {
     io_set_read_length(str, buf_pos + total, shrinkable_string);
     if (fptr) io_enc_str(str, fptr);
   }
@@ -373,7 +373,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return buffer.raw ? INT2FIX(total) : str;
+  return buffer_spec.raw ? INT2FIX(total) : str;
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -486,8 +486,8 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
 
-  struct io_buffer buffer = get_io_buffer(str, 1);
-  long left = buffer.len;
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 1);
+  long left = buffer_spec.len;
 
   GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 1, 0);
@@ -495,7 +495,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
 
   while (left > 0) {
     backend->base.op_count++;
-    ssize_t result = write(fd, buffer.ptr, left);
+    ssize_t result = write(fd, buffer_spec.ptr, left);
     if (result < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -505,7 +505,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      buffer.ptr += result;
+      buffer_spec.ptr += result;
       left -= result;
     }
   }
@@ -519,7 +519,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2FIX(buffer.len);
+  return INT2FIX(buffer_spec.len);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
@@ -761,8 +761,8 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
 
-  struct io_buffer buffer = get_io_buffer(str, 1);
-  long left = buffer.len;
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 1);
+  long left = buffer_spec.len;
   int flags_int = FIX2INT(flags);
 
   GetBackend(self, backend);
@@ -771,7 +771,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
 
   while (left > 0) {
     backend->base.op_count++;
-    ssize_t result = send(fd, buffer.ptr, left, flags_int);
+    ssize_t result = send(fd, buffer_spec.ptr, left, flags_int);
     if (result < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -781,7 +781,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
       if (TEST_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
-      buffer.ptr += result;
+      buffer_spec.ptr += result;
       left -= result;
     }
   }
@@ -795,7 +795,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
-  return INT2FIX(buffer.len);
+  return INT2FIX(buffer_spec.len);
 error:
   return RAISE_EXCEPTION(switchpoint_result);
 }

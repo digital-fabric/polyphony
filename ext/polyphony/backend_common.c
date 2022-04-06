@@ -479,10 +479,10 @@ int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr) {
   return addrinfo_result->ai_addrlen;
 }
 
-struct io_buffer get_io_buffer(VALUE in, int rw) {
+struct backend_buffer_spec backend_get_buffer_spec(VALUE in, int rw) {
   if (FIXNUM_P(in)) {
-    struct raw_buffer *raw = FIX2PTR(in);
-    return (struct io_buffer){ raw->ptr, raw->len, 1 };
+    struct buffer_spec *spec = FIX2PTR(in);
+    return (struct backend_buffer_spec){ spec->ptr, spec->len, 1 };
   }
 
   #ifdef HAVE_RUBY_IO_BUFFER_H
@@ -493,11 +493,11 @@ struct io_buffer get_io_buffer(VALUE in, int rw) {
       rb_io_buffer_get_bytes_for_reading(in, (const void **)&ptr, &len);
     else
       rb_io_buffer_get_bytes_for_writing(in, &ptr, &len);
-    return (struct io_buffer){ ptr, len, 1 };
+    return (struct backend_buffer_spec){ ptr, len, 1 };
   }
   #endif
 
-  return (struct io_buffer){ (unsigned char *)RSTRING_PTR(in), RSTRING_LEN(in), 0 };
+  return (struct backend_buffer_spec){ (unsigned char *)RSTRING_PTR(in), RSTRING_LEN(in), 0 };
 }
 
 VALUE coerce_io_string_or_buffer(VALUE buf) {

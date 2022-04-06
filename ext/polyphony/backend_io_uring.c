@@ -363,34 +363,34 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
-  struct io_buffer buffer = get_io_buffer(str, 0);
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 0);
   long buf_pos = FIX2INT(pos);
   int shrinkable_string = 0;
   int expandable_buffer = 0;
   long total = 0;
   int read_to_eof = RTEST(to_eof);
 
-  if (buffer.raw) {
-    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
-    buffer.ptr += buf_pos;
-    buffer.len -= buf_pos;
+  if (buffer_spec.raw) {
+    if (buf_pos < 0 || buf_pos > buffer_spec.len) buf_pos = buffer_spec.len;
+    buffer_spec.ptr += buf_pos;
+    buffer_spec.len -= buf_pos;
   }
   else {
     expandable_buffer = length == Qnil;
     long expected_read_length = expandable_buffer ? 4096 : FIX2INT(length);
     long string_cap = rb_str_capacity(str);
-    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
+    if (buf_pos < 0 || buf_pos > buffer_spec.len) buf_pos = buffer_spec.len;
 
     if (string_cap < expected_read_length + buf_pos) {
       shrinkable_string = io_setstrbuf(&str, expected_read_length + buf_pos);
-      buffer.ptr = (unsigned char *)RSTRING_PTR(str) + buf_pos;
-      buffer.len = expected_read_length;
+      buffer_spec.ptr = (unsigned char *)RSTRING_PTR(str) + buf_pos;
+      buffer_spec.len = expected_read_length;
     }
     else {
-      buffer.ptr += buf_pos;
-      buffer.len = string_cap - buf_pos;
-      if (buffer.len > expected_read_length)
-        buffer.len = expected_read_length;
+      buffer_spec.ptr += buf_pos;
+      buffer_spec.len = string_cap - buf_pos;
+      if (buffer_spec.len > expected_read_length)
+        buffer_spec.len = expected_read_length;
     }
   }
 
@@ -404,7 +404,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
     int result;
     int completed;
     
-    io_uring_prep_read(sqe, fd, buffer.ptr, buffer.len, -1);
+    io_uring_prep_read(sqe, fd, buffer_spec.ptr, buffer_spec.len, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -423,31 +423,31 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, 
       total += result;
       if (!read_to_eof) break;
 
-      if (result == buffer.len) {
+      if (result == buffer_spec.len) {
         if (!expandable_buffer) break;
 
         // resize buffer to double its capacity
         rb_str_resize(str, total + buf_pos);
         rb_str_modify_expand(str, rb_str_capacity(str));
         shrinkable_string = 0;
-        buffer.ptr = (unsigned char *)RSTRING_PTR(str) + total + buf_pos;
-        buffer.len = rb_str_capacity(str) - total - buf_pos;
+        buffer_spec.ptr = (unsigned char *)RSTRING_PTR(str) + total + buf_pos;
+        buffer_spec.len = rb_str_capacity(str) - total - buf_pos;
       }
       else {
-        buffer.ptr += result;
-        buffer.len -= result;
-        if (!buffer.len) break;
+        buffer_spec.ptr += result;
+        buffer_spec.len -= result;
+        if (!buffer_spec.len) break;
       }
     }
   }
 
-  if (!buffer.raw) {
+  if (!buffer_spec.raw) {
     io_set_read_length(str, buf_pos + total, shrinkable_string);
     if (fptr) io_enc_str(str, fptr);
   }
   if (!total) return Qnil;
 
-  return buffer.raw ? INT2FIX(total) : str;
+  return buffer_spec.raw ? INT2FIX(total) : str;
 }
 
 VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
@@ -552,8 +552,8 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
   int fd;
   rb_io_t *fptr;
 
-  struct io_buffer buffer = get_io_buffer(str, 1);
-  long left = buffer.len;
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 1);
+  long left = buffer_spec.len;
 
   GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 1, 0);
@@ -565,7 +565,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
     int result;
     int completed;
 
-    io_uring_prep_write(sqe, fd, buffer.ptr, left, -1);
+    io_uring_prep_write(sqe, fd, buffer_spec.ptr, left, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -579,12 +579,12 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
     if (result < 0)
       rb_syserr_fail(-result, strerror(-result));
     else {
-      buffer.ptr += result;
+      buffer_spec.ptr += result;
       left -= result;
     }
   }
 
-  return INT2FIX(buffer.len);
+  return INT2FIX(buffer_spec.len);
 }
 
 VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
@@ -668,33 +668,33 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
-  struct io_buffer buffer = get_io_buffer(str, 0);
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 0);
   long buf_pos = FIX2INT(pos);
   int shrinkable_string = 0;
   int expandable_buffer = 0;
   long total = 0;
 
-  if (buffer.raw) {
-    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
-    buffer.ptr += buf_pos;
-    buffer.len -= buf_pos;
+  if (buffer_spec.raw) {
+    if (buf_pos < 0 || buf_pos > buffer_spec.len) buf_pos = buffer_spec.len;
+    buffer_spec.ptr += buf_pos;
+    buffer_spec.len -= buf_pos;
   }
   else {
     expandable_buffer = length == Qnil;
     long expected_read_length = expandable_buffer ? 4096 : FIX2INT(length);
     long string_cap = rb_str_capacity(str);
-    if (buf_pos < 0 || buf_pos > buffer.len) buf_pos = buffer.len;
+    if (buf_pos < 0 || buf_pos > buffer_spec.len) buf_pos = buffer_spec.len;
 
     if (string_cap < expected_read_length + buf_pos) {
       shrinkable_string = io_setstrbuf(&str, expected_read_length + buf_pos);
-      buffer.ptr = (unsigned char *)RSTRING_PTR(str) + buf_pos;
-      buffer.len = expected_read_length;
+      buffer_spec.ptr = (unsigned char *)RSTRING_PTR(str) + buf_pos;
+      buffer_spec.len = expected_read_length;
     }
     else {
-      buffer.ptr += buf_pos;
-      buffer.len = string_cap - buf_pos;
-      if (buffer.len > expected_read_length)
-        buffer.len = expected_read_length;
+      buffer_spec.ptr += buf_pos;
+      buffer_spec.len = string_cap - buf_pos;
+      if (buffer_spec.len > expected_read_length)
+        buffer_spec.len = expected_read_length;
     }
   }
 
@@ -708,7 +708,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
     int result;
     int completed;
 
-    io_uring_prep_recv(sqe, fd, buffer.ptr, buffer.len, 0);
+    io_uring_prep_recv(sqe, fd, buffer_spec.ptr, buffer_spec.len, 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -727,13 +727,13 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
     }
   }
 
-  if (!buffer.raw) {
+  if (!buffer_spec.raw) {
     io_set_read_length(str, buf_pos + total, shrinkable_string);
     if (fptr) io_enc_str(str, fptr);
   }
   if (!total) return Qnil;
 
-  return buffer.raw ? INT2FIX(total) : str;
+  return buffer_spec.raw ? INT2FIX(total) : str;
 }
 
 VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
@@ -836,8 +836,8 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
   int fd;
   rb_io_t *fptr;
 
-  struct io_buffer buffer = get_io_buffer(str, 1);
-  long left = buffer.len;
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 1);
+  long left = buffer_spec.len;
   int flags_int = FIX2INT(flags);
 
   GetBackend(self, backend);
@@ -850,7 +850,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
     int result;
     int completed;
 
-    io_uring_prep_send(sqe, fd, buffer.ptr, left, flags_int);
+    io_uring_prep_send(sqe, fd, buffer_spec.ptr, left, flags_int);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
@@ -864,12 +864,12 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
     if (result < 0)
       rb_syserr_fail(-result, strerror(-result));
     else {
-      buffer.ptr += result;
+      buffer_spec.ptr += result;
       left -= result;
     }
   }
 
-  return INT2FIX(buffer.len);
+  return INT2FIX(buffer_spec.len);
 }
 
 VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE socket_class, int loop) {

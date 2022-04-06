@@ -114,30 +114,30 @@ static inline enum write_method detect_write_method(VALUE io) {
 #endif
 
 
-static inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method method, struct raw_buffer *buffer) {
+static inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method method, struct buffer_spec *buffer_spec) {
   switch (method) {
     case RM_BACKEND_READ: {
-      VALUE len = Backend_read(backend, io, PTR2FIX(buffer), Qnil, Qfalse, INT2FIX(0));
+      VALUE len = Backend_read(backend, io, PTR2FIX(buffer_spec), Qnil, Qfalse, INT2FIX(0));
       return (len == Qnil) ? 0 : FIX2INT(len);
     }
     case RM_BACKEND_RECV: {
-      VALUE len = Backend_recv(backend, io, PTR2FIX(buffer), Qnil, INT2FIX(0));
+      VALUE len = Backend_recv(backend, io, PTR2FIX(buffer_spec), Qnil, INT2FIX(0));
       return (len == Qnil) ? 0 : FIX2INT(len);
     }
     case RM_READPARTIAL: {
-      VALUE str = rb_funcall(io, ID_readpartial, 1, INT2FIX(buffer->len));
+      VALUE str = rb_funcall(io, ID_readpartial, 1, INT2FIX(buffer_spec->len));
       int len = RSTRING_LEN(str);
-      if (len) memcpy(buffer->ptr, RSTRING_PTR(str), len);
+      if (len) memcpy(buffer_spec->ptr, RSTRING_PTR(str), len);
       RB_GC_GUARD(str);
       return len;
     }
     case RM_CALL: {
-      VALUE str = rb_funcall(io, ID_call, INT2FIX(buffer->len));
+      VALUE str = rb_funcall(io, ID_call, INT2FIX(buffer_spec->len));
       if (TYPE(str) != T_STRING)
         rb_raise(rb_eRuntimeError, "io#call must return a string");
       int len = RSTRING_LEN(str);
-      if (len > buffer->len) len = buffer->len;
-      if (len) memcpy(buffer->ptr, RSTRING_PTR(str), len);
+      if (len > buffer_spec->len) len = buffer_spec->len;
+      if (len) memcpy(buffer_spec->ptr, RSTRING_PTR(str), len);
       RB_GC_GUARD(str);
       return len;
     }
@@ -147,35 +147,35 @@ static inline int read_to_raw_buffer(VALUE backend, VALUE io, enum read_method m
   }
 }
 
-static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_method method, struct raw_buffer *buffer) {
+static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_method method, struct buffer_spec *buffer_spec) {
   switch (method) {
     case WM_STRING: {
-      rb_str_buf_cat(io, (char *)buffer->ptr, buffer->len);
-      return buffer->len;
+      rb_str_buf_cat(io, (char *)buffer_spec->ptr, buffer_spec->len);
+      return buffer_spec->len;
     }
     case WM_BACKEND_WRITE: {
-      VALUE len = Backend_write(backend, io, PTR2FIX(buffer));
+      VALUE len = Backend_write(backend, io, PTR2FIX(buffer_spec));
       return FIX2INT(len);
     }
     case WM_BACKEND_SEND: {
-      VALUE len = Backend_send(backend, io, PTR2FIX(buffer), INT2FIX(0));
+      VALUE len = Backend_send(backend, io, PTR2FIX(buffer_spec), INT2FIX(0));
       return FIX2INT(len);
     }
     case WM_WRITE: {
-      VALUE str = rb_str_new(0, buffer->len);
-      memcpy(RSTRING_PTR(str), buffer->ptr, buffer->len);
-      rb_str_modify_expand(str, buffer->len);
+      VALUE str = rb_str_new(0, buffer_spec->len);
+      memcpy(RSTRING_PTR(str), buffer_spec->ptr, buffer_spec->len);
+      rb_str_modify_expand(str, buffer_spec->len);
       rb_funcall(io, ID_write, 1, str);
       RB_GC_GUARD(str);
-      return buffer->len;
+      return buffer_spec->len;
     }
     case WM_CALL: {
-      VALUE str = rb_str_new(0, buffer->len);
-      memcpy(RSTRING_PTR(str), buffer->ptr, buffer->len);
-      rb_str_modify_expand(str, buffer->len);
+      VALUE str = rb_str_new(0, buffer_spec->len);
+      memcpy(RSTRING_PTR(str), buffer_spec->ptr, buffer_spec->len);
+      rb_str_modify_expand(str, buffer_spec->len);
       rb_funcall(io, ID_call, 1, str);
       RB_GC_GUARD(str);
-      return buffer->len;
+      return buffer_spec->len;
     }
     default: {
       rb_raise(rb_eRuntimeError, "Invalid write method");
@@ -183,16 +183,16 @@ static inline int write_from_raw_buffer(VALUE backend, VALUE io, enum write_meth
   }
 }
 
-static inline int write_c_string_from_str(VALUE str, struct raw_buffer *buffer) {
+static inline int write_c_string_from_str(VALUE str, struct buffer_spec *buffer_spec) {
   int strlen = RSTRING_LEN(str);
-  if (strlen >= buffer->len)
+  if (strlen >= buffer_spec->len)
     rb_raise(rb_eRuntimeError, "string too long to fit in gzip header buffer");
 
-  memcpy(buffer->ptr, RSTRING_PTR(str), strlen);
-  buffer->ptr[strlen] = 0;
+  memcpy(buffer_spec->ptr, RSTRING_PTR(str), strlen);
+  buffer_spec->ptr[strlen] = 0;
   int written = strlen + 1;
-  buffer->ptr += written;
-  buffer->len -= written;
+  buffer_spec->ptr += written;
+  buffer_spec->len -= written;
   return written;
 }
 
@@ -265,7 +265,7 @@ int gzip_prepare_header(struct gzip_header_ctx *ctx, unsigned char *buffer, int 
 
   len = 10;
 
-  struct raw_buffer buffer_spec = {buffer + len, maxlen - len};
+  struct buffer_spec buffer_spec = {buffer + len, maxlen - len};
   if (!NIL_P(ctx->orig_name))
     len += write_c_string_from_str(ctx->orig_name, &buffer_spec);
   if (!NIL_P(ctx->comment))
@@ -312,54 +312,54 @@ struct z_stream_ctx {
 
 typedef int (*zlib_func)(z_streamp, int);
 
-void read_gzip_header_str(struct raw_buffer *buffer, VALUE *str, unsigned int *in_pos, unsigned long *total_read) {
+void read_gzip_header_str(struct buffer_spec *buffer_spec, VALUE *str, unsigned int *in_pos, unsigned long *total_read) {
   unsigned long null_pos;
   // find null terminator
   for (null_pos = *in_pos; null_pos < *total_read; null_pos++) {
-    if (!buffer->ptr[null_pos]) break;
+    if (!buffer_spec->ptr[null_pos]) break;
   }
   if (null_pos == *total_read)
     rb_raise(rb_eRuntimeError, "Invalid gzip header");
   
-  *str = rb_str_new_cstr((char *)buffer->ptr + *in_pos);
+  *str = rb_str_new_cstr((char *)buffer_spec->ptr + *in_pos);
   *in_pos = null_pos + 1;
 }
 
 void gzip_read_header(struct z_stream_ctx *ctx, struct gzip_header_ctx *header_ctx) {
-  struct raw_buffer in_buffer;
+  struct buffer_spec in_buffer_spec;
   int flags;
 
   if (ctx->src_read_method == RM_STRING) {
-    in_buffer.ptr = (unsigned char *)RSTRING_PTR(ctx->src);
-    in_buffer.len = RSTRING_LEN(ctx->src);
-    ctx->in_total = in_buffer.len;
+    in_buffer_spec.ptr = (unsigned char *)RSTRING_PTR(ctx->src);
+    in_buffer_spec.len = RSTRING_LEN(ctx->src);
+    ctx->in_total = in_buffer_spec.len;
   }
   else {
-    in_buffer.ptr = ctx->in;
-    in_buffer.len = CHUNK;
+    in_buffer_spec.ptr = ctx->in;
+    in_buffer_spec.len = CHUNK;
     while (ctx->in_total < 10) {
-      int read = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer);
+      int read = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer_spec);
       if (read == 0) goto error;
       ctx->in_total += read;
     }
   }
 
   // PRINT_BUFFER("read gzip header", ctx->in, ctx->in_total);
-  if (in_buffer.ptr[0] != GZ_MAGIC1) goto error;
-  if (in_buffer.ptr[1] != GZ_MAGIC2) goto error;
-  if (in_buffer.ptr[2] != GZ_METHOD_DEFLATE) goto error;
-  flags = in_buffer.ptr[3];
+  if (in_buffer_spec.ptr[0] != GZ_MAGIC1) goto error;
+  if (in_buffer_spec.ptr[1] != GZ_MAGIC2) goto error;
+  if (in_buffer_spec.ptr[2] != GZ_METHOD_DEFLATE) goto error;
+  flags = in_buffer_spec.ptr[3];
 
-  unsigned long mtime = gzfile_get32(in_buffer.ptr + 4);
+  unsigned long mtime = gzfile_get32(in_buffer_spec.ptr + 4);
   header_ctx->mtime = INT2FIX(mtime);
   ctx->in_pos = 10;
 
   if (flags & GZ_FLAG_ORIG_NAME)
-    read_gzip_header_str(&in_buffer, &header_ctx->orig_name, &ctx->in_pos, &ctx->in_total);
+    read_gzip_header_str(&in_buffer_spec, &header_ctx->orig_name, &ctx->in_pos, &ctx->in_total);
   else
     header_ctx->orig_name = Qnil;
   if (flags & GZ_FLAG_COMMENT)
-    read_gzip_header_str(&in_buffer, &header_ctx->comment, &ctx->in_pos, &ctx->in_total);
+    read_gzip_header_str(&in_buffer_spec, &header_ctx->comment, &ctx->in_pos, &ctx->in_total);
   else
     header_ctx->comment = Qnil;
   return;
@@ -391,25 +391,25 @@ static inline int process_without_gvl(zlib_func fun, z_stream *strm, int flags) 
 static inline int z_stream_write_out(struct z_stream_ctx *ctx, zlib_func fun, int eof) {
   int ret;
   int written;
-  struct raw_buffer out_buffer;
+  struct buffer_spec out_buffer_spec;
 
   int avail_out_pre = ctx->strm.avail_out = CHUNK - ctx->out_pos;
   ctx->strm.next_out = ctx->out + ctx->out_pos;
   ret = process_without_gvl(fun, &ctx->strm, eof ? Z_FINISH : Z_NO_FLUSH);
   assert(ret != Z_STREAM_ERROR);
   written = avail_out_pre - ctx->strm.avail_out;
-  out_buffer.ptr = ctx->out;
-  out_buffer.len = ctx->out_pos + written;
+  out_buffer_spec.ptr = ctx->out;
+  out_buffer_spec.len = ctx->out_pos + written;
 
-  if (eof && ctx->f_gzip_footer && (CHUNK - out_buffer.len >= GZIP_FOOTER_LEN)) {
-    gzip_prepare_footer(ctx->crc32, ctx->in_total, out_buffer.ptr + out_buffer.len, 8);
-    out_buffer.len += GZIP_FOOTER_LEN;
+  if (eof && ctx->f_gzip_footer && (CHUNK - out_buffer_spec.len >= GZIP_FOOTER_LEN)) {
+    gzip_prepare_footer(ctx->crc32, ctx->in_total, out_buffer_spec.ptr + out_buffer_spec.len, 8);
+    out_buffer_spec.len += GZIP_FOOTER_LEN;
   }
 
-  if (out_buffer.len) {
-    ret = write_from_raw_buffer(ctx->backend, ctx->dest, ctx->dest_write_method, &out_buffer);
+  if (out_buffer_spec.len) {
+    ret = write_from_raw_buffer(ctx->backend, ctx->dest, ctx->dest_write_method, &out_buffer_spec);
     if (ctx->mode == SM_INFLATE)
-      ctx->crc32 = crc32(ctx->crc32, out_buffer.ptr + ctx->out_pos, written);
+      ctx->crc32 = crc32(ctx->crc32, out_buffer_spec.ptr + ctx->out_pos, written);
     ctx->out_total += ret - ctx->out_pos;
   }
   ctx->out_pos = 0;
@@ -437,19 +437,19 @@ VALUE z_stream_io_loop(struct z_stream_ctx *ctx) {
     int eof;
     int read_len;
     if (ctx->src_read_method == RM_STRING) {
-      struct raw_buffer in_buffer = {
+      struct buffer_spec in_buffer_spec = {
         (unsigned char *)RSTRING_PTR(ctx->src) + ctx->in_pos,
         RSTRING_LEN(ctx->src) - ctx->in_pos
       };
-      ctx->strm.next_in = in_buffer.ptr;
-      read_len = ctx->strm.avail_in = in_buffer.len;
+      ctx->strm.next_in = in_buffer_spec.ptr;
+      read_len = ctx->strm.avail_in = in_buffer_spec.len;
       eof = 1;
-      if (ctx->mode == SM_DEFLATE) ctx->crc32 = crc32(ctx->crc32, in_buffer.ptr, read_len);
+      if (ctx->mode == SM_DEFLATE) ctx->crc32 = crc32(ctx->crc32, in_buffer_spec.ptr, read_len);
     }
     else {
-      struct raw_buffer in_buffer = {ctx->in, CHUNK};
+      struct buffer_spec in_buffer_spec = {ctx->in, CHUNK};
       ctx->strm.next_in = ctx->in;
-      read_len = ctx->strm.avail_in = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer);
+      read_len = ctx->strm.avail_in = read_to_raw_buffer(ctx->backend, ctx->src, ctx->src_read_method, &in_buffer_spec);
       if (!read_len) break;
       eof = read_len < CHUNK;
       if (ctx->mode == SM_DEFLATE) ctx->crc32 = crc32(ctx->crc32, ctx->in, read_len);
@@ -606,24 +606,24 @@ VALUE IO_http1_splice_chunked(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   VALUE backend = BACKEND();
   VALUE pipe = rb_funcall(cPipe, ID_new, 0);
   unsigned char out[128];
-  struct raw_buffer buffer = { out, 0 };
+  struct buffer_spec buffer_spec = { out, 0 };
 
   while (1) {
     int len = FIX2INT(Backend_splice(backend, src, pipe, maxlen));
     if (!len) break;
 
     // write chunk header
-    buffer.len += sprintf((char *)buffer.ptr + buffer.len, "%x\r\n", len);
-    write_from_raw_buffer(backend, dest, method, &buffer);
-    buffer.len = 0;
+    buffer_spec.len += sprintf((char *)buffer_spec.ptr + buffer_spec.len, "%x\r\n", len);
+    write_from_raw_buffer(backend, dest, method, &buffer_spec);
+    buffer_spec.len = 0;
     while (len) {
       int spliced = FIX2INT(Backend_splice(backend, pipe, dest, INT2FIX(len)));
       len -= spliced;
     }
-    buffer.len += sprintf((char *)buffer.ptr + buffer.len, "\r\n");
+    buffer_spec.len += sprintf((char *)buffer_spec.ptr + buffer_spec.len, "\r\n");
   }
-  buffer.len += sprintf((char *)buffer.ptr + buffer.len, "0\r\n\r\n");
-  write_from_raw_buffer(backend, dest, method, &buffer);
+  buffer_spec.len += sprintf((char *)buffer_spec.ptr + buffer_spec.len, "0\r\n\r\n");
+  write_from_raw_buffer(backend, dest, method, &buffer_spec);
 
   Pipe_close(pipe);
   RB_GC_GUARD(pipe);
