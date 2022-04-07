@@ -114,23 +114,23 @@ VALUE backend_snooze(struct Backend_base *backend);
 
 // macros for doing read loops
 #define READ_LOOP_PREPARE_STR() { \
-  str = Qnil; \
-  shrinkable = io_setstrbuf(&str, len); \
-  buf = RSTRING_PTR(str); \
+  buffer = Qnil; \
+  shrinkable = io_setstrbuf(&buffer, len); \
+  ptr = RSTRING_PTR(buffer); \
   total = 0; \
 }
 
 #define READ_LOOP_YIELD_STR() { \
-  io_set_read_length(str, total, shrinkable); \
-  if (fptr) io_enc_str(str, fptr); \
-  rb_yield(str); \
+  io_set_read_length(buffer, total, shrinkable); \
+  if (fptr) io_enc_str(buffer, fptr); \
+  rb_yield(buffer); \
   READ_LOOP_PREPARE_STR(); \
 }
 
 #define READ_LOOP_PASS_STR_TO_RECEIVER(receiver, method_id) { \
-  io_set_read_length(str, total, shrinkable); \
-  if (fptr) io_enc_str(str, fptr); \
-  rb_funcall_passing_block(receiver, method_id, 1, &str); \
+  io_set_read_length(buffer, total, shrinkable); \
+  if (fptr) io_enc_str(buffer, fptr); \
+  rb_funcall_passing_block(receiver, method_id, 1, &buffer); \
   READ_LOOP_PREPARE_STR(); \
 }
 

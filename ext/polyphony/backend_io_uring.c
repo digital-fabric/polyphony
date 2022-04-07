@@ -421,11 +421,11 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
-  VALUE str;
+  VALUE buffer;
   long total;
+  char *ptr;
   long len = FIX2INT(maxlen);
   int shrinkable;
-  char *buf;
 
   READ_LOOP_PREPARE_STR();
 
@@ -439,12 +439,12 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
     ssize_t result;
     int completed;
 
-    io_uring_prep_read(sqe, fd, buf, len, -1);
+    io_uring_prep_read(sqe, fd, ptr, len, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
-      context_attach_buffers(ctx, 1, &str);
+      context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
@@ -460,7 +460,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
     }
   }
 
-  RB_GC_GUARD(str);
+  RB_GC_GUARD(buffer);
 
   return io;
 }
@@ -469,11 +469,11 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
-  VALUE str;
+  VALUE buffer;
   long total;
+  char *ptr;
   long len = 8192;
   int shrinkable;
-  char *buf;
   ID method_id = SYM2ID(method);
 
   READ_LOOP_PREPARE_STR();
@@ -488,12 +488,12 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
     ssize_t result;
     int completed;
 
-    io_uring_prep_read(sqe, fd, buf, len, -1);
+    io_uring_prep_read(sqe, fd, ptr, len, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
-      context_attach_buffers(ctx, 1, &str);
+      context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
@@ -509,17 +509,17 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
     }
   }
 
-  RB_GC_GUARD(str);
+  RB_GC_GUARD(buffer);
 
   return io;
 }
 
-VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
+VALUE Backend_write(VALUE self, VALUE io, VALUE buffer) {
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
 
-  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 1);
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 1);
   long left = buffer_spec.len;
 
   GetBackend(self, backend);
@@ -537,7 +537,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
-      context_attach_buffers(ctx, 1, &str);
+      context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
@@ -569,9 +569,9 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 
   iov = malloc(iov_count * sizeof(struct iovec));
   for (int i = 0; i < argc; i++) {
-    VALUE str = argv[i];
-    iov[i].iov_base = StringValuePtr(str);
-    iov[i].iov_len = RSTRING_LEN(str);
+    VALUE buffer = argv[i];
+    iov[i].iov_base = StringValuePtr(buffer);
+    iov[i].iov_len = RSTRING_LEN(buffer);
     total_length += iov[i].iov_len;
   }
   iov_ptr = iov;
@@ -678,11 +678,11 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
-  VALUE str;
+  VALUE buffer;
   long total;
+  char *ptr;
   long len = FIX2INT(maxlen);
   int shrinkable;
-  char *buf;
 
   READ_LOOP_PREPARE_STR();
 
@@ -696,12 +696,12 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
     int result;
     int completed;
 
-    io_uring_prep_recv(sqe, fd, buf, len, 0);
+    io_uring_prep_recv(sqe, fd, ptr, len, 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
-      context_attach_buffers(ctx, 1, &str);
+      context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
@@ -717,7 +717,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
     }
   }
 
-  RB_GC_GUARD(str);
+  RB_GC_GUARD(buffer);
   return io;
 }
 
@@ -725,11 +725,11 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
-  VALUE str;
+  VALUE buffer;
   long total;
+  char *ptr;
   long len = 8192;
   int shrinkable;
-  char *buf;
   ID method_id = SYM2ID(method);
 
   READ_LOOP_PREPARE_STR();
@@ -744,12 +744,12 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
     int result;
     int completed;
 
-    io_uring_prep_recv(sqe, fd, buf, len, 0);
+    io_uring_prep_recv(sqe, fd, ptr, len, 0);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
-      context_attach_buffers(ctx, 1, &str);
+      context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
@@ -765,16 +765,16 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
     }
   }
 
-  RB_GC_GUARD(str);
+  RB_GC_GUARD(buffer);
   return io;
 }
 
-VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
+VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
   Backend_t *backend;
   int fd;
   rb_io_t *fptr;
 
-  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 1);
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 1);
   long left = buffer_spec.len;
   int flags_int = FIX2INT(flags);
 
@@ -793,7 +793,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
-      context_attach_buffers(ctx, 1, &str);
+      context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
@@ -1344,18 +1344,18 @@ VALUE Backend_kind(VALUE self) {
   return SYM_io_uring;
 }
 
-struct io_uring_sqe *Backend_chain_prepare_write(Backend_t *backend, VALUE io, VALUE str) {
+struct io_uring_sqe *Backend_chain_prepare_write(Backend_t *backend, VALUE io, VALUE buffer) {
   int fd;
   rb_io_t *fptr;
   struct io_uring_sqe *sqe;
 
   fd = fd_from_io(io, &fptr, 1, 0);
   sqe = io_uring_backend_get_sqe(backend);
-  io_uring_prep_write(sqe, fd, StringValuePtr(str), RSTRING_LEN(str), 0);
+  io_uring_prep_write(sqe, fd, StringValuePtr(buffer), RSTRING_LEN(buffer), 0);
   return sqe;
 }
 
-struct io_uring_sqe *Backend_chain_prepare_send(Backend_t *backend, VALUE io, VALUE str, VALUE flags) {
+struct io_uring_sqe *Backend_chain_prepare_send(Backend_t *backend, VALUE io, VALUE buffer, VALUE flags) {
   int fd;
   rb_io_t *fptr;
   struct io_uring_sqe *sqe;
@@ -1363,7 +1363,7 @@ struct io_uring_sqe *Backend_chain_prepare_send(Backend_t *backend, VALUE io, VA
   fd = fd_from_io(io, &fptr, 1, 0);
 
   sqe = io_uring_backend_get_sqe(backend);
-  io_uring_prep_send(sqe, fd, StringValuePtr(str), RSTRING_LEN(str), FIX2INT(flags));
+  io_uring_prep_send(sqe, fd, StringValuePtr(buffer), RSTRING_LEN(buffer), FIX2INT(flags));
   return sqe;
 }
 
@@ -1498,9 +1498,9 @@ inline VALUE Backend_run_idle_tasks(VALUE self) {
   return self;
 }
 
-static inline void splice_chunks_prep_write(op_context_t *ctx, struct io_uring_sqe *sqe, int fd, VALUE str) {
-  char *buf = RSTRING_PTR(str);
-  int len = RSTRING_LEN(str);
+static inline void splice_chunks_prep_write(op_context_t *ctx, struct io_uring_sqe *sqe, int fd, VALUE buffer) {
+  char *buf = RSTRING_PTR(buffer);
+  int len = RSTRING_LEN(buffer);
   io_uring_prep_write(sqe, fd, buf, len, 0);
   // io_uring_prep_send(sqe, fd, buf, len, 0);
   io_uring_sqe_set_data(sqe, ctx);
@@ -1567,7 +1567,6 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   op_context_t *ctx = 0;
   struct io_uring_sqe *sqe = 0;
   int maxlen;
-  VALUE str = Qnil;
   VALUE chunk_len_value = Qnil;
   int src_fd;
   int dest_fd;
@@ -1639,7 +1638,6 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     SPLICE_CHUNKS_AWAIT_OPS(backend, &ctx, 0, &switchpoint_result);
   }
 
-  RB_GC_GUARD(str);
   RB_GC_GUARD(chunk_len_value);
   RB_GC_GUARD(switchpoint_result);
   if (pipefd[0] != -1) close(pipefd[0]);

@@ -355,11 +355,11 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   struct libev_io watcher;
   int fd;
   rb_io_t *fptr;
-  VALUE str;
+  VALUE buffer;
   long total;
+  char *ptr;
   long len = FIX2INT(maxlen);
   int shrinkable;
-  char *buf;
   VALUE switchpoint_result = Qnil;
 
   READ_LOOP_PREPARE_STR();
@@ -370,7 +370,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
 
   while (1) {
     backend->base.op_count++;
-    ssize_t n = read(fd, buf, len);
+    ssize_t n = read(fd, ptr, len);
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -389,7 +389,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
     }
   }
 
-  RB_GC_GUARD(str);
+  RB_GC_GUARD(buffer);
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
@@ -403,11 +403,11 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
   struct libev_io watcher;
   int fd;
   rb_io_t *fptr;
-  VALUE str;
+  VALUE buffer;
   long total;
+  char *ptr;
   long len = 8192;
   int shrinkable;
-  char *buf;
   VALUE switchpoint_result = Qnil;
   ID method_id = SYM2ID(method);
 
@@ -419,7 +419,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
 
   while (1) {
     backend->base.op_count++;
-    ssize_t n = read(fd, buf, len);
+    ssize_t n = read(fd, ptr, len);
     if (n < 0) {
       int e = errno;
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -438,7 +438,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
     }
   }
 
-  RB_GC_GUARD(str);
+  RB_GC_GUARD(buffer);
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
 
@@ -447,14 +447,14 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE Backend_write(VALUE self, VALUE io, VALUE str) {
+VALUE Backend_write(VALUE self, VALUE io, VALUE buffer) {
   Backend_t *backend;
   struct libev_io watcher;
   int fd;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
 
-  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 1);
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 1);
   long left = buffer_spec.len;
 
   GetBackend(self, backend);
@@ -510,9 +510,9 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 
   iov = malloc(iov_count * sizeof(struct iovec));
   for (int i = 0; i < argc; i++) {
-    VALUE str = argv[i];
-    iov[i].iov_base = StringValuePtr(str);
-    iov[i].iov_len = RSTRING_LEN(str);
+    VALUE buffer = argv[i];
+    iov[i].iov_base = StringValuePtr(buffer);
+    iov[i].iov_len = RSTRING_LEN(buffer);
     total_length += iov[i].iov_len;
   }
   iov_ptr = iov;
@@ -722,14 +722,14 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
-VALUE Backend_send(VALUE self, VALUE io, VALUE str, VALUE flags) {
+VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
   Backend_t *backend;
   struct libev_io watcher;
   int fd;
   rb_io_t *fptr;
   VALUE switchpoint_result = Qnil;
 
-  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(str, 1);
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 1);
   long left = buffer_spec.len;
   int flags_int = FIX2INT(flags);
 
@@ -920,11 +920,11 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   rb_io_t *dest_fptr;
   int left = 0;
   int total = 0;
+  char *ptr;
   int maxlen_i = FIX2INT(maxlen);
   int splice_to_eof = maxlen_i < 0;
   if (splice_to_eof) maxlen_i = -maxlen_i;
-  VALUE str = rb_str_new(0, maxlen_i);
-  char *buf = RSTRING_PTR(str);
+  VALUE buffer = rb_str_new(0, maxlen_i);
 
   GetBackend(self, backend);
   src_fd = fd_from_io(src, &src_fptr, 0, 0);
@@ -935,7 +935,8 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
     int done;
     while (1) {
       backend->base.op_count++;
-      ssize_t n = read(src_fd, buf, maxlen_i);
+      ptr = RSTRING_PTR(buffer);
+      ssize_t n = read(src_fd, ptr, maxlen_i);
       if (n < 0) {
         int e = errno;
         if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -952,7 +953,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
     while (left > 0) {
       backend->base.op_count++;
-      ssize_t n = write(dest_fd, buf, left);
+      ssize_t n = write(dest_fd, ptr, left);
       if (n < 0) {
         int e = errno;
         if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
@@ -962,7 +963,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
         if (TEST_EXCEPTION(switchpoint_result)) goto error;
       }
       else {
-        buf += n;
+        ptr += n;
         left -= n;
       }
     }
@@ -976,7 +977,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
-  RB_GC_GUARD(str);
+  RB_GC_GUARD(buffer);
 
   return INT2FIX(total);
 error:
@@ -1258,13 +1259,13 @@ inline VALUE Backend_run_idle_tasks(VALUE self) {
   return self;
 }
 
-static inline int splice_chunks_write(Backend_t *backend, int fd, VALUE str, struct libev_rw_io *watcher, VALUE *result) {
-  char *buf = RSTRING_PTR(str);
-  int len = RSTRING_LEN(str);
+static inline int splice_chunks_write(Backend_t *backend, int fd, VALUE buffer, struct libev_rw_io *watcher, VALUE *result) {
+  char *ptr = RSTRING_PTR(buffer);
+  int len = RSTRING_LEN(buffer);
   int left = len;
   while (left > 0) {
     backend->base.op_count++;
-    ssize_t n = write(fd, buf, left);
+    ssize_t n = write(fd, ptr, left);
     if (n < 0) {
       int err = errno;
       if ((err != EWOULDBLOCK && err != EAGAIN)) return err;
@@ -1273,7 +1274,7 @@ static inline int splice_chunks_write(Backend_t *backend, int fd, VALUE str, str
       if (TEST_EXCEPTION(*result)) return -1;
     }
     else {
-      buf += n;
+      ptr += n;
       left -= n;
     }
   }
@@ -1356,8 +1357,8 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   struct libev_rw_io watcher;
   watcher.ctx.fiber = Qnil;
   int maxlen = FIX2INT(chunk_size);
-  VALUE str = Qnil;
   VALUE chunk_len_value = Qnil;
+  VALUE buffer;
 
   int pipefd[2] = { -1, -1 };
   if (pipe(pipefd) == -1) {
@@ -1382,8 +1383,8 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     chunk_len_value = INT2FIX(chunk_len);
 
     if (chunk_prefix != Qnil) {
-      VALUE str = (TYPE(chunk_prefix) == T_STRING) ? chunk_prefix : rb_funcall(chunk_prefix, ID_call, 1, chunk_len_value);
-      int err = splice_chunks_write(backend, dest_fd, str, &watcher, &result);
+      buffer = (TYPE(chunk_prefix) == T_STRING) ? chunk_prefix : rb_funcall(chunk_prefix, ID_call, 1, chunk_len_value);
+      int err = splice_chunks_write(backend, dest_fd, buffer, &watcher, &result);
       if (err == -1) goto error; else if (err) goto syscallerror;
     }
 
@@ -1397,8 +1398,8 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     }
 
     if (chunk_postfix != Qnil) {
-      VALUE str = (TYPE(chunk_postfix) == T_STRING) ? chunk_postfix : rb_funcall(chunk_postfix, ID_call, 1, chunk_len_value);
-      int err = splice_chunks_write(backend, dest_fd, str, &watcher, &result);
+      buffer = (TYPE(chunk_postfix) == T_STRING) ? chunk_postfix : rb_funcall(chunk_postfix, ID_call, 1, chunk_len_value);
+      int err = splice_chunks_write(backend, dest_fd, buffer, &watcher, &result);
       if (err == -1) goto error; else if (err) goto syscallerror;
     }
   }
@@ -1412,7 +1413,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     result = backend_snooze(&backend->base);
     if (TEST_EXCEPTION(result)) goto error;
   }
-  RB_GC_GUARD(str);
+  RB_GC_GUARD(buffer);
   RB_GC_GUARD(chunk_len_value);
   RB_GC_GUARD(result);
   if (pipefd[0] != -1) close(pipefd[0]);

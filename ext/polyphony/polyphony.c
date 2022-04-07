@@ -54,16 +54,16 @@ VALUE Polyphony_backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE me
   return Backend_feed_loop(BACKEND(), io, receiver, method);
 }
 
-VALUE Polyphony_backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, VALUE pos) {
-  return Backend_read(BACKEND(), io, str, length, to_eof, pos);
+VALUE Polyphony_backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eof, VALUE pos) {
+  return Backend_read(BACKEND(), io, buffer, length, to_eof, pos);
 }
 
 VALUE Polyphony_backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   return Backend_read_loop(BACKEND(), io, maxlen);
 }
 
-VALUE Polyphony_backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos) {
-  return Backend_recv(BACKEND(), io, str, length, pos);
+VALUE Polyphony_backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE pos) {
+  return Backend_recv(BACKEND(), io, buffer, length, pos);
 }
 
 VALUE Polyphony_backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
@@ -150,8 +150,8 @@ VALUE Polyphony_raw_buffer_get(int argc, VALUE *argv, VALUE self) {
   return rb_utf8_str_new((char *)buffer_spec->ptr, length);
 }
 
-VALUE Polyphony_raw_buffer_set(VALUE self, VALUE buf, VALUE str) {
-  struct buffer_spec *buffer_spec = FIX2PTR(buf);
+VALUE Polyphony_raw_buffer_set(VALUE self, VALUE buffer, VALUE str) {
+  struct buffer_spec *buffer_spec = FIX2PTR(buffer);
   int len = RSTRING_LEN(str);
   if (len > buffer_spec->len)
     rb_raise(rb_eRuntimeError, "Given string does not fit in given buffer");
@@ -161,8 +161,8 @@ VALUE Polyphony_raw_buffer_set(VALUE self, VALUE buf, VALUE str) {
   return self;
 }
 
-VALUE Polyphony_raw_buffer_size(VALUE self, VALUE buf) {
-  struct buffer_spec *buffer_spec = FIX2PTR(buf);
+VALUE Polyphony_raw_buffer_size(VALUE self, VALUE buffer) {
+  struct buffer_spec *buffer_spec = FIX2PTR(buffer);
   return INT2FIX(buffer_spec->len);
 }
 
