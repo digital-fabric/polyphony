@@ -5,7 +5,7 @@ require 'mkmf'
 
 dir_config 'polyphony_ext'
 
-KERNEL_INFO_RE = /Linux (\d)\.(\d+)\.(?:\d+)\-(?:\d+\-)?(\w+)/
+KERNEL_INFO_RE = /Linux (\d)\.(\d+)(?:\.)?((?:\d+\.?)*)(?:\-)?([\w\-]+)?/
 def get_config
   config = { linux: !!(RUBY_PLATFORM =~ /linux/) }
   return config if !config[:linux]
