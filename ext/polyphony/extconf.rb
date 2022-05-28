@@ -5,7 +5,7 @@ require 'mkmf'
 
 dir_config 'polyphony_ext'
 
-KERNEL_INFO_RE = /Linux (\d)\.(\d+)\.(?:\d+)\-(?:\d+\-)?(\w+)/
+KERNEL_INFO_RE = /Linux (\d)\.(\d+)(?:\.)?((?:\d+\.?)*)(?:\-)?([\w\-]+)?/
 def get_config
   config = { linux: !!(RUBY_PLATFORM =~ /linux/) }
   return config if !config[:linux]
@@ -14,7 +14,7 @@ def get_config
   m = kernel_info.match(KERNEL_INFO_RE)
   raise "Could not parse Linux kernel information (#{kernel_info.inspect})" if !m
 
-  version, major_revision, distribution = m[1].to_i, m[2].to_i, m[3]
+  version, major_revision, distribution = m[1].to_i, m[2].to_i, m[4]
   config[:pidfd_open] = (version == 5) && (major_revision >= 3)
 
   force_libev = ENV['POLYPHONY_LIBEV'] != nil
