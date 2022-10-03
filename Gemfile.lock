@@ -14,7 +14,7 @@ GEM
     httparty (0.17.1)
       mime-types (~> 3.0)
       multi_xml (>= 0.5.2)
-    json (2.6.1)
+    json (2.6.2)
     localhost (1.1.9)
     method_source (1.0.0)
     mime-types (3.4.1)
@@ -28,8 +28,8 @@ GEM
       ruby-progressbar
     msgpack (1.4.2)
     multi_xml (0.6.0)
-    parallel (1.21.0)
-    parser (3.1.0.0)
+    parallel (1.22.1)
+    parser (3.1.2.1)
       ast (~> 2.4.1)
     pry (0.13.1)
       coderay (~> 1.1)
@@ -38,7 +38,7 @@ GEM
     rake (13.0.6)
     rake-compiler (1.1.1)
       rake
-    regexp_parser (2.2.0)
+    regexp_parser (2.6.0)
     rexml (3.2.5)
     rubocop (0.85.1)
       parallel (~> 1.10)
@@ -49,8 +49,8 @@ GEM
       rubocop-ast (>= 0.0.3)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 1.4.0, < 2.0)
-    rubocop-ast (1.15.1)
-      parser (>= 3.0.1.1)
+    rubocop-ast (1.21.0)
+      parser (>= 3.1.1.0)
     ruby-progressbar (1.11.0)
     simplecov (0.17.1)
       docile (~> 1.1)
@@ -60,11 +60,7 @@ GEM
     unicode-display_width (1.8.0)
 
 PLATFORMS
-  ruby
-  universal-darwin
-  universal-freebsd
-  universal-linux
-  universal-unknown
+  x86_64-linux
 
 DEPENDENCIES
   httparty (= 0.17.1)
@@ -79,4 +75,4 @@ DEPENDENCIES
   simplecov (= 0.17.1)
 
 BUNDLED WITH
-   2.3.3
+   2.3.7

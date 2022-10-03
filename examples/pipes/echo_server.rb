@@ -17,4 +17,4 @@ def handle_client(conn)
 end
 
 puts "Serving echo on port 1234..."
-TCPServer.new('127.0.0.1', 1234).accept_loop { |c| handle_client(c) }
+TCPServer.new('0.0.0.0', 1234).accept_loop { |c| handle_client(c) }
