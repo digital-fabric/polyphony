@@ -286,6 +286,7 @@ VALUE Backend_wakeup(VALUE self) {
     // NOP which would cause the io_uring_enter syscall to return
     struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     io_uring_prep_nop(sqe);
+    io_uring_sqe_set_data(sqe, NULL);
     io_uring_backend_immediate_submit(backend);
 
     return Qtrue;
@@ -319,6 +320,7 @@ int io_uring_backend_defer_submit_and_await(
     ctx->result = -ECANCELED;
     sqe = io_uring_backend_get_sqe(backend);
     io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+    io_uring_sqe_set_data(sqe, NULL);
     io_uring_backend_immediate_submit(backend);
   }
 
@@ -942,6 +944,7 @@ static inline void io_uring_backend_cancel(Backend_t *backend, op_context_t *ctx
   struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
   ctx->result = -ECANCELED;
   io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+  io_uring_sqe_set_data(sqe, NULL);
 }
 
 VALUE double_splice_safe(struct double_splice_ctx *ctx) {
@@ -1213,6 +1216,7 @@ VALUE Backend_timeout_ensure(VALUE arg) {
     // op was not completed, so we need to cancel it
     sqe = io_uring_get_sqe(&timeout_ctx->backend->ring);
     io_uring_prep_cancel(sqe, (__u64)timeout_ctx->ctx, 0);
+    io_uring_sqe_set_data(sqe, NULL);
     io_uring_backend_immediate_submit(timeout_ctx->backend);
   }
   context_store_release(&timeout_ctx->backend->store, timeout_ctx->ctx);
@@ -1331,6 +1335,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
     struct io_uring_sqe *sqe;
     sqe = io_uring_backend_get_sqe(backend);
     io_uring_prep_cancel(sqe, (__u64)backend->event_fd_ctx, 0);
+    io_uring_sqe_set_data(sqe, NULL);
     io_uring_backend_immediate_submit(backend);
     backend->event_fd_ctx = NULL;
   }
@@ -1437,6 +1442,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
         ctx->result = -ECANCELED;
         sqe = io_uring_backend_get_sqe(backend);
         io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+        io_uring_sqe_set_data(sqe, NULL);
         io_uring_backend_immediate_submit(backend);
       }
       else {
@@ -1467,6 +1473,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
     ctx->result = -ECANCELED;
     sqe = io_uring_backend_get_sqe(backend);
     io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+    io_uring_sqe_set_data(sqe, NULL);
     io_uring_backend_immediate_submit(backend);
     RAISE_IF_EXCEPTION(resume_value);
     return resume_value;
@@ -1533,6 +1540,7 @@ static inline void splice_chunks_cancel(Backend_t *backend, op_context_t *ctx) {
   ctx->result = -ECANCELED;
   sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+  io_uring_sqe_set_data(sqe, NULL);
   io_uring_backend_immediate_submit(backend);
 }
 
