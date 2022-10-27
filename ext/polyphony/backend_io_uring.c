@@ -305,10 +305,7 @@ int io_uring_backend_defer_submit_and_await(
   VALUE switchpoint_result = Qnil;
 
   backend->base.op_count++;
-  if (sqe) {
-    io_uring_sqe_set_data(sqe, ctx);
-    io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
-  }
+  if (sqe) io_uring_sqe_set_data(sqe, ctx);
   io_uring_backend_defer_submit(backend);
 
   switchpoint_result = backend_await((struct Backend_base *)backend);
@@ -319,7 +316,7 @@ int io_uring_backend_defer_submit_and_await(
     // op was not completed (an exception was raised), so we need to cancel it
     ctx->result = -ECANCELED;
     sqe = io_uring_backend_get_sqe(backend);
-    io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+    io_uring_prep_cancel(sqe, ctx, 0);
     io_uring_sqe_set_data(sqe, NULL);
     io_uring_backend_immediate_submit(backend);
   }
@@ -933,7 +930,6 @@ static inline op_context_t *prepare_double_splice_ctx(Backend_t *backend, int sr
   struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_splice(sqe, src_fd, -1, dest_fd, -1, DOUBLE_SPLICE_MAXLEN, 0);
   io_uring_sqe_set_data(sqe, ctx);
-  io_uring_sqe_set_flags(sqe, IOSQE_ASYNC);
   backend->base.op_count += 1;
   backend->pending_sqes += 1;
 
@@ -943,7 +939,7 @@ static inline op_context_t *prepare_double_splice_ctx(Backend_t *backend, int sr
 static inline void io_uring_backend_cancel(Backend_t *backend, op_context_t *ctx) {
   struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
   ctx->result = -ECANCELED;
-  io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+  io_uring_prep_cancel(sqe, ctx, 0);
   io_uring_sqe_set_data(sqe, NULL);
 }
 
@@ -1215,7 +1211,7 @@ VALUE Backend_timeout_ensure(VALUE arg) {
     timeout_ctx->ctx->result = -ECANCELED;
     // op was not completed, so we need to cancel it
     sqe = io_uring_get_sqe(&timeout_ctx->backend->ring);
-    io_uring_prep_cancel(sqe, (__u64)timeout_ctx->ctx, 0);
+    io_uring_prep_cancel(sqe, timeout_ctx->ctx, 0);
     io_uring_sqe_set_data(sqe, NULL);
     io_uring_backend_immediate_submit(timeout_ctx->backend);
   }
@@ -1334,7 +1330,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
     // last fiber to use the eventfd, so we cancel the ongoing poll
     struct io_uring_sqe *sqe;
     sqe = io_uring_backend_get_sqe(backend);
-    io_uring_prep_cancel(sqe, (__u64)backend->event_fd_ctx, 0);
+    io_uring_prep_cancel(sqe, backend->event_fd_ctx, 0);
     io_uring_sqe_set_data(sqe, NULL);
     io_uring_backend_immediate_submit(backend);
     backend->event_fd_ctx = NULL;
@@ -1434,14 +1430,12 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
 
       if (sqe_count) {
         struct io_uring_sqe *sqe;
-        
         io_uring_sqe_set_data(last_sqe, ctx);
-        io_uring_sqe_set_flags(last_sqe, IOSQE_ASYNC);
 
         ctx->ref_count = sqe_count;
         ctx->result = -ECANCELED;
         sqe = io_uring_backend_get_sqe(backend);
-        io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+        io_uring_prep_cancel(sqe, ctx, 0);
         io_uring_sqe_set_data(sqe, NULL);
         io_uring_backend_immediate_submit(backend);
       }
@@ -1453,7 +1447,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
     }
 
     io_uring_sqe_set_data(last_sqe, ctx);
-    flags = (i == (argc - 1)) ? IOSQE_ASYNC : IOSQE_ASYNC | IOSQE_IO_LINK;
+    flags = (i == (argc - 1)) ? 0 : IOSQE_IO_LINK;
     io_uring_sqe_set_flags(last_sqe, flags);
     sqe_count++;
   }
@@ -1472,7 +1466,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
     // op was not completed (an exception was raised), so we need to cancel it
     ctx->result = -ECANCELED;
     sqe = io_uring_backend_get_sqe(backend);
-    io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+    io_uring_prep_cancel(sqe, ctx, 0);
     io_uring_sqe_set_data(sqe, NULL);
     io_uring_backend_immediate_submit(backend);
     RAISE_IF_EXCEPTION(resume_value);
@@ -1539,7 +1533,7 @@ static inline void splice_chunks_cancel(Backend_t *backend, op_context_t *ctx) {
   
   ctx->result = -ECANCELED;
   sqe = io_uring_backend_get_sqe(backend);
-  io_uring_prep_cancel(sqe, (__u64)ctx, 0);
+  io_uring_prep_cancel(sqe, ctx, 0);
   io_uring_sqe_set_data(sqe, NULL);
   io_uring_backend_immediate_submit(backend);
 }
