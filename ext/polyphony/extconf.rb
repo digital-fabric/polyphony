@@ -15,11 +15,13 @@ def get_config
   raise "Could not parse Linux kernel information (#{kernel_info.inspect})" if !m
 
   version, major_revision, distribution = m[1].to_i, m[2].to_i, m[4]
-  config[:pidfd_open] = (version == 5) && (major_revision >= 3)
+
+  combined_version = version.to_i * 100 + major_revision.to_i
+
+  config[:pidfd_open] = combined_version > 503
 
   force_libev = ENV['POLYPHONY_LIBEV'] != nil
-  config[:io_uring] = !force_libev &&
-    (version == 5) && (major_revision >= 6) && (distribution != 'linuxkit')
+  config[:io_uring] = !force_libev && (combined_version >= 506) && (distribution != 'linuxkit')
   config
 end
 
