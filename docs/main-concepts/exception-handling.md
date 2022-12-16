@@ -229,7 +229,7 @@ def do_work
   end
 rescue Polyphony::Terminate
   # We still need to handle any pending request
-  receive_pending.each { handle_req(req) }
+  receive_all_pending.each { handle_req(req) }
 end
 
 # on the main fiber

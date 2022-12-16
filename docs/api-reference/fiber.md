@@ -212,7 +212,7 @@ spin { Fiber.current.parent << 'hello from child' }
 message = receive #=> 'hello from child'
 ```
 
-### #receive_pending → [*object]
+### #receive_all_pending → [*object]
 
 Returns all messages currently in the mailbox, emptying the mailbox. This method
 does not block if no the mailbox is already empty. This method may be used to
@@ -225,7 +225,7 @@ worker = spin do
     handle_job(job)
   end
 rescue Polyphony::Terminate => e
-  receive_pending.each { |job| handle_job(job) }
+  receive_all_pending.each { |job| handle_job(job) }
 end
 ```
 

@@ -63,9 +63,9 @@ result #=> 'bar'
 
 Shortcut for `Fiber.current.receive`
 
-### #receive_pending → [*object]
+### #receive_all_pending → [*object]
 
-Shortcut for `Fiber.current.receive_pending`
+Shortcut for `Fiber.current.receive_all_pending`
 
 ### #sleep(duration = nil) → fiber
 
