@@ -194,6 +194,8 @@ class ::Socket
   def readpartial(maxlen, buf = +'', buf_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_recv(self, buf, maxlen, buf_pos)
     raise EOFError if !result && raise_on_eof
+
+    result
   end
 
   ZERO_LINGER = [0, 0].pack('ii').freeze
