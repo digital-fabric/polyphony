@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative './extensions/enumerator'
 require_relative './extensions/exception'
 require_relative './extensions/fiber'
 require_relative './extensions/io'
