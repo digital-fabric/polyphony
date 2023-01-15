@@ -315,7 +315,7 @@ end:
   return self;
 }
 
-void Init_Queue() {
+void Init_Queue(void) {
   cClosedQueueError = rb_const_get(rb_cObject, rb_intern("ClosedQueueError"));
   cThreadError = rb_const_get(rb_cObject, rb_intern("ThreadError"));
 

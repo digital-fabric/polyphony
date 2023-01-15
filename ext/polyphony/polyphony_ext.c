@@ -15,7 +15,7 @@ void Init_SocketExtensions();
 extern void playground();
 #endif
 
-void Init_polyphony_ext() {
+void Init_polyphony_ext(void) {
   Init_Polyphony();
 
   Init_Backend();

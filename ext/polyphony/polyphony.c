@@ -170,7 +170,7 @@ VALUE Polyphony_raw_buffer_size(VALUE self, VALUE buffer) {
 //   return Backend_close(BACKEND(), io);
 // }
 
-void Init_Polyphony() {
+void Init_Polyphony(void) {
   mPolyphony = rb_define_module("Polyphony");
 
   // backend methods

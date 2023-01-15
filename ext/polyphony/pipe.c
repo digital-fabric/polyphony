@@ -96,7 +96,7 @@ VALUE Pipe_fds(VALUE self) {
   return rb_ary_new_from_args(2, INT2FIX(pipe->fds[0]), INT2FIX(pipe->fds[1]));
 }
 
-void Init_Pipe() {
+void Init_Pipe(void) {
   cPipe = rb_define_class_under(mPolyphony, "Pipe", rb_cObject);
   cClosedPipeError = rb_define_class_under(cPipe, "ClosedPipeError", rb_eRuntimeError);
 

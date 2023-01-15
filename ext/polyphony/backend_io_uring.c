@@ -1701,7 +1701,7 @@ void Backend_unpark_fiber(VALUE self, VALUE fiber) {
   backend_base_unpark_fiber(&backend->base, fiber);
 }
 
-void Init_Backend() {
+void Init_Backend(void) {
   VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cObject);
   rb_define_alloc_func(cBackend, Backend_allocate);
 

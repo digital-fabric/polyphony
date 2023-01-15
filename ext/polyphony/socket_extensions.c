@@ -16,7 +16,7 @@ VALUE Socket_double_chevron(VALUE self, VALUE msg) {
   return self;
 }
 
-void Init_SocketExtensions() {
+void Init_SocketExtensions(void) {
   VALUE cSocket;
   VALUE cTCPSocket;
 

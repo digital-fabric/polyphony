@@ -60,7 +60,7 @@ VALUE Thread_class_backend(VALUE _self) {
   return rb_ivar_get(rb_thread_current(), ID_ivar_backend);
 }
 
-void Init_Thread() {
+void Init_Thread(void) {
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "schedule_and_wakeup", Thread_fiber_schedule_and_wakeup, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);

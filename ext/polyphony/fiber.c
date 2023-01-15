@@ -130,7 +130,7 @@ VALUE Fiber_parked_p(VALUE self) {
   return rb_ivar_get(self, ID_ivar_parked);
 }
 
-void Init_Fiber() {
+void Init_Fiber(void) {
   VALUE cFiber = rb_const_get(rb_cObject, rb_intern("Fiber"));
   rb_define_method(cFiber, "safe_transfer", Fiber_safe_transfer, -1);
   rb_define_method(cFiber, "schedule", Fiber_schedule, -1);

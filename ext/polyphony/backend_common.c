@@ -280,7 +280,7 @@ inline void rectify_io_file_pos(rb_io_t *fptr) {
   }
 }
 
-inline double current_time() {
+inline double current_time(void) {
   struct timespec ts;
   double t;
   uint64_t ns;
@@ -292,7 +292,7 @@ inline double current_time() {
   return t / 1e9;
 }
 
-inline uint64_t current_time_ns() {
+inline uint64_t current_time_ns(void) {
   struct timespec ts;
   uint64_t ns;
 
@@ -439,7 +439,7 @@ VALUE Backend_verify_blocking_mode(VALUE self, VALUE io, VALUE blocking) {
   return self;
 }
 
-void backend_setup_stats_symbols() {
+void backend_setup_stats_symbols(void) {
   SYM_runqueue_size       = ID2SYM(rb_intern("runqueue_size"));
   SYM_runqueue_length     = ID2SYM(rb_intern("runqueue_length"));
   SYM_runqueue_max_length = ID2SYM(rb_intern("runqueue_max_length"));

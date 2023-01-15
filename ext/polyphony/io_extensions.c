@@ -631,7 +631,7 @@ VALUE IO_http1_splice_chunked(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   return self;
 }
 
-void Init_IOExtensions() {
+void Init_IOExtensions(void) {
   rb_define_singleton_method(rb_cIO, "gzip", IO_gzip, -1);
   rb_define_singleton_method(rb_cIO, "gunzip", IO_gunzip, -1);
   rb_define_singleton_method(rb_cIO, "deflate", IO_deflate, 2);

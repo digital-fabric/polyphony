@@ -79,7 +79,7 @@ VALUE Event_await(VALUE self) {
   return switchpoint_result;
 }
 
-void Init_Event() {
+void Init_Event(void) {
   cEvent = rb_define_class_under(mPolyphony, "Event", rb_cObject);
   rb_define_alloc_func(cEvent, Event_allocate);
 
