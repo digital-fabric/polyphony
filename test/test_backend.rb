@@ -144,8 +144,12 @@ class BackendTest < MiniTest::Test
       buf << :done
     end
 
-    # writing always causes snoozing
+    # Caution: we want to read in two chunks, that a race condition lurks here:
+    # writing always causes snoozing, but that might not be enough for the
+    # reader fiber to perform the read before the second write, so for the test
+    # to work consistently we add a little sleep between the two writes.
     o << 'foo'
+    sleep 0.03
     o << 'bar'
     o.close
 

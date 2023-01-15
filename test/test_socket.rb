@@ -44,7 +44,7 @@ class SocketTest < MiniTest::Test
     client = TCPSocket.open('google.com', 80)
     client.write("GET / HTTP/1.0\r\nHost: google.com\r\n\r\n")
     result = nil
-    move_on_after(1) {
+    move_on_after(3) {
       result = client.read
     }
     assert result =~ /HTTP\/1.0 301 Moved Permanently/
