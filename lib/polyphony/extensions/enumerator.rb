@@ -9,8 +9,8 @@ class ::Enumerator
   end
 
   alias_method :orig_each, :each
-  def each(*, &)
+  def each(*a, &b)
     Fiber.current.thread ||= Thread.current
-    orig_each(*, &)
+    orig_each(*a, &b)
   end
 end
