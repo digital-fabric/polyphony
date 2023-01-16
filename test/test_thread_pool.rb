@@ -56,7 +56,7 @@ class ThreadPoolTest < MiniTest::Test
     t0 = Time.now
     threads = []
     buffer = []
-    10.times do |i|
+    20.times do |i|
       @pool.cast do
         sleep 0.01
         threads << Thread.current
@@ -70,7 +70,7 @@ class ThreadPoolTest < MiniTest::Test
 
     sleep 0.20 # allow time for threads to spawn
     assert_equal @pool.size, threads.uniq.size
-    assert_equal (0..9).to_a, buffer.sort if IS_LINUX
+    assert_equal (0..19).to_a, buffer.sort if IS_LINUX
   end
 
   def test_busy?
