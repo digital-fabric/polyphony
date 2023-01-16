@@ -1,4 +1,4 @@
-name: Tests with io_uring
+name: Tests (io_uring)
 
 on: [push, pull_request]
 
