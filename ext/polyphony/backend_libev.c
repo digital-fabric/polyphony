@@ -107,7 +107,7 @@ void break_async_callback(struct ev_loop *ev_loop, struct ev_async *ev_async, in
   // of a *blocking* event loop (waking it up) in a thread-safe, signal-safe manner
 }
 
-inline struct ev_loop *libev_new_loop() {
+inline struct ev_loop *libev_new_loop(void) {
   #ifdef POLYPHONY_USE_PIDFD_OPEN
     return ev_loop_new(EVFLAG_NOSIGMASK);
   #else
@@ -1474,7 +1474,7 @@ void Backend_unpark_fiber(VALUE self, VALUE fiber) {
   backend_base_unpark_fiber(&backend->base, fiber);
 }
 
-void Init_Backend() {
+void Init_Backend(void) {
   ev_set_allocator(xrealloc);
 
   VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cObject);

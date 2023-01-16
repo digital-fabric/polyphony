@@ -60,9 +60,21 @@ inline void conditional_nonblocking_poll(VALUE backend, struct Backend_base *bas
     Backend_poll(backend, Qnil);
 }
 
-#define CHECK_FIBER_THREAD_REF(fiber) { \
+// Verifies that the given fiber has the @thread ivar set. If not, sets it to
+// the current thread. This is essential for the correct functioning of fibers
+// not created by Polyphony, such as those used by the Enumerator class, and
+// probably others as well. With a nil thread ivar, a fiber can not be
+// scheduled. This macro is called in backend_base_switch_fiber() and in
+// backend_snooze().
+//
+// In order to refrain from calling rb_thread_current() multiple times, we
+// allow it to be passed to this macro, and if not we call it on the spot.
+#define CHECK_FIBER_THREAD_REF(fiber, current_thread) { \
   VALUE thread = rb_ivar_get(fiber, ID_ivar_thread); \
-  if (thread == Qnil) rb_ivar_set(fiber, ID_ivar_thread, rb_thread_current()); \
+  if (thread == Qnil)  { \
+    thread = (current_thread != Qnil) ? current_thread : rb_thread_current(); \
+    rb_ivar_set(fiber, ID_ivar_thread, thread); \
+  } \
 }
 
 VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
@@ -76,7 +88,7 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   if (SHOULD_TRACE(base))
     TRACE(base, 3, SYM_block, current_fiber, CALLER());
 
-  CHECK_FIBER_THREAD_REF(current_fiber);
+  CHECK_FIBER_THREAD_REF(current_fiber, Qnil);
 
   while (1) {
     next = runqueue_shift(&base->runqueue);
@@ -268,6 +280,9 @@ inline VALUE backend_snooze(struct Backend_base *backend) {
   VALUE ret;
   VALUE fiber = rb_fiber_current();
   VALUE thread = rb_thread_current();
+  
+  CHECK_FIBER_THREAD_REF(fiber, thread);
+  
   Fiber_make_runnable(fiber, Qnil);
   ret = Thread_switch_fiber(thread);
 
