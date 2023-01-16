@@ -60,6 +60,11 @@ inline void conditional_nonblocking_poll(VALUE backend, struct Backend_base *bas
     Backend_poll(backend, Qnil);
 }
 
+#define CHECK_FIBER_THREAD_REF(fiber) { \
+  VALUE thread = rb_ivar_get(fiber, ID_ivar_thread); \
+  if (thread == Qnil) rb_ivar_set(fiber, ID_ivar_thread, rb_thread_current()); \
+}
+
 VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   VALUE current_fiber = rb_fiber_current();
   runqueue_entry next;
@@ -70,6 +75,8 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
   base->switch_count++;
   if (SHOULD_TRACE(base))
     TRACE(base, 3, SYM_block, current_fiber, CALLER());
+
+  CHECK_FIBER_THREAD_REF(current_fiber);
 
   while (1) {
     next = runqueue_shift(&base->runqueue);

@@ -11,7 +11,8 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://digital-fabric.github.io/polyphony'
   s.metadata    = {
     "source_code_uri" => "https://github.com/digital-fabric/polyphony",
-    "documentation_uri" => "https://digital-fabric.github.io/polyphony/",
+    "documentation_uri" => "https://www.rubydoc.info/gems/polyphony",
+    # "documentation_uri" => "https://digital-fabric.github.io/polyphony/",
     "homepage_uri" => "https://digital-fabric.github.io/polyphony/",
     "changelog_uri" => "https://github.com/digital-fabric/polyphony/blob/master/CHANGELOG.md"
   }
