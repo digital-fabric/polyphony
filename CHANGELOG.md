@@ -1,3 +1,17 @@
+## 0.95 2023-01-16
+
+- Remove support for Ruby 2.7
+- Add support for explicit Enumerator (external enumeration) (#93)
+- Fix `Socket#readpartial`
+- Fix `receive_all_pending` docs (#92)
+- Improve linux kernel version detection
+- Update liburing
+- Always reset SQE user data in io_uring backend
+
+## 0.94 2022-10-03
+
+- Fix linux kernel version detection (#89)
+
 ## 0.93 2022-04-05
 
 - Add support for IO::Buffer in Ruby 3.1 (#80)

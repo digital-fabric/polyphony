@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.extra_rdoc_files = ["README.md"]
   s.extensions = ["ext/polyphony/extconf.rb"]
   s.require_paths = ["lib"]
-  s.required_ruby_version = '>= 2.6'
+  s.required_ruby_version = '>= 3.0'
 
   s.add_development_dependency  'rake-compiler',        '1.1.1'
   s.add_development_dependency  'minitest',             '5.14.4'
