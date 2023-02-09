@@ -188,7 +188,7 @@ module Polyphony
     def start_server_thread
       @thread = Thread.new do
         puts("Listening on #{@socket_path}")
-        FileUtils.rm(@socket_path) if File.exists?(@socket_path)
+        FileUtils.rm(@socket_path) if File.exist?(@socket_path)
         socket = UNIXServer.new(@socket_path)
         loop do
           @client = socket.accept
