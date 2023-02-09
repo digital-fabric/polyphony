@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'polyphony/extensions/debug'
+require 'polyphony/core/debug'
 
 module Polyphony
   TP_EVENTS = [

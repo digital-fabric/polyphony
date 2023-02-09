@@ -2,7 +2,7 @@
 
 require 'bundler/setup'
 require 'polyphony'
-require 'polyphony/extensions/debug'
+require 'polyphony/core/debug'
 
 Exception.__disable_sanitized_backtrace__ = true
 
