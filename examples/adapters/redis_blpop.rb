@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
-require 'bundler/setup'
-require 'polyphony/adapters/redis'
-# require 'redis'
+require 'redis'
+require_relative '../../lib/polyphony/adapters/redis'
+require_relative '../../lib/polyphony'
+
 
 redis = Redis.new(host: ENV['REDISHOST'] || 'localhost')
 

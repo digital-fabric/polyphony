@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
-require 'bundler/setup'
-require 'polyphony/adapters/redis'
+require 'redis'
+require_relative '../../lib/polyphony/adapters/redis'
+require_relative '../../lib/polyphony'
+require_relative '../../lib/polyphony/core/channel'
 
 class RedisChannel < Polyphony::Channel
   def self.publish_connection
@@ -17,20 +19,24 @@ class RedisChannel < Polyphony::Channel
   def self.start_monitor
     @channels = {}
     @monitor = spin do
+      p start_monitor: 1
       subscribe_connection.subscribe(CHANNEL_MASTER_TOPIC) do |on|
+        p start_monitor: 2
         on.message do |topic, message|
+          p start_monitor: 3, topic: topic, message: message
           message = Marshal.load(message)
-          topic == if CHANNEL_MASTER_TOPIC
-                     handle_master_message(message)
-                   else
-                     handle_channel_message(topic, message)
-                   end
+          if CHANNEL_MASTER_TOPIC
+            handle_master_message(message)
+          else
+            handle_channel_message(topic, message)
+          end
         end
       end
     end
   end
 
   def self.stop_monitor
+    p stop_monitor: 1
     @monitor&.interrupt
   end
 
@@ -111,10 +117,13 @@ end
 
 spin do
   move_on_after(3) do
+    p :move_on_after
     throttled_loop(1) do
+      # p :throttled_loop
       channel << Time.now
     end
   end
+  p :done
   channel.close
   RedisChannel.stop_monitor
 end

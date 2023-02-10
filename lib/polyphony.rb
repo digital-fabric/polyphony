@@ -117,6 +117,10 @@ module Polyphony
   $VERBOSE = nil
   Object.const_set(:Queue, Polyphony::Queue)
   Object.const_set(:Mutex, Polyphony::Mutex)
+  
+  require 'monitor'
+  Object.const_set(:Monitor, Polyphony::Mutex)
+
   Object.const_set(:ConditionVariable, Polyphony::ConditionVariable)
   $VERBOSE = verbose
 end
