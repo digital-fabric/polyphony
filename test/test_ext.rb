@@ -39,6 +39,69 @@ class ExceptionTest < MiniTest::Test
     Exception.__disable_sanitized_backtrace__ = prev_disable
   end
 
+  LOCATION_ONLY = ->(s) { s =~ /^(.+)\:in / && Regexp.last_match[1] }
+
+  def test_backtrace_on_main_fiber
+    base = caller.map(&LOCATION_ONLY)
+    begin
+      lineno = __LINE__ + 1
+      raise 'foo'
+    rescue => e
+    end
+
+    assert !!e
+
+    bt = e.backtrace.map(&LOCATION_ONLY)
+    assert_equal ["#{__FILE__}:#{lineno}"] + base, bt
+  end
+
+  def test_backtrace_on_child_fiber
+    Exception.__disable_sanitized_backtrace__ = false
+
+    lineno = __LINE__ + 1
+    fiber = spin do
+      raise receive
+    end
+
+    base = caller.map(&LOCATION_ONLY)
+
+    begin
+      fiber << 'foo'
+      fiber.await
+    rescue => e
+    end
+
+    assert !!e
+    bt = e.backtrace.map(&LOCATION_ONLY)
+    assert_equal ["#{__FILE__}:#{lineno + 1}", "#{__FILE__}:#{lineno}"] + base, bt
+  ensure
+    Exception.__disable_sanitized_backtrace__ = true
+  end
+
+  def test_backtrace_on_grand_child_fiber
+    Exception.__disable_sanitized_backtrace__ = false
+
+    lineno = __LINE__ + 1
+    f1 = spin do
+      f2 = spin do
+        raise 'foo'
+      end
+      f2.await
+    end
+
+    base = caller.map(&LOCATION_ONLY)
+
+    begin
+      f1.await
+    rescue => e
+    end
+
+    assert !!e
+    bt = e.backtrace.map(&LOCATION_ONLY)
+    assert_equal ["#{__FILE__}:#{lineno + 2}", "#{__FILE__}:#{lineno + 1}", "#{__FILE__}:#{lineno}"] + base, bt
+  ensure
+    Exception.__disable_sanitized_backtrace__ = true
+  end
 end
 
 class ProcessTest < MiniTest::Test
