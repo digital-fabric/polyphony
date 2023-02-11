@@ -101,6 +101,8 @@ module Polyphony
     #
     # @return [void]
     def signal
+      return if @queue.empty?
+
       fiber = @queue.shift
       fiber.schedule
     end
@@ -109,6 +111,8 @@ module Polyphony
     #
     # @return [void]
     def broadcast
+      return if @queue.empty?
+
       while (fiber = @queue.shift)
         fiber.schedule
       end

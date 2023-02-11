@@ -7,11 +7,13 @@ require 'readline'
 # thread pool. That way, the reactor loop can keep running while waiting for
 # readline to return
 module ::Readline
-  alias_method :orig_readline, :readline
+  class << self
+    alias_method :orig_readline, :readline
 
-  Worker = Polyphony::ThreadPool.new(1)
+    Worker = Polyphony::ThreadPool.new(1)
 
-  def readline(*args)
-    Worker.process { orig_readline(*args) }
+    def readline(*args)
+      Worker.process { orig_readline(*args) }
+    end
   end
 end
