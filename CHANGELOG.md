@@ -1,3 +1,8 @@
+## 0.96 2023-02-11
+ - Rework Redis client adapter
+- Fix working with Pry (#95, thanks @floriandejonckheere)
+- Improve compatibility with Enumerator and other APIs.
+
 ## 0.95 2023-01-16
 
 - Remove support for Ruby 2.7
