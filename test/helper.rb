@@ -11,15 +11,10 @@ require 'fileutils'
 require_relative './eg'
 
 require 'minitest/autorun'
-require 'minitest/reporters'
 
 ::Exception.__disable_sanitized_backtrace__ = true
 
 IS_LINUX = RUBY_PLATFORM =~ /linux/
-
-# Minitest::Reporters.use! [
-#   Minitest::Reporters::SpecReporter.new
-# ]
 
 module ::Kernel
   def trace(*args)

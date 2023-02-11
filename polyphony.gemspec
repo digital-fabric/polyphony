@@ -11,8 +11,8 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://digital-fabric.github.io/polyphony'
   s.metadata    = {
     "source_code_uri" => "https://github.com/digital-fabric/polyphony",
-    "documentation_uri" => "https://www.rubydoc.info/gems/polyphony",
-    # "documentation_uri" => "https://digital-fabric.github.io/polyphony/",
+    # "documentation_uri" => "https://www.rubydoc.info/gems/polyphony",
+    "documentation_uri" => "https://digital-fabric.github.io/polyphony/",
     "homepage_uri" => "https://digital-fabric.github.io/polyphony/",
     "changelog_uri" => "https://github.com/digital-fabric/polyphony/blob/master/CHANGELOG.md"
   }
@@ -22,16 +22,15 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.required_ruby_version = '>= 3.0'
 
-  s.add_development_dependency  'rake-compiler',        '1.1.1'
-  s.add_development_dependency  'minitest',             '5.14.4'
-  s.add_development_dependency  'minitest-reporters',   '1.4.2'
-  s.add_development_dependency  'simplecov',            '0.17.1'
-  s.add_development_dependency  'rubocop',              '0.85.1'
-  s.add_development_dependency  'pry',                  '0.13.1'
+  s.add_development_dependency  'rake-compiler',        '1.2.1'
+  s.add_development_dependency  'minitest',             '5.17.0'
+  s.add_development_dependency  'simplecov',            '0.22.0'
+  s.add_development_dependency  'rubocop',              '1.45.1'
+  s.add_development_dependency  'pry',                  '0.14.2'
 
-  s.add_development_dependency  'msgpack',              '1.4.2'
+  s.add_development_dependency  'msgpack',              '1.6.0'
   s.add_development_dependency  'httparty',             '0.21.0'
-  s.add_development_dependency  'localhost',            '~>1.1.4'
+  s.add_development_dependency  'localhost',            '1.1.10'
 
   # s.add_development_dependency  'jekyll',               '~>3.8.6'
   # s.add_development_dependency  'jekyll-remote-theme',  '~>0.4.1'
