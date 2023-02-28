@@ -33,15 +33,6 @@ module ::Kernel
 
   alias_method :orig_gets, :gets
   def gets(*_args)
-    if !ARGV.empty? || @gets_fiber
-      @gets_fiber ||= Fiber.new(&ARGV_GETS_LOOP)
-      @gets_fiber.thread = Thread.current
-      result = @gets_fiber.alive? && @gets_fiber.safe_transfer(Fiber.current)
-      return result if result
-
-      @gets_fiber = nil
-    end
-
     $stdin.gets
   end
 

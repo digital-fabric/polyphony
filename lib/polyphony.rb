@@ -133,3 +133,7 @@ if (debug_socket_path = ENV['POLYPHONY_DEBUG_SOCKET_PATH'])
   require 'polyphony/debugger'
   Polyphony.start_debug_server(debug_socket_path)
 end
+
+if Object.const_defined?(:IRB)
+  require_relative './polyphony/adapters/irb'
+end
