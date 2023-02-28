@@ -131,6 +131,16 @@ class ::IO
     nil
   end
 
+  def ungetc(c)
+    c = c.chr if c.is_a?(Integer)
+    if @read_buffer
+      @read_buffer.prepend(c)
+    else
+      @read_buffer = +c
+    end
+  end
+  alias_method :ungetbyte, :ungetc
+
   alias_method :orig_read, :read
   def read(len = nil, buf = nil, buf_pos = 0)
     if buf
@@ -252,6 +262,8 @@ class ::IO
   end
 
   def wait_readable(timeout = nil)
+    return self if @read_buffer && @read_buffer.size > 0
+
     if timeout
       move_on_after(timeout) do
         Polyphony.backend_wait_io(self, false)

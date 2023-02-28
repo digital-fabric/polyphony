@@ -12,7 +12,7 @@ task :recompile => [:clean, :compile]
 task :default => [:compile, :test]
 
 task :test do
-  exec 'ruby test/run.rb --verbose'
+  exec 'ruby test/run.rb'
 end
 
 task :stress_test do
