@@ -5,17 +5,17 @@ require 'polyphony'
 require 'localhost/authority'
 
 authority = Localhost::Authority.fetch
+server_ctx = authority.server_context
+server_ctx.servername_cb = proc { |_socket, name| server_ctx  }
 opts = {
   reuse_addr:     true,
   dont_linger:    true,
-  secure_context: authority.server_context
+  secure_context: server_ctx
 }
 
 server = Polyphony::Net.tcp_listen('localhost', 1234, opts)
 
 puts 'Serving HTTPS on port 1234'
-
-spin_loop(interval: 1) { STDOUT << '.' }
 
 # server.accept_loop do |socket|
 server.accept_loop do |socket|

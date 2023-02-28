@@ -3,6 +3,7 @@
 require 'bundler/inline'
 
 gemfile do
+  source 'https://rubygems.org'
   gem 'h1p'
   gem 'polyphony', path: '.'
 end
@@ -22,10 +23,12 @@ def handle_client(conn)
 
       conn << "HTTP/1.1 200 OK\r\nContent-Length: 14\r\n\r\nHello, world!\n"
     end
+  rescue Errno::ECONNRESET
+    # ignore
   rescue H1P::Error
     puts 'Got invalid request, closing connection...'
   ensure
-    conn.close
+    conn.close rescue nil
   end
 end
 
