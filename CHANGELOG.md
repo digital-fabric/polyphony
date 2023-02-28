@@ -1,3 +1,7 @@
+## 0.97 2023-02-28
+
+- Fix working with IRB (#5)
+
 ## 0.96 2023-02-11
  - Rework Redis client adapter
 - Fix working with Pry (#95, thanks @floriandejonckheere)
