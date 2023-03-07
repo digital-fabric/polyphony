@@ -143,6 +143,8 @@ class ::IO
 
   alias_method :orig_read, :read
   def read(len = nil, buf = nil, buf_pos = 0)
+    return '' if len == 0
+
     if buf
       return Polyphony.backend_read(self, buf, len, true, buf_pos)
     end

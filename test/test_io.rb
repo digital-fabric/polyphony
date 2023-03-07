@@ -93,6 +93,13 @@ class IOTest < MiniTest::Test
     assert_equal 'deffoobar', buf
   end
   
+  def test_read_zero
+    i, o = IO.pipe
+
+    o << 'hi'
+    assert_equal '', i.read(0)
+  end
+  
   def test_readpartial
     i, o = IO.pipe
     
