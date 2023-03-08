@@ -40,13 +40,14 @@ class ThreadTest < MiniTest::Test
 
   def test_thread_join_with_timeout
     buffer = []
-    spin { (1..3).each { |i| snooze; buffer << i } }
+    f = spin { (1..3).each { |i| snooze; buffer << i } }
     t = Thread.new { sleep 1; buffer << 4 }
     t0 = Time.now
     r = t.join(0.01)
     t = nil
 
     assert Time.now - t0 < 0.2
+    f.join
     assert_equal [1, 2, 3], buffer
     assert_nil r
   ensure
