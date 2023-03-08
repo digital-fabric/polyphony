@@ -350,6 +350,72 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE pos) 
   return Backend_read(self, io, buffer, length, Qnil, pos);
 }
 
+VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE pos, VALUE flags, VALUE maxcontrollen, VALUE opts) {
+  Backend_t *backend;
+  struct libev_io watcher;
+  int fd;
+  rb_io_t *fptr;
+
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 0);
+  long total = 0;
+  VALUE switchpoint_result = Qnil;
+  
+  GetBackend(self, backend);
+  backend_prepare_read_buffer(buffer, maxlen, &buffer_spec, FIX2INT(pos));
+  fd = fd_from_io(io, &fptr, 0, 1);
+  watcher.fiber = Qnil;
+
+  char addr_buffer[64];
+  struct iovec iov;
+  struct msghdr msg;
+
+  iov.iov_base = StringValuePtr(buffer);
+  iov.iov_len = maxlen;
+
+  msg.msg_name = addr_buffer;
+  msg.msg_namelen = sizeof(addr_buffer);
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = 0;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
+
+  while (1) {
+    backend->base.op_count++;
+    ssize_t result = recvmsg(fd, &msg, INT2NUM(flags));
+    if (result < 0) {
+      int e = errno;
+      if (e != EWOULDBLOCK && e != EAGAIN) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_READ);
+
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      switchpoint_result = backend_snooze(&backend->base);
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+
+      if (!result) break; // EOF
+
+      total += result;
+      break;
+    }
+  }
+
+  if (!total) return Qnil;
+  
+  if (!buffer_spec.raw) backend_finalize_string_buffer(buffer, &buffer_spec, total, fptr);
+  VALUE addr = name_to_addrinfo(msg.msg_name, msg.msg_namelen);
+  VALUE rflags = INT2NUM(msg.msg_flags);
+
+  return rb_ary_new_from_args(3, buffer, addr, rflags);
+  RB_GC_GUARD(addr);
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
 VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
   struct libev_io watcher;
@@ -750,6 +816,73 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
     }
     else {
       buffer_spec.ptr += result;
+      left -= result;
+    }
+  }
+
+  if (watcher.fiber == Qnil) {
+    switchpoint_result = backend_snooze(&backend->base);
+
+    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+  }
+
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return INT2FIX(buffer_spec.len);
+error:
+  return RAISE_EXCEPTION(switchpoint_result);
+}
+
+VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE dest_sockaddr, VALUE controls) {
+  Backend_t *backend;
+  struct libev_io watcher;
+  int fd;
+  rb_io_t *fptr;
+  VALUE switchpoint_result = Qnil;
+
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 1);
+  long left = buffer_spec.len;
+  int flags_int = FIX2INT(flags);
+
+  GetBackend(self, backend);
+  fd = fd_from_io(io, &fptr, 1, 0);
+  watcher.fiber = Qnil;
+
+  struct iovec iov;
+  struct msghdr msg;
+
+  iov.iov_base = buffer_spec.ptr;
+  iov.iov_len = buffer_spec.len;
+
+  if (dest_sockaddr != Qnil) {
+    msg.msg_name = RSTRING_PTR(dest_sockaddr);
+    msg.msg_namelen = RSTRING_LEN(dest_sockaddr);
+  }
+  else {
+    msg.msg_name = 0;
+    msg.msg_namelen = 0;
+  }
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = 0;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
+
+  while (left > 0) {
+    backend->base.op_count++;
+    ssize_t result = sendmsg(fd, &msg, flags_int);
+    if (result < 0) {
+      int e = errno;
+      if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
+
+      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    }
+    else {
+      iov.iov_base = (buffer_spec.ptr += result);
+      iov.iov_len -= result;
       left -= result;
     }
   }
@@ -1502,9 +1635,11 @@ void Init_Backend(void) {
   rb_define_method(cBackend, "read", Backend_read, 5);
   rb_define_method(cBackend, "read_loop", Backend_read_loop, 2);
   rb_define_method(cBackend, "recv", Backend_recv, 4);
+  rb_define_method(cBackend, "recvmsg", Backend_recvmsg, 7);
   rb_define_method(cBackend, "recv_loop", Backend_read_loop, 2);
   rb_define_method(cBackend, "recv_feed_loop", Backend_feed_loop, 3);
   rb_define_method(cBackend, "send", Backend_send, 3);
+  rb_define_method(cBackend, "sendmsg", Backend_sendmsg, 5);
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
 
