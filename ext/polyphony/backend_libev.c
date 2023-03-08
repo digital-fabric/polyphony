@@ -382,7 +382,7 @@ VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE po
 
   while (1) {
     backend->base.op_count++;
-    ssize_t result = recvmsg(fd, &msg, INT2NUM(flags));
+    ssize_t result = recvmsg(fd, &msg, NUM2INT(flags));
     if (result < 0) {
       int e = errno;
       if (e != EWOULDBLOCK && e != EAGAIN) rb_syserr_fail(e, strerror(e));

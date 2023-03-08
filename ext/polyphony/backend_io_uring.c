@@ -706,7 +706,7 @@ VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE po
     int result;
     int completed;
 
-    io_uring_prep_recvmsg(sqe, fd, &msg, INT2NUM(flags));
+    io_uring_prep_recvmsg(sqe, fd, &msg, NUM2INT(flags));
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
