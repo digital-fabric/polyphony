@@ -673,6 +673,67 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE pos) 
   return buffer_spec.raw ? INT2FIX(total) : buffer;
 }
 
+VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE pos, VALUE flags, VALUE maxcontrollen, VALUE opts) {
+  Backend_t *backend;
+  int fd;
+  rb_io_t *fptr;
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 0);
+  long total = 0;
+
+  GetBackend(self, backend);
+  backend_prepare_read_buffer(buffer, maxlen, &buffer_spec, FIX2INT(pos));
+  fd = fd_from_io(io, &fptr, 0, 0);
+
+  char addr_buffer[64];
+  struct iovec iov;
+  struct msghdr msg;
+
+  iov.iov_base = StringValuePtr(buffer);
+  iov.iov_len = maxlen;
+
+  msg.msg_name = addr_buffer;
+  msg.msg_namelen = sizeof(addr_buffer);
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = 0;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
+
+  while (1) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = context_store_acquire(&backend->store, OP_RECV);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
+    int result;
+    int completed;
+
+    io_uring_prep_recvmsg(sqe, fd, &msg, INT2NUM(flags));
+
+    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    completed = context_store_release(&backend->store, ctx);
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &buffer);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
+    RB_GC_GUARD(resume_value);
+
+    if (result < 0)
+      rb_syserr_fail(-result, strerror(-result));
+    else {
+      total += result;
+      break;
+    }
+  }
+
+  if (!total) return Qnil;
+
+  if (!buffer_spec.raw) backend_finalize_string_buffer(buffer, &buffer_spec, total, fptr);
+  VALUE addr = name_to_addrinfo(msg.msg_name, msg.msg_namelen);
+  VALUE rflags = INT2NUM(msg.msg_flags);
+  return rb_ary_new_from_args(3, buffer, addr, rflags);
+  RB_GC_GUARD(addr);
+}
+
 VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
   Backend_t *backend;
   int fd;
@@ -802,6 +863,68 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
       rb_syserr_fail(-result, strerror(-result));
     else {
       buffer_spec.ptr += result;
+      left -= result;
+    }
+  }
+
+  return INT2FIX(buffer_spec.len);
+}
+
+VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE dest_sockaddr, VALUE controls) {
+  Backend_t *backend;
+  int fd;
+  rb_io_t *fptr;
+
+  struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 1);
+  long left = buffer_spec.len;
+  int flags_int = FIX2INT(flags);
+
+  GetBackend(self, backend);
+  fd = fd_from_io(io, &fptr, 1, 0);
+
+  struct iovec iov;
+  struct msghdr msg;
+
+  iov.iov_base = buffer_spec.ptr;
+  iov.iov_len = buffer_spec.len;
+
+  if (dest_sockaddr != Qnil) {
+    msg.msg_name = RSTRING_PTR(dest_sockaddr);
+    msg.msg_namelen = RSTRING_LEN(dest_sockaddr);
+  }
+  else {
+    msg.msg_name = 0;
+    msg.msg_namelen = 0;
+  }
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = 0;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
+
+  while (left > 0) {
+    VALUE resume_value = Qnil;
+    op_context_t *ctx = context_store_acquire(&backend->store, OP_SEND);
+    struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
+    int result;
+    int completed;
+
+    io_uring_prep_sendmsg(sqe, fd, &msg, flags_int);
+
+    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    completed = context_store_release(&backend->store, ctx);
+    if (!completed) {
+      context_attach_buffers(ctx, 1, &buffer);
+      RAISE_IF_EXCEPTION(resume_value);
+      return resume_value;
+    }
+    RB_GC_GUARD(resume_value);
+
+    if (result < 0)
+      rb_syserr_fail(-result, strerror(-result));
+    else {
+      iov.iov_base += result;
+      iov.iov_len -= result;
       left -= result;
     }
   }
@@ -1727,9 +1850,11 @@ void Init_Backend(void) {
   rb_define_method(cBackend, "read", Backend_read, 5);
   rb_define_method(cBackend, "read_loop", Backend_read_loop, 2);
   rb_define_method(cBackend, "recv", Backend_recv, 4);
+  rb_define_method(cBackend, "recvmsg", Backend_recvmsg, 7);
   rb_define_method(cBackend, "recv_feed_loop", Backend_recv_feed_loop, 3);
   rb_define_method(cBackend, "recv_loop", Backend_recv_loop, 2);
   rb_define_method(cBackend, "send", Backend_send, 3);
+  rb_define_method(cBackend, "sendmsg", Backend_sendmsg, 5);
   rb_define_method(cBackend, "sendv", Backend_sendv, 3);
   rb_define_method(cBackend, "sleep", Backend_sleep, 1);
 

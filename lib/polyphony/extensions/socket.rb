@@ -743,3 +743,32 @@ class ::UNIXSocket
     @io.write_nonblock(buf, exception: exception)
   end
 end
+
+class ::UDPSocket
+  def recvfrom(maxlen, flags = 0)
+    buf = +''
+    Polyphony.backend_recvmsg(self, buf, maxlen, 0, flags, 0, nil)
+  end
+
+  def recvmsg(maxlen = nil, flags = 0, maxcontrollen = nil, opts = {})
+    buf = +''
+    Polyphony.backend_recvmsg(self, buf, maxlen || 4096, 0, flags, maxcontrollen, opts)
+  end
+
+  def sendmsg(msg, flags = 0, dest_sockaddr = nil, *controls)
+    Polyphony.backend_sendmsg(self, msg, flags, dest_sockaddr, controls)
+  end
+
+  def send(msg, flags, *addr)
+    sockaddr =  case addr.size
+    when 2
+      Socket.sockaddr_in(addr[1], addr[0])
+    when 1
+      addr[0]
+    else
+      nil
+    end
+
+    Polyphony.backend_sendmsg(self, msg, flags, sockaddr, nil)
+  end
+end

@@ -66,6 +66,10 @@ VALUE Polyphony_backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, V
   return Backend_recv(BACKEND(), io, buffer, length, pos);
 }
 
+VALUE Polyphony_backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE pos, VALUE flags, VALUE maxcontrollen, VALUE opts) {
+  return Backend_recvmsg(BACKEND(), io, buffer, maxlen, pos, flags, maxcontrollen, opts);
+}
+
 VALUE Polyphony_backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
   return Backend_recv_loop(BACKEND(), io, maxlen);
 }
@@ -76,6 +80,10 @@ VALUE Polyphony_backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VAL
 
 VALUE Polyphony_backend_send(VALUE self, VALUE io, VALUE msg, VALUE flags) {
   return Backend_send(BACKEND(), io, msg, flags);
+}
+
+VALUE Polyphony_backend_sendmsg(VALUE self, VALUE io, VALUE msg, VALUE flags, VALUE dest_sockaddr, VALUE controls) {
+  return Backend_sendmsg(BACKEND(), io, msg, flags, dest_sockaddr, controls);
 }
 
 VALUE Polyphony_backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags) {
@@ -181,9 +189,11 @@ void Init_Polyphony(void) {
   rb_define_singleton_method(mPolyphony, "backend_read", Polyphony_backend_read, 5);
   rb_define_singleton_method(mPolyphony, "backend_read_loop", Polyphony_backend_read_loop, 2);
   rb_define_singleton_method(mPolyphony, "backend_recv", Polyphony_backend_recv, 4);
+  rb_define_singleton_method(mPolyphony, "backend_recvmsg", Polyphony_backend_recvmsg, 7);
   rb_define_singleton_method(mPolyphony, "backend_recv_loop", Polyphony_backend_recv_loop, 2);
   rb_define_singleton_method(mPolyphony, "backend_recv_feed_loop", Polyphony_backend_recv_feed_loop, 3);
   rb_define_singleton_method(mPolyphony, "backend_send", Polyphony_backend_send, 3);
+  rb_define_singleton_method(mPolyphony, "backend_sendmsg", Polyphony_backend_sendmsg, 5);
   rb_define_singleton_method(mPolyphony, "backend_sendv", Polyphony_backend_sendv, 3);
   rb_define_singleton_method(mPolyphony, "backend_sleep", Polyphony_backend_sleep, 1);
   rb_define_singleton_method(mPolyphony, "backend_splice", Polyphony_backend_splice, 3);

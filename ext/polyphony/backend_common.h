@@ -148,5 +148,6 @@ void set_fd_blocking_mode(int fd, int blocking);
 void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking);
 void backend_setup_stats_symbols();
 int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr);
+VALUE name_to_addrinfo(void *name, socklen_t len);
 
 #endif /* BACKEND_COMMON_H */

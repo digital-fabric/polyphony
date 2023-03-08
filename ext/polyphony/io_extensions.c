@@ -21,7 +21,9 @@ ID ID_write;
 
 VALUE SYM_backend_read;
 VALUE SYM_backend_recv;
+VALUE SYM_backend_recvmsg;
 VALUE SYM_backend_send;
+VALUE SYM_backend_sendmsg;
 VALUE SYM_backend_write;
 VALUE SYM_call;
 VALUE SYM_comment;

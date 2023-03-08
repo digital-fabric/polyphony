@@ -4,11 +4,7 @@ require_relative 'helper'
 require 'fileutils'
 require 'msgpack'
 
-class SocketTest < MiniTest::Test
-  def setup
-    super
-  end
-
+class TCPSocketTest < MiniTest::Test
   def start_tcp_server_on_random_port(host = '127.0.0.1')
     port = rand(1100..60000)
     server = TCPServer.new(host, port)
@@ -166,7 +162,9 @@ class SocketTest < MiniTest::Test
     server_fiber&.await
     server&.close
   end
+end
 
+class UNIXSocketTest < MiniTest::Test
   def test_unix_socket
     path = '/tmp/test_unix_socket'
     FileUtils.rm(path) rescue nil
@@ -193,7 +191,7 @@ class SocketTest < MiniTest::Test
   end
 end
 
-class SocketWithRawBufferTest < MiniTest::Test
+class TCPSocketWithRawBufferTest < MiniTest::Test
   def start_tcp_server_on_random_port(host = '127.0.0.1')
     port = rand(1100..60000)
     server = TCPServer.new(host, port)
@@ -240,6 +238,68 @@ class SocketWithRawBufferTest < MiniTest::Test
       assert_nil res
     end
     assert_equal ['*' * 64, '*'], chunks
+  end
+end
+
+class UDPSocketTest < MiniTest::Test
+  def test_udp_recvfrom
+    u1 = UDPSocket.new
+    u1.bind('127.0.0.1', 0)
+
+    server_fiber = spin do
+      msg, peer_addr = u1.recvfrom(256)
+      u1.send(msg, 0, peer_addr[3], peer_addr[1])
+    end
+
+    server_addr = u1.addr
+    u2 = UDPSocket.new
+    u2.bind('127.0.0.1', 0)
+    u2.send('foobar', 0, server_addr[3], server_addr[1])
+
+    msg, addr = u2.recvfrom(256)
+
+    assert_equal 'foobar', msg
+    assert_equal server_addr, addr
+  end
+
+  def test_udp_recvmsg
+    u1 = UDPSocket.new
+    u1.bind('127.0.0.1', 0)
+
+    server_fiber = spin do
+      msg, peer_addr = u1.recvmsg(256)
+      u1.send(msg, 0, peer_addr[3], peer_addr[1])
+    end
+
+    server_addr = u1.addr
+    u2 = UDPSocket.new
+    u2.bind('127.0.0.1', 0)
+    u2.send('foobar', 0, server_addr[3], server_addr[1])
+
+    msg, addr = u2.recvmsg(256)
+
+    assert_equal 'foobar', msg
+    assert_equal server_addr, addr
+  end
+
+  def test_udp_recvfrom_ipv6
+    u1 = UDPSocket.new :INET6
+    u1.bind('::1', 0)
+
+    server_fiber = spin do
+      msg, peer_addr = u1.recvfrom(256)
+      u1.send(msg, 0, peer_addr[3], peer_addr[1])
+    end
+
+    server_addr = u1.addr
+    u2 = UDPSocket.new :INET6
+    u2.bind('::1', 0)
+    u2.send('foobar', 0, server_addr[3], server_addr[1])
+
+    msg, addr = u2.recvfrom(256)
+
+    assert_equal 'foobar', msg
+    assert_equal server_addr, addr
   end
 end
 

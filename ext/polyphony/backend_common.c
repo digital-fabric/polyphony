@@ -501,6 +501,36 @@ int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr) {
   return addrinfo_result->ai_addrlen;
 }
 
+inline VALUE name_to_addrinfo(void *name, socklen_t len) {
+  switch(((struct sockaddr *)name)->sa_family) {
+    case AF_INET:
+    {
+      struct sockaddr_in *info = name;
+      char buf[INET_ADDRSTRLEN];
+
+      VALUE port = INT2NUM(ntohs(info->sin_port));
+      if (!inet_ntop(AF_INET, &info->sin_addr, buf, sizeof(buf)))
+        rb_raise(rb_eRuntimeError, "Failed to get AF_INET addr");
+      VALUE addr = rb_str_new_cstr(buf);
+      return rb_ary_new_from_args(4, rb_str_new_literal("AF_INET"), port, addr, addr);
+      RB_GC_GUARD(addr);
+    }
+    case AF_INET6:
+    {
+      struct sockaddr_in6 *info = name;
+      char buf[INET6_ADDRSTRLEN];
+
+      VALUE port = INT2NUM(ntohs(info->sin6_port));
+      if (!inet_ntop(AF_INET6, &info->sin6_addr, buf, sizeof(buf)))
+        rb_raise(rb_eRuntimeError, "Failed to get AF_INET addr");
+      VALUE addr = rb_str_new_cstr(buf);
+      return rb_ary_new_from_args(4, rb_str_new_literal("AF_INET6"), port, addr, addr);
+      RB_GC_GUARD(addr);
+    }
+  }
+  return Qnil;
+}
+
 inline struct backend_buffer_spec backend_get_buffer_spec(VALUE in, int rw) {
   if (FIXNUM_P(in)) {
     struct buffer_spec *spec = FIX2PTR(in);
