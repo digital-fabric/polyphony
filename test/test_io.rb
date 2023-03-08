@@ -658,6 +658,7 @@ class IOClassMethodsTest < MiniTest::Test
     
     # writing always causes snoozing
     o << 'foo'
+    3.times { snooze }
     o << 'bar'
     o.close
     
