@@ -37,13 +37,13 @@ class TCPSocketTest < MiniTest::Test
   end
 
   def test_tcpsocket_open_with_hostname
-    client = TCPSocket.open('google.com', 80)
-    client.write("GET / HTTP/1.0\r\nHost: google.com\r\n\r\n")
+    client = TCPSocket.open('ipinfo.io', 80)
+    client.write("GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n")
     result = nil
     move_on_after(3) {
       result = client.read
     }
-    assert result =~ /HTTP\/1.0 301 Moved Permanently/
+    assert result =~ /HTTP\/1.0 200 OK/
   end
 
   def test_tcp_ipv6
