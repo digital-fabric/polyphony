@@ -1,3 +1,9 @@
+## 0.98 2023-03-08
+
+- Add basic support for UDP sockets
+- Fix `IO#read` to return empty string when reading length zero
+- Fix hang on `require 'polyphony'` in irb session
+
 ## 0.97 2023-02-28
 
 - Fix working with IRB (#5)
