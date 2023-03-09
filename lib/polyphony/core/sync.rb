@@ -58,6 +58,58 @@ module Polyphony
       @holding_fiber
     end
 
+    # Obtains a lock. Raises `ThreadError` if mutex is locked by the current
+    # thread.
+    #
+    # @return [Mutex] self
+    def lock
+      raise ThreadError if owned?
+      
+      @token = @store.shift
+      @holding_fiber = Fiber.current
+      self
+    end
+
+    # Releases the lock. Raises `ThreadError` if mutex is not locked by the
+    # current thread.
+    #
+    # @return [Mutex] self
+    def unlock
+      raise ThreadError if !owned?
+
+      @holding_fiber = nil
+      @store << @token if @token
+      @token = nil
+    end
+
+    # Attempts to obtain the lock and returns immediately. Returns `true` if the
+    # lock was granted.
+    #
+    # @return [true, false]
+    def try_lock
+      return false if @holding_fiber
+
+      @token = @store.shift
+      @holding_fiber = Fiber.current
+      true
+    end
+
+    # Releases the lock and sleeps timeout seconds if it is given and non-nil or
+    # forever. Raises `ThreadError` if mutex wasn’t locked by the current
+    # thread.
+    #
+    # @param timeout [nil, Number] sleep timeout
+    # @return [Number] slept time in seconds
+    def sleep(timeout = nil)
+      unlock
+      t0 = Time.now
+      Kernel.sleep(timeout)
+      t1 = Time.now
+      lock
+
+      return t1 - t0
+    end
+
     private
 
     # Helper method for performing a `#synchronize` when not currently holding
@@ -72,6 +124,7 @@ module Polyphony
       ensure
         @holding_fiber = nil
         @store << @token if @token
+        @token = nil
       end
     end
   end

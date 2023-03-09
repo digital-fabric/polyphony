@@ -113,4 +113,45 @@ class MutexTest < MiniTest::Test
     receive
     assert !lock.locked?
   end
+
+  def test_lock_unlock
+    m = Polyphony::Mutex.new
+    assert_nil m.locked?
+    assert_equal false, m.owned?
+    assert_raises(ThreadError) { m.unlock }
+
+    m.lock
+    assert_equal Fiber.current, m.locked?
+    assert_equal true, m.owned?
+
+    assert_raises(ThreadError) { m.lock }
+
+    m.unlock
+    assert_nil m.locked?
+    assert_equal false, m.owned?
+  end
+
+  def test_try_lock
+    m = Polyphony::Mutex.new
+
+    r = m.try_lock
+    assert_equal true, r
+
+    r = m.try_lock
+    assert_equal false, r
+
+    this = Fiber.current
+    m.unlock
+    f = spin do
+      m.synchronize { this << 'ok'; sleep 0.2 }
+    end
+
+    assert_equal 'ok', receive
+    r = m.try_lock
+    assert_equal false, r
+
+    f.await
+    r = m.try_lock
+    assert_equal true, r
+  end
 end
