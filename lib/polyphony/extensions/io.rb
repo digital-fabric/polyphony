@@ -25,20 +25,19 @@ class ::IO
 
     EMPTY_HASH = {}.freeze
 
-    # alias_method :orig_foreach, :foreach
-    # def foreach(_name, _sep = $/, _limit = nil, _getline_args = EMPTY_HASH,
-    #             &_block)
-    #   # IO.orig_read(name).each_line(&block)
-    #   raise NotImplementedError
+    alias_method :orig_foreach, :foreach
+    def foreach(name, sep = $/, limit = nil, getline_args = EMPTY_HASH, &block)
+      # IO.orig_read(name).each_line(&block)
+      # raise NotImplementedError
 
-    #   # if sep.is_a?(Integer)
-    #   #   sep = $/
-    #   #   limit = sep
-    #   # end
-    #   # File.open(name, 'r') do |f|
-    #   #   f.each_line(sep, limit, getline_args, &block)
-    #   # end
-    # end
+      if sep.is_a?(Integer)
+        sep = $/
+        limit = sep
+      end
+      File.open(name, 'r') do |f|
+        f.each_line(sep, limit, chomp: getline_args[:chomp], &block)
+      end
+    end
 
     alias_method :orig_read, :read
     def read(name, length = nil, offset = nil, opt = EMPTY_HASH)
@@ -196,6 +195,30 @@ class ::IO
     end
   rescue EOFError
     return nil
+  end
+
+  def each_line(sep = $/, limit = nil, chomp: false)
+    if sep.is_a?(Integer)
+      limit = sep
+      sep = $/
+    end
+    sep_size = sep.bytesize
+
+
+    @read_buffer ||= +''
+
+    while true
+      while (idx = @read_buffer.index(sep))
+        line = @read_buffer.slice!(0, idx + sep_size)
+        line = line.chomp if chomp
+        yield line
+      end
+
+      result = readpartial(8192, @read_buffer, -1)
+      return self if !result
+    end
+  rescue EOFError
+    return self
   end
 
   # def print(*args)

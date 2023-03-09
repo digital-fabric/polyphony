@@ -523,13 +523,12 @@ class IOClassMethodsTest < MiniTest::Test
     assert_equal BIN_DATA, s
   end
   
-  # def test_foreach
-  #   skip 'IO.foreach is not yet implemented'
-  #   lines = []
-  #   IO.foreach(__FILE__) { |l| lines << l }
-  #   assert_equal "# frozen_string_literal: true\n", lines[0]
-  #   assert_equal "end\n", lines[-1]
-  # end
+  def test_foreach
+    lines = []
+    IO.foreach(__FILE__) { |l| lines << l }
+    assert_equal "# frozen_string_literal: true\n", lines[0]
+    assert_equal "end\n", lines[-1]
+  end
   
   def test_read_class_method
     s = IO.read(__FILE__)
