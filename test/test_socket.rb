@@ -345,7 +345,7 @@ class SSLSocketTest < MiniTest::Test
     }
     
     port = rand(10001..39999)
-    server = Polyphony::Net.tcp_listen('localhost', port, opts)
+    server = Polyphony::Net.tcp_listen('127.0.0.1', port, opts)
     f = spin do
       server.accept_loop { |s| handle_http_request(s) }
     end
@@ -360,7 +360,7 @@ class SSLSocketTest < MiniTest::Test
     f.await
 
     port = rand(10001..39999)
-    server = Polyphony::Net.tcp_listen('localhost', port, opts)
+    server = Polyphony::Net.tcp_listen('127.0.0.1', port, opts)
     errors = []
     f = spin do
       ## without ignoring errors
