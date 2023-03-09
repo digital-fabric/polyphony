@@ -1,3 +1,10 @@
+## 0.99 2023-03-09
+
+- Add missing Mutex API methods (#76)
+- Fix `IO.foreach` and `IO#each_line` (#74)
+- Fix `SSLServer#accept_loop` (#59)
+- Update liburing
+
 ## 0.98 2023-03-08
 
 - Add basic support for UDP sockets
