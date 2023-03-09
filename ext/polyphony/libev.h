@@ -1,5 +1,3 @@
-#define EV_STANDALONE
-
 #ifdef POLYPHONY_BACKEND_LIBEV
 
 /* keeps ev from requiring config.h */

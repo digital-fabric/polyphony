@@ -55,15 +55,16 @@ if config[:io_uring]
 else
   $defs << "-DPOLYPHONY_BACKEND_LIBEV"
   $defs << "-DPOLYPHONY_LINUX" if config[:linux]
-  $defs << '-DEV_USE_LINUXAIO'     if have_header('linux/aio_abi.h')
-  $defs << '-DEV_USE_SELECT'       if have_header('sys/select.h')
-  $defs << '-DEV_USE_POLL'         if have_type('port_event_t', 'poll.h')
-  $defs << '-DEV_USE_EPOLL'        if have_header('sys/epoll.h')
-  $defs << '-DEV_USE_KQUEUE'       if have_header('sys/event.h') && have_header('sys/queue.h')
-  $defs << '-DEV_USE_PORT'         if have_type('port_event_t', 'port.h')
-  $defs << '-DHAVE_SYS_RESOURCE_H' if have_header('sys/resource.h')
 
   $defs << "-DEV_STANDALONE" # prevent libev from assuming "config.h" exists
+  $defs << '-DEV_USE_EPOLL'        if have_header('sys/epoll.h')
+  $defs << '-DEV_USE_KQUEUE'       if have_header('sys/event.h') && have_header('sys/queue.h')
+  $defs << '-DEV_USE_LINUXAIO'     if have_header('linux/aio_abi.h')
+  $defs << '-DEV_USE_POLL'         if have_type('port_event_t', 'poll.h')
+  $defs << '-DEV_USE_PORT'         if have_type('port_event_t', 'port.h')
+  $defs << '-DEV_USE_SELECT'       if have_header('sys/select.h')
+  
+  $defs << '-DHAVE_SYS_RESOURCE_H' if have_header('sys/resource.h')
 
   $CFLAGS << " -Wno-comment"
   $CFLAGS << " -Wno-unused-result"
