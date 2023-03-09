@@ -27,15 +27,21 @@ server = Polyphony::Net.tcp_listen('localhost', 1234, opts)
 
 puts 'Serving HTTPS on port 1234'
 
-# server.accept_loop do |socket|
-server.accept_loop do |socket|
-# while (socket = (server.accept)
-  spin do
-    while (data = socket.gets("\n", 8192))
-      if data.chomp.empty?
-        socket << "HTTP/1.1 200 OK\nConnection: close\nContent-Length: 4\n\nfoo\n"
-        break
+begin
+  server.accept_loop(false) do |socket|
+    spin do
+      while (data = socket.gets("\n", 8192))
+        if data.chomp.empty?
+          socket << "HTTP/1.1 200 OK\nConnection: close\nContent-Length: 4\n\nfoo\n"
+          break
+        end
       end
+    rescue OpenSSL::SSL::SSLError
+      # ignore
     end
   end
+rescue => e
+  puts '*' * 40
+  p e
+  puts e.backtrace.join("\n")
 end

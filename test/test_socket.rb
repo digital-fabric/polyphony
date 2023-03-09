@@ -3,6 +3,7 @@
 require_relative 'helper'
 require 'fileutils'
 require 'msgpack'
+require 'localhost/authority'
 
 class TCPSocketTest < MiniTest::Test
   def start_tcp_server_on_random_port(host = '127.0.0.1')
@@ -320,5 +321,65 @@ if IS_LINUX
       response = JSON.load(res.body)
       assert_equal 'https://ipinfo.io/missingauth', response['readme']
     end
+  end
+end
+
+class SSLSocketTest < MiniTest::Test
+  def handle_http_request(socket)
+    while (data = socket.gets("\n", 8192))
+      if data.chomp.empty?
+        socket << "HTTP/1.1 200 OK\nConnection: close\nContent-Length: 3\n\nfoo"
+        break
+      end
+    end
+  end
+
+  def test_ssl_accept_loop
+    authority = Localhost::Authority.fetch
+    server_ctx = authority.server_context
+    
+    opts = {
+      reuse_addr:     true,
+      dont_linger:    true,
+      secure_context: server_ctx
+    }
+    
+    port = rand(10001..39999)
+    server = Polyphony::Net.tcp_listen('localhost', port, opts)
+    f = spin do
+      server.accept_loop { |s| handle_http_request(s) }
+    end
+
+    # make bad request
+    `curl -s http://localhost:#{port}/`
+
+    msg = `curl -sk https://localhost:#{port}/`
+    assert_equal 'foo', msg
+
+    f.stop
+    f.await
+
+    port = rand(10001..39999)
+    server = Polyphony::Net.tcp_listen('localhost', port, opts)
+    errors = []
+    f = spin do
+      ## without ignoring errors
+      f2 = spin do
+        server.accept_loop(false) { |s| handle_http_request(s) }
+      end
+      f2.await
+    rescue => e
+      errors << e
+    end
+
+    msg = `curl -sk https://localhost:#{port}/`
+    assert_equal 'foo', msg
+
+    # make bad request
+    `curl -s http://localhost:#{port}/`
+
+    f.await
+    assert_equal 1, errors.size
+    assert_kind_of OpenSSL::SSL::SSLError, errors.first
   end
 end

@@ -200,7 +200,7 @@ class ::OpenSSL::SSL::SSLServer
   def accept_loop(ignore_errors = true)
     loop do
       yield accept
-    rescue SystemCallError, StandardError => e
+    rescue OpenSSL::SSL::SSLError, SystemCallError => e
       raise e unless ignore_errors
     end
   end
