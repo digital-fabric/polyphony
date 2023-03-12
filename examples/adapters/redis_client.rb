@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
-require 'bundler/setup'
-require 'polyphony/adapters/redis'
+# require 'bundler/setup'
+require './lib/polyphony/adapters/redis'
+require 'redis'
 
 ::Exception.__disable_sanitized_backtrace__ = true
 

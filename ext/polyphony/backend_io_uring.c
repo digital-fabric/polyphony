@@ -701,7 +701,7 @@ VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE po
 
   while (1) {
     VALUE resume_value = Qnil;
-    op_context_t *ctx = context_store_acquire(&backend->store, OP_RECV);
+    op_context_t *ctx = context_store_acquire(&backend->store, OP_RECVMSG);
     struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
@@ -904,7 +904,7 @@ VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE des
 
   while (left > 0) {
     VALUE resume_value = Qnil;
-    op_context_t *ctx = context_store_acquire(&backend->store, OP_SEND);
+    op_context_t *ctx = context_store_acquire(&backend->store, OP_SENDMSG);
     struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;

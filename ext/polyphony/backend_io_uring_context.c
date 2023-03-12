@@ -6,18 +6,21 @@
 
 const char *op_type_to_str(enum op_type type) {
   switch (type) {
-  case OP_READ: return "READ";
-  case OP_WRITEV: return "WRITEV";
-  case OP_WRITE: return "WRITE";
-  case OP_RECV: return "RECV";
-  case OP_SEND: return "SEND";
-  case OP_SPLICE: return "SPLICE";
-  case OP_TIMEOUT: return "TIMEOUT";
-  case OP_POLL: return "POLL";
-  case OP_ACCEPT: return "ACCEPT";
-  case OP_CONNECT: return "CONNECT";
-  case OP_CHAIN: return "CHAIN";
-  case OP_CLOSE: return "CLOSE";
+  case OP_ACCEPT:   return "ACCEPT";
+  case OP_CHAIN:    return "CHAIN";
+  case OP_CLOSE:    return "CLOSE";
+  case OP_CONNECT:  return "CONNECT";
+  case OP_POLL:     return "POLL";
+  case OP_READ:     return "READ";
+  case OP_RECV:     return "RECV";
+  case OP_RECVMSG:  return "RECVMSG";
+  case OP_SEND:     return "SEND";
+  case OP_SENDMSG:  return "SENDMSG";
+  case OP_SPLICE:   return "SPLICE";
+  case OP_TIMEOUT:  return "TIMEOUT";
+  case OP_WRITEV:   return "WRITEV";
+  case OP_WRITE:    return "WRITE";
+
   default: return "";
   };
 }

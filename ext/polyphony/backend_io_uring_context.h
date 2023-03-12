@@ -4,19 +4,21 @@
 #include "ruby.h"
 
 enum op_type {
+  OP_ACCEPT,
+  OP_CHAIN,
+  OP_CLOSE,
+  OP_CONNECT,
   OP_NONE,
+  OP_POLL,
   OP_READ,
-  OP_WRITEV,
-  OP_WRITE,
   OP_RECV,
+  OP_RECVMSG,
   OP_SEND,
+  OP_SENDMSG,
   OP_SPLICE,
   OP_TIMEOUT,
-  OP_POLL,
-  OP_ACCEPT,
-  OP_CONNECT,
-  OP_CHAIN,
-  OP_CLOSE
+  OP_WRITEV,
+  OP_WRITE
 };
 
 typedef struct op_context {
