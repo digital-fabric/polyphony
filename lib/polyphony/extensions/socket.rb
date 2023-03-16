@@ -503,6 +503,7 @@ class ::TCPServer
   def initialize(hostname = nil, port = 0)
     addr = Addrinfo.tcp(hostname, port)
     @io = Socket.new addr.afamily, Socket::SOCK_STREAM
+    @io.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
     @io.bind(addr)
     @io.listen(0)
   end
