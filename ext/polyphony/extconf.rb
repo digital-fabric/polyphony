@@ -19,6 +19,9 @@ def get_config
   combined_version = version.to_i * 100 + major_revision.to_i
 
   config[:pidfd_open] = combined_version > 503
+  config[:multishot_recv] = combined_version >= 600
+  config[:multishot_recvmsg] = combined_version >= 600
+  config[:multishot_accept] = combined_version >= 519
 
   force_libev = ENV['POLYPHONY_LIBEV'] != nil
   config[:io_uring] = !force_libev && (combined_version >= 506) && (distribution != 'linuxkit')
@@ -46,24 +49,33 @@ if config[:io_uring]
   $LDFLAGS << " -L#{File.expand_path('../../vendor/liburing/src', __dir__)} -l uring"
 end
 
+def define_bool(name, value)
+  $defs << "-D#{name}=#{value ? 1 : 0 }"
+end
+
 $defs << '-DPOLYPHONY_USE_PIDFD_OPEN' if config[:pidfd_open]
 if config[:io_uring]
   $defs << "-DPOLYPHONY_BACKEND_LIBURING"
   $defs << "-DPOLYPHONY_LINUX"
   $defs << "-DPOLYPHONY_UNSET_NONBLOCK" if RUBY_VERSION =~ /^3/
+  $defs << "-DHAVE_IO_URING_PREP_MULTISHOT_ACCEPT" if config[:multishot_accept]
+  $defs << "-DHAVE_IO_URING_PREP_RECV_MULTISHOT" if config[:multishot_recv]
+  $defs << "-DHAVE_IO_URING_PREP_RECVMSG_MULTISHOT" if config[:multishot_recvmsg]
   $CFLAGS << " -Wno-pointer-arith"
 else
   $defs << "-DPOLYPHONY_BACKEND_LIBEV"
   $defs << "-DPOLYPHONY_LINUX" if config[:linux]
 
   $defs << "-DEV_STANDALONE" # prevent libev from assuming "config.h" exists
-  $defs << '-DEV_USE_EPOLL'        if have_header('sys/epoll.h')
-  $defs << '-DEV_USE_KQUEUE'       if have_header('sys/event.h') && have_header('sys/queue.h')
-  $defs << '-DEV_USE_LINUXAIO'     if have_header('linux/aio_abi.h')
-  $defs << '-DEV_USE_POLL'         if have_type('port_event_t', 'poll.h')
-  $defs << '-DEV_USE_PORT'         if have_type('port_event_t', 'port.h')
-  $defs << '-DEV_USE_SELECT'       if have_header('sys/select.h')
-  
+
+  define_bool('EV_USE_EPOLL', have_header('sys/epoll.h'))
+  define_bool('EV_USE_KQUEUE', have_header('sys/event.h') && have_header('sys/queue.h'))
+  define_bool('EV_USE_LINUXAIO', have_header('linux/aio_abi.h'))
+  define_bool('EV_USE_POLL', have_type('port_event_t', 'poll.h'))
+  define_bool('EV_USE_PORT', have_type('port_event_t', 'port.h'))
+  define_bool('EV_USE_SELECT', have_header('sys/select.h'))
+  define_bool('EV_USE_IOCP', false)
+
   $defs << '-DHAVE_SYS_RESOURCE_H' if have_header('sys/resource.h')
 
   $CFLAGS << " -Wno-comment"

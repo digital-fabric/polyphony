@@ -383,3 +383,95 @@ class SSLSocketTest < MiniTest::Test
     assert_kind_of OpenSSL::SSL::SSLError, errors.first
   end
 end
+
+class MultishotAcceptTest < MiniTest::Test
+  def start_tcp_server_on_random_port(host = '127.0.0.1')
+    port = rand(1100..60000)
+    server = TCPServer.new(host, port)
+    [port, server]
+  rescue Errno::EADDRINUSE
+    retry
+  end
+
+  def test_multishot_accept_while_loop
+    port, server = start_tcp_server_on_random_port
+    server_fiber = spin do
+      server.multishot_accept do
+        while (socket = server.accept)
+          spin do
+            while (data = socket.gets(8192))
+              socket << data
+            end
+          end
+        end
+      end
+    end
+
+    snooze
+    client = TCPSocket.new('127.0.0.1', port)
+    client.write("1234\n")
+    assert_equal "1234\n", client.recv(8192)
+    client.close
+
+    client = TCPSocket.new('127.0.0.1', port)
+    client.write("5678\n")
+    assert_equal "5678\n", client.recv(8192)
+    client.close
+
+  ensure
+    server_fiber&.stop
+    server_fiber&.await
+    server&.close
+  end
+
+  def spin_client(socket)
+    spin do
+      while (data = socket.gets(8192))
+        socket << data
+      end
+    end
+  end
+
+  def test_multishot_accept_loop
+    port, server = start_tcp_server_on_random_port
+    server_fiber = spin do
+      server.multishot_accept do
+        server.accept_loop { |s| spin_client(s) }
+      end
+    end
+
+    snooze
+    client = TCPSocket.new('127.0.0.1', port)
+    client.write("1234\n")
+    assert_equal "1234\n", client.recv(8192)
+    client.close
+
+    client = TCPSocket.new('127.0.0.1', port)
+    client.write("5678\n")
+    assert_equal "5678\n", client.recv(8192)
+    client.close
+
+  ensure
+    server_fiber&.stop
+    server_fiber&.await
+    server&.close
+  end
+
+  def test_multishot_accept_error
+    port, server = start_tcp_server_on_random_port
+    error = nil
+    server_fiber = spin do
+      server.multishot_accept do
+        server.accept_loop { |s| spin_client(s) }
+      rescue SystemCallError => e
+        error = e
+      end
+    end
+    snooze
+    server.close
+    snooze
+    server_fiber.await
+    assert_kind_of Errno::EBADF, error
+  end
+
+end

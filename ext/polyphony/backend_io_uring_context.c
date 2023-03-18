@@ -69,6 +69,12 @@ inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
 
   assert(ctx->ref_count);
 
+  // If a multishot ctx is released, we pretend its ref count is 1, so it will
+  // be returned to the store.
+  if (ctx->ref_count == MULTISHOT_REFCOUNT) {
+    ctx->ref_count = 1;
+  }
+
   ctx->ref_count--;
   if (ctx->ref_count) return 0;
 

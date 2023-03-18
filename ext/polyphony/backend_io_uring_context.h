@@ -8,6 +8,7 @@ enum op_type {
   OP_CHAIN,
   OP_CLOSE,
   OP_CONNECT,
+  OP_MULTISHOT_ACCEPT,
   OP_NONE,
   OP_POLL,
   OP_READ,
@@ -20,6 +21,8 @@ enum op_type {
   OP_WRITEV,
   OP_WRITE
 };
+
+#define MULTISHOT_REFCOUNT 0xFFFF
 
 typedef struct op_context {
   struct op_context *prev;

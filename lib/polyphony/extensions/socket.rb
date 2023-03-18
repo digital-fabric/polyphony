@@ -517,6 +517,10 @@ class ::TCPServer
     Polyphony.backend_accept(@io, TCPSocket)
   end
 
+  def multishot_accept(&block)
+    Polyphony.backend_multishot_accept(@io, &block)
+  end
+
   # call-seq:
   #   socket.accept_loop { |conn| ... }
   #

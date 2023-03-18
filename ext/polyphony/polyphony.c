@@ -11,6 +11,7 @@ ID ID_inspect;
 ID ID_invoke;
 ID ID_ivar_blocking_mode;
 ID ID_ivar_io;
+ID ID_ivar_multishot_accept_queue;
 ID ID_ivar_parked;
 ID ID_ivar_runnable;
 ID ID_ivar_running;
@@ -45,6 +46,13 @@ VALUE Polyphony_backend_accept(VALUE self, VALUE server_socket, VALUE socket_cla
 VALUE Polyphony_backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   return Backend_accept_loop(BACKEND(), server_socket, socket_class);
 }
+
+#ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
+VALUE Polyphony_backend_multishot_accept(VALUE self, VALUE server_socket) {
+  return Backend_multishot_accept(BACKEND(), server_socket);
+}
+#endif
+
 
 VALUE Polyphony_backend_connect(VALUE self, VALUE io, VALUE addr, VALUE port) {
   return Backend_connect(BACKEND(), io, addr, port);
@@ -186,6 +194,12 @@ void Init_Polyphony(void) {
   rb_define_singleton_method(mPolyphony, "backend_accept_loop", Polyphony_backend_accept_loop, 2);
   rb_define_singleton_method(mPolyphony, "backend_connect", Polyphony_backend_connect, 3);
   rb_define_singleton_method(mPolyphony, "backend_feed_loop", Polyphony_backend_feed_loop, 3);
+
+  #ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
+  rb_define_singleton_method(mPolyphony, "backend_multishot_accept", Polyphony_backend_multishot_accept, 1);
+  #endif
+
+
   rb_define_singleton_method(mPolyphony, "backend_read", Polyphony_backend_read, 5);
   rb_define_singleton_method(mPolyphony, "backend_read_loop", Polyphony_backend_read_loop, 2);
   rb_define_singleton_method(mPolyphony, "backend_recv", Polyphony_backend_recv, 4);
@@ -225,23 +239,24 @@ void Init_Polyphony(void) {
 
   cTimeoutException = rb_define_class_under(mPolyphony, "TimeoutException", rb_eException);
 
-  ID_call               = rb_intern("call");
-  ID_caller             = rb_intern("caller");
-  ID_clear              = rb_intern("clear");
-  ID_each               = rb_intern("each");
-  ID_inspect            = rb_intern("inspect");
-  ID_invoke             = rb_intern("invoke");
-  ID_ivar_blocking_mode = rb_intern("@blocking_mode");
-  ID_ivar_io            = rb_intern("@io");
-  ID_ivar_parked        = rb_intern("@parked");
-  ID_ivar_runnable      = rb_intern("@runnable");
-  ID_ivar_running       = rb_intern("@running");
-  ID_ivar_thread        = rb_intern("@thread");
-  ID_new                = rb_intern("new");
-  ID_raise              = rb_intern("raise");
-  ID_signal             = rb_intern("signal");
-  ID_size               = rb_intern("size");
-  ID_switch_fiber       = rb_intern("switch_fiber");
-  ID_to_s               = rb_intern("to_s");
-  ID_transfer           = rb_intern("transfer");
+  ID_call                         = rb_intern("call");
+  ID_caller                       = rb_intern("caller");
+  ID_clear                        = rb_intern("clear");
+  ID_each                         = rb_intern("each");
+  ID_inspect                      = rb_intern("inspect");
+  ID_invoke                       = rb_intern("invoke");
+  ID_ivar_blocking_mode           = rb_intern("@blocking_mode");
+  ID_ivar_io                      = rb_intern("@io");
+  ID_ivar_multishot_accept_queue  = rb_intern("@multishot_accept_queue");
+  ID_ivar_parked                  = rb_intern("@parked");
+  ID_ivar_runnable                = rb_intern("@runnable");
+  ID_ivar_running                 = rb_intern("@running");
+  ID_ivar_thread                  = rb_intern("@thread");
+  ID_new                          = rb_intern("new");
+  ID_raise                        = rb_intern("raise");
+  ID_signal                       = rb_intern("signal");
+  ID_size                         = rb_intern("size");
+  ID_switch_fiber                 = rb_intern("switch_fiber");
+  ID_to_s                         = rb_intern("to_s");
+  ID_transfer                     = rb_intern("transfer");
 }
