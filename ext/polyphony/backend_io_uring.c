@@ -1054,7 +1054,6 @@ VALUE multishot_accept_start(struct multishot_accept_ctx *ctx) {
   int server_fd;
   rb_io_t *server_fptr;
   server_fd = fd_from_io(ctx->server_socket, &server_fptr, 0, 0);
-
   VALUE accept_queue = rb_funcall(cQueue, ID_new, 0);
   rb_ivar_set(ctx->server_socket, ID_ivar_multishot_accept_queue, accept_queue);
 

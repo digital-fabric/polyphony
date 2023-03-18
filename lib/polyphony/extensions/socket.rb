@@ -517,8 +517,10 @@ class ::TCPServer
     Polyphony.backend_accept(@io, TCPSocket)
   end
 
-  def multishot_accept(&block)
-    Polyphony.backend_multishot_accept(@io, &block)
+  if Polyphony.instance_methods(false).include?(:backend_multishot_accept)
+    def multishot_accept(&block)
+      Polyphony.backend_multishot_accept(@io, &block)
+    end
   end
 
   # call-seq:

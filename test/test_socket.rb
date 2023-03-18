@@ -385,6 +385,10 @@ class SSLSocketTest < MiniTest::Test
 end
 
 class MultishotAcceptTest < MiniTest::Test
+  def setup
+    skip if !TCPServer.instance_methods(false).include?(:multishot_accept)
+  end
+
   def start_tcp_server_on_random_port(host = '127.0.0.1')
     port = rand(1100..60000)
     server = TCPServer.new(host, port)
