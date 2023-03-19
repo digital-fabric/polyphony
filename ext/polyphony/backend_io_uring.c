@@ -91,7 +91,10 @@ static VALUE Backend_initialize(VALUE self) {
 
   backend->prepared_limit = 1024;
   while (1) {
-    int ret = io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
+    int ret = io_uring_queue_init(
+      backend->prepared_limit, &backend->ring,
+      IORING_SETUP_SUBMIT_ALL | IORING_SETUP_COOP_TASKRUN
+    );
     if (!ret) break;
     
     // if ENOMEM is returned, use a smaller limit

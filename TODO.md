@@ -11,8 +11,6 @@
 - Add support for IPv6:
   https://www.reddit.com/r/ruby/comments/lyen23/understanding_ipv6_and_why_its_important_to_you/
 
-- Add support for UDP sockets
-
 - Check segfault when resetting a `cancel_after` timeout lots of times at very high rate
 - Check why `throttled_loop` inside of `move_on_after` fails to stop
 
@@ -164,7 +162,6 @@
   - if not, fork sidekiq, make adjustments to Polyphony code
   - test performance
   - proceed from there
-
 
 ### Sinatra / Sidekiq
 
