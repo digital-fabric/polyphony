@@ -18,10 +18,12 @@ def get_config
 
   combined_version = version.to_i * 100 + major_revision.to_i
 
-  config[:pidfd_open] = combined_version > 503
-  config[:multishot_recv] = combined_version >= 600
-  config[:multishot_recvmsg] = combined_version >= 600
-  config[:multishot_accept] = combined_version >= 519
+  config[:pidfd_open]         = combined_version > 503
+  config[:multishot_recv]     = combined_version >= 600
+  config[:multishot_recvmsg]  = combined_version >= 600
+  config[:multishot_accept]   = combined_version >= 519
+  config[:submit_all_flag]    = combined_version >= 518
+  config[:coop_taskrun_flag]  = combined_version >= 519
 
   force_libev = ENV['POLYPHONY_LIBEV'] != nil
   config[:io_uring] = !force_libev && (combined_version >= 506) && (distribution != 'linuxkit')
@@ -61,6 +63,8 @@ if config[:io_uring]
   $defs << "-DHAVE_IO_URING_PREP_MULTISHOT_ACCEPT" if config[:multishot_accept]
   $defs << "-DHAVE_IO_URING_PREP_RECV_MULTISHOT" if config[:multishot_recv]
   $defs << "-DHAVE_IO_URING_PREP_RECVMSG_MULTISHOT" if config[:multishot_recvmsg]
+  $defs << "-DHAVE_IORING_SETUP_SUBMIT_ALL" if config[:submit_all_flag]
+  $defs << "-DHAVE_IORING_SETUP_COOP_TASKRUN" if config[:coop_taskrun_flag]
   $CFLAGS << " -Wno-pointer-arith"
 else
   $defs << "-DPOLYPHONY_BACKEND_LIBEV"

@@ -90,11 +90,16 @@ static VALUE Backend_initialize(VALUE self) {
   context_store_initialize(&backend->store);
 
   backend->prepared_limit = 1024;
+  int flags = 0;
+  #ifdef HAVE_IORING_SETUP_SUBMIT_ALL
+  flags |= IORING_SETUP_SUBMIT_ALL;
+  #endif
+  #ifdef HAVE_IORING_SETUP_COOP_TASKRUN
+  flags |= IORING_SETUP_COOP_TASKRUN;
+  #endif
+
   while (1) {
-    int ret = io_uring_queue_init(
-      backend->prepared_limit, &backend->ring,
-      IORING_SETUP_SUBMIT_ALL | IORING_SETUP_COOP_TASKRUN
-    );
+    int ret = io_uring_queue_init(backend->prepared_limit, &backend->ring, flags);
     if (!ret) break;
     
     // if ENOMEM is returned, use a smaller limit
