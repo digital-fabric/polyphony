@@ -39,18 +39,18 @@ class TimerMoveOnAfterTest < MiniTest::Test
     skip unless IS_LINUX
 
     t0 = Time.now
-    v = @timer.move_on_after(0.01, with_value: :moved_on) do
-      sleep 0.007
+    v = @timer.move_on_after(0.1, with_value: :moved_on) do
+      sleep 0.07
       @timer.reset
-      sleep 0.007
+      sleep 0.07
       @timer.reset
-      sleep 0.007
+      sleep 0.07
       nil
     end
     t1 = Time.now
 
     assert_nil v
-    assert_in_range 0.015..0.04, t1 - t0
+    assert_in_range 0.15..0.4, t1 - t0
   end
 end
 

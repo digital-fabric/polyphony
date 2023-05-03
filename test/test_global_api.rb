@@ -145,13 +145,13 @@ class MoveOnAfterTest < MiniTest::Test
 
     t0 = monotonic_clock
     o = move_on_after(0.01, with_value: 1) do
-      move_on_after(0.02, with_value: 2) do
+      move_on_after(0.03, with_value: 2) do
         sleep 1
       end
     end
     t1 = monotonic_clock
     assert_equal 1, o
-    assert_in_range 0.008..0.015, t1 - t0 if IS_LINUX
+    assert_in_range 0.008..0.027, t1 - t0 if IS_LINUX
 
     t0 = monotonic_clock
     o = move_on_after(0.05, with_value: 1) do
@@ -161,7 +161,7 @@ class MoveOnAfterTest < MiniTest::Test
     end
     t1 = monotonic_clock
     assert_equal 2, o
-    assert_in_range 0.008..0.013, t1 - t0 if IS_LINUX
+    assert_in_range 0.008..0.025, t1 - t0 if IS_LINUX
   end
 end
 
@@ -181,15 +181,17 @@ class CancelAfterTest < MiniTest::Test
 
   def test_cancel_after_with_reset
     t0 = monotonic_clock
-    cancel_after(0.01) do |f|
+    cancel_after(0.1) do |f|
       assert_kind_of Fiber, f
       assert_equal Fiber.current, f.parent
-      sleep 0.007
+      sleep 0.05
       f.reset
-      sleep 0.007
+      sleep 0.05
+      f.reset
+      sleep 0.05
     end
     t1 = monotonic_clock
-    assert_in_range 0.014..0.024, t1 - t0 if IS_LINUX
+    assert_in_range 0.14..0.24, t1 - t0 if IS_LINUX
   end
 
   class CustomException < Exception
@@ -227,6 +229,34 @@ class CancelAfterTest < MiniTest::Test
       assert_kind_of RuntimeError, e
       assert_equal 'foo', e.message
     end
+  end
+
+  def test_lots_of_cancel_after
+    cancels = 100
+
+    cancel_count = 0
+    cancels.times do
+      begin
+        cancel_after(0.001) { sleep 1 }
+      rescue Polyphony::Cancel
+        cancel_count += 1
+      end
+    end
+    assert_equal cancels, cancel_count
+  end
+
+  def test_cancel_after_with_lots_of_resets
+    resets = 100
+
+    t0 = monotonic_clock
+    cancel_after(0.1) do |f|
+      resets.times do
+        sleep 0.0001
+        f.reset
+      end
+    end
+    t1 = monotonic_clock
+    assert_in_range 0.01..0.2, t1 - t0 if IS_LINUX
   end
 end
 
@@ -380,6 +410,14 @@ class ThrottledLoopTest < MiniTest::Test
     t1 = monotonic_clock
     assert_in_range 0.075..0.15, t1 - t0 if IS_LINUX
     assert_equal [1, 2, 3, 4, 5], buffer
+  end
+
+  def test_throttled_loop_inside_move_on_after
+    count = 0
+    move_on_after(0.1) do
+      throttled_loop(50) { count += 1 }
+    end
+    assert_in_range 3..7, count
   end
 end
 

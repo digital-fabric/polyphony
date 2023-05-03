@@ -1,5 +1,5 @@
 AllCops:
-  TargetRubyVersion: 2.6
+  TargetRubyVersion: 3.2
   RubyInterpreters:
     - ruby
   Exclude:
@@ -49,7 +49,7 @@ Style/NumericPredicate:
 Style/TrivialAccessors:
   Enabled: false
 
-Style/MethodMissingSuper:
+Lint/MissingSuper:
   Enabled: false
 
 Style/GlobalVars:
@@ -90,7 +90,7 @@ Metrics/MethodLength:
 
 Metrics/ModuleLength:
   Exclude:
-    - lib/polyphony/extensions/core.rb
+    - lib/polyphony/core/global_api.rb
     - examples/**/*.rb
 
 Metrics/ClassLength:

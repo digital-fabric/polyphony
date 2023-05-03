@@ -247,11 +247,12 @@ module Polyphony
     # @param &block [Proc] block to run
     # @return [any] block's return value
     def cancel_after_with_optional_reset(interval, exception, &block)
+      fiber = Fiber.current
       canceller = spin do
-        sleep interval
+        Polyphony.backend_sleep(interval)
         exception = cancel_exception(exception)
         exception.raising_fiber = Fiber.current
-        fiber.cancel(exception).await
+        fiber.cancel(exception)
       end
       block.call(canceller)
     ensure
@@ -295,7 +296,7 @@ module Polyphony
       fiber = Fiber.current
       canceller = spin do
         sleep interval
-        fiber.move_on(value).await
+        fiber.move_on(value)
       end
       block.call(canceller)
     rescue Polyphony::MoveOn => e
