@@ -1941,7 +1941,7 @@ VALUE Backend_snooze(VALUE self) {
   GetBackend(self, backend);
 
   Fiber_make_runnable(fiber, Qnil);
-  ret = Thread_switch_fiber(rb_thread_current());
+  ret = backend_base_switch_fiber(self, &backend->base);
 
   COND_TRACE(&backend->base, 4, SYM_unblock, rb_fiber_current(), ret, CALLER());
 

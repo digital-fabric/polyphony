@@ -15,7 +15,14 @@ inline void runqueue_mark(runqueue_t *runqueue) {
 }
 
 inline void runqueue_push(runqueue_t *runqueue, VALUE fiber, VALUE value, int reschedule) {
-  if (reschedule) runqueue_ring_buffer_delete(&runqueue->entries, fiber);
+  if (reschedule) {
+    if (IS_EXCEPTION(value))
+      runqueue_ring_buffer_delete(&runqueue->entries, fiber);
+    else {
+      int exception_scheduled = runqueue_ring_buffer_delete_if_not_exception(&runqueue->entries, fiber);
+      if (exception_scheduled) return;
+    }
+  }
   runqueue_ring_buffer_push(&runqueue->entries, fiber, value);
   if (runqueue->entries.count > runqueue->high_watermark)
     runqueue->high_watermark = runqueue->entries.count;

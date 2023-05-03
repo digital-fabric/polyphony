@@ -87,6 +87,19 @@ inline void runqueue_ring_buffer_delete(runqueue_ring_buffer *buffer, VALUE fibe
   }
 }
 
+inline int runqueue_ring_buffer_delete_if_not_exception(runqueue_ring_buffer *buffer, VALUE fiber) {
+  for (unsigned int i = 0; i < buffer->count; i++) {
+    unsigned int idx = (buffer->head + i) % buffer->size;
+    if (buffer->entries[idx].fiber == fiber) {
+      if (IS_EXCEPTION(buffer->entries[idx].value)) return 1;
+
+      runqueue_ring_buffer_delete_at(buffer, idx);
+      return 0;
+    }
+  }
+  return 0;
+}
+
 inline int runqueue_ring_buffer_index_of(runqueue_ring_buffer *buffer, VALUE fiber) {
   for (unsigned int i = 0; i < buffer->count; i++) {
     unsigned int idx = (buffer->head + i) % buffer->size;

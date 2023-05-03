@@ -14,8 +14,9 @@
 // exceptions
 #define TEST_EXCEPTION(ret) (rb_obj_is_kind_of(ret, rb_eException) == Qtrue)
 #define RAISE_EXCEPTION(e) rb_funcall(e, ID_invoke, 0);
-#define RAISE_IF_EXCEPTION(ret) if (rb_obj_is_kind_of(ret, rb_eException) == Qtrue) { RAISE_EXCEPTION(ret); }
-#define RAISE_IF_NOT_NIL(ret) if (ret != Qnil) { RAISE_EXCEPTION(ret); }
+#define IS_EXCEPTION(o) (rb_obj_is_kind_of(o, rb_eException) == Qtrue)
+#define RAISE_IF_EXCEPTION(o) if (IS_EXCEPTION(o)) { RAISE_EXCEPTION(o); }
+#define RAISE_IF_NOT_NIL(o) if (o != Qnil) { RAISE_EXCEPTION(o); }
 
 // Fiber#transfer
 #if HAVE_RB_FIBER_TRANSFER

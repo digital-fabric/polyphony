@@ -10,7 +10,6 @@ void ring_buffer_init(ring_buffer *buffer) {
 }
 
 void ring_buffer_free(ring_buffer *buffer) {
-  // printf("ring_buffer_free ring_buffer: %p entries: %p\n", buffer, buffer->entries);
   free(buffer->entries);
 }
 

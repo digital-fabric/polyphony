@@ -43,9 +43,10 @@ VALUE Thread_fiber_schedule_and_wakeup(VALUE self, VALUE fiber, VALUE resume_obj
     Thread_schedule_fiber_with_priority(self, fiber, resume_obj);
   }
 
-  if (Backend_wakeup(rb_ivar_get(self, ID_ivar_backend)) == Qnil) {
+  VALUE backend = rb_ivar_get(self, ID_ivar_backend);
+  if (Backend_wakeup(backend) == Qnil) {
     // we're not inside Backend_poll, so we just do a switchpoint
-    Thread_switch_fiber(self);
+    Backend_switch_fiber(backend);
   }
 
   return self;
