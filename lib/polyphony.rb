@@ -18,10 +18,14 @@ require_relative './polyphony/adapters/process'
 # Polyphony API
 module Polyphony
   class << self
+    # Creates a new Polyphony::Pipe instance.
+    #
+    # @return [Polyphony::Pipe] created pipe
     def pipe
       Pipe.new
     end
 
+    # @!visibility private
     def fork(&block)
       Kernel.fork do
         # A race condition can arise if a TERM or INT signal is received before
@@ -39,6 +43,19 @@ module Polyphony
       end
     end
 
+    # call-seq:
+    #   Polyphony.watch_process(cmd)
+    #   Polyphony.watch_process { sleep 1 }
+    # 
+    # Lubnches a process using either a command or a block for a forked process,
+    # waiting for the child process to terminate.
+    def watch_process(cmd = nil, &block)
+      Polyphony::Process.watch(cmd, &block)
+    end
+
+    private
+
+    # @!visibility private
     def spin_forked_block(&block)
       Fiber.new do
         run_forked_block(&block)
@@ -54,6 +71,7 @@ module Polyphony
       end
     end
 
+    # @!visibility private
     def run_forked_block(&block)
       Thread.current.setup
       Thread.current.backend.post_fork
@@ -63,6 +81,7 @@ module Polyphony
       block.()
     end
 
+    # @!visibility private
     def exit_forked_process
       terminate_threads
       Fiber.current.shutdown_all_children
@@ -74,10 +93,7 @@ module Polyphony
       exit
     end
 
-    def watch_process(cmd = nil, &block)
-      Polyphony::Process.watch(cmd, &block)
-    end
-
+    # @!visibility private
     def install_terminating_signal_handlers
       trap('SIGTERM') { raise SystemExit }
       orig_trap('SIGINT') do
@@ -86,6 +102,7 @@ module Polyphony
       end
     end
 
+    # @!visibility private
     def terminate_threads
       threads = Thread.list - [Thread.current]
       return if threads.empty?
@@ -94,8 +111,10 @@ module Polyphony
       threads.each(&:join)
     end
 
+    # @!visibility private
     attr_accessor :original_pid
 
+    # @!visibility private
     def install_at_exit_handler
       @original_pid = ::Process.pid
 
@@ -106,7 +125,7 @@ module Polyphony
       at_exit do
         next unless @original_pid == ::Process.pid
 
-        Polyphony.terminate_threads
+        terminate_threads
         Fiber.current.shutdown_all_children
       end
     end
@@ -123,10 +142,11 @@ module Polyphony
 
   Object.const_set(:ConditionVariable, Polyphony::ConditionVariable)
   $VERBOSE = verbose
+
+  install_terminating_signal_handlers
+  install_at_exit_handler
 end
 
-Polyphony.install_terminating_signal_handlers
-Polyphony.install_at_exit_handler
 
 if (debug_socket_path = ENV['POLYPHONY_DEBUG_SOCKET_PATH'])
   puts "Starting debug server on #{debug_socket_path}"

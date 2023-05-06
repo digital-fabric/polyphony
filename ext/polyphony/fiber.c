@@ -18,6 +18,8 @@ VALUE SYM_schedule;
 VALUE SYM_block;
 VALUE SYM_terminate;
 
+/* @!visibility private */
+
 static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
   VALUE arg = (argc == 0) ? Qnil : argv[0];
   VALUE ret = FIBER_TRANSFER(self, arg);
@@ -26,6 +28,8 @@ static VALUE Fiber_safe_transfer(int argc, VALUE *argv, VALUE self) {
   RB_GC_GUARD(ret);
   return ret;
 }
+
+/* @!visibility private */
 
 inline VALUE Fiber_auto_watcher(VALUE self) {
   VALUE watcher;
@@ -38,12 +42,16 @@ inline VALUE Fiber_auto_watcher(VALUE self) {
   return watcher;
 }
 
+/* @!visibility private */
+
 inline void Fiber_make_runnable(VALUE fiber, VALUE value) {
   VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
   if (thread == Qnil) rb_raise(rb_eRuntimeError, "No thread set for fiber");
 
   Thread_schedule_fiber(thread, fiber, value);
 }
+
+/* @!visibility private */
 
 inline void Fiber_make_runnable_with_priority(VALUE fiber, VALUE value) {
   VALUE thread = rb_ivar_get(fiber, ID_ivar_thread);
@@ -52,17 +60,45 @@ inline void Fiber_make_runnable_with_priority(VALUE fiber, VALUE value) {
   Thread_schedule_fiber_with_priority(thread, fiber, value);
 }
 
+/* call-seq:
+ *   fiber.schedule
+ *   fiber.schedule(value)
+ * 
+ * Adds the fiber to the runqueue with the given resume value or `nil`.
+ * 
+ * @return [void]
+ */
+
 static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
   VALUE value = (argc == 0) ? Qnil : argv[0];
   Fiber_make_runnable(self, value);
   return self;
 }
 
+/* call-seq:
+ *   fiber.schedule_with_priority
+ *   fiber.schedule_with_priority(value)
+ * 
+ * Adds the fiber to the head of the runqueue with the given resume value or
+ * `nil`.
+ * 
+ * @return [void]
+ */
+
 static VALUE Fiber_schedule_with_priority(int argc, VALUE *argv, VALUE self) {
   VALUE value = (argc == 0) ? Qnil : argv[0];
   Fiber_make_runnable_with_priority(self, value);
   return self;
 }
+
+/* call-seq:
+ *   fiber.state -> sym
+ * 
+ * Returns the current state for the fiber, one of `:running`, `:runnable`,
+ * `:waiting`, `:dead`.
+ * 
+ * @return [Symbol]
+ */
 
 static VALUE Fiber_state(VALUE self) {
   if (!rb_fiber_alive_p(self) || (rb_ivar_get(self, ID_ivar_running) == Qfalse))
@@ -73,15 +109,34 @@ static VALUE Fiber_state(VALUE self) {
   return SYM_waiting;
 }
 
-VALUE Fiber_send(VALUE self, VALUE value) {
+/* call-seq:
+ *   fiber.send(msg)
+ * 
+ * Sends a message to the given fiber. The message will be added to the fiber's
+ * mailbox.
+ * 
+ * @param msg [any]
+ * @return [void]
+ */
+
+VALUE Fiber_send(VALUE self, VALUE msg) {
   VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
   if (mailbox == Qnil) {
     mailbox = rb_funcall(cQueue, ID_new, 0);
     rb_ivar_set(self, ID_ivar_mailbox, mailbox);
   }
-  Queue_push(mailbox, value);
+  Queue_push(mailbox, msg);
   return self;
 }
+
+/* call-seq:
+ *   fiber.receive -> msg
+ * 
+ * Receive's a message from the fiber's mailbox. If no message is available,
+ * waits for a message to be sent to it.
+ * 
+ * @return [any] received message
+ */
 
 VALUE Fiber_receive(VALUE self) {
   VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
@@ -92,6 +147,14 @@ VALUE Fiber_receive(VALUE self) {
   return Queue_shift(0, 0, mailbox);
 }
 
+/* call-seq:
+ *   fiber.mailbox -> queue
+ * 
+ * Returns the fiber's mailbox.
+ * 
+ * @return [Queue]
+ */
+
 VALUE Fiber_mailbox(VALUE self) {
   VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
   if (mailbox == Qnil) {
@@ -101,10 +164,20 @@ VALUE Fiber_mailbox(VALUE self) {
   return mailbox;
 }
 
+/* call-seq:
+ *   fiber.receive_all_pending -> ary
+ * 
+ * Receives all messages currently in the fiber's mailbox.
+ * 
+ * @return [Array]
+ */
+
 VALUE Fiber_receive_all_pending(VALUE self) {
   VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
   return (mailbox == Qnil) ? rb_ary_new() : Queue_shift_all(mailbox);
 }
+
+/* @!visibility private */
 
 VALUE Fiber_park(VALUE self) {
   rb_ivar_set(self, ID_ivar_parked, Qtrue);
@@ -112,11 +185,15 @@ VALUE Fiber_park(VALUE self) {
   return self;
 }
 
+/* @!visibility private */
+
 VALUE Fiber_unpark(VALUE self) {
   rb_ivar_set(self, ID_ivar_parked, Qnil);
   Backend_unpark_fiber(BACKEND(), self);
   return self;
 }
+
+/* @!visibility private */
 
 VALUE Fiber_parked_p(VALUE self) {
   return rb_ivar_get(self, ID_ivar_parked);

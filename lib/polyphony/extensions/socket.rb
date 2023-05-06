@@ -15,6 +15,10 @@ class BasicSocket < ::IO
     :backend_recv
   end
 
+  # Returns `:backend_send`. This method is used to tell various libraries which
+  # write method to use for this object.
+  #
+  # @return [:backend_send] use Polyphony.backend_send to send DATA
   def __write_method__
     :backend_send
   end
@@ -41,6 +45,7 @@ class ::Socket < ::BasicSocket
     Polyphony.backend_accept_loop(self, TCPSocket, &block)
   end
 
+  # @!visibility private
   NO_EXCEPTION = { exception: false }.freeze
 
   # Connects to the given address
@@ -53,6 +58,7 @@ class ::Socket < ::BasicSocket
     self
   end
 
+  # @!visibility private
   alias_method :orig_read, :read
 
   # call-seq:
@@ -155,7 +161,11 @@ class ::Socket < ::BasicSocket
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
 
-  # :no-doc:
+  # Reimplements #recvfrom.
+  #
+  # @param maxlen [Integer] maximum bytes to receive
+  # @param flags [Integer] optional flags
+  # @return [String] received data
   def recvfrom(maxlen, flags = 0)
     buf = +''
     while true
@@ -198,6 +208,7 @@ class ::Socket < ::BasicSocket
     result
   end
 
+  # @!visibility private
   ZERO_LINGER = [0, 0].pack('ii').freeze
 
   # Sets the linger option to 0.
@@ -233,7 +244,8 @@ class ::Socket < ::BasicSocket
   end
 
   class << self
-    alias_method :orig_getaddrinfo, :getaddrinfo
+  # @!visibility private
+  alias_method :orig_getaddrinfo, :getaddrinfo
     
     # Resolves the given addr using a worker thread from the default thread
     # pool.
@@ -247,8 +259,10 @@ end
 
 # Overide stock TCPSocket code by encapsulating a Socket instance
 class ::TCPSocket < ::IPSocket
+  # @!visibility private
   NO_EXCEPTION = { exception: false }.freeze
 
+  # @!visibility private
   attr_reader :io
 
   class << self
@@ -275,6 +289,7 @@ class ::TCPSocket < ::IPSocket
     @io.connect(addr)
   end
 
+  # @!visibility private
   alias_method :orig_close, :close
   
   # Closes the socket.
@@ -285,6 +300,7 @@ class ::TCPSocket < ::IPSocket
     self
   end
 
+  # @!visibility private
   alias_method :orig_setsockopt, :setsockopt
   
   # Calls `setsockopt` with the given arguments.
@@ -295,6 +311,7 @@ class ::TCPSocket < ::IPSocket
     self
   end
 
+  # @!visibility private
   alias_method :orig_closed?, :closed?
   
   # Returns true if the socket is closed.
@@ -336,6 +353,7 @@ class ::TCPSocket < ::IPSocket
     self
   end
 
+  # @!visibility private
   alias_method :orig_read, :read
 
   # call-seq:
@@ -508,6 +526,7 @@ class ::TCPServer < ::TCPSocket
     @io.listen(0)
   end
 
+  # @!visibility private
   alias_method :orig_accept, :accept
 
   # Accepts an incoming connection.
@@ -518,6 +537,15 @@ class ::TCPServer < ::TCPSocket
   end
 
   if Polyphony.instance_methods(false).include?(:backend_multishot_accept)
+    # Starts a multishot accept operation (only available with io_uring
+    # backend). Example usage:
+    #
+    #   server.multishot_accept do
+    #     server.accept_loop { |c| handle_connection(c) }
+    #   end
+    #
+    # @yield [TCPSocket] code block
+    # @return [any] return value of code block
     def multishot_accept(&block)
       Polyphony.backend_multishot_accept(@io, &block)
     end
@@ -534,6 +562,7 @@ class ::TCPServer < ::TCPSocket
     Polyphony.backend_accept_loop(@io, TCPSocket, &block)
   end
 
+  # @!visibility private
   alias_method :orig_close, :close
   
   # Closes the server socket.
@@ -545,8 +574,9 @@ class ::TCPServer < ::TCPSocket
   end
 end
 
-# :nodoc:
+# UNIXServer extensions
 class ::UNIXServer < ::UNIXSocket
+  # @!visibility private
   alias_method :orig_accept, :accept
 
   # Accepts an incoming connection.
@@ -568,8 +598,9 @@ class ::UNIXServer < ::UNIXSocket
   end
 end
 
-# :nodoc:
+# UNIXSocket extensions
 class ::UNIXSocket < ::BasicSocket
+  # @!visibility private
   alias_method :orig_read, :read
   
   # call-seq:
@@ -753,22 +784,47 @@ class ::UNIXSocket < ::BasicSocket
   end
 end
 
-# :nodoc:
+# UDPSocket extensions
 class ::UDPSocket < ::IPSocket
+  # Reimplements #recvfrom.
+  #
+  # @param maxlen [Integer] maximum bytes to receive
+  # @param flags [Integer] optional flags
+  # @return [String] received data
   def recvfrom(maxlen, flags = 0)
     buf = +''
     Polyphony.backend_recvmsg(self, buf, maxlen, 0, flags, 0, nil)
   end
 
+  # Reimplements #recvmsg.
+  #
+  # @param maxlen [Integer] maximum bytes to receive
+  # @param flags [Integer] optional flags
+  # @param maxcontrollen [Integer] maximum control bytes to receive
+  # @param opts [Hash] options
+  # @return [String] received data
   def recvmsg(maxlen = nil, flags = 0, maxcontrollen = nil, opts = {})
     buf = +''
     Polyphony.backend_recvmsg(self, buf, maxlen || 4096, 0, flags, maxcontrollen, opts)
   end
 
+  # Reimplements #sendmsg.
+  #
+  # @param msg [String] data to send
+  # @param flags [Integer] optional flags
+  # @param dest_sockaddr [Sockaddr, nil] optional destination address
+  # @param controls [Array] optional control data
+  # @return [Integer] bytes sent
   def sendmsg(msg, flags = 0, dest_sockaddr = nil, *controls)
     Polyphony.backend_sendmsg(self, msg, flags, dest_sockaddr, controls)
   end
 
+  # Sends data.
+  #
+  # @param msg [String] data to send
+  # @param flags [Integer] flags
+  # @param addr [Array] addresses to send to
+  # @return [Integer] bytes sent
   def send(msg, flags, *addr)
     sockaddr =  case addr.size
     when 2

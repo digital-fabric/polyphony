@@ -132,7 +132,7 @@ module Polyphony
 
     private
 
-    # :no-doc:
+    # @!visibility private
     def error_from_raise_args(args)
       case (arg = args.shift)
       when String then RuntimeError.new(arg)
@@ -199,7 +199,7 @@ module Polyphony
 
     private
 
-    # :no-doc:
+    # @!visibility private
     def supervise_opts_to_block(opts)
       block = opts[:on_done] || opts[:on_error]
       restart = opts[:restart]
@@ -323,7 +323,7 @@ module Polyphony
 
     private
 
-    # :no-doc:
+    # @!visibility private
     def prepare_oob_fiber(fiber, block)
       fiber.oob = true
       fiber.tag = :oob

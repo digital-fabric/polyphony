@@ -5,9 +5,10 @@ require 'open3'
 # IO extensions
 class ::IO
   class << self
+    # @!visibility private
     alias_method :orig_binread, :binread
 
-    # TODO: add docs to all methods in this file
+    # @!visibility private
     def binread(name, length = nil, offset = nil)
       File.open(name, 'rb:ASCII-8BIT') do |f|
         f.seek(offset) if offset
@@ -15,7 +16,10 @@ class ::IO
       end
     end
 
+    # @!visibility private
     alias_method :orig_binwrite, :binwrite
+
+    # @!visibility private
     def binwrite(name, string, offset = nil)
       File.open(name, 'wb:ASCII-8BIT') do |f|
         f.seek(offset) if offset
@@ -23,13 +27,14 @@ class ::IO
       end
     end
 
+    # @!visibility private
     EMPTY_HASH = {}.freeze
 
+    # @!visibility private
     alias_method :orig_foreach, :foreach
-    def foreach(name, sep = $/, limit = nil, getline_args = EMPTY_HASH, &block)
-      # IO.orig_read(name).each_line(&block)
-      # raise NotImplementedError
 
+    # @!visibility private
+    def foreach(name, sep = $/, limit = nil, getline_args = EMPTY_HASH, &block)
       if sep.is_a?(Integer)
         sep = $/
         limit = sep
@@ -39,7 +44,10 @@ class ::IO
       end
     end
 
+    # @!visibility private
     alias_method :orig_read, :read
+
+    # @!visibility private
     def read(name, length = nil, offset = nil, opt = EMPTY_HASH)
       if length.is_a?(Hash)
         opt = length
@@ -58,7 +66,10 @@ class ::IO
     #   end
     # end
 
+    # @!visibility private
     alias_method :orig_write, :write
+
+    # @!visibility private
     def write(name, string, offset = nil, opt = EMPTY_HASH)
       File.open(name, opt[:mode] || 'w') do |f|
         f.seek(offset) if offset
@@ -66,22 +77,44 @@ class ::IO
       end
     end
 
+    # @!visibility private
     alias_method :orig_popen, :popen
+
+
+    # @!visibility private
     def popen(cmd, mode = 'r')
       return orig_popen(cmd, mode) unless block_given?
 
       Open3.popen2(cmd) { |_i, o, _t| yield o }
     end
 
+    # Splices from one IO to another IO. At least one of the IOs must be a pipe.
+    #
+    # @param src [IO, Polyphony::Pipe] source to splice from
+    # @param dest [IO, Polyphony::Pipe] destination to splice to
+    # @param maxlen [Integer] maximum bytes to splice
+    # @return [Integer] bytes spliced
     def splice(src, dest, maxlen)
       Polyphony.backend_splice(src, dest, maxlen)
     end
 
     if RUBY_PLATFORM =~ /linux/
+      # Creates a pipe and splices data between the two given IOs using the
+      # pipe, splicing until EOF.
+      #
+      # @param src [IO, Polyphony::Pipe] source to splice from
+      # @param dest [IO, Polyphony::Pipe] destination to splice to
+      # @return [Integer] total bytes spliced
       def double_splice(src, dest)
         Polyphony.backend_double_splice(src, dest)
       end
     
+      # Tees data from the source to the desination.
+      #
+      # @param src [IO, Polyphony::Pipe] source to tee from
+      # @param dest [IO, Polyphony::Pipe] destination to tee to
+      # @param maxlen [Integer] maximum bytes to tee
+      # @return [Integer] total bytes teed
       def tee(src, dest, maxlen)
         Polyphony.backend_tee(src, dest, maxlen)
       end
@@ -91,10 +124,12 @@ end
 
 # IO instance method patches
 class ::IO
+  # @!visibility private
   def __read_method__
     :backend_read
   end
 
+  # @!visibility private
   def __write_method__
     :backend_write
   end
@@ -113,13 +148,21 @@ class ::IO
   # def each_codepoint
   # end
 
+  # @!visibility private
   alias_method :orig_getbyte, :getbyte
+
+
+  # @!visibility private
   def getbyte
     char = getc
     char ? char.getbyte(0) : nil
   end
 
+  # @!visibility private
   alias_method :orig_getc, :getc
+
+
+  # @!visibility private
   def getc
     return @read_buffer.slice!(0) if @read_buffer && !@read_buffer.empty?
 
@@ -130,6 +173,7 @@ class ::IO
     nil
   end
 
+  # @!visibility private
   def ungetc(c)
     c = c.chr if c.is_a?(Integer)
     if @read_buffer
@@ -140,7 +184,11 @@ class ::IO
   end
   alias_method :ungetbyte, :ungetc
 
+  # @!visibility private
   alias_method :orig_read, :read
+
+
+  # @!visibility private
   def read(len = nil, buf = nil, buf_pos = 0)
     return '' if len == 0
 
@@ -157,7 +205,10 @@ class ::IO
     already_read
   end
 
+  # @!visibility private
   alias_method :orig_readpartial, :read
+
+  # @!visibility private
   def readpartial(len, str = +'', buffer_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_read(self, str, len, false, buffer_pos)
     raise EOFError if !result && raise_on_eof
@@ -165,18 +216,27 @@ class ::IO
     result
   end
 
+  # @!visibility private
   alias_method :orig_write, :write
+
+  # @!visibility private
   def write(str, *args)
     Polyphony.backend_write(self, str, *args)
   end
 
+  # @!visibility private
   alias_method :orig_write_chevron, :<<
+
+  # @!visibility private
   def <<(str)
     Polyphony.backend_write(self, str)
     self
   end
-
+  
+  # @!visibility private
   alias_method :orig_gets, :gets
+
+  # @!visibility private
   def gets(sep = $/, _limit = nil, _chomp: nil)
     if sep.is_a?(Integer)
       sep = $/
@@ -197,6 +257,7 @@ class ::IO
     return nil
   end
 
+  # @!visibility private
   def each_line(sep = $/, limit = nil, chomp: false)
     if sep.is_a?(Integer)
       limit = sep
@@ -230,10 +291,15 @@ class ::IO
   # def putc(obj)
   # end
 
+  # @!visibility private
   LINEFEED = "\n"
+  # @!visibility private
   LINEFEED_RE = /\n$/.freeze
 
+  # @!visibility private
   alias_method :orig_puts, :puts
+
+  # @!visibility private
   def puts(*args)
     if args.empty?
       write LINEFEED
@@ -268,24 +334,66 @@ class ::IO
   # def readlines(sep = $/, limit = nil, chomp: nil)
   # end
 
+  # @!visibility private
   alias_method :orig_write_nonblock, :write_nonblock
+
+  # @!visibility private
   def write_nonblock(string, _options = {})
     write(string)
   end
 
+  # @!visibility private
   alias_method :orig_read_nonblock, :read_nonblock
+
+  # @!visibility private
   def read_nonblock(maxlen, buf = nil, _options = nil)
     buf ? readpartial(maxlen, buf) : readpartial(maxlen)
   end
 
+  # call-seq:
+  #   io.read_loop { |data| ... }
+  #   io.read_loop(maxlen) { |data| ... }
+  #
+  # Reads up to `maxlen` bytes at a time in an infinite loop. Read data
+  # will be passed to the given block.
+  #
+  # @param maxlen [Integer] maximum bytes to receive
+  # @yield [String] handler block
+  # @return [void]
   def read_loop(maxlen = 8192, &block)
     Polyphony.backend_read_loop(self, maxlen, &block)
   end
 
+  # call-seq:
+  #   io.feed_loop(receiver, method)
+  #   io.feed_loop(receiver, method) { |result| ... }
+  #
+  # Receives data from the io in an infinite loop, passing the data to the given
+  # receiver using the given method. If a block is given, the result of the
+  # method call to the receiver is passed to the block.
+  #
+  # This method can be used to feed data into parser objects. The following
+  # example shows how to feed data from a io directly into a MessagePack
+  # unpacker:
+  #
+  #   unpacker = MessagePack::Unpacker.new
+  #   buffer = []
+  #   reader = spin do
+  #     io.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
+  #   end
+  #
+  # @param receiver [any] receiver object
+  # @param method [Symbol] method to call
+  # @yield [any] block to handle result of method call to receiver
+  # @return [void]
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_feed_loop(self, receiver, method, &block)
   end
 
+  # Waits for the IO to become readable, with an optional timeout.
+  #
+  # @param timeout [Integer, nil] optional timeout in seconds.
+  # @return [IO] self
   def wait_readable(timeout = nil)
     return self if @read_buffer && @read_buffer.size > 0
 
@@ -300,6 +408,10 @@ class ::IO
     end
   end
 
+  # Waits for the IO to become writeable, with an optional timeout.
+  #
+  # @param timeout [Integer, nil] optional timeout in seconds.
+  # @return [IO] self
   def wait_writable(timeout = nil)
     if timeout
       move_on_after(timeout) do
@@ -312,11 +424,21 @@ class ::IO
     end
   end
 
+  # Splices data from the given IO.
+  #
+  # @param src [IO, Polpyhony::Pipe] source to splice from
+  # @param maxlen [Integer] maximum bytes to splice
+  # @return [Integer] bytes spliced
   def splice_from(src, maxlen)
     Polyphony.backend_splice(src, self, maxlen)
   end
 
   if RUBY_PLATFORM =~ /linux/
+    # Tees data from the given IO.
+    #
+    # @param src [IO, Polpyhony::Pipe] source to tee from
+    # @param maxlen [Integer] maximum bytes to tee
+    # @return [Integer] bytes teed
     def tee_from(src, maxlen)
       Polyphony.backend_tee(src, self, maxlen)
     end

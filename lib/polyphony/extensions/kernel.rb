@@ -4,11 +4,13 @@ require 'open3'
 
 # Kernel extensions (methods available to all objects / call sites)
 module ::Kernel
+  # @!visibility private
   alias_method :orig_sleep, :sleep
 
+  # @!visibility private
   alias_method :orig_backtick, :`
 
-  # TODO: add docs to all methods in this file
+  # @!visibility private
   def `(cmd)
     Open3.popen3(cmd) do |i, o, e, _t|
       i.close
@@ -18,6 +20,7 @@ module ::Kernel
     end
   end
 
+  # @!visibility private
   ARGV_GETS_LOOP = proc do |calling_fiber|
     while (fn = ARGV.shift)
       File.open(fn, 'r') do |f|
@@ -31,7 +34,10 @@ module ::Kernel
     calling_fiber.transfer(e)
   end
 
+  # @!visibility private
   alias_method :orig_gets, :gets
+
+  # Reads a single line from STDIN
   def gets(*_args)
     if !ARGV.empty? || @gets_fiber
       @gets_fiber ||= Fiber.new(&ARGV_GETS_LOOP)
@@ -45,7 +51,10 @@ module ::Kernel
     $stdin.gets
   end
 
+  # @!visibility private
   alias_method :orig_p, :p
+
+  # @!visibility private
   def p(*args)
     strs = args.inject([]) do |m, a|
       m << a.inspect << "\n"
@@ -54,13 +63,19 @@ module ::Kernel
     args.size == 1 ? args.first : args
   end
 
+  # @!visibility private
   alias_method :orig_system, :system
+
+  # @!visibility private
   def system(*args)
     Kernel.system(*args)
   end
 
   class << self
+    # @!visibility private
     alias_method :orig_system, :system
+
+    # @!visibility private
     def system(*args)
       waiter = nil
       Open3.popen2(*args) do |i, o, t|
@@ -74,7 +89,10 @@ module ::Kernel
     end
   end
 
+  # @!visibility private
   alias_method :orig_trap, :trap
+
+  # @!visibility private
   def trap(sig, command = nil, &block)
     return orig_trap(sig, command) if command.is_a? String
 
@@ -93,7 +111,7 @@ module ::Kernel
 
   private
 
-  # :no-doc:
+  # @!visibility private
   def pipe_to_eof(src, dest)
     src.read_loop { |data| dest << data }
   end

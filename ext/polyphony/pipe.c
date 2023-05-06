@@ -36,7 +36,15 @@ static VALUE Pipe_allocate(VALUE klass) {
 #define GetPipe(obj, pipe) \
   TypedData_Get_Struct((obj), Pipe_t, &Pipe_type, (pipe))
 
-static VALUE Pipe_initialize(int argc, VALUE *argv, VALUE self) {
+/* call-seq:
+ *   Pipe.new -> pipe
+ *
+ * Creates a new pipe.
+ * 
+ * @return [void]
+ */
+
+static VALUE Pipe_initialize(VALUE self) {
   Pipe_t *pipe_struct;
   GetPipe(self, pipe_struct);
 
@@ -72,11 +80,27 @@ int Pipe_get_fd(VALUE self, int write_mode) {
   return pipe->fds[write_mode ? 1 : 0];
 }
 
+/* call-seq:
+ *   pipe.closed? -> bool
+ *
+ * Returns true if the pipe is closed.
+ * 
+ * @return [boolean]
+ */
+
 VALUE Pipe_closed_p(VALUE self) {
   Pipe_t *pipe;
   GetPipe(self, pipe);
   return pipe->w_closed ? Qtrue : Qfalse;
 }
+
+/* call-seq:
+ *   pipe.close -> pipe
+ *
+ * Closes the pipe.
+ * 
+ * @return [Pipe] self
+ */
 
 VALUE Pipe_close(VALUE self) {
   Pipe_t *pipe;
@@ -89,6 +113,15 @@ VALUE Pipe_close(VALUE self) {
   return self;
 }
 
+/* call-seq:
+ *   Pipe.fds -> [r, w]
+ *
+ * Returns an array containing the read and write fds for the pipe,
+ * respectively.
+ * 
+ * @return [Array<Integer>]
+ */
+
 VALUE Pipe_fds(VALUE self) {
   Pipe_t *pipe;
   GetPipe(self, pipe);
@@ -98,11 +131,18 @@ VALUE Pipe_fds(VALUE self) {
 
 void Init_Pipe(void) {
   cPipe = rb_define_class_under(mPolyphony, "Pipe", rb_cObject);
+  
+  /*
+   * Document-class: Polyphony::Pipe::ClosedPipeError
+   *
+   * An exception raised when trying to read or write to a closed pipe.
+   */
+
   cClosedPipeError = rb_define_class_under(cPipe, "ClosedPipeError", rb_eRuntimeError);
 
   rb_define_alloc_func(cPipe, Pipe_allocate);
 
-  rb_define_method(cPipe, "initialize", Pipe_initialize, -1);
+  rb_define_method(cPipe, "initialize", Pipe_initialize, 0);
   rb_define_method(cPipe, "closed?", Pipe_closed_p, 0);
   rb_define_method(cPipe, "close", Pipe_close, 0);
   rb_define_method(cPipe, "fds", Pipe_fds, 0);

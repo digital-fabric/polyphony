@@ -61,7 +61,7 @@ module Polyphony
       acquire { |r| r.send(sym, *args, &block) }
     end
 
-    # :no-doc:
+    # @!visibility private
     def respond_to_missing?(*_args)
       true
     end

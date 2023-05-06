@@ -507,6 +507,16 @@ static inline VALUE z_stream_cleanup(struct z_stream_ctx *ctx) {
 #define Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx) \
   rb_ensure(SAFE(z_stream_io_loop), (VALUE)&ctx, SAFE(z_stream_cleanup), (VALUE)&ctx)
 
+/* call-seq:
+ *   IO.gzip(src, dest) -> bytes_written
+ *   IO.gzip(src, dest, opt) -> bytes_written
+ *
+ * Gzips data from the source IO to the destination IO, returning the number
+ * bytes written to the destination IO.
+ * 
+ * @return [Integer]
+ */
+
 VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
   VALUE src;
   VALUE dest;
@@ -537,6 +547,16 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
 }
 
 # define FIX2TIME(v) (rb_funcall(rb_cTime, ID_at, 1, v))
+
+/* call-seq:
+ *   IO.gunzip(src, dest) -> bytes_written
+ *   IO.gunzip(src, dest, opt) -> bytes_written
+ *
+ * Gunzips data from the source IO to the destination IO, returning the number
+ * bytes written to the destination IO.
+ * 
+ * @return [Integer]
+ */
 
 VALUE IO_gunzip(int argc, VALUE *argv, VALUE self) {
   VALUE src;
@@ -574,6 +594,16 @@ VALUE IO_gunzip(int argc, VALUE *argv, VALUE self) {
   return INT2FIX(ctx.out_total);
 }
 
+/* call-seq:
+ *   IO.deflate(src, dest) -> bytes_written
+ *   IO.deflate(src, dest, opt) -> bytes_written
+ *
+ * Defaltes data from the source IO to the destination IO, returning the number
+ * bytes written to the destination IO.
+ * 
+ * @return [Integer]
+ */
+
 VALUE IO_deflate(VALUE self, VALUE src, VALUE dest) {
   struct z_stream_ctx ctx;
   int level = DEFAULT_LEVEL;
@@ -589,6 +619,16 @@ VALUE IO_deflate(VALUE self, VALUE src, VALUE dest) {
   return INT2FIX(ctx.out_total);
 }
 
+/* call-seq:
+ *   IO.inflate(src, dest) -> bytes_written
+ *   IO.inflate(src, dest, opt) -> bytes_written
+ *
+ * Inflates data from the source IO to the destination IO, returning the number
+ * bytes written to the destination IO.
+ * 
+ * @return [Integer]
+ */
+
 VALUE IO_inflate(VALUE self, VALUE src, VALUE dest) {
   struct z_stream_ctx ctx;
   int ret;
@@ -602,6 +642,19 @@ VALUE IO_inflate(VALUE self, VALUE src, VALUE dest) {
  
   return INT2FIX(ctx.out_total);
 }
+
+/* call-seq:
+ *   IO.http1_splice_chunked(src, dest, maxlen)
+ *
+ * Splices data from the source IO to the destination IO, writing it in HTTP1
+ * chunked encoding. A pipe is automatically created to buffer data between
+ * source and destination.
+ * 
+ * @param src [IO] source
+ * @param dest [IO] destination
+ * @param maxlen [Integer] maximum bytes to splice
+ * @return [Integer] bytes spliced
+ */
 
 VALUE IO_http1_splice_chunked(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   enum write_method method = detect_write_method(dest);

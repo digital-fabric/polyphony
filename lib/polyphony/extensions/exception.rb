@@ -18,6 +18,7 @@ class ::Exception
   # Set to the fiber from which the exception was raised.
   attr_accessor :raising_fiber
 
+  # @!visibility private
   alias_method :orig_initialize, :initialize
 
   # Initializes the exception with the given arguments.
@@ -26,6 +27,7 @@ class ::Exception
     orig_initialize(*args)
   end
 
+  # @!visibility private
   alias_method :orig_backtrace, :backtrace
 
   # Returns the backtrace for the exception. If

@@ -7,9 +7,13 @@ class ::Thread
   attr_reader :main_fiber, :result
   attr_accessor :backend
 
+  # @!visibility private
   alias_method :orig_initialize, :initialize
 
   # Initializes the thread.
+  # @param args [Array] arguments to pass to thread block
+  # @yield [any] thread block
+  # @return [void]
   def initialize(*args, &block)
     @join_wait_queue = []
     @finalization_mutex = Mutex.new
@@ -27,6 +31,7 @@ class ::Thread
     setup_fiber_scheduling
   end
 
+  # @!visibility private
   alias_method :orig_join, :join
 
   # call-seq:
@@ -56,6 +61,7 @@ class ::Thread
   end
   alias_method :await, :join
 
+  # @!visibility private
   alias_method :orig_raise, :raise
 
   # call-seq:
@@ -77,6 +83,7 @@ class ::Thread
     main_fiber&.raise(error)
   end
 
+  # @!visibility private
   alias_method :orig_kill, :kill
 
   # Terminates the thread.
@@ -89,6 +96,7 @@ class ::Thread
     self
   end
 
+  # @!visibility private
   alias_method :orig_inspect, :inspect
 
   # Returns a string representation of the thread for debugging purposes.

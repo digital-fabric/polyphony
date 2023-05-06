@@ -1,8 +1,12 @@
 #include "polyphony.h"
 
+/* :nop-doc: */
+
 VALUE Socket_send(VALUE self, VALUE msg, VALUE flags) {
   return Backend_send(BACKEND(), self, msg, flags);
 }
+
+/* :nop-doc: */
 
 VALUE Socket_write(int argc, VALUE *argv, VALUE self) {
   VALUE ary = rb_ary_new_from_values(argc, argv);
@@ -10,6 +14,8 @@ VALUE Socket_write(int argc, VALUE *argv, VALUE self) {
   RB_GC_GUARD(ary);
   return result;
 }
+
+/* :nop-doc: */
 
 VALUE Socket_double_chevron(VALUE self, VALUE msg) {
   Backend_send(BACKEND(), self, msg, INT2FIX(0));

@@ -8,6 +8,8 @@ ID ID_ivar_main_fiber;
 ID ID_ivar_terminated;
 ID ID_stop;
 
+/* :nop-doc: */
+
 static VALUE Thread_setup_fiber_scheduling(VALUE self) {
   rb_ivar_set(self, ID_ivar_main_fiber, rb_fiber_current());
   return self;
@@ -16,6 +18,15 @@ static VALUE Thread_setup_fiber_scheduling(VALUE self) {
 inline void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize) {
   Backend_schedule_fiber(self, rb_ivar_get(self, ID_ivar_backend), fiber, value, prioritize);
 }
+
+/* call-seq:
+ *   thread.unschedule_fiber(fiber)
+ *
+ * Removes the given fiber from the thread's runqueue.
+ * 
+ * @param fiber [Fiber] fiber to unschedule
+ * @return [Thread] self
+ */
 
 VALUE Thread_fiber_unschedule(VALUE self, VALUE fiber) {
   Backend_unschedule_fiber(rb_ivar_get(self, ID_ivar_backend), fiber);
@@ -34,9 +45,19 @@ inline void Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE v
   // schedule_fiber(self, fiber, value, 1);
 }
 
+/* call-seq:
+ *   thread.switch_fiber()
+ *
+ * Switches to the next fiber in the thread's runqueue.
+ * 
+ * @return [void]
+ */
+
 VALUE Thread_switch_fiber(VALUE self) {
   return Backend_switch_fiber(rb_ivar_get(self, ID_ivar_backend));
 }
+
+/* @!visibility private */
 
 VALUE Thread_fiber_schedule_and_wakeup(VALUE self, VALUE fiber, VALUE resume_obj) {
   if (fiber != Qnil) {
@@ -52,10 +73,20 @@ VALUE Thread_fiber_schedule_and_wakeup(VALUE self, VALUE fiber, VALUE resume_obj
   return self;
 }
 
+/* @!visibility private */
+
 VALUE Thread_debug(VALUE self) {
   rb_ivar_set(self, rb_intern("@__debug__"), Qtrue);
   return self;
 }
+
+/* call-seq:
+ *   Thread.backend
+ *
+ * Returns the backend for the current thread.
+ * 
+ * @return [Polyphony::Backend] backend for the current thread
+ */
 
 VALUE Thread_class_backend(VALUE _self) {
   return rb_ivar_get(rb_thread_current(), ID_ivar_backend);

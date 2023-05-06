@@ -24,6 +24,11 @@ module Polyphony
         kill_process(pid) unless terminated || pid.nil?
       end
 
+      # Kills the given pid, waiting for it to terminate, with a timeout of 5
+      # seconds.
+      #
+      # @param pid [Integer] pid
+      # @return [void]
       def kill_process(pid)
         cancel_after(5) do
           kill_and_await('TERM', pid)
@@ -34,6 +39,11 @@ module Polyphony
 
       private
 
+      # Kills the given process with given signal, waiting for it to terminate.
+      #
+      # @param sig [String, Symbol, Integer] signal to use
+      # @param pid [Integer] pid
+      # @return [void]
       def kill_and_await(sig, pid)
         ::Process.kill(sig, pid)
         Polyphony.backend_waitpid(pid)
