@@ -12,7 +12,7 @@ module Polyphony
 
     # Runs the given block on an available thread from the default thread pool.
     #
-    # @param &block [Proc] given block
+    # @yield [] given block
     # @return [any] return value of given block
     def self.process(&block)
       @default_pool ||= new
@@ -41,7 +41,7 @@ module Polyphony
 
     # Runs the given block on an available thread from the pool.
     #
-    # @param &block [Proc] given block
+    # @yield [] given block
     # @return [any] return value of block
     def process(&block)
       setup unless @task_queue
@@ -55,7 +55,7 @@ module Polyphony
     # method does not block. The task will be performed once a thread becomes
     # available.
     #
-    # @param &block [Proc] given block
+    # @yield [] given block
     # @return [Polyphony::ThreadPool] self
     def cast(&block)
       setup unless @task_queue

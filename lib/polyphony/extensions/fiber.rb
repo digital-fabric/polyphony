@@ -116,7 +116,7 @@ module Polyphony
     # operation will be resumed. This API is experimental and might be removed
     # in the future.
     #
-    # @param &block [Proc] given block
+    # @yield [any] given block
     # @return [Fiber] self
     def interject(&block)
       raise Polyphony::Interjection.new(block)
@@ -171,10 +171,11 @@ module Polyphony
     #
     # This method blocks indefinitely.
     #
-    # @param *fibers [Array<Fiber>] fibers to supervise
-    # @param on_done: [Proc, nil] proc to call when a supervised fiber is terminated
-    # @param on_error: [Proc, nil] proc to call when a supervised fiber is terminated with an exception
-    # @param restart: [:always, :on_error, nil] whether to restart terminated fibers
+    # @param fibers [Array<Fiber>] fibers to supervise
+    # @option opts [Proc, nil] :on_done proc to call when a supervised fiber is terminated
+    # @option opts [Proc, nil] :on_error proc to call when a supervised fiber is terminated with an exception
+    # @option opts [:always, :on_error, nil] :restart whether to restart terminated fibers
+    # @yield [] supervisor block
     # @return [void]
     def supervise(*fibers, **opts, &block)
       block ||= supervise_opts_to_block(opts)
@@ -228,7 +229,7 @@ module Polyphony
     # terminates with an uncaught exception, `Fiber.await` will await all the
     # other fibers to terminate, then reraise the exception.
     #
-    # @param *fibers [Array<Fiber>] fibers to wait for
+    # @param fibers [Array<Fiber>] fibers to wait for
     # @return [Array<any>] return values of given fibers
     def await(*fibers)
       return [] if fibers.empty?
@@ -267,7 +268,7 @@ module Polyphony
     # array containing the first terminated fiber and its return value. If an
     # exception occurs in one of the given fibers, it will be reraised.
     #
-    # @param *fibers [Array<Fiber>] Fibers to wait for
+    # @param fibers [Array<Fiber>] Fibers to wait for
     # @return [Array] Array containing the first terminated fiber and its return value
     def select(*fibers)
       return nil if fibers.empty?
@@ -301,7 +302,7 @@ module Polyphony
     # also be scheduled with priority. This method is mainly used trapping
     # signals (see also the patched `Kernel#trap`)
     #
-    # @param &block [Proc] given block
+    # @yield [] given block
     # @return [void]
     def schedule_priority_oob_fiber(&block)
       oob_fiber = Fiber.new do
@@ -348,7 +349,7 @@ module Polyphony
     #
     # @param tag [any] child fiber's tag
     # @param orig_caller [Array<String>] caller to set for fiber
-    # @param &block [Proc] child fiber's block
+    # @yield [any] child fiber's block
     # @return [Fiber] child fiber
     def spin(tag = nil, orig_caller = Kernel.caller, &block)
       f = Fiber.new { |v| f.run(v) }
@@ -456,10 +457,11 @@ module Polyphony
 
     # Removes a child fiber reference. Used internally.
     #
-    # @param parent [Fiber] new parent
+    # @param child_fiber [Fiber] child fiber to be removed
     # @return [Fiber] self
     def remove_child(child_fiber)
       @children.delete(child_fiber) if @children
+      self
     end
   end
 

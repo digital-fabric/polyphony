@@ -128,7 +128,7 @@ class ::Thread
 
   # Sets the idle handler for the thread's backend.
   #
-  # @param &block [Proc] idle handler
+  # @yield [] idle handler
   # @return [Proc] idle handler
   def on_idle(&block)
     backend.idle_proc = block

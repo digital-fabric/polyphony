@@ -6,7 +6,7 @@ require_relative './io'
 require_relative '../core/thread_pool'
 
 # BasicSocket extensions
-class BasicSocket
+class BasicSocket < ::IO
   # Returns `:backend_recv`. This method is used to tell parsers which read
   # method to use for this object.
   #
@@ -21,7 +21,7 @@ class BasicSocket
 end
 
 # Socket extensions # TODO: rewrite in C
-class ::Socket
+class ::Socket < ::BasicSocket
 
   # Accepts an incoming connection.
   
@@ -35,7 +35,7 @@ class ::Socket
   #
   # Accepts incoming connections in an infinite loop.
   #
-  # @param &block [Proc] handler block
+  # @yield [Socket] block receiving accepted sockets
   # @return [void]
   def accept_loop(&block)
     Polyphony.backend_accept_loop(self, TCPSocket, &block)
@@ -122,7 +122,7 @@ class ::Socket
   # will be passed to the given block.
   #
   # @param maxlen [Integer] maximum bytes to receive
-  # @param &block [Proc] handler block
+  # @yield [String] handler block
   # @return [void]
   def recv_loop(maxlen = 8192, &block)
     Polyphony.backend_recv_loop(self, maxlen, &block)
@@ -149,7 +149,7 @@ class ::Socket
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @param &block [Proc] block to handle result of method call to receiver
+  # @yield [any] block to handle result of method call to receiver
   # @return [void]
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
@@ -246,7 +246,7 @@ class ::Socket
 end
 
 # Overide stock TCPSocket code by encapsulating a Socket instance
-class ::TCPSocket
+class ::TCPSocket < ::IPSocket
   NO_EXCEPTION = { exception: false }.freeze
 
   attr_reader :io
@@ -405,7 +405,7 @@ class ::TCPSocket
   # will be passed to the given block.
   #
   # @param maxlen [Integer] maximum bytes to receive
-  # @param &block [Proc] handler block
+  # @yield [String] handler block
   # @return [void]
   def recv_loop(maxlen = 8192, &block)
     Polyphony.backend_recv_loop(self, maxlen, &block)
@@ -432,7 +432,7 @@ class ::TCPSocket
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @param &block [Proc] block to handle result of method call to receiver
+  # @yield [any] block to handle result of method call to receiver
   # @return [void]
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
@@ -460,8 +460,8 @@ class ::TCPSocket
   # @param buf_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, str = +'', buffer_pos = 0, raise_on_eof = true)
-    result = Polyphony.backend_recv(self, str, maxlen, buffer_pos)
+  def readpartial(maxlen, buf = +'', buf_pos = 0, raise_on_eof = true)
+    result = Polyphony.backend_recv(self, buf, maxlen, buf_pos)
     raise EOFError if !result && raise_on_eof
     result
   end
@@ -476,8 +476,8 @@ class ::TCPSocket
   # @param buf [String, nil] read buffer
   # @param exception [bool] whether to raise an exception if not ready for reading
   # @return [String, :wait_readable] read buffer
-  def read_nonblock(len, buf = nil, exception: true)
-    @io.read_nonblock(len, buf, exception: exception)
+  def read_nonblock(maxlen, buf = nil, exception: true)
+    @io.read_nonblock(maxlen, buf, exception: exception)
   end
 
   # Performs a non-blocking to the socket. If the socket is not ready for
@@ -494,7 +494,7 @@ class ::TCPSocket
 end
 
 # TCPServer extensions
-class ::TCPServer
+class ::TCPServer < ::TCPSocket
 
   # Initializes the TCP server socket.
   #
@@ -528,7 +528,7 @@ class ::TCPServer
   #
   # Accepts incoming connections in an infinite loop.
   #
-  # @param &block [Proc] handler block
+  # @yield [TCPSocket] handler block
   # @return [void]
   def accept_loop(&block)
     Polyphony.backend_accept_loop(@io, TCPSocket, &block)
@@ -545,7 +545,8 @@ class ::TCPServer
   end
 end
 
-class ::UNIXServer
+# :nodoc:
+class ::UNIXServer < ::UNIXSocket
   alias_method :orig_accept, :accept
 
   # Accepts an incoming connection.
@@ -560,14 +561,15 @@ class ::UNIXServer
   #
   # Accepts incoming connections in an infinite loop.
   #
-  # @param &block [Proc] handler block
+  # @yield [UNIXSocket] handler block
   # @return [void]
   def accept_loop(&block)
     Polyphony.backend_accept_loop(self, UNIXSocket, &block)
   end
 end
 
-class ::UNIXSocket
+# :nodoc:
+class ::UNIXSocket < ::BasicSocket
   alias_method :orig_read, :read
   
   # call-seq:
@@ -637,7 +639,7 @@ class ::UNIXSocket
   # will be passed to the given block.
   #
   # @param maxlen [Integer] maximum bytes to receive
-  # @param &block [Proc] handler block
+  # @yield [String] handler block
   # @return [void]
   def recv_loop(maxlen = 8192, &block)
     Polyphony.backend_recv_loop(self, maxlen, &block)
@@ -664,7 +666,7 @@ class ::UNIXSocket
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @param &block [Proc] block to handle result of method call to receiver
+  # @yield [any] block to handle result of method call to receiver
   # @return [void]
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
@@ -682,7 +684,7 @@ class ::UNIXSocket
   # Sends one or more strings on the socket. The strings are guaranteed to be
   # written as a single blocking operation.
   #
-  # @param *args [Array<String>] string buffers to write
+  # @param args [Array<String>] string buffers to write
   # @return [Integer] number of bytes written
   def write(*args)
     Polyphony.backend_sendv(self, args, 0)
@@ -718,8 +720,8 @@ class ::UNIXSocket
   # @param buf_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, str = +'', buffer_pos = 0, raise_on_eof = true)
-    result = Polyphony.backend_recv(self, str, maxlen, buffer_pos)
+  def readpartial(maxlen, buf = +'', buf_pos = 0, raise_on_eof = true)
+    result = Polyphony.backend_recv(self, buf, maxlen, buf_pos)
     raise EOFError if !result && raise_on_eof
     result
   end
@@ -734,8 +736,8 @@ class ::UNIXSocket
   # @param buf [String, nil] read buffer
   # @param exception [bool] whether to raise an exception if not ready for reading
   # @return [String, :wait_readable] read buffer
-  def read_nonblock(len, str = nil, exception: true)
-    @io.read_nonblock(len, str, exception: exception)
+  def read_nonblock(maxlen, buf = nil, exception: true)
+    @io.read_nonblock(maxlen, buf, exception: exception)
   end
 
   # Performs a non-blocking to the socket. If the socket is not ready for
@@ -751,7 +753,8 @@ class ::UNIXSocket
   end
 end
 
-class ::UDPSocket
+# :nodoc:
+class ::UDPSocket < ::IPSocket
   def recvfrom(maxlen, flags = 0)
     buf = +''
     Polyphony.backend_recvmsg(self, buf, maxlen, 0, flags, 0, nil)

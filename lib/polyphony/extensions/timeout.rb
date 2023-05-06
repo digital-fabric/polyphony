@@ -13,7 +13,7 @@ module ::Timeout
   # @param sec [Number] timeout period in seconds
   # @param klass [Class] exception class
   # @param message [String] exception message
-  # @param &block [Proc] code to run
+  # @yield [] code to run
   # @return [any] block's return value
   def self.timeout(sec, klass = Timeout::Error, message = 'execution expired', &block)
     cancel_after(sec, with_exception: [klass, message], &block)

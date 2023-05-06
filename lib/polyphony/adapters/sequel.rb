@@ -11,7 +11,7 @@ module Polyphony
     # Initializes the connection pool.
     #
     # @param db [any] db to connect to
-    # @opts [Hash] connection pool options
+    # @paral opts [Hash] connection pool options
     def initialize(db, opts = OPTS)
       super
       max_size = Integer(opts[:max_connections] || 4)

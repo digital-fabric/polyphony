@@ -17,7 +17,7 @@ module Polyphony
     # This method is re-entrant. Recursive calls from the given block will not
     # block.
     #
-    # @param &block [Proc] code to run
+    # @yield [] code to run
     # @return [any] return value of block
     def synchronize(&block)
       return yield if @holding_fiber == Fiber.current
@@ -140,7 +140,7 @@ module Polyphony
     # Waits for the condition variable to be signalled.
     #
     # @param mutex [Polyphony::Mutex] mutex to release while waiting for signal
-    # @param timeout [Number, nil] timeout in seconds (currently not implemented)
+    # @param _timeout [Number, nil] timeout in seconds (currently not implemented)
     # @return [void]
     def wait(mutex, _timeout = nil)
       mutex.conditional_release

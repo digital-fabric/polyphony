@@ -8,7 +8,7 @@ module Polyphony
     # Initializes a new resource pool.
     #
     # @param opts [Hash] options
-    # @param &block [Proc] allocator block
+    # @yield [] allocator block
     def initialize(opts, &block)
       @allocator = block
       @limit = opts[:limit] || 4
@@ -36,7 +36,7 @@ module Polyphony
     #     db.query(sql).to_a
     #   end
     #
-    # @param &block [Proc] code to run
+    # @yield [any] code to run
     # @return [any] return value of block
     def acquire(&block)
       fiber = Fiber.current
@@ -54,8 +54,9 @@ module Polyphony
     #   }
     #
     # @param sym [Symbol] method name
-    # @param *args [Array<any>] method arguments
-    # @param &block [Proc] block passed to method
+    # @param args [Array<any>] method arguments
+    # @yield [any] block passed to method
+    # @return [any] result of method call
     def method_missing(sym, *args, &block)
       acquire { |r| r.send(sym, *args, &block) }
     end
@@ -87,7 +88,7 @@ module Polyphony
     # Acquires a resource from stock, yielding it to the given block.
     #
     # @param fiber [Fiber] the fiber the resource will be associated with
-    # @param &block [Proc] given block
+    # @yield [any] given block
     # @return [any] return value of block
     def acquire_from_stock(fiber)
       add_to_stock if (@stock.empty? || @stock.pending?) && @size < @limit

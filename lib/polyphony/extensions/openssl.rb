@@ -66,12 +66,7 @@ class ::OpenSSL::SSL::SSLSocket
   end
 
   def flush
-    # osync = @sync
-    # @sync = true
-    # do_write ""
-    # return self
-    # ensure
-    # @sync = osync
+    warn "SSLSocket#flush is not yet implemented in Polyphony"
   end
 
   alias_method :orig_read, :read

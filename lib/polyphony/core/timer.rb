@@ -11,7 +11,7 @@ module Polyphony
     # Initializes a new timer with the given resolution.
     #
     # @param tag [any] tag to use for the timer's fiber
-    # @param resolution: [Number] timer granularity in seconds or fractions thereof
+    # @param resolution [Number] timer granularity in seconds or fractions thereof
     def initialize(tag = nil, resolution:)
       @fiber = spin_loop(tag, interval: resolution) { update }
       @timeouts = {}
@@ -43,8 +43,8 @@ module Polyphony
     # Spins up a fiber that will run the given block after sleeping for the
     # given delay.
     #
-    # @param delay [Number] delay in seconds before running the given block
-    # @param &block [Proc] block to run
+    # @param interval [Number] delay in seconds before running the given block
+    # @yield [] block to run
     # @return [Fiber] spun fiber
     def after(interval, &block)
       spin do
@@ -57,7 +57,7 @@ module Polyphony
     # consecutive iterations.
     #
     # @param interval [Number] interval between consecutive iterations in seconds
-    # @param &block [Proc] block to run
+    # @yield [] block to run
     # @return [void]
     def every(interval)
       fiber = Fiber.current
@@ -109,8 +109,8 @@ module Polyphony
     #   end
     #
     # @param interval [Number] timout in seconds
-    # @param with_exception: [Class, Exception] exception or exception class
-    # @param &block [Proc] block to execute
+    # @param with_exception [Class, Exception] exception or exception class
+    # @yield [Canceller] block to execute
     # @return [any] block's return value
     def cancel_after(interval, with_exception: Polyphony::Cancel)
       fiber = Fiber.current
@@ -163,8 +163,8 @@ module Polyphony
     #   end
     #
     # @param interval [Number] timout in seconds
-    # @param with_value: [any] return value in case of timeout
-    # @param &block [Proc] block to execute
+    # @param with_value [any] return value in case of timeout
+    # @yield [Fiber] block to execute
     # @return [any] block's return value
     def move_on_after(interval, with_value: nil)
       fiber = Fiber.current
