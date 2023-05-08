@@ -1,3 +1,7 @@
+## 0.99.1 2023-05-08
+
+- Reorganize docs, use Yard for all docs.
+
 ## 0.99 2023-03-09
 
 - Add missing Mutex API methods (#76)
