@@ -9,6 +9,7 @@ module LocalLinkHelper
   # {file: } directives.
   def resolve_links(text)
     text = text.gsub(%r{<a href="(docs/[^"]*.md)">([^<]*)</a>}, '{file:/\1 \2}')
+               .gsub(%r{<img src="(assets/[^"]*)">}, '{rdoc-image:/\1}')
     super text
   end
 end
