@@ -14,6 +14,7 @@
 --exclude sequel.rb
 --exclude event.c
 --exclude backend.+\.c
+--load ./docs/link_rewriter.rb
 ./lib
 ./ext/polyphony
 -

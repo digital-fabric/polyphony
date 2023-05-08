@@ -75,17 +75,17 @@ $ gem install polyphony
 
 ## Usage
 
-- [Overview](/docs/file/docs/overview.md)
-- [Tutorial](/docs/file/docs/tutorial.md)
-- [FAQ](/docs/file/docs/faq.md)
+- [Overview](docs/overview.md)
+- [Tutorial](docs/tutorial.md)
+- [FAQ](docs/faq.md)
 
 ## Technical Discussion
 
-- [Concurrency the Easy Way](/docs/file/docs/concurrency.md)
-- [How Fibers are Scheduled](/docs/file/docs/fiber-scheduling.md)
-- [Exception Handling](/docs/file/docs/exception-handling.md)
-- [Extending Polyphony](/docs/file/docs/extending.md)
-- [Polyphony's Design](/docs/file/docs/design-principles.md)
+- [Concurrency the Easy Way](docs/concurrency.md)
+- [How Fibers are Scheduled](docs/fiber-scheduling.md)
+- [Exception Handling](docs/exception-handling.md)
+- [Extending Polyphony](docs/extending.md)
+- [Polyphony's Design](docs/design-principles.md)
 
 ## Examples
 

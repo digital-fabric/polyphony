@@ -178,5 +178,5 @@ Feel free to create issues and contribute pull requests.
 ## Who is behind this project?
 
 I'm Sharon Rosner, an independent software developer living in France. Here's my
-[github profile](https://github.com/ciconia). You can contact me by writing to
-[noteflakes@gmail.com](mailto:ciconia@gmail.com).
+[github profile](https://github.com/noteflakes). You can contact me by writing to
+[sharon@noteflakes.com](mailto:sharon@noteflakes.com).
