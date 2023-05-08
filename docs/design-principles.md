@@ -1,12 +1,6 @@
----
-layout: page
-title: The Design of Polyphony
-nav_order: 5
-parent: Main Concepts
-permalink: /main-concepts/design-principles/
-prev_title: Extending Polyphony
----
-# The Design of Polyphony
+# @title Polyphony's Design
+
+# Polyphony's Design
 
 Polyphony is a new gem that aims to enable developing high-performance
 concurrent applications in Ruby using a fluent, compact syntax and API.

@@ -1,36 +1,26 @@
-<h1 align="center">
-  <a href="https://digital-fabric.github.io/polyphony/">
-    <img src="assets/polyphony-logo.png" alt="Polyphony">
-  </a>
-  <br>
-  Polyphony
-  <br>
-</h1>
+<img src="assets/polyphony-logo.png" alt="Polyphony">
 
-<h4 align="center">Fine-Grained Concurrency for Ruby</h4>
+# Polyphony: Fine-Grained Concurrency for Ruby
 
-<p align="center">
-  <a href="http://rubygems.org/gems/polyphony">
-    <img src="https://badge.fury.io/rb/polyphony.svg" alt="Ruby gem">
-  </a>
-  <a href="https://github.com/digital-fabric/polyphony/actions?query=workflow%3ATests">
-    <img src="https://github.com/digital-fabric/polyphony/workflows/Tests/badge.svg" alt="Tests">
-  </a>
-  <a href="https://github.com/digital-fabric/polyphony/blob/master/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License">
-  </a>
-</p>
-
-[DOCS](https://digital-fabric.github.io/polyphony/) |
-[EXAMPLES](examples)
+<a href="http://rubygems.org/gems/polyphony">
+  <img src="https://badge.fury.io/rb/polyphony.svg" alt="Ruby gem">
+</a>
+<a href="https://github.com/digital-fabric/polyphony/actions?query=workflow%3ATests">
+  <img src="https://github.com/digital-fabric/polyphony/workflows/Tests/badge.svg" alt="Tests">
+</a>
+<a href="https://github.com/digital-fabric/polyphony/blob/master/LICENSE">
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License">
+</a>
 
 > Polyphony \| pəˈlɪf\(ə\)ni \|
+>
 > 1. _Music_ the style of simultaneously combining a number of parts, each
 >    forming an individual melody and harmonizing with each other.
+>
 > 2. _Programming_ a Ruby gem for concurrent programming focusing on performance
 >    and developer happiness.
 
-## What is Polyphony
+## What is Polyphony?
 
 Polyphony is a library for building concurrent applications in Ruby. Polyphony
 harnesses the power of [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html)
@@ -54,10 +44,54 @@ the hood, Polyphony uses
 * Competitive performance and scalability characteristics, in terms of both
   throughput and memory consumption.
 
-## Documentation
+## Installing
 
-The complete documentation for Polyphony could be found on the
-[Polyphony website](https://digital-fabric.github.io/polyphony).
+### System Requirements
+
+In order to use Polyphony you need to have:
+
+- Linux or MacOS (support for Windows will come at a later stage)
+- Ruby (MRI) 3.0 or newer
+
+### Installing the Polyphony Gem
+
+Add this line to your application's Gemfile:
+
+```ruby
+gem 'polyphony'
+```
+
+And then execute:
+
+```bash
+$ bundle
+```
+
+Or install it yourself as:
+
+```bash
+$ gem install polyphony
+```
+
+## Usage
+
+- [Overview](/docs/file/docs/overview.md)
+- [Tutorial](/docs/file/docs/tutorial.md)
+- [FAQ](/docs/file/docs/faq.md)
+
+## Technical Discussion
+
+- [Concurrency the Easy Way](/docs/file/docs/concurrency.md)
+- [How Fibers are Scheduled](/docs/file/docs/fiber-scheduling.md)
+- [Exception Handling](/docs/file/docs/exception-handling.md)
+- [Extending Polyphony](/docs/file/docs/extending.md)
+- [Polyphony's Design](/docs/file/docs/design-principles.md)
+
+## Examples
+
+For examples of specific use cases you can consult the [bundled
+examples](https://github.com/digital-fabric/polyphony/tree/master/examples) in
+Polyphony's GitHub repository.
 
 ## Contributing to Polyphony
 

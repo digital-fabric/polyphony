@@ -1,19 +1,6 @@
----
-layout: page
-title: Frequently Asked Questions
-nav_order: 100
----
+# @title FAQ
 
 # Frequently Asked Questions
-{: .no_toc }
-
-## Table of contents
-{: .no_toc .text-delta }
-
-- TOC
-{:toc}
-
----
 
 ## Why not just use callbacks instead of fibers?
 

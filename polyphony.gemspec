@@ -11,9 +11,7 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://digital-fabric.github.io/polyphony'
   s.metadata    = {
     "source_code_uri" => "https://github.com/digital-fabric/polyphony",
-    # "documentation_uri" => "https://www.rubydoc.info/gems/polyphony",
-    "documentation_uri" => "https://digital-fabric.github.io/polyphony/",
-    "homepage_uri" => "https://digital-fabric.github.io/polyphony/",
+    "documentation_uri" => "https://www.rubydoc.info/gems/polyphony",
     "changelog_uri" => "https://github.com/digital-fabric/polyphony/blob/master/CHANGELOG.md"
   }
   s.rdoc_options = ["--title", "polyphony", "--main", "README.md"]
@@ -31,9 +29,4 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'msgpack',              '1.6.0'
   s.add_development_dependency  'httparty',             '0.21.0'
   s.add_development_dependency  'localhost',            '1.1.10'
-
-  # s.add_development_dependency  'jekyll',               '~>3.8.6'
-  # s.add_development_dependency  'jekyll-remote-theme',  '~>0.4.1'
-  # s.add_development_dependency  'jekyll-seo-tag',       '~>2.6.1'
-  # s.add_development_dependency  'just-the-docs',        '~>0.3.0'
 end

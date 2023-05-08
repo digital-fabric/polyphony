@@ -1,20 +1,6 @@
----
-layout: page
-title: Tutorial
-parent: Getting Started
-nav_order: 3
----
+# @title Tutorial
 
 # Tutorial
-{: .no_toc }
-
-## Table of contents
-{: .no_toc .text-delta }
-
-- TOC
-{:toc}
-
----
 
 Polyphony is a new Ruby library aimed at making writing concurrent Ruby apps
 easy and fun. In this article, we'll introduce Polyphony's fiber-based
@@ -108,7 +94,7 @@ The above program does nothing exceptional, it just sleeps for 1 second and
 prints a bunch of messages. But it is enough to demonstrate how concurrency
 works in Polyphony. Here's a flow chart of the transfer of control:
 
-<p class="img-figure"><img src="../../assets/img/sleeping-fiber.svg"></p>
+<img src="../assets/sleeping-fiber.svg">
 
 Here's the actual sequence of execution (in pseudo-code)
 
@@ -203,7 +189,7 @@ innocent call to `#spin`.
 
 Here's a flow chart showing the transfer of control between the different fibers:
 
-<p class="img-figure"><img src="../../assets/img/echo-fibers.svg"></p>
+<img src="../assets/echo-fibers.svg">
 
 Let's consider the advantage of the Polyphony concurrency model:
 
@@ -346,14 +332,3 @@ Polyphony currently provides support for any library that uses Ruby's stock
 `redis` and `irb` gems. It also includes an implementation of an integrated HTTP
 1 / HTTP 2 / websockets web server with support for TLS termination, ALPN
 protocol selection and preliminary rack support.
-
-## Fibers are the Future!
-
-Implementing concurrency at the level of fibers opens up so many new
-possibilities for Ruby. Polyphony has the performance characteristics and
-provides the necessary tools for transforming how concurrent Ruby apps are
-written. Polyphony is still new, and the present documentation is far from being
-complete. To learn more about Polyphony, read the [technical
-overview](../../main-concepts/design-principles/). For more examples please
-consult the [Github
-repository](https://github.com/digital-fabric/polyphony/tree/master/examples).

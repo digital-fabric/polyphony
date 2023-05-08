@@ -1,7 +1,5 @@
--m markdown
--M kramdown
 -o ./_yardoc
--r ./README.md
+-m markdown -M redcarpet
 --verbose
 --protected
 --no-private
@@ -19,4 +17,13 @@
 ./lib
 ./ext/polyphony
 -
+docs/overview.md
+docs/tutorial.md
+docs/faq.md
+docs/concurrency.md
+docs/fiber-scheduling.md
+docs/exception-handling.md
+docs/extending.md
+docs/design-principles.md
 CHANGELOG.md
+LICENSE

@@ -1,12 +1,5 @@
----
-layout: page
-title: Extending Polyphony
-nav_order: 4
-parent: Main Concepts
-permalink: /main-concepts/extending/
-prev_title: Exception Handling
-next_title: The Design of Polyphony
----
+# @title Extending Polyphony
+
 # Extending Polyphony
 
 Polyphony was designed to ease the transition from blocking APIs and

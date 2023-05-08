@@ -1,12 +1,5 @@
----
-layout: page
-title: Concurrency the Easy Way
-nav_order: 1
-parent: Main Concepts
-permalink: /main-concepts/concurrency/
-prev_title: Tutorial
-next_title: How Fibers are Scheduled
----
+# @title Concurrency the Easy Way
+
 # Concurrency the Easy Way
 
 Concurrency is a major consideration for modern programmers. Applications and

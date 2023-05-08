@@ -1,20 +1,6 @@
----
-layout: page
-title: Overview
-parent: Getting Started
-nav_order: 2
----
+# @title Overview
 
 # Polyphony - an Overview
-{: .no_toc }
-
-## Table of contents
-{: .no_toc .text-delta }
-
-- TOC
-{:toc}
-
----
 
 ## Introduction
 
@@ -33,21 +19,6 @@ Polyphony includes a full-blown HTTP server implementation with integrated
 support for HTTP 1 & 2, WebSockets, TLS/SSL termination and more. Polyphony also
 provides fiber-aware adapters for connecting to PostgreSQL and Redis servers.
 More adapters are being actively developed.
-
-### Features
-{: .no_toc }
-
-- Co-operative scheduling of concurrent tasks using Ruby fibers.
-- High-performance event reactor for handling I/O, timer, and other events.
-- Natural, sequential programming style that makes it easy to reason about
-  concurrent code.
-- Abstractions and constructs for controlling the execution of concurrent code:
-  supervisors, cancel scopes, throttling, resource pools etc.
-- Code can use native networking classes and libraries, growing support for
-  third-party gems such as pg and redis.
-- Use stdlib classes such as TCPServer and TCPSocket and Net::HTTP.
-- Impressive performance and scalability characteristics, in terms of both
-  throughput and memory consumption (see below)
 
 ## Taking Polyphony for a Spin
 

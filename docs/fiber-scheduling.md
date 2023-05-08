@@ -1,12 +1,4 @@
----
-layout: page
-title: How Fibers are Scheduled
-nav_order: 2
-parent: Main Concepts
-permalink: /main-concepts/fiber-scheduling/
-prev_title: Concurrency the Easy Way
-next_title: Exception Handling
----
+# @title How Fibers are Scheduled
 
 # How Fibers are Scheduled
 

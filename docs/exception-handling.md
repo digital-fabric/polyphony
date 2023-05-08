@@ -1,12 +1,5 @@
----
-layout: page
-title: Exception Handling
-nav_order: 3
-parent: Main Concepts
-permalink: /main-concepts/exception-handling/
-prev_title: How Fibers are Scheduled
-next_title: Extending Polyphony
----
+# @title Exception Handling
+
 # Exception Handling
 
 Ruby employs a pretty robust exception handling mechanism. An raised exception
