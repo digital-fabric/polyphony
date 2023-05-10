@@ -34,12 +34,6 @@ class ::Thread
   # @!visibility private
   alias_method :orig_join, :join
 
-  # call-seq:
-  #   thread.join -> result
-  #   thread.join(timeout) -> result
-  #   thread.await -> result
-  #   thread.await(timeout) -> result
-  # 
   # Waits for the thread to terminate and returns its return value. If the
   # thread terminated with an uncaught exception, it is propagated to the
   # waiting fiber. If a timeout interval is specified, the thread will be
@@ -64,11 +58,6 @@ class ::Thread
   # @!visibility private
   alias_method :orig_raise, :raise
 
-  # call-seq:
-  #   thread.raise
-  #   thread.raise(exception_class)
-  #   thread.raise(exception_instance)
-  # 
   # Raises an exception in the context of the thread. If no exception is given,
   # a `RuntimeError` is raised.
   #

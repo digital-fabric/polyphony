@@ -61,16 +61,16 @@ static VALUE Queue_allocate(VALUE klass) {
 #define GetQueue(obj, queue) \
   TypedData_Get_Struct((obj), Queue_t, &Queue_type, (queue))
 
-/* call-seq:
- *   Queue.new -> queue
- *   Queue.new(capacity) -> queue
- *
- * Initializes a queue instance. If the capacity is given, the queue becomes
+/* Initializes a queue instance. If the capacity is given, the queue becomes
  * capped, i.e. it cannot contain more elements than its capacity. When trying
  * to add items to a capped queue that is full, the current fiber will block
  * until at least one item is removed from the queue.
  * 
- * @return [void]
+ * @overload new()
+ *   @return [void]
+ * @overload new(capacity)
+ *   @param capacity [Integer] maximum items in queue
+ *   @return [void]
  */
 
 static VALUE Queue_initialize(int argc, VALUE *argv, VALUE self) {
@@ -151,10 +151,7 @@ VALUE Queue_push(VALUE self, VALUE value) {
   return self;
 }
 
-/* call-seq:
- *   queue.unshift(value) -> queue
- *
- * Adds the given value to the queue's beginning. If the queue is capped and
+/* Adds the given value to the queue's beginning. If the queue is capped and
  * full, the call will block until a value is removed from the queue.
  * 
  * @param value [any] value to be added to the queue
@@ -230,6 +227,7 @@ VALUE Queue_shift_block(Queue_t *queue) {
  * the queue is empty, a ThreadError exception is raised. In blocking mode, if
  * the queue is empty, the call will block until an item is added to the queue.
  *
+ * @param nonblock [boolean] non-blocking mode
  * @return [any] first value in queue
  */
 
@@ -243,10 +241,7 @@ VALUE Queue_shift(int argc,VALUE *argv, VALUE self) {
     Queue_shift_block(queue);
 }
 
-/* call-seq:
- *   queue.delete(value) -> queue
- *
- * Removes the given value from the queue.
+/* Removes the given value from the queue.
  *
  * @return [Queue] self
  */
@@ -263,10 +258,7 @@ VALUE Queue_delete(VALUE self, VALUE value) {
   return self;
 }
 
-/* call-seq:
- *   queue.cap(capacity) -> queue
- *
- * Sets the capacity for the queue to the given value. If 0 or nil is given, the
+/* Sets the capacity for the queue to the given value. If 0 or nil is given, the
  * queue becomes uncapped.
  *
  * @param cap [Integer, nil] new capacity
@@ -287,10 +279,7 @@ VALUE Queue_cap(VALUE self, VALUE cap) {
   return self;
 }
 
-/* call-seq:
- *   queue.capped? -> bool
- *
- * Returns true if the queue is capped.
+/* Returns true if the queue is capped.
  *
  * @return [boolean] is the queue capped
  */
@@ -302,10 +291,7 @@ VALUE Queue_capped_p(VALUE self) {
   return queue->capacity ? INT2FIX(queue->capacity) : Qnil;
 }
 
-/* call-seq:
- *   queue.clear -> queue
- *
- * Removes all values from the queue.
+/* Removes all values from the queue.
  *
  * @return [Queue] self
  */
@@ -327,10 +313,7 @@ long Queue_len(VALUE self) {
   return queue->values.count;
 }
 
-/* call-seq:
- *   queue.shift_each { |value| do_something(value) } -> queue
- *
- * Iterates over all values in the queue, removing each item and passing it to
+/* Iterates over all values in the queue, removing each item and passing it to
  * the given block.
  *
  * @yield [any] value passed to the given block
@@ -346,10 +329,7 @@ VALUE Queue_shift_each(VALUE self) {
   return self;
 }
 
-/* call-seq:
- *   queue.shift_all -> array
- *
- * Returns all values currently in the queue, clearing the queue.
+/* Returns all values currently in the queue, clearing the queue.
  *
  * @return [Array] all values
  */
@@ -365,10 +345,7 @@ VALUE Queue_shift_all(VALUE self) {
   return result;
 }
 
-/* call-seq:
- *   queue.flush_waiters -> queue
- *
- * Flushes all fibers currently blocked waiting to remove items from the queue,
+/* Flushes all fibers currently blocked waiting to remove items from the queue,
  * resuming them with the given value.
  *
  * @param value [any] value to resome all waiting fibers with
@@ -389,10 +366,7 @@ VALUE Queue_flush_waiters(VALUE self, VALUE value) {
   return self;
 }
 
-/* call-seq:
- *   queue.empty? -> bool
- *
- * Returns true if the queue is empty.
+/* Returns true if the queue is empty.
  *
  * @return [boolean]
  */
@@ -404,10 +378,7 @@ VALUE Queue_empty_p(VALUE self) {
   return (!queue->values.count) ? Qtrue : Qfalse;
 }
 
-/* call-seq:
- *   queue.pending? -> bool
- *
- * Returns true if any fibers are currently waiting to remove items from the
+/* Returns true if any fibers are currently waiting to remove items from the
  * queue.
  *
  * @return [boolean]
@@ -420,10 +391,7 @@ VALUE Queue_pending_p(VALUE self) {
   return (queue->shift_queue.count) ? Qtrue : Qfalse;
 }
 
-/* call-seq:
- *   queue.num_waiting -> integer
- *
- * Returns the number of fibers currently waiting to remove items from the
+/* Returns the number of fibers currently waiting to remove items from the
  * queue.
  *
  * @return [Integer]
@@ -452,10 +420,7 @@ VALUE Queue_size_m(VALUE self) {
   return INT2FIX(queue->values.count);
 }
 
-/* call-seq:
- *   queue.closed? -> bool
- *
- * Returns true if the queue has been closed.
+/* Returns true if the queue has been closed.
  *
  * @return [boolean]
  */
@@ -467,10 +432,7 @@ VALUE Queue_closed_p(VALUE self) {
   return (queue->closed) ? Qtrue : Qfalse;
 }
 
-/* call-seq:
- *   queue.close -> queue
- *
- * Marks the queue as closed. Any fibers currently waiting on the queue are
+/* Marks the queue as closed. Any fibers currently waiting on the queue are
  * resumed with a `nil` value. After the queue is closed, trying to remove items
  * from the queue will cause a `ClosedQueueError` to be raised.
  *

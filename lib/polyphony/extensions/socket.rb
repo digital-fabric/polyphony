@@ -34,12 +34,9 @@ class ::Socket < ::BasicSocket
     Polyphony.backend_accept(self, TCPSocket)
   end
 
-  # call-seq:
-  #   socket.accept_loop { |conn| ... }
-  #
   # Accepts incoming connections in an infinite loop.
   #
-  # @yield [Socket] block receiving accepted sockets
+  # @yield [Socket] accepted socket
   # @return [void]
   def accept_loop(&block)
     Polyphony.backend_accept_loop(self, TCPSocket, &block)
@@ -61,12 +58,6 @@ class ::Socket < ::BasicSocket
   # @!visibility private
   alias_method :orig_read, :read
 
-  # call-seq:
-  #   socket.read -> string
-  #   socket.read(maxlen) -> string
-  #   socket.read(maxlen, buf) -> buf
-  #   socket.read(maxlen, buf, buf_pos) -> buf
-  #
   # Reads from the socket. If `maxlen` is given, reads up to `maxlen` bytes from
   # the socket, otherwise reads to `EOF`. If `buf` is given, it is used as the
   # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
@@ -98,11 +89,6 @@ class ::Socket < ::BasicSocket
     buf
   end
 
-  # call-seq:
-  #   socket.recv(maxlen) -> string
-  #   socket.recv(maxlen, flags) -> string
-  #   socket.recv(maxlen, flags, buf) -> buf
-  #
   # Receives up to `maxlen` bytes from the socket. If `outbuf` is given, it is
   # used as the buffer to receive into, otherwise a new string is allocated and
   # used as buffer.
@@ -118,27 +104,17 @@ class ::Socket < ::BasicSocket
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
 
-  # call-seq:
-  #   socket.recv_loop { |data| ... }
-  #   socket.recv_loop(maxlen) { |data| ... }
-  #   socket.read_loop { |data| ... }
-  #   socket.read_loop(maxlen) { |data| ... }
-  #
   # Receives up to `maxlen` bytes at a time in an infinite loop. Read buffers
   # will be passed to the given block.
   #
   # @param maxlen [Integer] maximum bytes to receive
-  # @yield [String] handler block
+  # @yield [String] received data
   # @return [void]
   def recv_loop(maxlen = 8192, &block)
     Polyphony.backend_recv_loop(self, maxlen, &block)
   end
   alias_method :read_loop, :recv_loop
 
-  # call-seq:
-  #   socket.feed_loop(receiver, method)
-  #   socket.feed_loop(receiver, method) { |result| ... }
-  #
   # Receives data from the socket in an infinite loop, passing the data to the
   # given receiver using the given method. If a block is given, the result of
   # the method call to the receiver is passed to the block.
@@ -155,7 +131,6 @@ class ::Socket < ::BasicSocket
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @yield [any] block to handle result of method call to receiver
   # @return [void]
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
@@ -179,12 +154,6 @@ class ::Socket < ::BasicSocket
     end
   end
 
-  # call-seq:
-  #   socket.readpartial(maxlen) -> string
-  #   socket.readpartial(maxlen, buf) -> buf
-  #   socket.readpartial(maxlen, buf, buf_pos) -> buf
-  #   socket.readpartial(maxlen, buf, buf_pos, raise_on_eof) -> buf
-  #
   # Reads up to `maxlen` from the socket. If `buf` is given, it is used as the
   # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
@@ -356,12 +325,6 @@ class ::TCPSocket < ::IPSocket
   # @!visibility private
   alias_method :orig_read, :read
 
-  # call-seq:
-  #   socket.read -> string
-  #   socket.read(maxlen) -> string
-  #   socket.read(maxlen, buf) -> buf
-  #   socket.read(maxlen, buf, buf_pos) -> buf
-  #
   # Reads from the socket. If `maxlen` is given, reads up to `maxlen` bytes from
   # the socket, otherwise reads to `EOF`. If `buf` is given, it is used as the
   # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
@@ -393,11 +356,6 @@ class ::TCPSocket < ::IPSocket
     buf
   end
 
-  # call-seq:
-  #   socket.recv(maxlen) -> string
-  #   socket.recv(maxlen, flags) -> string
-  #   socket.recv(maxlen, flags, buf) -> buf
-  #
   # Receives up to `maxlen` bytes from the socket. If `outbuf` is given, it is
   # used as the buffer to receive into, otherwise a new string is allocated and
   # used as buffer.
@@ -413,27 +371,17 @@ class ::TCPSocket < ::IPSocket
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
 
-  # call-seq:
-  #   socket.recv_loop { |data| ... }
-  #   socket.recv_loop(maxlen) { |data| ... }
-  #   socket.read_loop { |data| ... }
-  #   socket.read_loop(maxlen) { |data| ... }
-  #
   # Receives up to `maxlen` bytes at a time in an infinite loop. Read buffers
   # will be passed to the given block.
   #
   # @param maxlen [Integer] maximum bytes to receive
-  # @yield [String] handler block
+  # @yield [String] received data
   # @return [void]
   def recv_loop(maxlen = 8192, &block)
     Polyphony.backend_recv_loop(self, maxlen, &block)
   end
   alias_method :read_loop, :recv_loop
 
-  # call-seq:
-  #   socket.feed_loop(receiver, method)
-  #   socket.feed_loop(receiver, method) { |result| ... }
-  #
   # Receives data from the socket in an infinite loop, passing the data to the
   # given receiver using the given method. If a block is given, the result of
   # the method call to the receiver is passed to the block.
@@ -456,12 +404,6 @@ class ::TCPSocket < ::IPSocket
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
 
-  # call-seq:
-  #   socket.readpartial(maxlen) -> string
-  #   socket.readpartial(maxlen, buf) -> buf
-  #   socket.readpartial(maxlen, buf, buf_pos) -> buf
-  #   socket.readpartial(maxlen, buf, buf_pos, raise_on_eof) -> buf
-  #
   # Reads up to `maxlen` from the socket. If `buf` is given, it is used as the
   # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
@@ -551,12 +493,9 @@ class ::TCPServer < ::TCPSocket
     end
   end
 
-  # call-seq:
-  #   socket.accept_loop { |conn| ... }
-  #
   # Accepts incoming connections in an infinite loop.
   #
-  # @yield [TCPSocket] handler block
+  # @yield [TCPSocket] accepted socket
   # @return [void]
   def accept_loop(&block)
     Polyphony.backend_accept_loop(@io, TCPSocket, &block)
@@ -586,12 +525,9 @@ class ::UNIXServer < ::UNIXSocket
     Polyphony.backend_accept(self, UNIXSocket)
   end
 
-  # call-seq:
-  #   socket.accept_loop { |conn| ... }
-  #
   # Accepts incoming connections in an infinite loop.
   #
-  # @yield [UNIXSocket] handler block
+  # @yield [UNIXSocket] accepted socket
   # @return [void]
   def accept_loop(&block)
     Polyphony.backend_accept_loop(self, UNIXSocket, &block)
@@ -603,12 +539,6 @@ class ::UNIXSocket < ::BasicSocket
   # @!visibility private
   alias_method :orig_read, :read
   
-  # call-seq:
-  #   socket.read -> string
-  #   socket.read(maxlen) -> string
-  #   socket.read(maxlen, buf) -> buf
-  #   socket.read(maxlen, buf, buf_pos) -> buf
-  #
   # Reads from the socket. If `maxlen` is given, reads up to `maxlen` bytes from
   # the socket, otherwise reads to `EOF`. If `buf` is given, it is used as the
   # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
@@ -640,11 +570,6 @@ class ::UNIXSocket < ::BasicSocket
     buf
   end
 
-  # call-seq:
-  #   socket.recv(maxlen) -> string
-  #   socket.recv(maxlen, flags) -> string
-  #   socket.recv(maxlen, flags, buf) -> buf
-  #
   # Receives up to `maxlen` bytes from the socket. If `outbuf` is given, it is
   # used as the buffer to receive into, otherwise a new string is allocated and
   # used as buffer.
@@ -660,27 +585,17 @@ class ::UNIXSocket < ::BasicSocket
     Polyphony.backend_recv(self, outbuf || +'', maxlen, 0)
   end
 
-  # call-seq:
-  #   socket.recv_loop { |data| ... }
-  #   socket.recv_loop(maxlen) { |data| ... }
-  #   socket.read_loop { |data| ... }
-  #   socket.read_loop(maxlen) { |data| ... }
-  #
   # Receives up to `maxlen` bytes at a time in an infinite loop. Read buffers
   # will be passed to the given block.
   #
   # @param maxlen [Integer] maximum bytes to receive
-  # @yield [String] handler block
+  # @yield [String] received data
   # @return [void]
   def recv_loop(maxlen = 8192, &block)
     Polyphony.backend_recv_loop(self, maxlen, &block)
   end
   alias_method :read_loop, :recv_loop
 
-  # call-seq:
-  #   socket.feed_loop(receiver, method)
-  #   socket.feed_loop(receiver, method) { |result| ... }
-  #
   # Receives data from the socket in an infinite loop, passing the data to the
   # given receiver using the given method. If a block is given, the result of
   # the method call to the receiver is passed to the block.
@@ -697,7 +612,6 @@ class ::UNIXSocket < ::BasicSocket
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @yield [any] block to handle result of method call to receiver
   # @return [void]
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
@@ -729,12 +643,6 @@ class ::UNIXSocket < ::BasicSocket
     Polyphony.backend_send(self, mesg, 0)
   end
 
-  # call-seq:
-  #   socket.readpartial(maxlen) -> string
-  #   socket.readpartial(maxlen, buf) -> buf
-  #   socket.readpartial(maxlen, buf, buf_pos) -> buf
-  #   socket.readpartial(maxlen, buf, buf_pos, raise_on_eof) -> buf
-  #
   # Reads up to `maxlen` from the socket. If `buf` is given, it is used as the
   # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the

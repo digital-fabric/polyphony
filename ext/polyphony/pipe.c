@@ -36,10 +36,7 @@ static VALUE Pipe_allocate(VALUE klass) {
 #define GetPipe(obj, pipe) \
   TypedData_Get_Struct((obj), Pipe_t, &Pipe_type, (pipe))
 
-/* call-seq:
- *   Pipe.new -> pipe
- *
- * Creates a new pipe.
+/* Creates a new pipe.
  * 
  * @return [void]
  */
@@ -80,10 +77,7 @@ int Pipe_get_fd(VALUE self, int write_mode) {
   return pipe->fds[write_mode ? 1 : 0];
 }
 
-/* call-seq:
- *   pipe.closed? -> bool
- *
- * Returns true if the pipe is closed.
+/* Returns true if the pipe is closed.
  * 
  * @return [boolean]
  */
@@ -94,10 +88,7 @@ VALUE Pipe_closed_p(VALUE self) {
   return pipe->w_closed ? Qtrue : Qfalse;
 }
 
-/* call-seq:
- *   pipe.close -> pipe
- *
- * Closes the pipe.
+/* Closes the pipe.
  * 
  * @return [Pipe] self
  */
@@ -113,10 +104,7 @@ VALUE Pipe_close(VALUE self) {
   return self;
 }
 
-/* call-seq:
- *   Pipe.fds -> [r, w]
- *
- * Returns an array containing the read and write fds for the pipe,
+/* Returns an array containing the read and write fds for the pipe,
  * respectively.
  * 
  * @return [Array<Integer>]

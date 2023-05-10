@@ -43,11 +43,7 @@ module Polyphony
       end
     end
 
-    # call-seq:
-    #   Polyphony.watch_process(cmd)
-    #   Polyphony.watch_process { sleep 1 }
-    # 
-    # Lubnches a process using either a command or a block for a forked process,
+    # Launches a process using either a command or a block for a forked process,
     # waiting for the child process to terminate.
     def watch_process(cmd = nil, &block)
       Polyphony::Process.watch(cmd, &block)

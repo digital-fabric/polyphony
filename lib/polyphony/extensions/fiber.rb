@@ -14,11 +14,6 @@ module Polyphony
       @monitor_mailbox ||= Polyphony::Queue.new
     end
 
-    # call-seq:
-    #   fiber.stop(value = nil) -> fiber
-    #   Fiber.interrupt(value = nil) -> fiber
-    #   Fiber.move_on(value = nil) -> fiber
-    #
     # Stops the fiber by raising a `Polyphony::MoveOn` exception. The given
     # value will become the fiber's return value.
     #
@@ -33,10 +28,6 @@ module Polyphony
     alias_method :stop, :interrupt
     alias_method :move_on, :interrupt
 
-    # call-seq:
-    #   fiber.reset(value = nil) -> fiber
-    #   fiber.restart(value = nil) -> fiber
-    #
     # Restarts the fiber, with the given value serving as the first value passed
     # to the fiber's block.
     #
@@ -96,15 +87,21 @@ module Polyphony
       self
     end
 
-    # call-seq:
-    #   fiber.raise(message) -> fiber
-    #   fiber.raise(exception_class) -> fiber
-    #   fiber.raise(exception_class, exception_message) -> fiber
-    #   fiber.raise(exception) -> fiber
-    #
     # Raises an exception in the context of the fiber
     #
-    # @return [Fiber] self
+    # @overload fiber.raise(message)
+    #   @param message [String] error message
+    #   @return [Fiber] self
+    # @overload fiber.raise(exception_class)
+    #   @param exception_class [Class] exception class to raise
+    #   @return [Fiber] self
+    # @overload fiber.raise(exception_class, exception_message)
+    #   @param exception_class [Class] exception class to raise
+    #   @param exception_message [String] exception message to raise
+    #   @return [Fiber] self
+    # @overload fiber.raise(exception)
+    #   @param any [Exception] exception to raise
+    #   @return [Fiber] self
     def raise(*args)
       error = error_from_raise_args(args)
       schedule(error)
@@ -146,15 +143,6 @@ module Polyphony
   # Fiber supervision methods
   module FiberSupervision
 
-    # call-seq:
-    #   fiber.supervise
-    #   fiber.supervise(fiber_a, fiber_b)
-    #   fiber.supervise { |f, r| handle_terminated_fiber(f, r) }
-    #   fiber.supervise(on_done: ->(f, r) { handle_terminated_fiber(f, r) })
-    #   fiber.supervise(on_error: ->(f, e) { handle_error(f, e) })
-    #   fiber.supervise(*fibers, restart: always)
-    #   fiber.supervise(*fibers, restart: on_error)
-    #
     # Supervises the given fibers or all child fibers. The fiber is put in
     # supervision mode, which means any child added after calling `#supervise`
     # will automatically be supervised. Depending on the given options, fibers
@@ -220,10 +208,6 @@ module Polyphony
   # Fiber control class methods
   module FiberControlClassMethods
     
-    # call-seq:
-    #   Fiber.await(*fibers) -> [*results]
-    #   Fiber.join(*fibers) -> [*results]
-    #
     # Waits for all given fibers to terminate, then returns the respective
     # return values for all terminated fibers. If any of the awaited fibers
     # terminates with an uncaught exception, `Fiber.await` will await all the

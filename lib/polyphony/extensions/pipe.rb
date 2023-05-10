@@ -89,12 +89,6 @@ class Polyphony::Pipe
     self
   end
 
-  # call-seq:
-  #   pipe.gets(limit, chomp)
-  #   pipe.gets(separator, limit, chomp)
-  #
-  # Reads a single line from the pipe.
-  #
   # @param sep [String] line separator
   # @param _limit [Integer, nil] line length limit
   # @param _chomp [boolean, nil] whether to chomp the read line
@@ -189,10 +183,6 @@ class Polyphony::Pipe
     Polyphony.backend_read_loop(self, maxlen, &block)
   end
 
-  # call-seq:
-  #   pipe.feed_loop(receiver, method)
-  #   pipe.feed_loop(receiver, method) { |result| ... }
-  #
   # Receives data from the pipe in an infinite loop, passing the data to the
   # given receiver using the given method. If a block is given, the result of
   # the method call to the receiver is passed to the block.
@@ -209,7 +199,6 @@ class Polyphony::Pipe
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @yield [any] block to handle result of method call to receiver
   # @return [void]
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_feed_loop(self, receiver, method, &block)

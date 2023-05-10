@@ -74,14 +74,6 @@ module Polyphony
       @timeouts.delete(fiber)
     end
 
-    # call-seq:
-    #   timer.cancel_after(interval) { ... }
-    #   timer.cancel_after(interval, with_exception: exception) { ... }
-    #   timer.cancel_after(interval, with_exception: [klass, message]) { ... }
-    #   timer.cancel_after(interval) { |timeout| ... }
-    #   timer.cancel_after(interval, with_exception: exception) { |timeout| ... }
-    #   timer.cancel_after(interval, with_exception: [klass, message]) { |timeout| ... }
-    #
     # Runs the given block after setting up a cancellation timer for
     # cancellation. If the cancellation timer elapses, the execution will be
     # interrupted with an exception defaulting to `Polyphony::Cancel`.
@@ -108,10 +100,20 @@ module Polyphony
     #     end
     #   end
     #
-    # @param interval [Number] timout in seconds
-    # @param with_exception [Class, Exception] exception or exception class
-    # @yield [Canceller] block to execute
-    # @return [any] block's return value
+    # @overload cancel_after(interval)
+    #   @param interval [Number] timout in seconds
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
+    # @overload cancel_after(interval, with_exception: exception)
+    #   @param interval [Number] timout in seconds
+    #   @param with_exception [Class, Exception] exception or exception class
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
+    # @overload cancel_after(interval, with_exception: [klass, message])
+    #   @param interval [Number] timout in seconds
+    #   @param with_exception [Array] array containing class and message to use as exception
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
     def cancel_after(interval, with_exception: Polyphony::Cancel)
       fiber = Fiber.current
       @timeouts[fiber] = {
@@ -124,12 +126,6 @@ module Polyphony
       @timeouts.delete(fiber)
     end
 
-    # call-seq:
-    #   timer.move_on_after(interval) { ... }
-    #   timer.move_on_after(interval, with_value: value) { ... }
-    #   timer.move_on_after(interval) { |canceller| ... }
-    #   timer.move_on_after(interval, with_value: value) { |canceller| ... }
-    #
     # Runs the given block after setting up a cancellation timer for
     # cancellation. If the cancellation timer elapses, the execution will be
     # interrupted with a `Polyphony::MoveOn` exception, which will be rescued,
@@ -162,10 +158,15 @@ module Polyphony
     #     end
     #   end
     #
-    # @param interval [Number] timout in seconds
-    # @param with_value [any] return value in case of timeout
-    # @yield [Fiber] block to execute
-    # @return [any] block's return value
+    # @overload move_on_after(interval) { ... }
+    #   @param interval [Number] timout in seconds
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
+    # @overload move_on_after(interval, with_value: value) { ... }
+    #   @param interval [Number] timout in seconds
+    #   @param with_value [any] return value in case of timeout
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
     def move_on_after(interval, with_value: nil)
       fiber = Fiber.current
       @timeouts[fiber] = {

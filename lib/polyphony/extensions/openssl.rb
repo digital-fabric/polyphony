@@ -89,12 +89,6 @@ class ::OpenSSL::SSL::SSLSocket
   # @!visibility private
   alias_method :orig_read, :read
 
-  # call-seq:
-  #   socket.read -> string
-  #   socket.read(maxlen) -> string
-  #   socket.read(maxlen, buf) -> buf
-  #   socket.read(maxlen, buf, buf_pos) -> buf
-  #
   # Reads from the socket. If `maxlen` is given, reads up to `maxlen` bytes from
   # the socket, otherwise reads to `EOF`. If `buf` is given, it is used as the
   # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
@@ -123,12 +117,6 @@ class ::OpenSSL::SSL::SSLSocket
     buf
   end
 
-  # call-seq:
-  #   socket.readpartial(maxlen) -> string
-  #   socket.readpartial(maxlen, buf) -> buf
-  #   socket.readpartial(maxlen, buf, buf_pos) -> buf
-  #   socket.readpartial(maxlen, buf, buf_pos, raise_on_eof) -> buf
-  #
   # Reads up to `maxlen` from the socket. If `buf` is given, it is used as the
   # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
@@ -162,12 +150,6 @@ class ::OpenSSL::SSL::SSLSocket
     result
   end
 
-  # call-seq:
-  #   socket.recv_loop { |data| ... }
-  #   socket.recv_loop(maxlen) { |data| ... }
-  #   socket.read_loop { |data| ... }
-  #   socket.read_loop(maxlen) { |data| ... }
-  #
   # Receives up to `maxlen` bytes at a time in an infinite loop. Read buffers
   # will be passed to the given block.
   #
@@ -279,12 +261,9 @@ class ::OpenSSL::SSL::SSLServer
     orig_close
   end
 
-  # call-seq:
-  #   socket.accept_loop { |conn| ... }
-  #
   # Accepts incoming connections in an infinite loop.
   #
-  # @yield [OpenSSL::SSL::SSLSocket] block receiving accepted sockets
+  # @yield [OpenSSL::SSL::SSLSocket] accepted socket
   # @return [void]
   def accept_loop(ignore_errors = true)
     loop do

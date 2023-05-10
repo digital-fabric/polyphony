@@ -20,14 +20,6 @@ module Polyphony
       end
     end
 
-    # call-seq:
-    #   cancel_after(interval) { ... }
-    #   cancel_after(interval, with_exception: exception) { ... }
-    #   cancel_after(interval, with_exception: [klass, message]) { ... }
-    #   cancel_after(interval) { |timeout| ... }
-    #   cancel_after(interval, with_exception: exception) { |timeout| ... }
-    #   cancel_after(interval, with_exception: [klass, message]) { |timeout| ... }
-    #
     # Runs the given block after setting up a cancellation timer for
     # cancellation. If the cancellation timer elapses, the execution will be
     # interrupted with an exception defaulting to `Polyphony::Cancel`.
@@ -55,10 +47,20 @@ module Polyphony
     #     end
     #   end
     #
-    # @param interval [Number] timout in seconds
-    # @param with_exception [Class, Exception] exception or exception class
-    # @yield [Fiber] block to execute
-    # @return [any] block's return value
+    # @overload cancel_after(interval)
+    #   @param interval [Number] timout in seconds
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
+    # @overload cancel_after(interval, with_exception: exception)
+    #   @param interval [Number] timout in seconds
+    #   @param with_exception [Class, Exception] exception or exception class
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
+    # @overload cancel_after(interval, with_exception: [klass, message])
+    #   @param interval [Number] timout in seconds
+    #   @param with_exception [Array] array containing class and message to use as exception
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
     def cancel_after(interval, with_exception: Polyphony::Cancel, &block)
       if block.arity > 0
         cancel_after_with_optional_reset(interval, with_exception, &block)
@@ -120,12 +122,6 @@ module Polyphony
       Polyphony.backend_timer_loop(interval, &block)
     end
 
-    # call-seq:
-    #   move_on_after(interval) { ... }
-    #   move_on_after(interval, with_value: value) { ... }
-    #   move_on_after(interval) { |canceller| ... }
-    #   move_on_after(interval, with_value: value) { |canceller| ... }
-    #
     # Runs the given block after setting up a cancellation timer for
     # cancellation. If the cancellation timer elapses, the execution will be
     # interrupted with a `Polyphony::MoveOn` exception, which will be rescued,
@@ -159,10 +155,15 @@ module Polyphony
     #     end
     #   end
     #
-    # @param interval [Number] timout in seconds
-    # @param with_value [any] return value in case of timeout
-    # @yield [Fiber] block to execute
-    # @return [any] block's return value
+    # @overload move_on_after(interval) { ... }
+    #   @param interval [Number] timout in seconds
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
+    # @overload move_on_after(interval, with_value: value) { ... }
+    #   @param interval [Number] timout in seconds
+    #   @param with_value [any] return value in case of timeout
+    #   @yield [Fiber] timeout fiber
+    #   @return [any] block's return value
     def move_on_after(interval, with_value: nil, &block)
       if block.arity > 0
         move_on_after_with_optional_reset(interval, with_value, &block)
@@ -207,12 +208,6 @@ module Polyphony
         Polyphony.backend_sleep(duration) : Polyphony.backend_wait_event(true)
     end
 
-    # call-seq:
-    #   throttled_loop(rate) { ... }
-    #   throttled_loop(interval: value) { ... }
-    #   throttled_loop(rate: value) { ... }
-    #   throttled_loop(rate, count: value) { ... }
-    #
     # Starts a throttled loop with the given rate. If `count:` is given, the
     # loop is run for the given number of times. Otherwise, the loop is
     # infinite. The loop rate (times per second) can be given as the rate

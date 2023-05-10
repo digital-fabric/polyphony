@@ -9,11 +9,6 @@ module Polyphony
   module Net
     class << self
 
-      # call-seq:
-      #   Polyphony::Net.tcp_connect(host, port) -> TCPSocket
-      #   Polyphony::Net.tcp_connect(host, port, secure: true) -> SSLSocket
-      #   Polyphony::Net.tcp_connect(host, port, secure_context: ctx) -> SSLSocket
-      #
       # Create a TCP connection to the given host and port, returning the new
       # socket. If `opts[:secure]` is true, or if an SSL context is given in
       # `opts[:secure_context]`, a TLS handshake is performed, and an SSLSocket
@@ -21,7 +16,9 @@ module Polyphony
       #
       # @param host [String] hostname
       # @param port [Integer] port number
-      # @param opts [Hash] connection options
+      # @param opts [Hash] options to use
+      # @option opts [boolean] :secure use a default context as SSL context, return `SSLSocket` instance
+      # @option opts [OpenSSL::SSL::SSLContext] :secure_context SSL context to use, return `SSLSocket` instance
       # @return [TCPSocket, SSLSocket] connected socket
       def tcp_connect(host, port, opts = {})
         socket = TCPSocket.new(host, port)

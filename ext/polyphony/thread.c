@@ -19,10 +19,7 @@ inline void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize)
   Backend_schedule_fiber(self, rb_ivar_get(self, ID_ivar_backend), fiber, value, prioritize);
 }
 
-/* call-seq:
- *   thread.unschedule_fiber(fiber)
- *
- * Removes the given fiber from the thread's runqueue.
+/* Removes the given fiber from the thread's runqueue.
  * 
  * @param fiber [Fiber] fiber to unschedule
  * @return [Thread] self
@@ -45,10 +42,7 @@ inline void Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE v
   // schedule_fiber(self, fiber, value, 1);
 }
 
-/* call-seq:
- *   thread.switch_fiber()
- *
- * Switches to the next fiber in the thread's runqueue.
+/* Switches to the next fiber in the thread's runqueue.
  * 
  * @return [void]
  */
@@ -80,10 +74,7 @@ VALUE Thread_debug(VALUE self) {
   return self;
 }
 
-/* call-seq:
- *   Thread.backend
- *
- * Returns the backend for the current thread.
+/* Returns the backend for the current thread.
  * 
  * @return [Polyphony::Backend] backend for the current thread
  */

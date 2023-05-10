@@ -350,24 +350,16 @@ class ::IO
     buf ? readpartial(maxlen, buf) : readpartial(maxlen)
   end
 
-  # call-seq:
-  #   io.read_loop { |data| ... }
-  #   io.read_loop(maxlen) { |data| ... }
-  #
   # Reads up to `maxlen` bytes at a time in an infinite loop. Read data
   # will be passed to the given block.
   #
   # @param maxlen [Integer] maximum bytes to receive
-  # @yield [String] handler block
+  # @yield [String] read data
   # @return [void]
   def read_loop(maxlen = 8192, &block)
     Polyphony.backend_read_loop(self, maxlen, &block)
   end
 
-  # call-seq:
-  #   io.feed_loop(receiver, method)
-  #   io.feed_loop(receiver, method) { |result| ... }
-  #
   # Receives data from the io in an infinite loop, passing the data to the given
   # receiver using the given method. If a block is given, the result of the
   # method call to the receiver is passed to the block.
@@ -384,7 +376,6 @@ class ::IO
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @yield [any] block to handle result of method call to receiver
   # @return [void]
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_feed_loop(self, receiver, method, &block)

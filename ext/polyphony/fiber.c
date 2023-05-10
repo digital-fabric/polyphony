@@ -60,13 +60,14 @@ inline void Fiber_make_runnable_with_priority(VALUE fiber, VALUE value) {
   Thread_schedule_fiber_with_priority(thread, fiber, value);
 }
 
-/* call-seq:
- *   fiber.schedule
- *   fiber.schedule(value)
+/* Adds the fiber to the runqueue with the given resume value. If no resume
+ * value is given, the fiber will be resumed with `nil`.
  * 
- * Adds the fiber to the runqueue with the given resume value or `nil`.
- * 
- * @return [void]
+ * @overload schedule(value)
+ *   @param value [any] resume value
+ *   @return [Fiber] scheduled fiber
+ * @overload schedule
+ *   @return [Fiber] scheduled fiber
  */
 
 static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
@@ -75,14 +76,14 @@ static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
   return self;
 }
 
-/* call-seq:
- *   fiber.schedule_with_priority
- *   fiber.schedule_with_priority(value)
+/* Adds the fiber to the head of the runqueue with the given resume value. If no
+ * resume value is given, the fiber will be resumed with `nil`.
  * 
- * Adds the fiber to the head of the runqueue with the given resume value or
- * `nil`.
- * 
- * @return [void]
+ * @overload schedule_with_priority(value)
+ *   @param value [any] resume value
+ *   @return [Fiber] scheduled fiber
+ * @overload schedule_with_priority
+ *   @return [Fiber] scheduled fiber
  */
 
 static VALUE Fiber_schedule_with_priority(int argc, VALUE *argv, VALUE self) {
@@ -91,11 +92,13 @@ static VALUE Fiber_schedule_with_priority(int argc, VALUE *argv, VALUE self) {
   return self;
 }
 
-/* call-seq:
- *   fiber.state -> sym
+/* Returns the current state for the fiber, one of the following:
  * 
- * Returns the current state for the fiber, one of `:running`, `:runnable`,
- * `:waiting`, `:dead`.
+ * - `:running` - the fiber is currently running.
+ * - `:runnable` - the fiber is on the runqueue, scheduled to be resumed ("ran").
+ * - `:waiting` - the fiber is waiting on some blocking operation to complete,
+ *   allowing other fibers to run.
+ * - `:dead` - the fiber has finished running.
  * 
  * @return [Symbol]
  */
@@ -109,10 +112,7 @@ static VALUE Fiber_state(VALUE self) {
   return SYM_waiting;
 }
 
-/* call-seq:
- *   fiber.send(msg)
- * 
- * Sends a message to the given fiber. The message will be added to the fiber's
+/* Sends a message to the given fiber. The message will be added to the fiber's
  * mailbox.
  * 
  * @param msg [any]
@@ -129,10 +129,7 @@ VALUE Fiber_send(VALUE self, VALUE msg) {
   return self;
 }
 
-/* call-seq:
- *   fiber.receive -> msg
- * 
- * Receive's a message from the fiber's mailbox. If no message is available,
+/* Receive's a message from the fiber's mailbox. If no message is available,
  * waits for a message to be sent to it.
  * 
  * @return [any] received message
@@ -147,10 +144,7 @@ VALUE Fiber_receive(VALUE self) {
   return Queue_shift(0, 0, mailbox);
 }
 
-/* call-seq:
- *   fiber.mailbox -> queue
- * 
- * Returns the fiber's mailbox.
+/* Returns the fiber's mailbox.
  * 
  * @return [Queue]
  */
@@ -164,10 +158,7 @@ VALUE Fiber_mailbox(VALUE self) {
   return mailbox;
 }
 
-/* call-seq:
- *   fiber.receive_all_pending -> ary
- * 
- * Receives all messages currently in the fiber's mailbox.
+/* Receives all messages currently in the fiber's mailbox.
  * 
  * @return [Array]
  */
