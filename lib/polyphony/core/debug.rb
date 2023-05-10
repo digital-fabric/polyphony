@@ -32,7 +32,7 @@ module Polyphony
       # If an IO instance is given, events are dumped to it instead.
       #
       # @param io [IO, nil] IO instance
-      # @yield [Hash] event handler block
+      # @yield [Hash] event information
       # @return [void]
       def start_event_firehose(io = nil, &block)
         Thread.backend.trace_proc = firehose_proc(io, block)

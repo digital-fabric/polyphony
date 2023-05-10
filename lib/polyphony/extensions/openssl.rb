@@ -154,7 +154,7 @@ class ::OpenSSL::SSL::SSLSocket
   # will be passed to the given block.
   #
   # @param maxlen [Integer] maximum bytes to receive
-  # @yield [String] handler block
+  # @yield [String] read data
   # @return [void]
   def read_loop(maxlen = 8192)
     while (data = sysread(maxlen))

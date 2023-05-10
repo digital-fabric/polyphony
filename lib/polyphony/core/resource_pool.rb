@@ -5,13 +5,15 @@ module Polyphony
   class ResourcePool
     attr_reader :limit, :size
 
-    # Initializes a new resource pool.
+    # Initializes a new resource pool. The given block is used for creating a
+    # resource:
     #
-    # @param opts [Hash] options
-    # @yield [] allocator block
-    def initialize(opts, &block)
+    #   ResourcePool.new { Sequel.connect(DB_URL) }
+    #
+    # @param limit [Integer] maximum open resources
+    def initialize(limit: 4, &block)
       @allocator = block
-      @limit = opts[:limit] || 4
+      @limit = limit
       @size = 0
       @stock = Polyphony::Queue.new
       @acquired_resources = {}
@@ -36,7 +38,6 @@ module Polyphony
     #     db.query(sql).to_a
     #   end
     #
-    # @yield [any] code to run
     # @return [any] return value of block
     def acquire(&block)
       fiber = Fiber.current
@@ -55,7 +56,6 @@ module Polyphony
     #
     # @param sym [Symbol] method name
     # @param args [Array<any>] method arguments
-    # @yield [any] block passed to method
     # @return [any] result of method call
     def method_missing(sym, *args, &block)
       acquire { |r| r.send(sym, *args, &block) }
@@ -88,7 +88,6 @@ module Polyphony
     # Acquires a resource from stock, yielding it to the given block.
     #
     # @param fiber [Fiber] the fiber the resource will be associated with
-    # @yield [any] given block
     # @return [any] return value of block
     def acquire_from_stock(fiber)
       add_to_stock if (@stock.empty? || @stock.pending?) && @size < @limit

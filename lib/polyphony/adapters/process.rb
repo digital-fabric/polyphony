@@ -13,7 +13,6 @@ module Polyphony
       # process is killed.
       #
       # @param cmd [String, nil] command to spawn
-      # @yield [] block to fork
       # @return [void]
       def watch(cmd = nil, &block)
         terminated = nil

@@ -177,7 +177,7 @@ class Polyphony::Pipe
   # Runs a read loop.
   #
   # @param maxlen [Integer] maximum bytes to read
-  # @yield [String] read block
+  # @yield [String] read data
   # @return [void]
   def read_loop(maxlen = 8192, &block)
     Polyphony.backend_read_loop(self, maxlen, &block)

@@ -316,7 +316,7 @@ long Queue_len(VALUE self) {
 /* Iterates over all values in the queue, removing each item and passing it to
  * the given block.
  *
- * @yield [any] value passed to the given block
+ * @yield [any] removed item
  * @return [Queue] self
  */
 

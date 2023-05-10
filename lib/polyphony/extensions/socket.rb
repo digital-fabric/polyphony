@@ -398,7 +398,6 @@ class ::TCPSocket < ::IPSocket
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @yield [any] block to handle result of method call to receiver
   # @return [void]
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
@@ -486,7 +485,6 @@ class ::TCPServer < ::TCPSocket
     #     server.accept_loop { |c| handle_connection(c) }
     #   end
     #
-    # @yield [TCPSocket] code block
     # @return [any] return value of code block
     def multishot_accept(&block)
       Polyphony.backend_multishot_accept(@io, &block)

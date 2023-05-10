@@ -44,7 +44,6 @@ module Polyphony
     # given delay.
     #
     # @param interval [Number] delay in seconds before running the given block
-    # @yield [] block to run
     # @return [Fiber] spun fiber
     def after(interval, &block)
       spin do
@@ -57,7 +56,6 @@ module Polyphony
     # consecutive iterations.
     #
     # @param interval [Number] interval between consecutive iterations in seconds
-    # @yield [] block to run
     # @return [void]
     def every(interval)
       fiber = Fiber.current

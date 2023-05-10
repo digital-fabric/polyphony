@@ -11,7 +11,6 @@ module Polyphony
     # given delay.
     #
     # @param interval [Number] delay in seconds before running the given block
-    # @yield [] block to run
     # @return [Fiber] spun fiber
     def after(interval, &block)
       spin do
@@ -72,7 +71,6 @@ module Polyphony
     # Spins up a new fiber.
     #
     # @param tag [any] optional tag for the new fiber
-    # @yield [any] fiber block
     # @return [Fiber] new fiber
     def spin(tag = nil, &block)
       Fiber.current.spin(tag, caller, &block)
@@ -85,7 +83,6 @@ module Polyphony
     # @param tag [any] optional tag for the new fiber
     # @param rate [Number, nil] loop rate (times per second)
     # @param interval [Number, nil] interval between consecutive iterations in seconds
-    # @yield [any] code to run
     # @return [Fiber] new fiber
     def spin_loop(tag = nil, rate: nil, interval: nil, &block)
       if rate || interval
@@ -100,7 +97,6 @@ module Polyphony
     # Runs the given code, then waits for any child fibers of the current fibers
     # to terminate.
     #
-    # @yield [any] code to run
     # @return [any] given block's return value
     def spin_scope(&block)
       raise unless block
@@ -116,7 +112,6 @@ module Polyphony
     # consecutive iterations.
     #
     # @param interval [Number] interval between consecutive iterations in seconds
-    # @yield [any] block to run
     # @return [void]
     def every(interval, &block)
       Polyphony.backend_timer_loop(interval, &block)
@@ -192,7 +187,6 @@ module Polyphony
     #
     # @param args [Array] positional parameters
     # @param opts [Hash] named parameters
-    # @yield [any] given block
     # @return [void]
     def supervise(*args, **opts, &block)
       Fiber.current.supervise(*args, **opts, &block)
@@ -218,7 +212,6 @@ module Polyphony
     # @option opts [Number] :rate loop rate (times per second)
     # @option opts [Number] :interval loop interval in seconds
     # @option opts [Number] :count number of iterations (nil for infinite)
-    # @yield [] code to run
     # @return [void]
     def throttled_loop(rate = nil, **opts, &block)
       throttler = Polyphony::Throttler.new(rate || opts)
@@ -239,7 +232,6 @@ module Polyphony
     #
     # @param interval [Number] timeout interval in seconds
     # @param exception [Exception, Class, Array<class, message>] exception spec
-    # @yield [Fiber] block to run
     # @return [any] block's return value
     def cancel_after_with_optional_reset(interval, exception, &block)
       fiber = Fiber.current
@@ -285,7 +277,6 @@ module Polyphony
     #
     # @param interval [Number] timeout interval in seconds
     # @param value [any] return value in case of timeout
-    # @yield [Fiber] code to run
     # @return [any] return value of given block or timeout value
     def move_on_after_with_optional_reset(interval, value, &block)
       fiber = Fiber.current

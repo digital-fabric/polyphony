@@ -114,7 +114,6 @@ VALUE Polyphony_backend_connect(VALUE self, VALUE io, VALUE addr, VALUE port) {
  * @param io [IO] io to read from
  * @param receiver [any] an object receiving the data
  * @param method [Symbol] method used to feed the data to the receiver
- * @yield [any] result of passed to receiver @yieldreturn [any] 
  *
  * @return [IO] io
  */
@@ -202,7 +201,6 @@ VALUE Polyphony_backend_recv_loop(VALUE self, VALUE socket, VALUE maxlen) {
  * @param socket [Socket] socket to receive on
  * @param receiver [any] an object receiving the data
  * @param method [Symbol] method used to feed the data to the receiver
- * @yield [any] data passed to the given block
  * 
  * @return [void]
  */

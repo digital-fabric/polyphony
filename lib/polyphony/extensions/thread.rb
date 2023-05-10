@@ -12,7 +12,6 @@ class ::Thread
 
   # Initializes the thread.
   # @param args [Array] arguments to pass to thread block
-  # @yield [any] thread block
   # @return [void]
   def initialize(*args, &block)
     @join_wait_queue = []
@@ -125,7 +124,6 @@ class ::Thread
 
   # Sets the idle handler for the thread's backend.
   #
-  # @yield [] idle handler
   # @return [Proc] idle handler
   def on_idle(&block)
     backend.idle_proc = block

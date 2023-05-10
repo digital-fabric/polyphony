@@ -113,7 +113,6 @@ module Polyphony
     # operation will be resumed. This API is experimental and might be removed
     # in the future.
     #
-    # @yield [any] given block
     # @return [Fiber] self
     def interject(&block)
       raise Polyphony::Interjection.new(block)
@@ -163,7 +162,6 @@ module Polyphony
     # @option opts [Proc, nil] :on_done proc to call when a supervised fiber is terminated
     # @option opts [Proc, nil] :on_error proc to call when a supervised fiber is terminated with an exception
     # @option opts [:always, :on_error, nil] :restart whether to restart terminated fibers
-    # @yield [] supervisor block
     # @return [void]
     def supervise(*fibers, **opts, &block)
       block ||= supervise_opts_to_block(opts)
@@ -286,7 +284,6 @@ module Polyphony
     # also be scheduled with priority. This method is mainly used trapping
     # signals (see also the patched `Kernel#trap`)
     #
-    # @yield [] given block
     # @return [void]
     def schedule_priority_oob_fiber(&block)
       oob_fiber = Fiber.new do
@@ -333,7 +330,6 @@ module Polyphony
     #
     # @param tag [any] child fiber's tag
     # @param orig_caller [Array<String>] caller to set for fiber
-    # @yield [any] child fiber's block
     # @return [Fiber] child fiber
     def spin(tag = nil, orig_caller = Kernel.caller, &block)
       f = Fiber.new { |v| f.run(v) }

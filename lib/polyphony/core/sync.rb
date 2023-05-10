@@ -17,7 +17,6 @@ module Polyphony
     # This method is re-entrant. Recursive calls from the given block will not
     # block.
     #
-    # @yield [] code to run
     # @return [any] return value of block
     def synchronize(&block)
       return yield if @holding_fiber == Fiber.current
