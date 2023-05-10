@@ -28,7 +28,7 @@ end
 class ::Socket < ::BasicSocket
 
   # Accepts an incoming connection.
-  
+
   # @return [TCPSocket] new connection
   def accept
     Polyphony.backend_accept(self, TCPSocket)
@@ -215,7 +215,7 @@ class ::Socket < ::BasicSocket
   class << self
   # @!visibility private
   alias_method :orig_getaddrinfo, :getaddrinfo
-    
+
     # Resolves the given addr using a worker thread from the default thread
     # pool.
     #
@@ -260,7 +260,7 @@ class ::TCPSocket < ::IPSocket
 
   # @!visibility private
   alias_method :orig_close, :close
-  
+
   # Closes the socket.
   #
   # @return [TCPSocket] self
@@ -271,7 +271,7 @@ class ::TCPSocket < ::IPSocket
 
   # @!visibility private
   alias_method :orig_setsockopt, :setsockopt
-  
+
   # Calls `setsockopt` with the given arguments.
   #
   # @return [TCPSocket] self
@@ -282,7 +282,7 @@ class ::TCPSocket < ::IPSocket
 
   # @!visibility private
   alias_method :orig_closed?, :closed?
-  
+
   # Returns true if the socket is closed.
   #
   # @return [bool] is socket closed
@@ -471,7 +471,7 @@ class ::TCPServer < ::TCPSocket
   alias_method :orig_accept, :accept
 
   # Accepts an incoming connection.
-  
+
   # @return [TCPSocket] new connection
   def accept
     Polyphony.backend_accept(@io, TCPSocket)
@@ -501,7 +501,7 @@ class ::TCPServer < ::TCPSocket
 
   # @!visibility private
   alias_method :orig_close, :close
-  
+
   # Closes the server socket.
   #
   # @return [TCPServer] self
@@ -517,7 +517,7 @@ class ::UNIXServer < ::UNIXSocket
   alias_method :orig_accept, :accept
 
   # Accepts an incoming connection.
-  
+
   # @return [UNIXSocket] new connection
   def accept
     Polyphony.backend_accept(self, UNIXSocket)
@@ -536,7 +536,7 @@ end
 class ::UNIXSocket < ::BasicSocket
   # @!visibility private
   alias_method :orig_read, :read
-  
+
   # Reads from the socket. If `maxlen` is given, reads up to `maxlen` bytes from
   # the socket, otherwise reads to `EOF`. If `buf` is given, it is used as the
   # buffer to read into, otherwise a new string is allocated. If `buf_pos` is

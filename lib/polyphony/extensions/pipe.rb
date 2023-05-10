@@ -72,7 +72,7 @@ class Polyphony::Pipe
   end
 
   # Writes to the pipe.
-  
+
   # @param buf [String] data to write
   # @param args [any] further arguments to pass to Polyphony.backend_write
   # @return [Integer] bytes written
@@ -81,7 +81,7 @@ class Polyphony::Pipe
   end
 
   # Writes to the pipe.
-  
+
   # @param buf [String] data to write
   # @return [Integer] bytes written
   def <<(buf)
@@ -128,7 +128,7 @@ class Polyphony::Pipe
   LINEFEED_RE = /\n$/.freeze
 
   # Writes a line with line feed to the pipe.
-  # 
+  #
   # @param args [Array] zero or more lines
   def puts(*args)
     if args.empty?

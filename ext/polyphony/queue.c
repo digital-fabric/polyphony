@@ -65,7 +65,7 @@ static VALUE Queue_allocate(VALUE klass) {
  * capped, i.e. it cannot contain more elements than its capacity. When trying
  * to add items to a capped queue that is full, the current fiber will block
  * until at least one item is removed from the queue.
- * 
+ *
  * @overload new()
  *   @return [void]
  * @overload new(capacity)
@@ -131,7 +131,7 @@ static inline void capped_queue_block_push(Queue_t *queue) {
  *
  * Adds the given value to the queue's end. If the queue is capped and full, the
  * call will block until a value is removed from the queue.
- * 
+ *
  * @param value [any] value to be added to the queue
  * @return [Queue] self
  */
@@ -153,7 +153,7 @@ VALUE Queue_push(VALUE self, VALUE value) {
 
 /* Adds the given value to the queue's beginning. If the queue is capped and
  * full, the call will block until a value is removed from the queue.
- * 
+ *
  * @param value [any] value to be added to the queue
  * @return [Queue] self
  */
@@ -406,7 +406,7 @@ VALUE Queue_num_waiting(VALUE self) {
 
 /* call-seq:
  *   queue.size -> integer
- *   queue.length -> integer 
+ *   queue.length -> integer
  *
  * Returns the number of values currently in the queue.
  *

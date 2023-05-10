@@ -62,7 +62,7 @@ inline void Fiber_make_runnable_with_priority(VALUE fiber, VALUE value) {
 
 /* Adds the fiber to the runqueue with the given resume value. If no resume
  * value is given, the fiber will be resumed with `nil`.
- * 
+ *
  * @overload schedule(value)
  *   @param value [any] resume value
  *   @return [Fiber] scheduled fiber
@@ -78,7 +78,7 @@ static VALUE Fiber_schedule(int argc, VALUE *argv, VALUE self) {
 
 /* Adds the fiber to the head of the runqueue with the given resume value. If no
  * resume value is given, the fiber will be resumed with `nil`.
- * 
+ *
  * @overload schedule_with_priority(value)
  *   @param value [any] resume value
  *   @return [Fiber] scheduled fiber
@@ -93,13 +93,13 @@ static VALUE Fiber_schedule_with_priority(int argc, VALUE *argv, VALUE self) {
 }
 
 /* Returns the current state for the fiber, one of the following:
- * 
+ *
  * - `:running` - the fiber is currently running.
  * - `:runnable` - the fiber is on the runqueue, scheduled to be resumed ("ran").
  * - `:waiting` - the fiber is waiting on some blocking operation to complete,
  *   allowing other fibers to run.
  * - `:dead` - the fiber has finished running.
- * 
+ *
  * @return [Symbol]
  */
 
@@ -114,7 +114,7 @@ static VALUE Fiber_state(VALUE self) {
 
 /* Sends a message to the given fiber. The message will be added to the fiber's
  * mailbox.
- * 
+ *
  * @param msg [any]
  * @return [void]
  */
@@ -131,7 +131,7 @@ VALUE Fiber_send(VALUE self, VALUE msg) {
 
 /* Receive's a message from the fiber's mailbox. If no message is available,
  * waits for a message to be sent to it.
- * 
+ *
  * @return [any] received message
  */
 
@@ -145,7 +145,7 @@ VALUE Fiber_receive(VALUE self) {
 }
 
 /* Returns the fiber's mailbox.
- * 
+ *
  * @return [Queue]
  */
 
@@ -159,7 +159,7 @@ VALUE Fiber_mailbox(VALUE self) {
 }
 
 /* Receives all messages currently in the fiber's mailbox.
- * 
+ *
  * @return [Array]
  */
 

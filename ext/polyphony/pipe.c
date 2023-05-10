@@ -37,7 +37,7 @@ static VALUE Pipe_allocate(VALUE klass) {
   TypedData_Get_Struct((obj), Pipe_t, &Pipe_type, (pipe))
 
 /* Creates a new pipe.
- * 
+ *
  * @return [void]
  */
 
@@ -78,7 +78,7 @@ int Pipe_get_fd(VALUE self, int write_mode) {
 }
 
 /* Returns true if the pipe is closed.
- * 
+ *
  * @return [boolean]
  */
 
@@ -89,7 +89,7 @@ VALUE Pipe_closed_p(VALUE self) {
 }
 
 /* Closes the pipe.
- * 
+ *
  * @return [Pipe] self
  */
 
@@ -106,7 +106,7 @@ VALUE Pipe_close(VALUE self) {
 
 /* Returns an array containing the read and write fds for the pipe,
  * respectively.
- * 
+ *
  * @return [Array<Integer>]
  */
 
@@ -119,7 +119,7 @@ VALUE Pipe_fds(VALUE self) {
 
 void Init_Pipe(void) {
   cPipe = rb_define_class_under(mPolyphony, "Pipe", rb_cObject);
-  
+
   /*
    * Document-class: Polyphony::Pipe::ClosedPipeError
    *

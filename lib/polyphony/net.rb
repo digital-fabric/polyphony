@@ -4,7 +4,7 @@ require_relative './extensions/socket'
 require_relative './extensions/openssl'
 
 module Polyphony
-  
+
   # A more elegant networking API
   module Net
     class << self
@@ -54,7 +54,7 @@ module Polyphony
       # context will select the first protocol from the list given by the client
       # that appears in the list of given protocols, according to the specified
       # order.
-      # 
+      #
       # @param context [SSLContext] SSL context
       # @param protocols [Array] array of supported protocols
       # @return [void]

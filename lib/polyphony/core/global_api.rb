@@ -3,7 +3,7 @@
 require_relative './throttler'
 
 module Polyphony
-  
+
   # Global API methods to be included in `::Object`
   module GlobalAPI
 

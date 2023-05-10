@@ -40,7 +40,7 @@ module Polyphony
 
   # Interjection is used to run arbitrary code on arbitrary fibers at any point
   class Interjection < BaseException
-    
+
     # Initializes an Interjection with the given proc.
     #
     # @param proc [Proc] interjection proc

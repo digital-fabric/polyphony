@@ -49,7 +49,7 @@ class TraceTest < MiniTest::Test
     sleep 0
 
     Thread.backend.trace_proc = nil
-    
+
     assert_equal [
       [:spin, f],
       [:schedule, f, nil, false],
@@ -143,7 +143,7 @@ class TraceTest < MiniTest::Test
       }
     }
     receive
-    
+
     Polyphony::Trace.start_event_firehose { |e| receiver << e }
 
     f1 = spin(:f1) do

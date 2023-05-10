@@ -217,7 +217,7 @@ module Polyphony
 
     # Runs a timer iteration, invoking any timeouts that are due.
     #
-    # @return [void]      
+    # @return [void]
     def update
       return if @timeouts.empty?
 

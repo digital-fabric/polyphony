@@ -20,7 +20,7 @@ inline void schedule_fiber(VALUE self, VALUE fiber, VALUE value, int prioritize)
 }
 
 /* Removes the given fiber from the thread's runqueue.
- * 
+ *
  * @param fiber [Fiber] fiber to unschedule
  * @return [Thread] self
  */
@@ -43,7 +43,7 @@ inline void Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE v
 }
 
 /* Switches to the next fiber in the thread's runqueue.
- * 
+ *
  * @return [void]
  */
 
@@ -75,7 +75,7 @@ VALUE Thread_debug(VALUE self) {
 }
 
 /* Returns the backend for the current thread.
- * 
+ *
  * @return [Polyphony::Backend] backend for the current thread
  */
 

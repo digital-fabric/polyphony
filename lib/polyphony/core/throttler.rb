@@ -28,7 +28,7 @@ module Polyphony
         @next_time += @min_dt
         break if @next_time > now
       end
-      
+
       result
     end
     alias_method :process, :call

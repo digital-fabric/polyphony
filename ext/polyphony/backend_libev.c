@@ -169,14 +169,14 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
   backend->base.poll_count++;
 
   COND_TRACE(&backend->base, 2, SYM_enter_poll, rb_fiber_current());
-  
+
 ev_run:
   backend->base.currently_polling = 1;
   errno = 0;
   ev_run(backend->ev_loop, blocking == Qtrue ? EVRUN_ONCE : EVRUN_NOWAIT);
   backend->base.currently_polling = 0;
   if (errno == EINTR && runqueue_empty_p(&backend->base.runqueue)) goto ev_run;
-  
+
   COND_TRACE(&backend->base, 2, SYM_leave_poll, rb_fiber_current());
 
   return self;
@@ -335,7 +335,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eo
   }
 
   if (!total) return Qnil;
-  
+
   if (!buffer_spec.raw) backend_finalize_string_buffer(buffer, &buffer_spec, total, fptr);
 
   RB_GC_GUARD(watcher.fiber);
@@ -359,7 +359,7 @@ VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE po
   struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 0);
   long total = 0;
   VALUE switchpoint_result = Qnil;
-  
+
   GetBackend(self, backend);
   backend_prepare_read_buffer(buffer, maxlen, &buffer_spec, FIX2INT(pos));
   fd = fd_from_io(io, &fptr, 0, 1);
@@ -403,7 +403,7 @@ VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE po
   }
 
   if (!total) return Qnil;
-  
+
   if (!buffer_spec.raw) backend_finalize_string_buffer(buffer, &buffer_spec, total, fptr);
   VALUE addr = name_to_addrinfo(msg.msg_name, msg.msg_namelen);
   VALUE rflags = INT2NUM(msg.msg_flags);

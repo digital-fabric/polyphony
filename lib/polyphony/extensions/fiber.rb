@@ -6,14 +6,14 @@ require_relative '../core/exceptions'
 class ::Fiber
   attr_accessor :tag, :thread, :parent, :oob
   attr_reader :result
-  
+
   # Returns true if fiber is running.
   #
   # @return [bool] is fiber running
   def running?
     @running
   end
-  
+
   # Returns a string representation of the fiber for debugging.
   #
   # @return [String] string representation
@@ -25,7 +25,7 @@ class ::Fiber
     end
   end
   alias_method :to_s, :inspect
-  
+
   # Returns the source location for the fiber based on its caller.
   #
   # @return [String] source location
@@ -36,7 +36,7 @@ class ::Fiber
       @caller ? @caller[0] : '(root)'
     end
   end
-  
+
   # Returns the fiber's caller.
   #
   # @return [Array<String>] caller
@@ -48,7 +48,7 @@ class ::Fiber
       spin_caller
     end
   end
-  
+
   # Sets the fiber's caller.
   #
   # @param caller [Array<String>] new caller
@@ -57,18 +57,18 @@ class ::Fiber
     @caller = caller
     self
   end
-  
+
   # Returns true if the fiber is the main fiber for its thread.
   #
   # @return [bool] is main fiber
   def main?
     @main
   end
-  
+
   #########################
   # Fiber control methods #
   #########################
-  
+
   # Returns the fiber's monitoring mailbox queue, used for receiving fiber
   # monitoring messages.
   #
@@ -76,7 +76,7 @@ class ::Fiber
   def monitor_mailbox
     @monitor_mailbox ||= Polyphony::Queue.new
   end
-  
+
   # Stops the fiber by raising a `Polyphony::MoveOn` exception. The given
   # value will become the fiber's return value.
   #
@@ -84,13 +84,13 @@ class ::Fiber
   # @return [Fiber] self
   def interrupt(value = nil)
     return if @running == false
-    
+
     schedule Polyphony::MoveOn.new(value)
     self
   end
   alias_method :stop, :interrupt
   alias_method :move_on, :interrupt
-  
+
   # Restarts the fiber, with the given value serving as the first value passed
   # to the fiber's block.
   #
@@ -98,31 +98,31 @@ class ::Fiber
   # @return [Fiber] restarted fiber
   def restart(value = nil)
     raise "Can't restart main fiber" if @main
-    
+
     if @running
       schedule Polyphony::Restart.new(value)
       return self
     end
-    
+
     fiber = parent.spin(@tag, @caller, &@block)
     @monitors&.each_key { |f| fiber.monitor(f) }
     fiber.schedule(value) unless value.nil?
     fiber
   end
   alias_method :reset, :restart
-  
+
   # Stops a fiber by raising a Polyphony::Cancel exception.
   #
   # @param exception [Class, Exception] exception or exception class
   # @return [Fiber] self
   def cancel(exception = Polyphony::Cancel)
     return if @running == false
-    
+
     value = (Class === exception) ? exception.new : exception
     schedule value
     self
   end
-  
+
   # Sets the graceful shutdown flag for the fiber.
   #
   # @param graceful [bool] Whether or not to perform a graceful shutdown
@@ -130,26 +130,26 @@ class ::Fiber
   def graceful_shutdown=(graceful)
     @graceful_shutdown = graceful
   end
-  
+
   # Returns the graceful shutdown flag for the fiber.
   #
   # @return [bool] true if graceful shutdown, otherwise false
   def graceful_shutdown?
     @graceful_shutdown
   end
-  
+
   # Terminates the fiber, optionally setting the graceful shutdown flag.
   #
   # @param graceful [bool] Whether to perform a graceful shutdown
   # @return [Fiber] self
   def terminate(graceful = false)
     return if @running == false
-    
+
     @graceful_shutdown = graceful
     schedule Polyphony::Terminate.new
     self
   end
-  
+
   # Raises an exception in the context of the fiber
   #
   # @overload fiber.raise(message)
@@ -170,7 +170,7 @@ class ::Fiber
     schedule(error)
     self
   end
-  
+
   # Adds an interjection to the fiber. The current operation undertaken by the
   # fiber will be interrupted, and the given block will be executed, and the
   # operation will be resumed. This API is experimental and might be removed
@@ -180,7 +180,7 @@ class ::Fiber
   def interject(&block)
     raise Polyphony::Interjection.new(block)
   end
-  
+
   # Blocks until the fiber has terminated, returning its return value.
   #
   # @return [any] fiber's return value
@@ -188,11 +188,11 @@ class ::Fiber
     Fiber.await(self).first
   end
   alias_method :join, :await
-  
+
   #############################
   # Fiber supervision methods #
   #############################
-  
+
   # Supervises the given fibers or all child fibers. The fiber is put in
   # supervision mode, which means any child added after calling `#supervise`
   # will automatically be supervised. Depending on the given options, fibers
@@ -216,16 +216,16 @@ class ::Fiber
   # @return [void]
   def supervise(*fibers, **opts, &block)
     block ||= supervise_opts_to_block(opts)
-    
+
     @supervise_mode = true
     fibers = children if fibers.empty?
     fibers.each do |f|
       f.attach_to(self) unless f.parent == self
       f.monitor(self)
     end
-    
+
     mailbox = monitor_mailbox
-    
+
     while true
       (fiber, result) = mailbox.shift
       block&.call(fiber, result)
@@ -233,18 +233,18 @@ class ::Fiber
   ensure
     @supervise_mode = false
   end
-  
+
   ###############################
   # Child fiber control methods #
   ###############################
-  
+
   # Returns the fiber's children.
   #
   # @return [Array<Fiber>] child fibers
   def children
     (@children ||= {}).keys
   end
-  
+
   # Creates a new child fiber.
   #
   #   child = fiber.spin { sleep 10; fiber.stop }
@@ -259,7 +259,7 @@ class ::Fiber
     f.monitor(self) if @supervise_mode
     f
   end
-  
+
   # Terminates all child fibers. This method will return before the fibers are
   # actually terminated.
   #
@@ -267,7 +267,7 @@ class ::Fiber
   # @return [Fiber] self
   def terminate_all_children(graceful = false)
     return self unless @children
-    
+
     e = Polyphony::Terminate.new
     @children.each_key do |c|
       c.graceful_shutdown = true if graceful
@@ -275,34 +275,34 @@ class ::Fiber
     end
     self
   end
-  
+
   # Block until all child fibers have terminated. Returns the return values
   # for all child fibers.
   #
   # @return [Array<any>] return values of child fibers
   def await_all_children
     return unless @children && !@children.empty?
-    
+
     Fiber.await(*@children.keys.reject { |c| c.dead? })
   end
-  
+
   # Terminates and blocks until all child fibers have terminated.
   #
   # @return [Fiber] self
   def shutdown_all_children(graceful = false)
     return self unless @children
-    
+
     pending = []
     @children.keys.each do |c|
       next if c.dead?
-      
+
       c.terminate(graceful)
       pending << c
     end
     Fiber.await(*pending)
     self
   end
-  
+
   # Attaches all child fibers to a new parent.
   #
   # @param parent [Fiber] new parent
@@ -311,7 +311,7 @@ class ::Fiber
     @children&.keys.each { |c| c.attach_to(parent) }
     self
   end
-  
+
   # Detaches the fiber from its current parent. The fiber will be made a child
   # of the main fiber (for the current thread.)
   #
@@ -322,7 +322,7 @@ class ::Fiber
     @parent.add_child(self)
     self
   end
-  
+
   # Attaches the fiber to a new parent.
   #
   # @param parent [Fiber] new parent
@@ -333,7 +333,7 @@ class ::Fiber
     parent.add_child(self)
     self
   end
-  
+
   # Attaches the fiber to the new parent and monitors the new parent.
   #
   # @param parent [Fiber] new parent
@@ -345,7 +345,7 @@ class ::Fiber
     monitor(parent)
     self
   end
-  
+
   # Adds a child fiber reference. Used internally.
   #
   # @param child_fiber [Fiber] child fiber
@@ -355,7 +355,7 @@ class ::Fiber
     child_fiber.monitor(self) if @supervise_mode
     self
   end
-  
+
   # Removes a child fiber reference. Used internally.
   #
   # @param child_fiber [Fiber] child fiber to be removed
@@ -364,11 +364,11 @@ class ::Fiber
     @children.delete(child_fiber) if @children
     self
   end
-  
+
   ############################
   # Fiber life cycle methods #
   ############################
-  
+
   # Prepares a fiber for running.
   #
   # @param tag [any] fiber's tag
@@ -385,7 +385,7 @@ class ::Fiber
     Thread.backend.trace(:spin, self, Kernel.caller[1..-1])
     schedule
   end
-  
+
   # Runs the fiber's block and handles uncaught exceptions.
   #
   # @param first_value [any] value passed to fiber on first resume
@@ -393,7 +393,7 @@ class ::Fiber
   def run(first_value)
     Kernel.raise first_value if first_value.is_a?(Exception)
     @running = true
-    
+
     Thread.backend.trace(:unblock, self, first_value, @caller)
     result = @block.(first_value)
     finalize(result)
@@ -405,7 +405,7 @@ class ::Fiber
     e.source_fiber = self
     finalize(e, true)
   end
-  
+
   # Performs setup for a "raw" Fiber created using Fiber.new. Note that this
   # fiber is an orphan fiber (has no parent), since we cannot control how the
   # fiber terminates after it has already been created. Calling #setup_raw
@@ -416,7 +416,7 @@ class ::Fiber
     @thread = Thread.current
     @running = true
   end
-  
+
   # Sets up the fiber as the main fiber for the current thread.
   #
   # @return [void]
@@ -427,7 +427,7 @@ class ::Fiber
     @running = true
     @children&.clear
   end
-  
+
   # Resets the fiber's state and reruns the fiber.
   #
   # @param first_value [Fiber] first_value to pass to fiber after restarting
@@ -436,7 +436,7 @@ class ::Fiber
     @mailbox = nil
     run(first_value)
   end
-  
+
   # Finalizes the fiber, handling its return value or any uncaught exception.
   #
   # @param result [any] return value
@@ -446,7 +446,7 @@ class ::Fiber
     result, uncaught_exception = finalize_children(result, uncaught_exception)
     Thread.backend.trace(:terminate, self, result)
     @result = result
-    
+
     inform_monitors(result, uncaught_exception)
     @running = false
   ensure
@@ -455,7 +455,7 @@ class ::Fiber
     @thread.fiber_unschedule(self)
     Thread.current.switch_fiber
   end
-  
+
   # Shuts down all children of the current fiber. If any exception occurs while
   # the children are shut down, it is returned along with the uncaught_exception
   # flag set. Otherwise, it returns the given arguments.
@@ -469,7 +469,7 @@ class ::Fiber
   rescue Exception => e
     [e, true]
   end
-  
+
   # Informs the fiber's monitors it is terminated.
   #
   # @param result [any] fiber's return value
@@ -480,13 +480,13 @@ class ::Fiber
       msg = [self, result]
       @monitors.each_key { |f| f.monitor_mailbox << msg }
     end
-    
+
     if uncaught_exception && @parent
       parent_is_monitor = @monitors&.has_key?(@parent)
       @parent.schedule_with_priority(result) unless parent_is_monitor
     end
   end
-  
+
   # Adds a fiber to the list of monitoring fibers. Monitoring fibers will be
   # notified on their monitor mailboxes when the fiber is terminated.
   #
@@ -496,7 +496,7 @@ class ::Fiber
     (@monitors ||= {})[fiber] = true
     self
   end
-  
+
   # Removes a monitor fiber.
   #
   # @param fiber [Fiber] monitoring fiber
@@ -505,21 +505,21 @@ class ::Fiber
     (@monitors ||= []).delete(fiber)
     self
   end
-  
+
   # Returns the list of monitoring fibers.
   #
   # @return [Array<Fiber>] monitoring fibers
   def monitors
     @monitors&.keys || []
   end
-  
+
   # Returns true if the fiber is dead.
   #
   # @return [bool] is fiber dead
   def dead?
     state == :dead
   end
-  
+
   class << self
     # Waits for all given fibers to terminate, then returns the respective
     # return values for all terminated fibers. If any of the awaited fibers
@@ -530,7 +530,7 @@ class ::Fiber
     # @return [Array<any>] return values of given fibers
     def await(*fibers)
       return [] if fibers.empty?
-      
+
       current_fiber = self.current
       mailbox = current_fiber.monitor_mailbox
       results = {}
@@ -560,7 +560,7 @@ class ::Fiber
       results.values
     end
     alias_method :join, :await
-    
+
     # Waits for at least one of the given fibers to terminate, returning an
     # array containing the first terminated fiber and its return value. If an
     # exception occurs in one of the given fibers, it will be reraised.
@@ -569,7 +569,7 @@ class ::Fiber
     # @return [Array] Array containing the first terminated fiber and its return value
     def select(*fibers)
       return nil if fibers.empty?
-      
+
       current_fiber = self.current
       mailbox = current_fiber.monitor_mailbox
       fibers.each do |f|
@@ -578,12 +578,12 @@ class ::Fiber
           result.is_a?(Exception) ? (raise result) : (return [f, result])
         end
       end
-      
+
       fibers.each { |f| f.monitor(current_fiber) }
       while true
         (fiber, result) = mailbox.shift
         next unless fibers.include?(fiber)
-        
+
         fibers.each { |f| f.unmonitor(current_fiber) }
         if result.is_a?(Exception)
           raise result
@@ -592,7 +592,7 @@ class ::Fiber
         end
       end
     end
-    
+
     # Creates and schedules with priority an out-of-band fiber that runs the
     # supplied block. If any uncaught exception is raised while the fiber is
     # running, it will bubble up to the main thread's main fiber, which will
@@ -646,11 +646,11 @@ class ::Fiber
     block = opts[:on_done] || opts[:on_error]
     restart = opts[:restart]
     return nil unless block || restart
-    
+
     error_only = !!opts[:on_error]
     restart_always = (restart == :always) || (restart == true)
     restart_on_error = restart == :on_error
-    
+
     ->(f, r) do
       is_error = r.is_a?(Exception)
       block.(f, r) if block && (!error_only || is_error)

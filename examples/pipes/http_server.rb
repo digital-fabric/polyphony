@@ -14,7 +14,7 @@ require 'h1p'
 def handle_client(conn)
   spin do
     parser = H1P::Parser.new(conn, :server)
-    
+
     while true # assuming persistent connection
       headers = parser.parse_headers
       break unless headers

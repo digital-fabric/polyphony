@@ -10,7 +10,7 @@ def handle_client(conn)
     dest = TCPSocket.new(*DESTINATION)
     # w_buffer = Polyphony.pipe
     # r_buffer = Polyphony.pipe
-    
+
     # spin { IO.splice(conn, w_buffer, -1000) }
     # spin { IO.splice(w_buffer, dest, -1000) }
 

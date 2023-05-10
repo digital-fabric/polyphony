@@ -199,7 +199,7 @@ class TCPSocketWithRawBufferTest < MiniTest::Test
     [port, server]
   rescue Errno::EADDRINUSE
     retry
-  end  
+  end
 
   def setup
     super
@@ -337,13 +337,13 @@ class SSLSocketTest < MiniTest::Test
   def test_ssl_accept_loop
     authority = Localhost::Authority.fetch
     server_ctx = authority.server_context
-    
+
     opts = {
       reuse_addr:     true,
       dont_linger:    true,
       secure_context: server_ctx
     }
-    
+
     port = rand(10001..39999)
     server = Polyphony::Net.tcp_listen('127.0.0.1', port, opts)
     f = spin do

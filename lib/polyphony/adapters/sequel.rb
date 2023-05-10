@@ -4,10 +4,10 @@ require_relative '../../polyphony'
 require 'sequel'
 
 module Polyphony
-  
+
   # Sequel ConnectionPool that delegates to Polyphony::ResourcePool.
   class FiberConnectionPool < Sequel::ConnectionPool
-  
+
     # Initializes the connection pool.
     #
     # @param db [any] db to connect to

@@ -322,7 +322,7 @@ void read_gzip_header_str(struct buffer_spec *buffer_spec, VALUE *str, unsigned 
   }
   if (null_pos == *total_read)
     rb_raise(rb_eRuntimeError, "Invalid gzip header");
-  
+
   *str = rb_str_new_cstr((char *)buffer_spec->ptr + *in_pos);
   *in_pos = null_pos + 1;
 }
@@ -509,7 +509,7 @@ static inline VALUE z_stream_cleanup(struct z_stream_ctx *ctx) {
 
 /* Gzips data from the source IO to the destination IO, returning the number
  * bytes written to the destination IO.
- * 
+ *
  * @overload gzip(src, dest)
  *   @param src [IO, Polyphony::Pipe] source IO
  *   @param dest [IO, Polyphony::Pipe] destination IO
@@ -546,7 +546,7 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
   ret = deflateInit2(&ctx.strm, DEFAULT_LEVEL, Z_DEFLATED, -MAX_WBITS, DEFAULT_MEM_LEVEL, Z_DEFAULT_STRATEGY);
   if (ret != Z_OK)
     rb_raise(rb_eRuntimeError, "zlib error: %s\n", ctx.strm.msg);
-  Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx); 
+  Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx);
   return INT2FIX(ctx.out_total);
 }
 
@@ -554,7 +554,7 @@ VALUE IO_gzip(int argc, VALUE *argv, VALUE self) {
 
 /* Gunzips data from the source IO to the destination IO, returning the number
  * bytes written to the destination IO.
- * 
+ *
  * @overload gunzip(src, dest)
  *   @param src [IO, Polyphony::Pipe] source IO
  *   @param dest [IO, Polyphony::Pipe] destination IO
@@ -604,7 +604,7 @@ VALUE IO_gunzip(int argc, VALUE *argv, VALUE self) {
 
 /* Deflates data from the source IO to the destination IO, returning the number
  * bytes written to the destination IO.
- * 
+ *
  * @overload deflate(src, dest)
  *   @param src [IO, Polyphony::Pipe] source IO
  *   @param dest [IO, Polyphony::Pipe] destination IO
@@ -627,13 +627,13 @@ VALUE IO_deflate(VALUE self, VALUE src, VALUE dest) {
     rb_raise(rb_eRuntimeError, "zlib error: %s\n", ctx.strm.msg);
 
   Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx);
- 
+
   return INT2FIX(ctx.out_total);
 }
 
 /* Inflates data from the source IO to the destination IO, returning the number
  * bytes written to the destination IO.
- * 
+ *
  * @overload inflate(src, dest)
  *   @param src [IO, Polyphony::Pipe] source IO
  *   @param dest [IO, Polyphony::Pipe] destination IO
@@ -655,14 +655,14 @@ VALUE IO_inflate(VALUE self, VALUE src, VALUE dest) {
     rb_raise(rb_eRuntimeError, "zlib error: %s\n", ctx.strm.msg);
 
   Z_STREAM_SAFE_IO_LOOP_WITH_CLEANUP(ctx);
- 
+
   return INT2FIX(ctx.out_total);
 }
 
 /* Splices data from the source IO to the destination IO, writing it in HTTP1
  * chunked encoding. A pipe is automatically created to buffer data between
  * source and destination.
- * 
+ *
  * @param src [IO] source
  * @param dest [IO] destination
  * @param maxlen [Integer] maximum bytes to splice

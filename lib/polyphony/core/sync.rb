@@ -63,7 +63,7 @@ module Polyphony
     # @return [Mutex] self
     def lock
       raise ThreadError if owned?
-      
+
       @token = @store.shift
       @holding_fiber = Fiber.current
       self

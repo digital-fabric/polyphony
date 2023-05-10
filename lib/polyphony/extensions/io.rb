@@ -108,7 +108,7 @@ class ::IO
       def double_splice(src, dest)
         Polyphony.backend_double_splice(src, dest)
       end
-    
+
       # Tees data from the source to the desination.
       #
       # @param src [IO, Polyphony::Pipe] source to tee from
@@ -232,7 +232,7 @@ class ::IO
     Polyphony.backend_write(self, str)
     self
   end
-  
+
   # @!visibility private
   alias_method :orig_gets, :gets
 

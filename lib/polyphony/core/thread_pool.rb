@@ -3,10 +3,10 @@
 require 'etc'
 
 module Polyphony
-  
+
   # Implements a pool of threads
   class ThreadPool
-  
+
     # The pool size.
     attr_reader :size
 

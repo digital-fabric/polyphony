@@ -13,14 +13,14 @@ require 'h1p'
 def handle_client(conn)
   spin do
     parser = H1P::Parser.new(conn, :server)
-    
+
     while true # assuming persistent connection
       headers = parser.parse_headers
       break unless headers
 
       raw_buffer = Polyphony.pipe
       gzip_buffer = Polyphony.pipe
-      
+
       # splice request body to buffer
       spin do
         parser.splice_body_to(raw_buffer)

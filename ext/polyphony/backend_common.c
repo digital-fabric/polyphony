@@ -280,14 +280,14 @@ inline VALUE backend_snooze(struct Backend_base *backend) {
   VALUE ret;
   VALUE fiber = rb_fiber_current();
   VALUE thread = rb_thread_current();
-  
+
   CHECK_FIBER_THREAD_REF(fiber, thread);
-  
+
   Fiber_make_runnable(fiber, Qnil);
   ret = Thread_switch_fiber(thread);
 
   COND_TRACE(backend, 4, SYM_unblock, fiber, ret, CALLER());
-  
+
   return ret;
 }
 
@@ -306,7 +306,7 @@ inline double current_time(void) {
   struct timespec ts;
   double t;
   uint64_t ns;
-  
+
   clock_gettime(CLOCK_MONOTONIC, &ts);
   ns = ts.tv_sec;
   ns = ns * 1e9 + ts.tv_nsec;

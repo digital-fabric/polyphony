@@ -8,7 +8,7 @@ module Polyphony
       # Watches a forked or spawned process, waiting for it to terminate. If
       # `cmd` is given it is spawned, otherwise the process is forked with the
       # given block.
-      # 
+      #
       # If the operation is interrupted for any reason, the spawned or forked
       # process is killed.
       #

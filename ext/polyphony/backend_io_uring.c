@@ -101,7 +101,7 @@ static VALUE Backend_initialize(VALUE self) {
   while (1) {
     int ret = io_uring_queue_init(backend->prepared_limit, &backend->ring, flags);
     if (!ret) break;
-    
+
     // if ENOMEM is returned, use a smaller limit
     if (ret == -ENOMEM && backend->prepared_limit > 64)
       backend->prepared_limit = backend->prepared_limit / 2;
@@ -263,10 +263,10 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
   if (!is_blocking && backend->pending_sqes) io_uring_backend_immediate_submit(backend);
 
   COND_TRACE(&backend->base, 2, SYM_enter_poll, rb_fiber_current());
-  
+
   if (is_blocking) io_uring_backend_poll(backend);
   io_uring_backend_handle_ready_cqes(backend);
-  
+
   COND_TRACE(&backend->base, 2, SYM_leave_poll, rb_fiber_current());
 
   return self;
@@ -414,7 +414,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eo
     struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
     int result;
     int completed;
-    
+
     io_uring_prep_read(sqe, fd, buffer_spec.ptr, buffer_spec.len, -1);
 
     result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
@@ -449,7 +449,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eo
   }
 
   if (!total) return Qnil;
-  
+
   if (!buffer_spec.raw) backend_finalize_string_buffer(buffer, &buffer_spec, total, fptr);
   return buffer_spec.raw ? INT2FIX(total) : buffer;
 }
@@ -1412,7 +1412,7 @@ int io_uring_backend_submit_timeout_and_await(Backend_t *backend, double duratio
   struct __kernel_timespec ts = double_to_timespec(duration);
   struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
   op_context_t *ctx = context_store_acquire(&backend->store, OP_TIMEOUT);
-  
+
   io_uring_prep_timeout(sqe, &ts, 0, 0);
   io_uring_backend_defer_submit_and_await(backend, sqe, ctx, resume_value);
   return context_store_release(&backend->store, ctx);
@@ -1723,7 +1723,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
   completed = context_store_release(&backend->store, ctx);
   if (!completed) {
     struct io_uring_sqe *sqe;
-    
+
     Backend_chain_ctx_attach_buffers(ctx, argc, argv);
 
     // op was not completed (an exception was raised), so we need to cancel it
@@ -1793,7 +1793,7 @@ static inline void splice_chunks_get_sqe(
 
 static inline void splice_chunks_cancel(Backend_t *backend, op_context_t *ctx) {
   struct io_uring_sqe *sqe;
-  
+
   ctx->result = -ECANCELED;
   sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_cancel(sqe, ctx, 0);

@@ -31,7 +31,7 @@ ID ID_RW;
  * current fiber to the runqueue. This lets other fibers run, letting the
  * current fiber eventually continue its work. This call is useful when
  * performing long-running calculations in order to keep the program responsive.
- * 
+ *
  * @return [void]
  */
 
@@ -42,7 +42,7 @@ VALUE Polyphony_snooze(VALUE self) {
 /* Switches to the next fiber in the current thread's runqueue without
  * rescheduling the current fiber. This is useful if the current fiber does not
  * need to continue or will be scheduled by other means eventually.
- * 
+ *
  * @return [void]
  */
 
@@ -56,10 +56,10 @@ static VALUE Polyphony_suspend(VALUE self) {
 
 /* Accepts an incoming connection on the given server socket, returning an
  * instance of the given socket class.
- * 
+ *
  * @param server_socket [Socket] socket to accept on
  * @param socket_class [Class] class of the socket to instantiate for the accepted connection
- * 
+ *
  * @return [Socket] accepted connection
  */
 
@@ -69,7 +69,7 @@ VALUE Polyphony_backend_accept(VALUE self, VALUE server_socket, VALUE socket_cla
 
 /* Runs an infinite loop accepting connections on the given server socket,
  * returning an instance of the given socket class.
- * 
+ *
  * @param server_socket [Socket] socket to accept on
  * @param socket_class [Class] class of the socket to instantiate for the accepted connection
  * @yield [Socket] accepted connection
@@ -83,7 +83,7 @@ VALUE Polyphony_backend_accept_loop(VALUE self, VALUE server_socket, VALUE socke
 #ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
 /* Starts a multishot accept operation on the given server socket. This API is
  * available only for the io_uring backend.
- * 
+ *
  * @param server_socket [Socket] socket to accept on
  * @return [void]
  */
@@ -95,11 +95,11 @@ VALUE Polyphony_backend_multishot_accept(VALUE self, VALUE server_socket) {
 
 
 /* Connects the given socket to the given address and port.
- * 
+ *
  * @param io [Socket] socket to connect
  * @param addr [String] address to connect to
  * @param port [Integer] port to connect to
- * 
+ *
  * @return [Socket] accepted connection
  */
 
@@ -123,13 +123,13 @@ VALUE Polyphony_backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE me
 }
 
 /* Reads from the given io.
- * 
+ *
  * @param io [IO] io to read from
  * @param buffer [String, nil] buffer to read into
  * @param length [Integer] maximum bytes to read
  * @param to_eof [boolean] whether to read to EOF
  * @param pos [Integer] Position in the buffer to read into
- * 
+ *
  * @return [String] buffer
  */
 
@@ -139,10 +139,10 @@ VALUE Polyphony_backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, V
 
 /* Performs an infinite loop reading data from the given io. The loop terminates
  * when EOF is encountered.
- * 
+ *
  * @param io [IO] io to read from
  * @param maxlen [Integer] maximum bytes to read
- * 
+ *
  * @return [void]
  */
 
@@ -151,12 +151,12 @@ VALUE Polyphony_backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
 }
 
 /* Receives data on the given io.
- * 
+ *
  * @param io [Socket] io to receive on
  * @param buffer [String, nil] buffer to read into
  * @param length [Integer] maximum bytes to read
  * @param pos [Integer] Position in the buffer to read into
- * 
+ *
  * @return [String] buffer
  */
 
@@ -165,7 +165,7 @@ VALUE Polyphony_backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, V
 }
 
 /* Receives a message on the given socket.
- * 
+ *
  * @param socket [UDPSocket] io to receive on
  * @param buffer [String, nil] buffer to read into
  * @param maxlen [Integer] maximum bytes to read
@@ -182,7 +182,7 @@ VALUE Polyphony_backend_recvmsg(VALUE self, VALUE socket, VALUE buffer, VALUE ma
 
 /* Performs an infinite loop receiving data on the given socket. The loop
  * terminates when the socket is closed.
- * 
+ *
  * @param socket [Socket] socket to receive on
  * @param maxlen [Integer] maximum bytes to read
  * @yield [data] received data
@@ -197,11 +197,11 @@ VALUE Polyphony_backend_recv_loop(VALUE self, VALUE socket, VALUE maxlen) {
  * receiver with the given method. The loop terminates when EOF is encountered.
  * If a block is given, it is used as the block for the method call to the
  * receiver.
- * 
+ *
  * @param socket [Socket] socket to receive on
  * @param receiver [any] an object receiving the data
  * @param method [Symbol] method used to feed the data to the receiver
- * 
+ *
  * @return [void]
  */
 
@@ -210,11 +210,11 @@ VALUE Polyphony_backend_recv_feed_loop(VALUE self, VALUE socket, VALUE receiver,
 }
 
 /* Sends data on the given socket, returning the number of bytes sent.
- * 
+ *
  * @param socket [Socket] socket to read from
  * @param msg [String] data to be sent
  * @param flags [Integer] Flags
- * 
+ *
  * @return [Integer] number of bytes sent
  */
 
@@ -223,7 +223,7 @@ VALUE Polyphony_backend_send(VALUE self, VALUE socket, VALUE msg, VALUE flags) {
 }
 
 /* Sends data on the given socket, returning the number of bytes sent.
- * 
+ *
  * @param socket [Socket] socket to read from
  * @param msg [String] data to be sent
  * @param flags [Integer] Flags
@@ -238,7 +238,7 @@ VALUE Polyphony_backend_sendmsg(VALUE self, VALUE socket, VALUE msg, VALUE flags
 
 /* Sends multiple strings on the given socket, returning the number of bytes
  * sent.
- * 
+ *
  * @param socket [Socket] socket to read from
  * @param ary [Array<String>] data to be sent
  * @param flags [Integer] Flags
@@ -250,7 +250,7 @@ VALUE Polyphony_backend_sendv(VALUE self, VALUE socket, VALUE ary, VALUE flags) 
 }
 
 /* Sleeps for the given duration, yielding execution to other fibers.
- * 
+ *
  * @param duration [Number] duration in seconds
  * @return [void]
  */
@@ -261,7 +261,7 @@ VALUE Polyphony_backend_sleep(VALUE self, VALUE duration) {
 
 /* Splices data from the given source to the given destination, returning the
  * number of bytes spliced.
- * 
+ *
  * @param src [IO] source
  * @param dest [IO] destination
  * @param maxlen [Integer] Maximum bytes to splice
@@ -291,7 +291,7 @@ VALUE Polyphony_backend_tee(VALUE self, VALUE src, VALUE dest, VALUE chunksize) 
 /* Runs the given block, raising an exception if the block has not finished
  * running before a timeout has elapsed, using the given duration. If an
  * exception class is not given, a TimeoutError is raised.
- * 
+ *
  * @overload backend_timeout(duration)
  *   @param duration [Number] timeout duration in seconds
  *   @return [any] return value of block
@@ -306,7 +306,7 @@ VALUE Polyphony_backend_timeout(int argc,VALUE *argv, VALUE self) {
 }
 
 /* Runs an infinite loop that calls the given block at the specified time interval.
- * 
+ *
  * @param interval [Number] interval in seconds
  * @return [void]
  */
@@ -318,7 +318,7 @@ VALUE Polyphony_backend_timer_loop(VALUE self, VALUE interval) {
 /* For for the current fiber to be rescheduled, resuming the fiber with its
  * resumed value. If raise is true and the resumed value is an exception, an
  * exception will be raised.
- * 
+ *
  * @param raise [boolean]
  * @return [any] resumed value
  */
@@ -329,7 +329,7 @@ VALUE Polyphony_backend_wait_event(VALUE self, VALUE raise) {
 
 /* Waits for the given IO to be readable or writeable, according to the
  * read_or_write parameter.
- * 
+ *
  * @param io [IO]
  * @param write [boolean] false for read, true for write
  * @return [void]
@@ -340,7 +340,7 @@ VALUE Polyphony_backend_wait_io(VALUE self, VALUE io, VALUE write) {
 }
 
 /* Waits for the given process to terminate, returning its exit code.
- * 
+ *
  * @param pid [Integer] pid
  * @return [Integer] exit code
  */
@@ -380,7 +380,7 @@ VALUE Polyphony_raw_buffer_get(int argc, VALUE *argv, VALUE self) {
 
   struct buffer_spec *buffer_spec = FIX2PTR(buf);
   int length = (len == Qnil) ? buffer_spec->len : FIX2INT(len);
-  
+
   if (length > buffer_spec->len) length = buffer_spec->len;
   return rb_utf8_str_new((char *)buffer_spec->ptr, length);
 }
@@ -392,7 +392,7 @@ VALUE Polyphony_raw_buffer_set(VALUE self, VALUE buffer, VALUE str) {
   int len = RSTRING_LEN(str);
   if (len > buffer_spec->len)
     rb_raise(rb_eRuntimeError, "Given string does not fit in given buffer");
-  
+
   memcpy(buffer_spec->ptr, RSTRING_PTR(str), len);
   buffer_spec->len = len;
   return self;
@@ -434,7 +434,7 @@ void Init_Polyphony(void) {
   rb_define_singleton_method(mPolyphony, "backend_sendv", Polyphony_backend_sendv, 3);
   rb_define_singleton_method(mPolyphony, "backend_sleep", Polyphony_backend_sleep, 1);
   rb_define_singleton_method(mPolyphony, "backend_splice", Polyphony_backend_splice, 3);
- 
+
   #ifdef POLYPHONY_BACKEND_LIBURING
   rb_define_singleton_method(mPolyphony, "backend_double_splice", Polyphony_backend_double_splice, 2);
   #endif
@@ -442,7 +442,7 @@ void Init_Polyphony(void) {
   #ifdef POLYPHONY_LINUX
   rb_define_singleton_method(mPolyphony, "backend_tee", Polyphony_backend_tee, 3);
   #endif
-  
+
   rb_define_singleton_method(mPolyphony, "backend_timeout", Polyphony_backend_timeout, -1);
   rb_define_singleton_method(mPolyphony, "backend_timer_loop", Polyphony_backend_timer_loop, 1);
   rb_define_singleton_method(mPolyphony, "backend_wait_event", Polyphony_backend_wait_event, 1);
