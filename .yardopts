@@ -14,10 +14,12 @@
 --exclude sequel.rb
 --exclude event.c
 --exclude backend.+\.c
---load ./docs/link_rewriter.rb
+# --load ./docs/link_rewriter.rb
+-r docs/readme.md
 ./lib
 ./ext/polyphony
 -
+docs/readme.md
 docs/overview.md
 docs/tutorial.md
 docs/faq.md

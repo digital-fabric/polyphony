@@ -1,3 +1,5 @@
+# @title README
+
 <img src="https://github.com/digital-fabric/polyphony/raw/master/assets/polyphony-logo.png">
 
 # Polyphony: Fine-Grained Concurrency for Ruby
@@ -75,17 +77,17 @@ $ gem install polyphony
 
 ## Usage
 
-- [Overview](docs/overview.md)
-- [Tutorial](docs/tutorial.md)
-- [FAQ](docs/faq.md)
+- {file:/docs/overview.md Overview}
+- {file:/docs/tutorial.md Tutorial}
+- {file:/docs/faq.md      FAQ}
 
 ## Technical Discussion
 
-- [Concurrency the Easy Way](docs/concurrency.md)
-- [How Fibers are Scheduled](docs/fiber-scheduling.md)
-- [Exception Handling](docs/exception-handling.md)
-- [Extending Polyphony](docs/extending.md)
-- [Polyphony's Design](docs/design-principles.md)
+- {file:/docs/concurrency.md        Concurrency the Easy Way}
+- {file:/docs/fiber-scheduling.md   How Fibers are Scheduled}
+- {file:/docs/exception-handling.md Exception Handling}
+- {file:/docs/extending.md          Extending Polyphony}
+- {file:/docs/design-principles.md  Polyphony's Design}
 
 ## Examples
 
