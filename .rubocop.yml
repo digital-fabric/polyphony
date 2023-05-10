@@ -85,6 +85,7 @@ Metrics/MethodLength:
   Exclude:
     - lib/polyphony/http/server/rack.rb
     - lib/polyphony/extensions/io.rb
+    - lib/polyphony/extensions/fiber.rb
     - test/**/*.rb
     - examples/**/*.rb
 
@@ -97,8 +98,17 @@ Metrics/ClassLength:
   Exclude:
     - lib/polyphony/http/server/http1.rb
     - lib/polyphony/extensions/io.rb
+    - lib/polyphony/extensions/fiber.rb
     - test/**/*.rb
     - examples/**/*.rb
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - lib/polyphony/extensions/fiber.rb
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - lib/polyphony/extensions/fiber.rb
 
 Style/RegexpLiteral:
   Enabled: false
