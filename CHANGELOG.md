@@ -1,3 +1,7 @@
+## 1.0 2023-05-11
+
+- More work on docs.
+
 ## 0.99.1 2023-05-08
 
 - Reorganize docs, use Yard for all docs.
