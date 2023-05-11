@@ -1,6 +1,6 @@
 # @title README
 
-<img src="https://github.com/digital-fabric/polyphony/raw/master/assets/polyphony-logo.png">
+<img src="https://github.com/digital-fabric/polyphony/raw/master/docs/assets/polyphony-logo.png">
 
 # Polyphony: Fine-Grained Concurrency for Ruby
 

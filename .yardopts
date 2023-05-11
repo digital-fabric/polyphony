@@ -3,18 +3,16 @@
 --verbose
 --protected
 --no-private
---asset assets/:assets
 --exclude debugger.rb
 --exclude redis.rb
 --exclude readline.rb
 --exclude postgres.rb
 --exclude zlib_conf.rb
 --exclude extconf.rb
---exclude mysql2.rb
+--exclude mysql2.rb 
 --exclude sequel.rb
 --exclude event.c
 --exclude backend.+\.c
-# --load ./docs/link_rewriter.rb
 -r docs/readme.md
 ./lib
 ./ext/polyphony

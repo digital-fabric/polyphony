@@ -1,4 +1,4 @@
-# @title Tutorial
+# @title Tutorial 
 
 # Tutorial
 
@@ -94,7 +94,7 @@ The above program does nothing exceptional, it just sleeps for 1 second and
 prints a bunch of messages. But it is enough to demonstrate how concurrency
 works in Polyphony. Here's a flow chart of the transfer of control:
 
-<img src="../assets/sleeping-fiber.svg">
+<img src="https://github.com/digital-fabric/polyphony/raw/master/docs/assets/sleeping-fiber.png">
 
 Here's the actual sequence of execution (in pseudo-code)
 
@@ -189,7 +189,7 @@ innocent call to `#spin`.
 
 Here's a flow chart showing the transfer of control between the different fibers:
 
-<img src="../assets/echo-fibers.svg">
+<img src="https://github.com/digital-fabric/polyphony/raw/master/docs/assets/echo-fibers.png">
 
 Let's consider the advantage of the Polyphony concurrency model:
 
