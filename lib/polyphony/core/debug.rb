@@ -1,8 +1,6 @@
 # Kernel extensions
 module ::Kernel
   # Prints a trace message to `STDOUT`, bypassing the Polyphony backend.
-  #
-  # @return [void]
   def trace(*args)
     STDOUT.orig_write(format_trace(args))
   end
@@ -33,7 +31,6 @@ module Polyphony
       #
       # @param io [IO, nil] IO instance
       # @yield [Hash] event information
-      # @return [void]
       def start_event_firehose(io = nil, &block)
         Thread.backend.trace_proc = firehose_proc(io, block)
       end

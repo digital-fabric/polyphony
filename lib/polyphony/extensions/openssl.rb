@@ -17,7 +17,6 @@ class ::OpenSSL::SSL::SSLSocket
   #
   # @param socket [TCPSocket] socket to wrap
   # @param context [OpenSSL::SSL::SSLContext] optional SSL context
-  # @return [void]
   def initialize(socket, context = nil)
     socket = socket.respond_to?(:io) ? socket.io || socket : socket
     context ? orig_initialize(socket, context) : orig_initialize(socket)
@@ -155,7 +154,7 @@ class ::OpenSSL::SSL::SSLSocket
   #
   # @param maxlen [Integer] maximum bytes to receive
   # @yield [String] read data
-  # @return [void]
+  # @return [OpenSSL::SSL::SSLSocket] self
   def read_loop(maxlen = 8192)
     while (data = sysread(maxlen))
       yield data
@@ -263,8 +262,9 @@ class ::OpenSSL::SSL::SSLServer
 
   # Accepts incoming connections in an infinite loop.
   #
+  # @param ignore_errors [boolean] whether to ignore IO and SSL errors
   # @yield [OpenSSL::SSL::SSLSocket] accepted socket
-  # @return [void]
+  # @return [OpenSSL::SSL::SSLServer] self
   def accept_loop(ignore_errors = true)
     loop do
       yield accept

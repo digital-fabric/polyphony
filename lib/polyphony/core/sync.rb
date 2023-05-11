@@ -27,7 +27,7 @@ module Polyphony
     # Conditionally releases the mutex. This method is used by condition
     # variables.
     #
-    # @return [void]
+    # @return [nil]
     def conditional_release
       @store << @token
       @token = nil
@@ -37,7 +37,7 @@ module Polyphony
     # Conditionally reacquires the mutex. This method is used by condition
     # variables.
     #
-    # @return [void]
+    # @return [Fiber] current fiber
     def conditional_reacquire
       @token = @store.shift
       @holding_fiber = Fiber.current
@@ -140,7 +140,7 @@ module Polyphony
     #
     # @param mutex [Polyphony::Mutex] mutex to release while waiting for signal
     # @param _timeout [Number, nil] timeout in seconds (currently not implemented)
-    # @return [void]
+    # @return [any]
     def wait(mutex, _timeout = nil)
       mutex.conditional_release
       @queue << Fiber.current
@@ -151,7 +151,7 @@ module Polyphony
     # Signals the condition variable, causing the first fiber in the waiting
     # queue to be resumed.
     #
-    # @return [void]
+    # @return [Fiber] resumed fiber
     def signal
       return if @queue.empty?
 
@@ -160,8 +160,6 @@ module Polyphony
     end
 
     # Resumes all waiting fibers.
-    #
-    # @return [void]
     def broadcast
       return if @queue.empty?
 

@@ -112,7 +112,6 @@ module Polyphony
     # consecutive iterations.
     #
     # @param interval [Number] interval between consecutive iterations in seconds
-    # @return [void]
     def every(interval, &block)
       Polyphony.backend_timer_loop(interval, &block)
     end
@@ -187,7 +186,7 @@ module Polyphony
     #
     # @param args [Array] positional parameters
     # @param opts [Hash] named parameters
-    # @return [void]
+    # @return [any]
     def supervise(*args, **opts, &block)
       Fiber.current.supervise(*args, **opts, &block)
     end
@@ -196,7 +195,7 @@ module Polyphony
     # indefinitely.
     #
     # @param duration [Number, nil] duration
-    # @return [void]
+    # @return [any]
     def sleep(duration = nil)
       duration ?
         Polyphony.backend_sleep(duration) : Polyphony.backend_wait_event(true)
@@ -212,7 +211,7 @@ module Polyphony
     # @option opts [Number] :rate loop rate (times per second)
     # @option opts [Number] :interval loop interval in seconds
     # @option opts [Number] :count number of iterations (nil for infinite)
-    # @return [void]
+    # @return [any]
     def throttled_loop(rate = nil, **opts, &block)
       throttler = Polyphony::Throttler.new(rate || opts)
       if opts[:count]
@@ -264,7 +263,7 @@ module Polyphony
     # @param tag [any] new fiber's tag
     # @param caller [Array<String>] caller info
     # @param block [Proc] code to run
-    # @return [void]
+    # @return [any]
     def spin_loop_without_throttling(tag, caller, block)
       Fiber.current.spin(tag, caller) do
         block.call while true

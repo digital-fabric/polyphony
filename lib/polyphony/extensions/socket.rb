@@ -37,7 +37,7 @@ class ::Socket < ::BasicSocket
   # Accepts incoming connections in an infinite loop.
   #
   # @yield [Socket] accepted socket
-  # @return [void]
+  # @return [nil]
   def accept_loop(&block)
     Polyphony.backend_accept_loop(self, TCPSocket, &block)
   end
@@ -109,7 +109,7 @@ class ::Socket < ::BasicSocket
   #
   # @param maxlen [Integer] maximum bytes to receive
   # @yield [String] received data
-  # @return [void]
+  # @return [Socket] self
   def recv_loop(maxlen = 8192, &block)
     Polyphony.backend_recv_loop(self, maxlen, &block)
   end
@@ -131,7 +131,7 @@ class ::Socket < ::BasicSocket
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @return [void]
+  # @return [Socket] self
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
@@ -376,7 +376,7 @@ class ::TCPSocket < ::IPSocket
   #
   # @param maxlen [Integer] maximum bytes to receive
   # @yield [String] received data
-  # @return [void]
+  # @return [Socket] self
   def recv_loop(maxlen = 8192, &block)
     Polyphony.backend_recv_loop(self, maxlen, &block)
   end
@@ -398,7 +398,7 @@ class ::TCPSocket < ::IPSocket
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @return [void]
+  # @return [Socket] self
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end
@@ -494,7 +494,7 @@ class ::TCPServer < ::TCPSocket
   # Accepts incoming connections in an infinite loop.
   #
   # @yield [TCPSocket] accepted socket
-  # @return [void]
+  # @return [nil]
   def accept_loop(&block)
     Polyphony.backend_accept_loop(@io, TCPSocket, &block)
   end
@@ -526,7 +526,7 @@ class ::UNIXServer < ::UNIXSocket
   # Accepts incoming connections in an infinite loop.
   #
   # @yield [UNIXSocket] accepted socket
-  # @return [void]
+  # @return [nil]
   def accept_loop(&block)
     Polyphony.backend_accept_loop(self, UNIXSocket, &block)
   end
@@ -588,7 +588,7 @@ class ::UNIXSocket < ::BasicSocket
   #
   # @param maxlen [Integer] maximum bytes to receive
   # @yield [String] received data
-  # @return [void]
+  # @return [Socket] self
   def recv_loop(maxlen = 8192, &block)
     Polyphony.backend_recv_loop(self, maxlen, &block)
   end
@@ -610,7 +610,7 @@ class ::UNIXSocket < ::BasicSocket
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @return [void]
+  # @return [Socket] self
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_recv_feed_loop(self, receiver, method, &block)
   end

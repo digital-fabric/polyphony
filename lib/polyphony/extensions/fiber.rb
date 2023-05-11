@@ -213,7 +213,6 @@ class ::Fiber
   # @option opts [Proc, nil] :on_done proc to call when a supervised fiber is terminated
   # @option opts [Proc, nil] :on_error proc to call when a supervised fiber is terminated with an exception
   # @option opts [:always, :on_error, nil] :restart whether to restart terminated fibers
-  # @return [void]
   def supervise(*fibers, **opts, &block)
     block ||= supervise_opts_to_block(opts)
 
@@ -375,7 +374,7 @@ class ::Fiber
   # @param block [Proc] fiber's block
   # @param caller [Array<String>] fiber's caller
   # @param parent [Fiber] fiber's parent
-  # @return [void]
+  # @return [Fiber] self
   def prepare(tag, block, caller, parent)
     @thread = Thread.current
     @tag = tag
@@ -384,12 +383,13 @@ class ::Fiber
     @block = block
     Thread.backend.trace(:spin, self, Kernel.caller[1..-1])
     schedule
+    self
   end
 
   # Runs the fiber's block and handles uncaught exceptions.
   #
   # @param first_value [any] value passed to fiber on first resume
-  # @return [void]
+  # @return [any] fiber result
   def run(first_value)
     Kernel.raise first_value if first_value.is_a?(Exception)
     @running = true
@@ -397,6 +397,7 @@ class ::Fiber
     Thread.backend.trace(:unblock, self, first_value, @caller)
     result = @block.(first_value)
     finalize(result)
+    result
   rescue Polyphony::Restart => e
     restart_self(e.value)
   rescue Polyphony::MoveOn, Polyphony::Terminate => e
@@ -411,27 +412,29 @@ class ::Fiber
   # fiber terminates after it has already been created. Calling #setup_raw
   # allows the fiber to be scheduled and to receive messages.
   #
-  # @return [void]
+  # @return [Fiber] self
   def setup_raw
     @thread = Thread.current
     @running = true
+    self
   end
 
   # Sets up the fiber as the main fiber for the current thread.
   #
-  # @return [void]
+  # @return [Fiber] self
   def setup_main_fiber
     @main = true
     @tag = :main
     @thread = Thread.current
     @running = true
     @children&.clear
+    self
   end
 
   # Resets the fiber's state and reruns the fiber.
   #
   # @param first_value [Fiber] first_value to pass to fiber after restarting
-  # @return [void]
+  # @return [any] fiber result
   def restart_self(first_value)
     @mailbox = nil
     run(first_value)
@@ -441,7 +444,7 @@ class ::Fiber
   #
   # @param result [any] return value
   # @param uncaught_exception [Exception, nil] uncaught exception
-  # @return [void]
+  # @return [false]
   def finalize(result, uncaught_exception = false)
     result, uncaught_exception = finalize_children(result, uncaught_exception)
     Thread.backend.trace(:terminate, self, result)
@@ -462,7 +465,7 @@ class ::Fiber
   #
   # @param result [any] fiber's return value
   # @param uncaught_exception [Exception, nil] uncaught exception
-  # @return [void]
+  # @return [Array] array containing result and uncaught exception if any
   def finalize_children(result, uncaught_exception)
     shutdown_all_children(graceful_shutdown?)
     [result, uncaught_exception]
@@ -474,7 +477,7 @@ class ::Fiber
   #
   # @param result [any] fiber's return value
   # @param uncaught_exception [Exception, nil] uncaught exception
-  # @return [void]
+  # @return [Fiber] self
   def inform_monitors(result, uncaught_exception)
     if @monitors
       msg = [self, result]
@@ -485,6 +488,8 @@ class ::Fiber
       parent_is_monitor = @monitors&.has_key?(@parent)
       @parent.schedule_with_priority(result) unless parent_is_monitor
     end
+
+    self
   end
 
   # Adds a fiber to the list of monitoring fibers. Monitoring fibers will be
@@ -598,8 +603,6 @@ class ::Fiber
     # running, it will bubble up to the main thread's main fiber, which will
     # also be scheduled with priority. This method is mainly used trapping
     # signals (see also the patched `Kernel#trap`)
-    #
-    # @return [void]
     def schedule_priority_oob_fiber(&block)
       oob_fiber = Fiber.new do
         Fiber.current.setup_raw

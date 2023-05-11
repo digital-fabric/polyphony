@@ -16,7 +16,6 @@ module Polyphony
     # Initializes the exception, setting the caller and the value.
     #
     # @param value [any] Exception value
-    # @return [void]
     def initialize(value = nil)
       @caller_backtrace = caller
       @value = value
@@ -44,14 +43,11 @@ module Polyphony
     # Initializes an Interjection with the given proc.
     #
     # @param proc [Proc] interjection proc
-    # @return [void]
     def initialize(proc)
       @proc = proc
     end
 
     # Invokes the exception by calling the associated proc.
-    #
-    # @return [void]
     def invoke
       @proc.call
     end

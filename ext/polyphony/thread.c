@@ -44,7 +44,7 @@ inline void Thread_schedule_fiber_with_priority(VALUE self, VALUE fiber, VALUE v
 
 /* Switches to the next fiber in the thread's runqueue.
  *
- * @return [void]
+ * @return [any] resume value
  */
 
 VALUE Thread_switch_fiber(VALUE self) {

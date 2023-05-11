@@ -67,10 +67,8 @@ static VALUE Queue_allocate(VALUE klass) {
  * until at least one item is removed from the queue.
  *
  * @overload new()
- *   @return [void]
  * @overload new(capacity)
  *   @param capacity [Integer] maximum items in queue
- *   @return [void]
  */
 
 static VALUE Queue_initialize(int argc, VALUE *argv, VALUE self) {

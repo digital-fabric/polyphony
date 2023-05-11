@@ -178,7 +178,7 @@ class Polyphony::Pipe
   #
   # @param maxlen [Integer] maximum bytes to read
   # @yield [String] read data
-  # @return [void]
+  # @return [Polyphony::Pipe] self
   def read_loop(maxlen = 8192, &block)
     Polyphony.backend_read_loop(self, maxlen, &block)
   end
@@ -199,7 +199,7 @@ class Polyphony::Pipe
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
-  # @return [void]
+  # @return [Polyphony::Pipe] self
   def feed_loop(receiver, method = :call, &block)
     Polyphony.backend_feed_loop(self, receiver, method, &block)
   end

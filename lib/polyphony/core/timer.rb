@@ -28,7 +28,6 @@ module Polyphony
     # Sleeps for the given duration.
     #
     # @param duration [Number] sleep duration in seconds
-    # @return [void]
     def sleep(duration)
       fiber = Fiber.current
       @timeouts[fiber] = {
@@ -56,7 +55,6 @@ module Polyphony
     # consecutive iterations.
     #
     # @param interval [Number] interval between consecutive iterations in seconds
-    # @return [void]
     def every(interval)
       fiber = Fiber.current
       @timeouts[fiber] = {
@@ -180,8 +178,6 @@ module Polyphony
     end
 
     # Resets the timeout for the current fiber.
-    #
-    # @return [void]
     def reset
       record = @timeouts[Fiber.current]
       return unless record
@@ -216,8 +212,6 @@ module Polyphony
     end
 
     # Runs a timer iteration, invoking any timeouts that are due.
-    #
-    # @return [void]
     def update
       return if @timeouts.empty?
 

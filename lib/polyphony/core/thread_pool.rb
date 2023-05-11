@@ -20,7 +20,7 @@ module Polyphony
 
     # Resets the default thread pool.
     #
-    # @return [void]
+    # @return [nil]
     def self.reset
       return unless @default_pool
 
@@ -78,8 +78,6 @@ module Polyphony
     private
 
     # Runs a processing loop on a worker thread.
-    #
-    # @return [void]
     def thread_loop
       while true
         run_queued_task
@@ -87,8 +85,6 @@ module Polyphony
     end
 
     # Runs the first queued task in the task queue.
-    #
-    # @return [void]
     def run_queued_task
       (block, watcher) = @task_queue.shift
       result = block.()

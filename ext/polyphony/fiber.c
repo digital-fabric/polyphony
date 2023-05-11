@@ -116,7 +116,7 @@ static VALUE Fiber_state(VALUE self) {
  * mailbox.
  *
  * @param msg [any]
- * @return [void]
+ * @return [Fiber] self
  */
 
 VALUE Fiber_send(VALUE self, VALUE msg) {

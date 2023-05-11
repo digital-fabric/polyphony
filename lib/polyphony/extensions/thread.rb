@@ -12,7 +12,6 @@ class ::Thread
 
   # Initializes the thread.
   # @param args [Array] arguments to pass to thread block
-  # @return [void]
   def initialize(*args, &block)
     @join_wait_queue = []
     @finalization_mutex = Mutex.new
@@ -23,11 +22,12 @@ class ::Thread
 
   # Sets up the thread and its main fiber.
   #
-  # @return [void]
+  # @return [Thread] self
   def setup
     @main_fiber = Fiber.current
     @main_fiber.setup_main_fiber
     setup_fiber_scheduling
+    self
   end
 
   # @!visibility private
@@ -133,7 +133,7 @@ class ::Thread
 
   # Runs the thread's block, handling any uncaught exceptions.
   #
-  # @return [void]
+  # @return [any] thread result value
   def execute
     # backend must be created in the context of the new thread, therefore it
     # cannot be created in Thread#initialize
@@ -159,7 +159,6 @@ class ::Thread
   # Finalizes the thread.
   #
   # @param result [any] thread's return value
-  # @return [void]
   def finalize(result)
     unless Fiber.current.children.empty?
       Fiber.current.shutdown_all_children
@@ -175,7 +174,6 @@ class ::Thread
   # Signals all fibers waiting for the thread to terminate.
   #
   # @param result [any] thread's return value
-  # @return [void]
   def signal_waiters(result)
     @join_wait_queue.each { |w| w.signal(result) }
   end

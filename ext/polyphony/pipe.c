@@ -37,8 +37,6 @@ static VALUE Pipe_allocate(VALUE klass) {
   TypedData_Get_Struct((obj), Pipe_t, &Pipe_type, (pipe))
 
 /* Creates a new pipe.
- *
- * @return [void]
  */
 
 static VALUE Pipe_initialize(VALUE self) {

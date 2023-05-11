@@ -57,7 +57,6 @@ module Polyphony
       #
       # @param context [SSLContext] SSL context
       # @param protocols [Array] array of supported protocols
-      # @return [void]
       def setup_alpn(context, protocols)
         context.alpn_protocols = protocols
         context.alpn_select_cb = lambda do |peer_protocols|

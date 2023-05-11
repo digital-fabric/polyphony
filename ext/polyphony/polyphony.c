@@ -32,7 +32,7 @@ ID ID_RW;
  * current fiber eventually continue its work. This call is useful when
  * performing long-running calculations in order to keep the program responsive.
  *
- * @return [void]
+ * @return [any] resume value
  */
 
 VALUE Polyphony_snooze(VALUE self) {
@@ -43,7 +43,7 @@ VALUE Polyphony_snooze(VALUE self) {
  * rescheduling the current fiber. This is useful if the current fiber does not
  * need to continue or will be scheduled by other means eventually.
  *
- * @return [void]
+ * @return [any] resume value
  */
 
 static VALUE Polyphony_suspend(VALUE self) {
@@ -73,7 +73,7 @@ VALUE Polyphony_backend_accept(VALUE self, VALUE server_socket, VALUE socket_cla
  * @param server_socket [Socket] socket to accept on
  * @param socket_class [Class] class of the socket to instantiate for the accepted connection
  * @yield [Socket] accepted connection
- * @return [void]
+ * @return [nil]
  */
 
 VALUE Polyphony_backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
@@ -85,7 +85,7 @@ VALUE Polyphony_backend_accept_loop(VALUE self, VALUE server_socket, VALUE socke
  * available only for the io_uring backend.
  *
  * @param server_socket [Socket] socket to accept on
- * @return [void]
+ * @return [any] block return value
  */
 
 VALUE Polyphony_backend_multishot_accept(VALUE self, VALUE server_socket) {
@@ -143,7 +143,7 @@ VALUE Polyphony_backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, V
  * @param io [IO] io to read from
  * @param maxlen [Integer] maximum bytes to read
  *
- * @return [void]
+ * @return [IO] io
  */
 
 VALUE Polyphony_backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
@@ -186,7 +186,7 @@ VALUE Polyphony_backend_recvmsg(VALUE self, VALUE socket, VALUE buffer, VALUE ma
  * @param socket [Socket] socket to receive on
  * @param maxlen [Integer] maximum bytes to read
  * @yield [data] received data
- * @return [void]
+ * @return [Socket] socket
  */
 
 VALUE Polyphony_backend_recv_loop(VALUE self, VALUE socket, VALUE maxlen) {
@@ -202,7 +202,7 @@ VALUE Polyphony_backend_recv_loop(VALUE self, VALUE socket, VALUE maxlen) {
  * @param receiver [any] an object receiving the data
  * @param method [Symbol] method used to feed the data to the receiver
  *
- * @return [void]
+ * @return [Socket] socket
  */
 
 VALUE Polyphony_backend_recv_feed_loop(VALUE self, VALUE socket, VALUE receiver, VALUE method) {
@@ -252,7 +252,7 @@ VALUE Polyphony_backend_sendv(VALUE self, VALUE socket, VALUE ary, VALUE flags) 
 /* Sleeps for the given duration, yielding execution to other fibers.
  *
  * @param duration [Number] duration in seconds
- * @return [void]
+ * @return [nil]
  */
 
 VALUE Polyphony_backend_sleep(VALUE self, VALUE duration) {
@@ -308,7 +308,6 @@ VALUE Polyphony_backend_timeout(int argc,VALUE *argv, VALUE self) {
 /* Runs an infinite loop that calls the given block at the specified time interval.
  *
  * @param interval [Number] interval in seconds
- * @return [void]
  */
 
 VALUE Polyphony_backend_timer_loop(VALUE self, VALUE interval) {
@@ -320,7 +319,6 @@ VALUE Polyphony_backend_timer_loop(VALUE self, VALUE interval) {
  * exception will be raised.
  *
  * @param raise [boolean]
- * @return [any] resumed value
  */
 
 VALUE Polyphony_backend_wait_event(VALUE self, VALUE raise) {
@@ -332,7 +330,7 @@ VALUE Polyphony_backend_wait_event(VALUE self, VALUE raise) {
  *
  * @param io [IO]
  * @param write [boolean] false for read, true for write
- * @return [void]
+ * @return [nil]
  */
 
 VALUE Polyphony_backend_wait_io(VALUE self, VALUE io, VALUE write) {
