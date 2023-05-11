@@ -99,6 +99,7 @@ Metrics/ClassLength:
     - lib/polyphony/http/server/http1.rb
     - lib/polyphony/extensions/io.rb
     - lib/polyphony/extensions/fiber.rb
+    - lib/polyphony/extensions/object.rb
     - test/**/*.rb
     - examples/**/*.rb
 
