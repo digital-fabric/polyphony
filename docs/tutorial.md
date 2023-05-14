@@ -67,7 +67,7 @@ innocent call to `#spin`.
 
 Here's a flow chart showing the transfer of control between the different fibers:
 
-<img src="https://github.com/digital-fabric/polyphony/raw/master/docs/assets/echo-fibers.png">
+<img src="https://github.com/digital-fabric/polyphony/raw/master/docs/assets/echo-fibers.svg">
 
 Let's consider the advantage of the Polyphony concurrency model:
 
