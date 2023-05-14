@@ -89,6 +89,8 @@ class ::IO
     end
 
     # Splices from one IO to another IO. At least one of the IOs must be a pipe.
+    # If maxlen is negative, splices repeatedly using absolute value of maxlen
+    # until EOF is encountered.
     #
     # @param src [IO, Polyphony::Pipe] source to splice from
     # @param dest [IO, Polyphony::Pipe] destination to splice to
@@ -415,7 +417,8 @@ class ::IO
     end
   end
 
-  # Splices data from the given IO.
+  # Splices data from the given IO. If maxlen is negative, splices repeatedly
+  # using absolute value of maxlen until EOF is encountered.
   #
   # @param src [IO, Polpyhony::Pipe] source to splice from
   # @param maxlen [Integer] maximum bytes to splice

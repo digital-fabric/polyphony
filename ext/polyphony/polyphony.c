@@ -260,7 +260,8 @@ VALUE Polyphony_backend_sleep(VALUE self, VALUE duration) {
 }
 
 /* Splices data from the given source to the given destination, returning the
- * number of bytes spliced.
+ * number of bytes spliced. If maxlen is negative, splices repeatedly
+ * using absolute value of maxlen until EOF is encountered.
  *
  * @param src [IO] source
  * @param dest [IO] destination

@@ -236,7 +236,8 @@ class Polyphony::Pipe
     end
   end
 
-  # Splices to the pipe from the given source.
+  # Splices to the pipe from the given source. If maxlen is negative, splices
+  # repeatedly using absolute value of maxlen until EOF is encountered.
   #
   # @param src [IO] source to splice from
   # @param maxlen [Integer] maximum bytes to splice
