@@ -43,12 +43,12 @@ programmers, a perplexing unfamiliar corner right at the heart of Ruby.
 
 ## The History of Polyphony
 
-Polyphony started as an experiment, but over about two years of slow, jerky
+Polyphony started as an experiment, but over about three years of slow, jerky
 evolution turned into something I'm really excited to share with the Ruby
-community. Polyphony's design is both similar and different than the projects
+community. Polyphony's design is both similar to and different than the projects
 mentioned above.
 
-Polyphony today as nothing like the way it began. A careful examination of the
+Polyphony today looks nothing like the way it began. A careful examination of the
 [CHANGELOG](https://github.com/digital-fabric/polyphony/blob/master/CHANGELOG.md)
 would show how Polyphony explored not only different event reactor designs, but
 also different API designs incorporating various concurrent paradigms such as
@@ -153,3 +153,59 @@ Polyphony's design is based on the following principles:
     }
   end
   ```
+
+- Enhance Ruby's I/O capabilities by providing [additional
+  APIs](./advanced-io.md) for splicing (on Linux) and moving data between file
+  descriptors. Polyphony provides APIs for compressing / uncompressing data on
+  the fly between file descriptors. This in turn enables the creation of
+  arbitrarily-complex data manipulation pipelines that maximize performance and
+  provide automatic backpressure.
+
+## Emergent Patterns for Ruby Apps Using Polyphony
+
+During the development of Polyphony and its usage in a few small- and
+medium-size custom Ruby apps, a few patterns have emerged. We belive embracing
+these patterns will lead to better-written concurrent programs that take
+advantage of all the benefits provided by Polyphony. Here are some of them:
+
+- Infinite loops make sense for fibers: normally, developers are taught to avoid
+  writing infinite loops, and to make sure any loop will be ended at one point.
+  With Polyphony, however, a fiber can run an infinite loop, performing work
+  such as responding to messages received on its mailbox, without the programmer
+  having to worry about it blocking the entire program:
+
+  ```ruby
+  server = spin do
+    loop do
+      client, data = receive
+      result = do_something_with_data(data)
+      client << result
+    end
+  end
+  ```
+
+  In the above example, a `server` of some sorts runs an infinite loop, taking
+  messages off its mailbox and handling them, sending the result back to the
+  corresponding client fiber. The programmer does not need to worry about
+  signalling the `server` fiber when it's time to finish its work. A simple call
+  to `server.stop` will stop it, as of course will its parent fiber stopping.
+
+- Message passing between fibers as a means to synchronize and pass data between
+  different parts of the application. The message passing ability integrated
+  into Polyphony allows writing programs where each fiber is responsible for a
+  single task, and receives its work by popping messages off its mailbox. If we
+  reconsider the above example, here's how a client might talk to the `server`
+  fiber:
+
+  ```ruby
+  results = incoming_data.map do |data|
+    server << [Fiber.current, data]
+    receive
+  end
+  ```
+
+  Look at all the things we don't need to do: we don't need to worry about
+  synchronizing access to shared variables between the different parts of the
+  app, and we also don't need to worry about how to handle backpressure - the
+  work will progress as fast as the slowest part in the app, without any
+  requests accumulating unnecessarily.

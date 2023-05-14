@@ -2,137 +2,15 @@
 
 # Tutorial
 
-Polyphony is a new Ruby library aimed at making writing concurrent Ruby apps
-easy and fun. In this article, we'll introduce Polyphony's fiber-based
-concurrency model, some of Polyphony's API, and demonstrate how to solve some
-simple situations related to concurrent computing.
-
-## What are Fibers and What are They Good For?
-
-Fibers are some of Ruby's most underappreciated hidden gems. Up until now,
-fibers have been used mostly as the underlying mechanism for implementing
-lazy enumerators and asynchronous generators. Fibers encapsulate, in short,
-an execution context that can be paused and resumed at will.
-
-Fibers are also at the heart of Polyphony's concurrency model. Polyphony employs
-fibers as a way to run multiple tasks at once, each task advancing at its own
-pace, pausing when waiting for an event to occur, and automatically resuming
-when that event has occurred.
-
-Take for example a web app: in order to fulfil an incoming request, multiple
-steps are required: querying the database, fetching cached entries from Redis,
-talking to third-party services such as Twilio or AWS S3. Each step can last
-tens of milliseconds, and blocks the current thread. Such an app is said to be
-I/O-bound, that is, it mostly spends its time waiting for some external
-services.
-
-The traditional approach to handling multiple requests concurrently is to employ
-multiple threads or processes, but this approach has numerous disavantages:
-
-- Both threads and processes are heavyweight, in both memory consmption and
-  the cost associated with context-switching.
-- Threads introduce hard-to-debug race conditions, and do not offer true
-  parallelism, owing to Ruby's GVL.
-- Processes are more difficult to coordinate, since they do not share memory.
-- Both threads and processes are limited to a few thousand at best on a single
-  machine. Trying to spawn a thread per client essentially limits the scaling
-  capacity of your system.
-
-Polyphony eschews both threads and processes in favor of fibers as the basic
-unit of concurrency. The idea is that any time a blocking I/O operation occurs,
-the current fiber is paused, and another fiber which has been marked as
-*runnable* is resumed. This way, your Ruby code can keep on handling incoming
-HTTP requests as they come with a scaling capacity that is virtually only
-limited by available memory.
-
-## Switchpoints and the Fiber-Switching Dance
-
-In order to make pausing and resuming fibers completely automatic and painfree,
-we need to know when an operation is going to block, and when it can be
-completed without blocking. Operations that might block execution are considered
-*switchpoints*. A switchpoint is a point in time at which control might switch
-from the currently running fiber to another fiber that is in a runnable state.
-Switchpoints may occur in any of the following cases:
-
-- On a call to any blocking operation, such as `#sleep`, `Fiber#await`,
-  `Thread#join` etc.
-- On fiber termination
-- On a call to `#suspend`
-- On a call to `#snooze`
-- On a call to `Thread#switch_fiber`
-
-At any switchpoint, the following takes place:
-
-- Check if any fiber is runnable, that is, ready to continue processing.
-- If no fiber is runnable, watch for events (see below) and wait for at least
-  one fiber to become runnable.
-- Pause the current fiber and switch to the first runnable fiber, which resumes
-  at the point it was last paused.
-
-The automatic switching between fibers is complemented by employing
-[libev](http://software.schmorp.de/pkg/libev.html), a multi-platform high
-performance event reactor that allows listening to I/O, timer and other events.
-At every switchpoint where no fibers are runnable, the libev evet loop is run
-until events occur, which in turn cause the relevant fibers to become runnable.
-
-Let's examine a simple example:
-
-```ruby
-require 'polyphony'
-
-spin do
-  puts "Going to sleep..."
-  sleep 1
-  puts "Woke up"
-end
-
-suspend
-puts "We're done"
-```
-
-The above program does nothing exceptional, it just sleeps for 1 second and
-prints a bunch of messages. But it is enough to demonstrate how concurrency
-works in Polyphony. Here's a flow chart of the transfer of control:
-
-<img src="https://github.com/digital-fabric/polyphony/raw/master/docs/assets/sleeping-fiber.png">
-
-Here's the actual sequence of execution (in pseudo-code)
-
-```ruby
-# (main fiber)
-sleeper = spin { ... } # The main fiber spins up a new fiber marked as runnable
-suspend # The main fiber suspends, waiting for all other work to finish
-  Thread.current.switch_fiber # Polyphony looks for other runnable fibers
-
-  # (sleeper fiber)
-  puts "Going to sleep..." # The sleeper fiber starts running
-  sleep 1 # The sleeper fiber goes to sleep
-    Gyro::Timer.new(1, 0).await # A timer event watcher is setup and yields
-      Thread.current.switch_fiber # Polyphony looks for other runnable fibers
-        Thread.current.backend.poll # With no work left, the event loop is ran
-          fiber.schedule # The timer event fires, scheduling the sleeper fiber
-  # <= The sleep method returns
-  puts "Woke up"
-  Thread.current.switch_fiber # With the fiber done, Polyphony looks for work
-
-# with no more work, control is returned to the main fiber
-# (main fiber)
-# <=
-# With no more work left, the main fiber is resumed and the suspend call returns
-puts "We're done"
-```
-
-What we have done in fact is we multiplexed two different contexts of execution
-(fibers) onto a single thread, each fiber continuing at its own pace and
-yielding control when waiting for something to happen. This context-switching
-dance, performed automatically by Polyphony behind the scenes, enables building
-highly-concurrent Ruby apps, with minimal impact on performance.
+In this tutorial we'll show how to build a simple fiber-based server using
+Polyphony, how to make it concurrent and how to make it resilient to errors.
+We'll assume you have read the [overview](./overview.md). If you haven't yet,
+please go and read it now before continuing with this tutorial.
 
 ## Building a Simple Echo Server with Polyphony
 
-Let's now turn our attention to something a bit more useful: a concurrent echo
-server. Our server will accept TCP connections and send back whatever it receives
-from the client.
+Here's what we want to build: a concurrent echo server. Our server will accept
+TCP connections and send back whatever it receives from the client.
 
 We'll start by opening a server socket:
 
@@ -205,14 +83,15 @@ Let's consider the advantage of the Polyphony concurrency model:
 
 Now that we have a working concurrent echo server, let's add some bells and
 whistles. First of all, let's get rid of clients that are not active. We'll do
-this by setting up a timeout fiber that cancels the fiber dealing with the connection
+this by wrapping our read loop in a call to `cancel_after`:
 
 ```ruby
 def handle_client(client)
-  timeout = cancel_after(10)
-  while (data = client.gets)
-    timeout.restart
-    client << data
+  cancel_after(10) do |timeout|
+    while (data = client.gets)
+      timeout.restart
+      client << data
+    end
   end
 rescue Polyphony::Cancel
   client.puts 'Closing connection due to inactivity.'
@@ -228,14 +107,15 @@ then cancel its parent. The call to `client.gets` blocks until new data is
 available. If no new data is available, the `timeout` fiber will finish
 sleeping, and then cancel the client handling fiber by raising a
 `Polyphony::Cancel` exception. However, if new data is received, the `timeout`
-fiber is restarted, causing to begin sleeping again for 10 seconds. If the
+fiber is restarted, causing it to begin sleeping again for 10 seconds. If the
 client has closed the connection, or some other exception occurs, the `timeout`
-fiber is automatically stopped as it is a child of the client handling fiber.
+fiber is automatically stopped as it is a child of the fiber running the
+`handle_client` method.
 
 The habit of always cleaning up using `ensure` in the face of potential
 interruptions is a fundamental element of using Polyphony correctly. This makes
 your code robust, even in a highly chaotic concurrent execution environment
-where tasks can be started, restarted and interrupted at any time.
+where fibers can be started, restarted and interrupted at any time.
 
 ## Implementing graceful shutdown
 
@@ -261,8 +141,7 @@ def client_loop(client, timeout = nil)
 end
 
 def handle_client(client)
-  timeout = cancel_after(10)
-  client_loop(client, timeout)
+  cancel_after(10) { |timeout| client_loop(client, timeout) }
 rescue Polyphony::Cancel
   client.puts 'Closing connection due to inactivity.'
 rescue Polyphony::Terminate
@@ -304,8 +183,7 @@ def client_loop(client, timeout = nil)
 end
 
 def handle_client(client)
-  timeout = cancel_after(10)
-  client_loop(client, timeout)
+  cancel_after(10) { |timeout| client_loop(client, timeout) }
 rescue Polyphony::Cancel
   client.puts 'Closing connection due to inactivity.'
 rescue Polyphony::Terminate
@@ -324,11 +202,3 @@ while (client = server.accept)
   spin { handle_client(client) }
 end
 ```
-
-## What Else Can I Do with Polyphony?
-
-Polyphony currently provides support for any library that uses Ruby's stock
-`socket` and `openssl` classes. Polyphony also includes adapters for the `pg`,
-`redis` and `irb` gems. It also includes an implementation of an integrated HTTP
-1 / HTTP 2 / websockets web server with support for TLS termination, ALPN
-protocol selection and preliminary rack support.

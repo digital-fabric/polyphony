@@ -77,9 +77,10 @@ $ gem install polyphony
 
 ## Usage
 
-- {file:/docs/overview.md Overview}
-- {file:/docs/tutorial.md Tutorial}
-- {file:/docs/faq.md      FAQ}
+- {file:/docs/overview.md           Overview}
+- {file:/docs/tutorial.md           Tutorial}
+- {file:/docs/cheat-sheet.md        Cheat-Sheet}
+- {file:/docs/faq.md                FAQ}
 
 ## Technical Discussion
 

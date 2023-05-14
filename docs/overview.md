@@ -6,7 +6,7 @@
 
 Polyphony is a new Ruby library for building concurrent applications in Ruby.
 Polyphony provides a comprehensive, structured concurrency model based on Ruby
-fibers and using libev as a high-performance event reactor.
+fibers and using `io_uring` or `libev` for high-performance I/O operations.
 
 Polyphony is designed to maximize developer happiness. It provides a natural and
 fluent API for writing concurrent Ruby apps while using the stock Ruby APIs such
@@ -14,11 +14,6 @@ as `IO`, `Process`, `Socket`, `OpenSSL` and `Net::HTTP` in a concurrent
 multi-fiber environment. In addition, Polyphony offers a solid
 exception-handling experience that builds on and enhances Ruby's
 exception-handling mechanisms.
-
-Polyphony includes a full-blown HTTP server implementation with integrated
-support for HTTP 1 & 2, WebSockets, TLS/SSL termination and more. Polyphony also
-provides fiber-aware adapters for connecting to PostgreSQL and Redis servers.
-More adapters are being actively developed.
 
 ## Taking Polyphony for a Spin
 
@@ -60,32 +55,69 @@ come in on `STDIN` and then switches control to the `counter` fiber. When the
 other work. If no other fiber is ready to run, Polyphony simply waits for at
 least one event to occur, and then resumes the corresponding fiber.
 
+## What are Fibers and What are They Good For?
+
+Fibers are some of Ruby's most underappreciated hidden gems. Up until now,
+fibers have been used mostly as the underlying mechanism for implementing
+lazy enumerators and asynchronous generators. Fibers encapsulate, in short,
+an execution context that can be paused and resumed at will.
+
+Fibers are also at the heart of Polyphony's concurrency model. Polyphony employs
+fibers as a way to run multiple tasks at once, each task advancing at its own
+pace, pausing when waiting for an event to occur, and automatically resuming
+when that event has occurred.
+
+Take for example a web app: in order to fulfil an incoming request, multiple
+steps are required: querying the database, fetching cached entries from Redis,
+talking to third-party services such as Twilio or AWS S3. Each step can last
+tens of milliseconds, and blocks the current thread. Such an app is said to be
+I/O-bound, that is, it mostly spends its time waiting for some external
+services.
+
+The traditional approach to handling multiple requests concurrently is to employ
+multiple threads or processes, but this approach has numerous disavantages:
+
+- Both threads and processes are heavyweight, in both memory consmption and
+  the cost associated with context-switching.
+- Threads introduce hard-to-debug race conditions, and do not offer true
+  parallelism, owing to Ruby's GVL.
+- Processes are more difficult to coordinate, since they do not share memory.
+- Both threads and processes are limited to a few thousand at best on a single
+  machine. Trying to spawn a thread per client essentially limits the scaling
+  capacity of your system.
+
+Polyphony eschews both threads and processes in favor of fibers as the basic
+unit of concurrency. The idea is that any time a blocking I/O operation occurs,
+the current fiber is paused, and another fiber which has been marked as
+*runnable* is resumed. This way, your Ruby code can keep on handling incoming
+HTTP requests as they come with a scaling capacity that is virtually only
+limited by available memory.
+
 ## Fibers vs Threads
 
-Most Ruby developers are familiar with threads, but fibers remain a little
-explored and little understood concept in the Ruby language. While A thread is
-an OS abstraction that is controlled by the OS, a fiber represents an execution
-context that can be paused and resumed by the application, and has no
-counterpart at the OS level.
+A thread is an OS abstraction that is controlled by the OS, while a fiber
+represents an execution context that can be paused and resumed by the
+application, and has no counterpart at the OS level.
 
 When used for writing concurrent programming, fibers offer multiple benefits
-over threads. They consume much less RAM than threads, and switching between
-them is faster than switching between threads. In addition, since fibers require
-no cooperation from the OS, an application can create literally millions of them
-given enough RAM. Those advantages make fibers a compelling solution for creating
-pervasively concurrent applications, even when using a dynamic high-level "slow"
-language such as Ruby.
+over threads. They consume less RAM than threads, and switching between them is
+faster than switching between threads. In addition, since fibers require no
+cooperation from the OS, an application can create literally millions of them
+given enough RAM. Those advantages make fibers a compelling solution for
+creating pervasively concurrent applications, even when using a dynamic
+high-level "slow" language such as Ruby.
 
 Ruby programs will only partly benefit from using mutiple threads for processing
-work loads (due to the GVL), but fibers are a great match mostly for programs
-that are I/O bound (that means spending most of their time talking to the
-outside world). A fiber-based web-server, for example, can juggle thousands of
-active concurrent connections, each advancing at its own pace, consuming only a
-single CPU core.
+work loads (due to the GVL), but fibers are a great match for programs that are
+I/O bound (that means spending most of their time talking to the outside world).
+A fiber-based web-server, for example, can juggle tens of thousands of active
+concurrent connections, each advancing at its own pace, consuming minimal CPU
+time.
 
-Nevertheless, Polyphony fully supports multithreading, with each thread having
-its own fiber run queue and its own libev event loop. Polyphony even enables
-cross-thread communication using [fiber messaging](#message-passing).
+That said, Polyphony fully supports multithreading, with each thread having its
+own fiber run queue and its own `io_uring` or `libev`-based I/O backend.
+Polyphony even enables cross-thread communication using [fiber
+messaging](#message-passing).
 
 ## Fibers vs Callbacks
 
@@ -110,6 +142,89 @@ sequential, easy to read manner: do this, then that. State can be stored right
 in the business logic, as local variables. And finally, the sequential
 programming style makes it much easier to debug your code, since stack traces
 contain the entire history of execution from the app's inception.
+
+## Switchpoints and the Fiber-Switching Dance
+
+In order to make pausing and resuming fibers completely automatic and painfree,
+we need to know when an operation is going to block, and when it can be
+completed without blocking. Operations that might block execution are considered
+*switchpoints*. A switchpoint is a point in time at which control might switch
+from the currently running fiber to another fiber that is in a runnable state.
+Switchpoints may occur in any of the following cases:
+
+- On a call to any blocking operation, such as `#sleep`, `Fiber#await`,
+  `Thread#join` etc.
+- On fiber termination
+- On a call to `#suspend`
+- On a call to `#snooze`
+- On a call to `Thread#switch_fiber`
+
+At any switchpoint, the following takes place:
+
+- Check if any fiber is runnable, that is, ready to continue processing.
+- If no fiber is runnable, watch for events (see below) and wait for at least
+  one fiber to become runnable.
+- Pause the current fiber and switch to the first runnable fiber, which resumes
+  at the point it was last paused.
+
+The automatic switching between fibers is complemented by employing
+[libev](http://software.schmorp.de/pkg/libev.html), a multi-platform high
+performance event reactor that allows listening to I/O, timer and other events.
+At every switchpoint where no fibers are runnable, the libev evet loop is run
+until events occur, which in turn cause the relevant fibers to become runnable.
+
+Let's examine a simple example:
+
+```ruby
+require 'polyphony'
+
+spin do
+  puts "Going to sleep..."
+  sleep 1
+  puts "Woke up"
+end
+
+suspend
+puts "We're done"
+```
+
+The above program does nothing exceptional, it just sleeps for 1 second and
+prints a bunch of messages. But it is enough to demonstrate how concurrency
+works in Polyphony. Here's a flow chart of the transfer of control:
+
+<img src="https://github.com/digital-fabric/polyphony/raw/master/docs/assets/sleeping-fiber.png">
+
+Here's the actual sequence of execution (in pseudo-code)
+
+```ruby
+# (main fiber)
+sleeper = spin { ... } # The main fiber spins up a new fiber marked as runnable
+suspend # The main fiber suspends, waiting for all other work to finish
+  Thread.current.switch_fiber # Polyphony looks for other runnable fibers
+
+  # (sleeper fiber)
+  puts "Going to sleep..." # The sleeper fiber starts running
+  sleep 1 # The sleeper fiber goes to sleep
+    Gyro::Timer.new(1, 0).await # A timer event watcher is setup and yields
+      Thread.current.switch_fiber # Polyphony looks for other runnable fibers
+        Thread.current.backend.poll # With no work left, the event loop is ran
+          fiber.schedule # The timer event fires, scheduling the sleeper fiber
+  # <= The sleep method returns
+  puts "Woke up"
+  Thread.current.switch_fiber # With the fiber done, Polyphony looks for work
+
+# with no more work, control is returned to the main fiber
+# (main fiber)
+# <=
+# With no more work left, the main fiber is resumed and the suspend call returns
+puts "We're done"
+```
+
+What we have done in fact is we multiplexed two different contexts of execution
+(fibers) onto a single thread, each fiber continuing at its own pace and
+yielding control when waiting for something to happen. This context-switching
+dance, performed automatically by Polyphony behind the scenes, enables building
+highly-concurrent Ruby apps, with minimal impact on performance.
 
 ## Structured Concurrency
 
@@ -445,13 +560,3 @@ connection loops waiting for data to be read from the socket. Once the data
 arrives, it is fed to the HTTP parser. The HTTP parser will call the
 `on_headers_complete` callback, which simply adds a request to the requests
 queue. The code then continues to handle any requests still in the queue.
-
-## Future Directions
-
-Polyphony is a young project, and will still need a lot of development effort to
-reach version 1.0. Here are some of the exciting directions we're working on.
-
-- Support for more core and stdlib APIs
-- More adapters for gems with C-extensions, such as `mysql`, `sqlite3` etc
-- Use `io_uring` backend as alternative to the libev backend
-- More concurrency constructs for building highly concurrent applications

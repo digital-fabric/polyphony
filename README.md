@@ -77,6 +77,7 @@ $ gem install polyphony
 
 - [Overview](docs/overview.md)
 - [Tutorial](docs/tutorial.md)
+- [Cheat-Sheet](docs/cheat-sheet.md)
 - [FAQ](docs/faq.md)
 
 ## Technical Discussion

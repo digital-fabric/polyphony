@@ -66,29 +66,31 @@ Switchpoint will also occur when the currently running fiber has terminated.
 
 ## Scheduler-less scheduling
 
-Polyphony relies on [libev](http://software.schmorp.de/pkg/libev.html) for
-handling events such as I/O readiness, timers and signals. In most event
-reactor-based libraries and frameworks, such as `nio4r`, `EventMachine` or
-`node.js`, the entire application is run inside of a reactor loop, and event
-callbacks are used to schedule user-supplied code *from inside the loop*.
+Polyphony relies on [io_uring](https://man.archlinux.org/man/io_uring.7) or
+[libev](http://software.schmorp.de/pkg/libev.html) for handling I/O operations
+such as reading or writing to file descriptors, waiting for timers or processes.
+In most event reactor-based libraries and frameworks, such as `nio4r`,
+`EventMachine` or `node.js`, the entire application is run inside of a reactor
+loop, and event callbacks are used to schedule user-supplied code *from inside
+the loop*.
 
 In Polyphony, however, we have chosen a concurrency model that does not use a
 loop to schedule fibers. In fact, in Polyphony there's no outer reactor loop,
 and there's no *scheduler* per se running on a separate execution context.
 
 Instead, Polyphony maintains for each thread a run queue, a list of `:runnable`
-fibers. If no fiber is `:runnable`, Polyphony will run the libev event loop until
-at least one event has occurred. Events are handled by adding the corresponding
-fibers onto the run queue. Finally, control is transferred to the first fiber on
-the run queue, which will run until it blocks or terminates, at which point
-control is transferred to the next runnable fiber.
+fibers. If no fiber is `:runnable`, Polyphony will run the underlying event
+reactor (using io_uring or libev) until at least one event has occurred. Events
+are handled by adding the corresponding fibers onto the run queue. Finally,
+control is transferred to the first fiber on the run queue, which will run until
+it blocks or terminates, at which point control is transferred to the next
+runnable fiber.
 
 This approach has numerous benefits:
 
 - No separate reactor fiber that needs to be resumed on each blocking operation,
   leading to less context switches, and less bookkeeping.
-- Clear separation between the reactor code (the `libev` code) and the fiber
-  scheduling code.
+- Clear separation between the I/O backend code and the fiber scheduling code.
 - Much less time is spent in event loop callbacks, letting the event loop run
   more efficiently.
 - Fibers are switched outside of the event reactor code, making it easier to

@@ -37,9 +37,7 @@
 
 -----------------------------------------------------
 
-- Adapter for io/console (what does `IO#raw` do?)
-- Adapter for Pry and IRB (Which fixes #5 and #6)
-- allow backend selection at runtime
+- allow backend selection at runtime?
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some
     test fails
@@ -138,19 +136,9 @@
     }
     ```
 
-
-
-
-
-
-
 - Docs
-  - landing page:
-    - links to the interesting stuff
-      - benchmarks
   - explain difference between `sleep` and `suspend`
   - discuss using `snooze` for ensuring responsiveness when executing CPU-bound work
-
 
 ### Some more API work, more docs
 

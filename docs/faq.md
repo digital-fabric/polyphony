@@ -115,7 +115,7 @@ between them, which is much easier to achieve using `Fiber#transfer`. In
 addition, using `Fiber#transfer` allows us to perform blocking operations from
 the main fiber, which is not possible when using `Fiber#resume`.
 
-## Why does Polyphony reimplements core APIs such as `IO#read` and `Kernel#sleep`?
+## Why does Polyphony reimplement core APIs such as `IO#read` and `Kernel#sleep`?
 
 Polyphony "patches" some Ruby core and stdlib APIs, providing behavioraly
 compatible fiber-aware implementations. We believe Polyphony has the potential
@@ -123,20 +123,21 @@ to profoundly change the way concurrent Ruby apps are written. Polyphony is
 therefore designed to feel as much as possible like an integral part of the Ruby
 runtime.
 
-## Why is Polyphony not split into multiple gems?
+# Does Polyphony implement the FiberScheduler API?
 
-Polyphony is currently at an experimental stage, and its different APIs are
-still in flux. For that reason, all the different parts of Polyphony are
-currently kept in a single gem. Once things stabilize, and as Polyphony
-approaches version 1.0, it will be split into separate gems, each with its own
-functionality.
+`FiberScheduler` is an API that was added to Ruby 3.0. It's not an
+implementation, only an interface. There are several implementations of the
+`FiberScheduler` API, with varying levels of maturity. Polyphony has a very
+opinionated design that does not really parallel the `FiberScheduler` API. It
+might be possible, though, to develop a compatibility layer on top of Polyphony
+that implements the `FiberScheduler` API at some point in the future.
 
 ## Can I use Polyphony in a multithreaded program?
 
-Yes, as of version 0.27 Polyphony implements per-thread fiber-scheduling. It is
-however important to note that Polyphony places the emphasis on a multi-fiber
-concurrency model, which is highly beneficial for I/O-bound workloads, such as
-web servers and web apps.
+Yes. Polyphony fully supports multi-threaded programs, and implements per-thread
+fiber-scheduling. It is however important to note that Polyphony places the
+emphasis on a multi-fiber concurrency model, which is highly beneficial for
+I/O-bound workloads, such as web servers and web apps.
 
 Because of Ruby's [global interpreter
 lock](https://en.wikipedia.org/wiki/Global_interpreter_lock), multiple threads
@@ -144,25 +145,6 @@ can not in fact run in parallel, and this is actually one of the reasons fibers
 are such a better fit for I/O bound Ruby programs. Threads should really be used
 when performing synchronous operations that are not fiber-aware, such as running
 an expensive SQLite query, or some other expensive system call.
-
-## How Does Polyphony Fit Into the Ruby's Future Concurrency Plans
-
-To our understanding, two things are currently on the horizon when it comes to
-concurrency in Ruby: [auto-fibers](https://bugs.ruby-lang.org/issues/13618), and
-[guilds](https://olivierlacan.com/posts/concurrency-in-ruby-3-with-guilds/).
-While the auto-fibers proposal introduces an event reactor into Ruby and
-automates waiting for file descriptors to become ready, allowing scheduling
-other fibers meanwhile. It is still too early to see how Polyphony can coexist
-with that. Another proposal is the addition of a fiber-aware [event
-selector](https://bugs.ruby-lang.org/issues/14736). It is our intention to
-eventually contribute to the discussion in this area by proposing a uniform
-fiber scheduler interface that could be implemented in pure Ruby in order to
-support all platforms and multiple Ruby runtimes.
-
-The guilds proposal, on the other hand, promises to be a perfect match for
-Polyphony's fiber-based concurrency model. Guilds will allow true parallelism
-and together with Polyphony will allow taking full advantage of multiple CPU
-cores in a single Ruby process.
 
 ## Can I run Rails using Polyphony?
 
@@ -178,5 +160,6 @@ Feel free to create issues and contribute pull requests.
 ## Who is behind this project?
 
 I'm Sharon Rosner, an independent software developer living in France. Here's my
-[github profile](https://github.com/noteflakes). You can contact me by writing to
-[sharon@noteflakes.com](mailto:sharon@noteflakes.com).
+[github profile](https://github.com/noteflakes). You can sponsor my open source
+work [here](https://github.com/sponsors/noteflakes). You can contact me by
+writing to [sharon@noteflakes.com](mailto:sharon@noteflakes.com).
