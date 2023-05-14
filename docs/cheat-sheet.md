@@ -52,7 +52,15 @@ fiber.raise(SomeException)
 fiber.raise(SomeException, 'Exception message')
 ```
 
-## Control Fiber Execution
+### Restart a fiber
+
+```ruby
+fiber.restart
+# or:
+fiber.reset
+```
+
+## Control Fiber Scheduling
 
 ### Yield to other fibers during a lengthy CPU-bound operation
 
@@ -143,4 +151,98 @@ result = move_on_after(10) { do_something_slow }
 
 # Or, with a specific value:
 result = move_on_after(10, with_value: 'foo') { do_something_slow }
+```
+
+### Resettable timeout
+
+```ruby
+# works with move_on_after as well
+cancel_after(10) do |timeout|
+  while (data = client.gets)
+    timeout&.reset
+    do_something_with_data(client)
+  end
+end
+```
+
+## Advanced I/O
+
+### Splice data between two file descriptors
+
+```ruby
+# At least one file descriptor should be a pipe
+dest.splice_from(source, 8192) #=> returns number of bytes spliced
+# or:
+IO.splice(src, dest, 8192)
+```
+
+### Splice data to EOF
+
+```ruby
+dest.splice_from(source, -8192) #=> returns number of bytes spliced
+# or:
+IO.splice(src, dest, -8192)
+```
+
+### Tee data between two file descriptors (allowing splicing data twice)
+
+```ruby
+dest2.tee_from(source, 8192)
+dest1.splice_from(source, 8192)
+# or:
+IO.tee(src, dest2)
+IO.splice(src, dest2)
+```
+
+### Splice data between two arbitrary file descriptors, without creating a pipe
+
+```ruby
+# This will automatically create a pipe, and splice data from source to
+# destination until EOF is encountered.
+IO.double_splice(src, dest)
+```
+
+### Create a pipe
+
+A `Polyphony::Pipe` instance encapsulates a pipe with two file descriptors. It
+can be used just like any other IO instance for reading, writing, splicing etc.
+
+```ruby
+pipe = Polyphony::Pipe.new
+# or:
+pipe = Polyphony.pipe
+```
+
+### Compress/uncompress data between two IOs
+
+```ruby
+IO.gzip(src, dest)
+IO.gunzip(src, dest)
+IO.deflate(src, dest)
+IO.inflate(src, dest)
+```
+
+### Accept connections in a loop
+
+```ruby
+server_socket.accept_loop do |conn|
+  handle_connection(conn)
+end
+```
+
+### Read data in a loop until EOF
+
+```ruby
+connection.read_loop do |data|
+  handle_data(data)
+end
+```
+
+### Read data in a loop and feed it to a parser
+
+```ruby
+unpacker = MessagePack::Unpacker.new
+reader = spin do
+  io.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
+end
 ```

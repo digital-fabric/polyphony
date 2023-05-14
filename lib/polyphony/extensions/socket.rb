@@ -124,10 +124,7 @@ class ::Socket < ::BasicSocket
   # unpacker:
   #
   #   unpacker = MessagePack::Unpacker.new
-  #   buffer = []
-  #   reader = spin do
-  #     i.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
-  #   end
+  #   conn.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
@@ -391,10 +388,7 @@ class ::TCPSocket < ::IPSocket
   # unpacker:
   #
   #   unpacker = MessagePack::Unpacker.new
-  #   buffer = []
-  #   reader = spin do
-  #     i.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
-  #   end
+  #   conn.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call
@@ -603,10 +597,7 @@ class ::UNIXSocket < ::BasicSocket
   # unpacker:
   #
   #   unpacker = MessagePack::Unpacker.new
-  #   buffer = []
-  #   reader = spin do
-  #     i.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
-  #   end
+  #   conn.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
   #
   # @param receiver [any] receiver object
   # @param method [Symbol] method to call

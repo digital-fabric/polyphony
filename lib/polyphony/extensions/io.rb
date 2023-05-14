@@ -381,10 +381,7 @@ end
 # unpacker:
 #
 #   unpacker = MessagePack::Unpacker.new
-#   buffer = []
-#   reader = spin do
-#     io.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
-#   end
+#   io.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
 #
 # @param receiver [any] receiver object
 # @param method [Symbol] method to call
