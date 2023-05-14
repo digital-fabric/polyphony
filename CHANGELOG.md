@@ -1,3 +1,9 @@
+## 1.0.1 2023-05-14
+
+- Add cheat-sheet
+- Improve and bring up to date doc files: overview, tutorial, FAQ
+- Fix image refs in docs (#99) (thanks @paulhenrich)
+
 ## 1.0 2023-05-11
 
 - More work on docs.
@@ -288,7 +294,8 @@
 
 ## 0.53.0 2021-04-23
 
-- Implement `Backend#splice`, `Backend#splice_to_eof`, along with `IO#splice`, `IO#splice_to_eof`
+- Implement `Backend#splice`, `Backend#splice_to_eof`, along with `IO#splice`,
+  `IO#splice_to_eof`
 
 ## 0.52.0 2021-02-28
 
@@ -530,7 +537,8 @@
 
 ## 0.38 2020-04-13
 
-- Fix post-fork segfault if parent process has multiple threads with active watchers
+- Fix post-fork segfault if parent process has multiple threads with active
+  watchers
 
 ## 0.37 2020-04-07
 
@@ -764,7 +772,8 @@
 ## 0.14 2019-05-17
 
 - Use chunked encoding in HTTP 1 response
-- Rewrite `IO#read`, `#readpartial`, `#write` in C (about 30% performance improvement)
+- Rewrite `IO#read`, `#readpartial`, `#write` in C (about 30% performance
+  improvement)
 - Add method delegation to `ResourcePool`
 - Optimize PG::Connection#async_exec
 - Fix `Coprocess#cancel!`
