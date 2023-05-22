@@ -29,4 +29,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'msgpack',              '1.6.0'
   s.add_development_dependency  'httparty',             '0.21.0'
   s.add_development_dependency  'localhost',            '1.1.10'
+  s.add_development_dependency  'debug',                '1.8.0'
+  s.add_development_dependency  'benchmark-ips',        '2.10.0'
 end
