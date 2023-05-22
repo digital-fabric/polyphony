@@ -1,3 +1,7 @@
+- issue #102 - test and see what this is about
+- Look at RPC benchmark more closely: is there a way to reduce the overhead of
+  the `backend_base_switch_fiber` function?
+
 - io_uring backend:
   - if `io_uring_get_sqe` returns null, call `io_uring_submit`, (snooze fiber)?
     and try again
