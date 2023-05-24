@@ -69,24 +69,24 @@ class ::Socket < ::BasicSocket
   # If no bytes are available and `EOF` is not hit, this method will block until
   # the socket is ready to read from.
   #
-  # @param maxlen [Integer, nil] maximum bytes to read from socket
+  # @param len [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
   # @param buf_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(maxlen = nil, buf = nil, buf_pos = 0)
-    return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
-    return Polyphony.backend_recv(self, +'', maxlen, 0) if maxlen
-
-    buf = +''
-    len = buf.bytesize
-    while true
-      Polyphony.backend_recv(self, buf, maxlen || 4096, -1)
-      new_len = buf.bytesize
-      break if new_len == len
-
-      len = new_len
+  def read(len = nil, buf = nil, buf_pos = 0)
+    return '' if len == 0
+    
+    if buf
+      return Polyphony.backend_read(self, buf, len, true, buf_pos)
     end
-    buf
+    
+    @read_buffer ||= +''
+    result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
+    return nil unless result
+    
+    already_read = @read_buffer
+    @read_buffer = +''
+    already_read
   end
 
   # Receives up to `maxlen` bytes from the socket. If `outbuf` is given, it is
@@ -333,24 +333,24 @@ class ::TCPSocket < ::IPSocket
   # If no bytes are available and `EOF` is not hit, this method will block until
   # the socket is ready to read from.
   #
-  # @param maxlen [Integer, nil] maximum bytes to read from socket
+  # @param len [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
   # @param buf_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(maxlen = nil, buf = nil, buf_pos = 0)
-    return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
-    return Polyphony.backend_recv(self, +'', maxlen, 0) if maxlen
-
-    buf = +''
-    len = buf.bytesize
-    while true
-      Polyphony.backend_recv(self, buf, maxlen || 4096, -1)
-      new_len = buf.bytesize
-      break if new_len == len
-
-      len = new_len
+  def read(len = nil, buf = nil, buf_pos = 0)
+    return '' if len == 0
+    
+    if buf
+      return Polyphony.backend_read(self, buf, len, true, buf_pos)
     end
-    buf
+    
+    @read_buffer ||= +''
+    result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
+    return nil unless result
+    
+    already_read = @read_buffer
+    @read_buffer = +''
+    already_read
   end
 
   # Receives up to `maxlen` bytes from the socket. If `outbuf` is given, it is
@@ -542,24 +542,24 @@ class ::UNIXSocket < ::BasicSocket
   # If no bytes are available and `EOF` is not hit, this method will block until
   # the socket is ready to read from.
   #
-  # @param maxlen [Integer, nil] maximum bytes to read from socket
+  # @param len [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
   # @param buf_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(maxlen = nil, buf = nil, buf_pos = 0)
-    return Polyphony.backend_recv(self, buf, maxlen, buf_pos) if buf
-    return Polyphony.backend_recv(self, +'', maxlen, 0) if maxlen
-
-    buf = +''
-    len = buf.bytesize
-    while true
-      Polyphony.backend_recv(self, buf, maxlen || 4096, -1)
-      new_len = buf.bytesize
-      break if new_len == len
-
-      len = new_len
+  def read(len = nil, buf = nil, buf_pos = 0)
+    return '' if len == 0
+    
+    if buf
+      return Polyphony.backend_read(self, buf, len, true, buf_pos)
     end
-    buf
+    
+    @read_buffer ||= +''
+    result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
+    return nil unless result
+    
+    already_read = @read_buffer
+    @read_buffer = +''
+    already_read
   end
 
   # Receives up to `maxlen` bytes from the socket. If `outbuf` is given, it is

@@ -75,7 +75,7 @@ class TCPSocketTest < MiniTest::Test
     server_fiber = spin do
       while (socket = server.accept)
         spin do
-          while (data = socket.read(8192))
+          while (data = socket.readpartial(8192))
             socket << data
           end
         end
