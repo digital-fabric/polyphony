@@ -89,6 +89,7 @@ class ::Fiber
     self
   end
   alias_method :stop, :interrupt
+  alias_method :kill, :interrupt
   alias_method :move_on, :interrupt
 
   # Restarts the fiber, with the given value serving as the first value passed
