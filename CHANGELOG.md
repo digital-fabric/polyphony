@@ -1,3 +1,7 @@
+## 1.0.2 2023-05-28
+
+- Remove liburing man files from gemspec (#103)
+
 ## 1.0.1 2023-05-14
 
 - Add cheat-sheet
