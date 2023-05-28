@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.summary     = 'Fine grained concurrency for Ruby'
   s.author      = 'Sharon Rosner'
   s.email       = 'sharon@noteflakes.com'
-  s.files       = `git ls-files --recurse-submodules`.split
+  s.files       = `git ls-files --recurse-submodules`.split.reject { |fn| fn =~ /liburing\/man/ }
   s.homepage    = 'https://digital-fabric.github.io/polyphony'
   s.metadata    = {
     "source_code_uri" => "https://github.com/digital-fabric/polyphony",
