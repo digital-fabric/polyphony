@@ -7,7 +7,7 @@ class ::IO
   class << self
     # @!visibility private
     alias_method :orig_binread, :binread
-    
+
     # @!visibility private
     def binread(name, length = nil, offset = nil)
       File.open(name, 'rb:ASCII-8BIT') do |f|
@@ -15,10 +15,10 @@ class ::IO
         length ? f.read(length) : f.read
       end
     end
-    
+
     # @!visibility private
     alias_method :orig_binwrite, :binwrite
-    
+
     # @!visibility private
     def binwrite(name, string, offset = nil)
       File.open(name, 'wb:ASCII-8BIT') do |f|
@@ -26,13 +26,13 @@ class ::IO
         f.write(string)
       end
     end
-    
+
     # @!visibility private
     EMPTY_HASH = {}.freeze
-    
+
     # @!visibility private
     alias_method :orig_foreach, :foreach
-    
+
     # @!visibility private
     def foreach(name, sep = $/, limit = nil, getline_args = EMPTY_HASH, &block)
       if sep.is_a?(Integer)
@@ -43,10 +43,10 @@ class ::IO
         f.each_line(sep, limit, chomp: getline_args[:chomp], &block)
       end
     end
-    
+
     # @!visibility private
     alias_method :orig_read, :read
-    
+
     # @!visibility private
     def read(name, length = nil, offset = nil, opt = EMPTY_HASH)
       if length.is_a?(Hash)
@@ -58,17 +58,17 @@ class ::IO
         length ? f.read(length) : f.read
       end
     end
-    
+
     # alias_method :orig_readlines, :readlines
     # def readlines(name, sep = $/, limit = nil, getline_args = EMPTY_HASH)
     #   File.open(name, 'r') do |f|
     #     f.readlines(sep, limit, getline_args)
     #   end
     # end
-    
+
     # @!visibility private
     alias_method :orig_write, :write
-    
+
     # @!visibility private
     def write(name, string, offset = nil, opt = EMPTY_HASH)
       File.open(name, opt[:mode] || 'w') do |f|
@@ -76,18 +76,18 @@ class ::IO
         f.write(string)
       end
     end
-    
+
     # @!visibility private
     alias_method :orig_popen, :popen
-    
-    
+
+
     # @!visibility private
     def popen(cmd, mode = 'r')
       return orig_popen(cmd, mode) unless block_given?
-      
+
       Open3.popen2(cmd) { |_i, o, _t| yield o }
     end
-    
+
     # Splices from one IO to another IO. At least one of the IOs must be a pipe.
     # If maxlen is negative, splices repeatedly using absolute value of maxlen
     # until EOF is encountered.
@@ -99,7 +99,7 @@ class ::IO
     def splice(src, dest, maxlen)
       Polyphony.backend_splice(src, dest, maxlen)
     end
-    
+
     # Creates a pipe and splices data between the two given IOs using the
     # pipe, splicing until EOF.
     #
@@ -109,7 +109,7 @@ class ::IO
     def double_splice(src, dest)
       Polyphony.backend_double_splice(src, dest)
     end
-    
+
     # Tees data from the source to the desination.
     #
     # @param src [IO, Polyphony::Pipe] source to tee from
@@ -125,7 +125,7 @@ class ::IO
       def double_splice(src, dest)
         raise NotImplementedError
       end
-      
+
       # @!visibility private
       def tee(src, dest, maxlen)
         raise NotImplementedError
@@ -140,51 +140,51 @@ class ::IO
   def __read_method__
     :backend_read
   end
-  
+
   # @!visibility private
   def __write_method__
     :backend_write
   end
-  
+
   # def each(sep = $/, limit = nil, chomp: nil)
   #   sep, limit = $/, sep if sep.is_a?(Integer)
   # end
   # alias_method :each_line, :each
-  
+
   # def each_byte
   # end
-  
+
   # def each_char
   # end
-  
+
   # def each_codepoint
   # end
-  
+
   # @!visibility private
   alias_method :orig_getbyte, :getbyte
-  
-  
+
+
   # @!visibility private
   def getbyte
     char = getc
-    char ? char.getbyte(0) : nil
+    char&.getbyte(0)
   end
-  
+
   # @!visibility private
   alias_method :orig_getc, :getc
-  
-  
+
+
   # @!visibility private
   def getc
     return @read_buffer.slice!(0) if @read_buffer && !@read_buffer.empty?
-    
+
     @read_buffer ||= +''
     Polyphony.backend_read(self, @read_buffer, 8192, false, -1)
     return @read_buffer.slice!(0) if !@read_buffer.empty?
-    
+
     nil
   end
-  
+
   # @!visibility private
   def ungetc(c)
     c = c.chr if c.is_a?(Integer)
@@ -195,59 +195,59 @@ class ::IO
     end
   end
   alias_method :ungetbyte, :ungetc
-  
+
   # @!visibility private
   alias_method :orig_read, :read
-  
-  
+
+
   # @!visibility private
   def read(len = nil, buf = nil, buf_pos = 0)
     return '' if len == 0
-    
+
     if buf
       return Polyphony.backend_read(self, buf, len, true, buf_pos)
     end
-    
+
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
     return nil unless result
-    
+
     already_read = @read_buffer
     @read_buffer = +''
     already_read
   end
-  
+
   # @!visibility private
   alias_method :orig_readpartial, :read
-  
+
   # @!visibility private
   def readpartial(len, str = +'', buffer_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_read(self, str, len, false, buffer_pos)
     raise EOFError if !result && raise_on_eof
-    
+
     result
   end
-  
+
   # @!visibility private
   alias_method :orig_write, :write
-  
+
   # @!visibility private
   def write(str, *args)
     Polyphony.backend_write(self, str, *args)
   end
-  
+
   # @!visibility private
   alias_method :orig_write_chevron, :<<
-  
+
   # @!visibility private
   def <<(str)
     Polyphony.backend_write(self, str)
     self
   end
-  
+
   # @!visibility private
   alias_method :orig_gets, :gets
-  
+
   # @!visibility private
   def gets(sep = $/, _limit = nil, _chomp: nil)
     if sep.is_a?(Integer)
@@ -255,20 +255,20 @@ class ::IO
       _limit = sep
     end
     sep_size = sep.bytesize
-    
+
     @read_buffer ||= +''
-    
+
     while true
       idx = @read_buffer.index(sep)
       return @read_buffer.slice!(0, idx + sep_size) if idx
-      
+
       result = readpartial(8192, @read_buffer, -1)
       return nil unless result
     end
   rescue EOFError
     return nil
   end
-  
+
   # @!visibility private
   def each_line(sep = $/, limit = nil, chomp: false)
     if sep.is_a?(Integer)
@@ -276,48 +276,48 @@ class ::IO
       sep = $/
     end
     sep_size = sep.bytesize
-    
-    
+
+
     @read_buffer ||= +''
-    
+
     while true
       while (idx = @read_buffer.index(sep))
         line = @read_buffer.slice!(0, idx + sep_size)
         line = line.chomp if chomp
         yield line
       end
-      
+
       result = readpartial(8192, @read_buffer, -1)
       return self if !result
     end
   rescue EOFError
     return self
   end
-  
+
   # def print(*args)
   # end
-  
+
   # def printf(format, *args)
   # end
-  
+
   # def putc(obj)
   # end
-  
+
   # @!visibility private
   LINEFEED = "\n"
   # @!visibility private
   LINEFEED_RE = /\n$/.freeze
-  
+
   # @!visibility private
   alias_method :orig_puts, :puts
-  
+
   # @!visibility private
   def puts(*args)
     if args.empty?
       write LINEFEED
       return
     end
-    
+
     idx = 0
     while idx < args.size
       arg = args[idx]
@@ -329,26 +329,26 @@ class ::IO
         idx += 2
       end
     end
-    
+
     write(*args)
     nil
   end
-  
+
   # def readbyte
   # end
-  
+
   # def readchar
   # end
-  
+
   # def readline(sep = $/, limit = nil, chomp: nil)
   # end
-  
+
   # def readlines(sep = $/, limit = nil, chomp: nil)
   # end
-  
+
   # @!visibility private
   alias_method :orig_write_nonblock, :write_nonblock
-  
+
   # @!visibility private
   def write_nonblock(string, _options = {})
   write(string)
@@ -396,7 +396,7 @@ end
 # @return [IO] self
 def wait_readable(timeout = nil)
   return self if @read_buffer && @read_buffer.size > 0
-  
+
   if timeout
     move_on_after(timeout) do
       Polyphony.backend_wait_io(self, false)

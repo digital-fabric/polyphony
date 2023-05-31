@@ -25,7 +25,9 @@ class ThreadPoolTest < MiniTest::Test
     threads = []
     results = []
 
-    20.times do |i|
+    count = 40
+
+    count.times do |i|
       spin do
         results << @pool.process do
           threads << Thread.current
@@ -38,7 +40,7 @@ class ThreadPoolTest < MiniTest::Test
     suspend
 
     assert_equal @pool.size, threads.uniq.size
-    assert_equal (0..19).map { |i| i * 10}, results.sort
+    assert_equal (0..(count - 1)).map { |i| i * 10}, results.sort
   end
 
   def test_process_with_exception
