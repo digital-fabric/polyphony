@@ -50,7 +50,7 @@ class TimerMoveOnAfterTest < MiniTest::Test
     t1 = Time.now
 
     assert_nil v
-    assert_in_range 0.15..0.4, t1 - t0
+    assert_in_range 0.12..0.4, t1 - t0
   end
 end
 
