@@ -94,11 +94,11 @@ def bm_fiber_raw
   $server_raw.transfer 3
 end
 
-p bm_raw
-p bm_send
-p bm_fiber
-p bm_fiber_optimized
-p bm_fiber_single
+# p bm_raw
+# p bm_send
+# p bm_fiber
+# p bm_fiber_optimized
+# p bm_fiber_single
 p bm_fiber_raw
 p bm_fiber_schedule
 
@@ -116,17 +116,17 @@ end
 
 puts "warming up JIT..."
 
-3.times do
-  warmup_jit
-  sleep 1
-end
+# 3.times do
+#   warmup_jit
+#   sleep 1
+# end
 
 Benchmark.ips do |x|
-  x.report("raw") { bm_raw }
-  x.report("send") { bm_send }
-  x.report("fiber") { bm_fiber }
-  x.report("fiber_optimized") { bm_fiber_optimized }
-  x.report("fiber_single") { bm_fiber_single }
+  # x.report("raw") { bm_raw }
+  # x.report("send") { bm_send }
+  # x.report("fiber") { bm_fiber }
+  # x.report("fiber_optimized") { bm_fiber_optimized }
+  # x.report("fiber_single") { bm_fiber_single }
   x.report("fiber_raw") { bm_fiber_raw }
   x.report("fiber_schedule") { bm_fiber_schedule }
   x.compare!

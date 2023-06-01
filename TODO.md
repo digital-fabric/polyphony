@@ -1,4 +1,3 @@
-- issue #102 - test and see what this is about
 - Look at RPC benchmark more closely: is there a way to reduce the overhead of
   the `backend_base_switch_fiber` function?
 

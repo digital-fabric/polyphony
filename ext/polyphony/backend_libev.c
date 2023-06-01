@@ -277,10 +277,10 @@ static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int recti
     if (underlying_io != Qnil) io = underlying_io;
 
     GetOpenFile(io, *fptr);
-    io_verify_blocking_mode(*fptr, io, Qfalse);
+    int fd = rb_io_descriptor(io);
+    io_verify_blocking_mode(io, fd, Qfalse);
     if (rectify_file_pos) rectify_io_file_pos(*fptr);
-
-    return (*fptr)->fd;
+    return rb_io_descriptor(io);
   }
 }
 
@@ -681,7 +681,7 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
       fp->fd = fd;
       fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
       rb_io_ascii8bit_binmode(socket);
-      io_verify_blocking_mode(fp, socket, Qfalse);
+      io_verify_blocking_mode(socket, fd, Qfalse);
       rb_io_synchronized(fp);
 
       // if (rsock_do_not_reverse_lookup) {
@@ -736,7 +736,7 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
       fp->fd = fd;
       fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
       rb_io_ascii8bit_binmode(socket);
-      io_verify_blocking_mode(fp, socket, Qfalse);
+      io_verify_blocking_mode(socket, fd, Qfalse);
       rb_io_synchronized(fp);
 
       rb_yield(socket);

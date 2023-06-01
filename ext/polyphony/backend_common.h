@@ -10,6 +10,15 @@
 #include "ruby/io.h"
 #include "runqueue.h"
 
+#ifndef HAVE_RB_IO_DESCRIPTOR
+static int rb_io_descriptor_fallback(VALUE io) {
+  rb_io_t *fptr;
+  GetOpenFile(io, fptr);
+  return fptr->fd;
+}
+#define rb_io_descriptor rb_io_descriptor_fallback
+#endif
+
 struct backend_stats {
   unsigned int runqueue_size;
   unsigned int runqueue_length;
@@ -145,7 +154,7 @@ VALUE Backend_stats(VALUE self);
 VALUE Backend_verify_blocking_mode(VALUE self, VALUE io, VALUE blocking);
 void backend_run_idle_tasks(struct Backend_base *base);
 void set_fd_blocking_mode(int fd, int blocking);
-void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking);
+void io_verify_blocking_mode(VALUE io, int fd, VALUE blocking);
 void backend_setup_stats_symbols();
 int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr);
 VALUE name_to_addrinfo(void *name, socklen_t len);

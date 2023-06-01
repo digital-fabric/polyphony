@@ -71,7 +71,7 @@ def calculate_some_stuff(n)
     acc += big_calc(acc, i)
     snooze if (i % 1000) == 0
   end
-end 
+end
 ```
 
 ### Suspend fiber

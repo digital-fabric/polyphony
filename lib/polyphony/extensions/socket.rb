@@ -75,15 +75,15 @@ class ::Socket < ::BasicSocket
   # @return [String] buffer used for reading
   def read(len = nil, buf = nil, buf_pos = 0)
     return '' if len == 0
-    
+
     if buf
       return Polyphony.backend_read(self, buf, len, true, buf_pos)
     end
-    
+
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
     return nil unless result
-    
+
     already_read = @read_buffer
     @read_buffer = +''
     already_read
@@ -339,15 +339,15 @@ class ::TCPSocket < ::IPSocket
   # @return [String] buffer used for reading
   def read(len = nil, buf = nil, buf_pos = 0)
     return '' if len == 0
-    
+
     if buf
       return Polyphony.backend_read(self, buf, len, true, buf_pos)
     end
-    
+
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
     return nil unless result
-    
+
     already_read = @read_buffer
     @read_buffer = +''
     already_read
@@ -548,15 +548,15 @@ class ::UNIXSocket < ::BasicSocket
   # @return [String] buffer used for reading
   def read(len = nil, buf = nil, buf_pos = 0)
     return '' if len == 0
-    
+
     if buf
       return Polyphony.backend_read(self, buf, len, true, buf_pos)
     end
-    
+
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
     return nil unless result
-    
+
     already_read = @read_buffer
     @read_buffer = +''
     already_read
