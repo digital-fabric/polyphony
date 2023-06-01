@@ -280,7 +280,7 @@ static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int recti
     int fd = rb_io_descriptor(io);
     io_verify_blocking_mode(io, fd, Qfalse);
     if (rectify_file_pos) rectify_io_file_pos(*fptr);
-    return rb_io_descriptor(io);
+    return fd;
   }
 }
 
