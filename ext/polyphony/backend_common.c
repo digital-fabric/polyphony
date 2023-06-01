@@ -389,12 +389,12 @@ inline void set_fd_blocking_mode(int fd, int blocking) {
 #endif
 }
 
-inline void io_verify_blocking_mode(rb_io_t *fptr, VALUE io, VALUE blocking) {
+inline void io_verify_blocking_mode(VALUE io, int fd, VALUE blocking) {
   VALUE blocking_mode = rb_ivar_get(io, ID_ivar_blocking_mode);
   if (blocking == blocking_mode) return;
 
   rb_ivar_set(io, ID_ivar_blocking_mode, blocking);
-  set_fd_blocking_mode(fptr->fd, blocking == Qtrue);
+  set_fd_blocking_mode(fd, blocking == Qtrue);
 }
 
 inline void backend_run_idle_tasks(struct Backend_base *base) {
@@ -455,9 +455,7 @@ VALUE Backend_stats(VALUE self) {
 }
 
 VALUE Backend_verify_blocking_mode(VALUE self, VALUE io, VALUE blocking) {
-  rb_io_t *fptr;
-  GetOpenFile(io, fptr);
-  io_verify_blocking_mode(fptr, io, blocking);
+  io_verify_blocking_mode(io, rb_io_descriptor(io), blocking);
   return self;
 }
 

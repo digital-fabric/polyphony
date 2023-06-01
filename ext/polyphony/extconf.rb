@@ -98,4 +98,10 @@ end
 
 have_header('ruby/io/buffer.h')
 
+have_func('rb_io_path')
+have_func('rb_io_descriptor')
+have_func('rb_io_get_write_io')
+have_func('rb_io_closed_p')
+have_func('rb_io_open_descriptor')
+
 create_makefile 'polyphony_ext'
