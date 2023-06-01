@@ -28,9 +28,9 @@ VALUE SYM_write;
 VALUE eArgumentError;
 
 #ifdef POLYPHONY_UNSET_NONBLOCK
-#define io_unset_nonblock(fptr, io) io_verify_blocking_mode(fptr, io, Qtrue)
+#define io_unset_nonblock(io, fd) io_verify_blocking_mode(io, fd, Qtrue)
 #else
-#define io_unset_nonblock(fptr, io)
+#define io_unset_nonblock(io, fd)
 #endif
 
 typedef struct Backend_t {
@@ -389,10 +389,10 @@ static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int recti
     if (underlying_io != Qnil) io = underlying_io;
 
     GetOpenFile(io, *fptr);
-    io_unset_nonblock(*fptr, io);
+    int fd = rb_io_descriptor(io);
+    io_unset_nonblock(io, fd);
     if (rectify_file_pos) rectify_io_file_pos(*fptr);
-
-    return (*fptr)->fd;
+    return fd;
   }
 }
 
@@ -1376,7 +1376,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 
 //   if (fd < 0) return Qnil;
 
-//   io_unset_nonblock(fptr, io);
+//   io_unset_nonblock(io, fd);
 
 //   ctx = context_store_acquire(&backend->store, OP_CLOSE);
 //   sqe = io_uring_backend_get_sqe(backend);
