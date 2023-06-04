@@ -22,7 +22,6 @@
 
 - More tight loops
   - `IO#gets_loop`, `Socket#gets_loop`, `OpenSSL::Socket#gets_loop` (medium effort)
-  - `Fiber#receive_loop` (very little effort, should be implemented in C)
 
 - Add support for `close` to io_uring backend
 

@@ -1,3 +1,4 @@
+#include <stdnoreturn.h>
 #include "polyphony.h"
 
 ID ID_ivar_auto_watcher;
@@ -129,7 +130,7 @@ VALUE Fiber_send(VALUE self, VALUE msg) {
   return self;
 }
 
-/* Receive's a message from the fiber's mailbox. If no message is available,
+/* Receives a message from the fiber's mailbox. If no message is available,
  * waits for a message to be sent to it.
  *
  * @return [any] received message
@@ -142,6 +143,24 @@ VALUE Fiber_receive(VALUE self) {
     rb_ivar_set(self, ID_ivar_mailbox, mailbox);
   }
   return Queue_shift(0, 0, mailbox);
+}
+
+/* Receives messages from the fiber's mailbox in an infinite loop.
+ *
+ */
+
+noreturn VALUE Fiber_receive_loop(VALUE self) {
+  VALUE mailbox = rb_ivar_get(self, ID_ivar_mailbox);
+  if (mailbox == Qnil) {
+    mailbox = rb_funcall(cQueue, ID_new, 0);
+    rb_ivar_set(self, ID_ivar_mailbox, mailbox);
+  }
+
+  while (1) {
+    VALUE msg = Queue_shift(0, 0,mailbox);
+    rb_yield(msg);
+    RB_GC_GUARD(msg);
+  }
 }
 
 /* Returns the fiber's mailbox.
@@ -201,6 +220,7 @@ void Init_Fiber(void) {
   rb_define_method(cFiber, "<<", Fiber_send, 1);
   rb_define_method(cFiber, "send", Fiber_send, 1);
   rb_define_method(cFiber, "receive", Fiber_receive, 0);
+  rb_define_method(cFiber, "receive_loop", Fiber_receive_loop, 0);
   rb_define_method(cFiber, "receive_all_pending", Fiber_receive_all_pending, 0);
   rb_define_method(cFiber, "mailbox", Fiber_mailbox, 0);
 

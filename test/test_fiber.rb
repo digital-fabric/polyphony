@@ -975,6 +975,28 @@ class MailboxTest < MiniTest::Test
     assert_equal ['foo'] * 100, messages
   end
 
+  def test_receive_loop
+    buffer = []
+    f = spin do
+      receive_loop { |msg| buffer << msg }
+    ensure
+      buffer << :done
+    end
+
+    snooze
+    f << :foo
+    snooze
+    assert_equal [:foo], buffer
+    
+    f << :bar
+    snooze
+    assert_equal [:foo, :bar], buffer
+
+    f.kill
+    f.join
+    assert_equal [:foo, :bar, :done], buffer
+  end
+
   def test_receive_exception
     e = RuntimeError.new 'foo'
     spin { Fiber.current.parent << e }

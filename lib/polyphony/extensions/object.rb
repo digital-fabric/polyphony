@@ -171,6 +171,12 @@ class ::Object
     Fiber.current.receive
   end
 
+  # Receives messages in an infinite loop from the current fiber's mailbox,
+  # passing them to the given block.
+  def receive_loop(&block)
+    Fiber.current.receive_loop(&block)
+  end
+
   # Returns all messages currently pending on the current fiber's mailbox.
   #
   # @return [Array] array of received messages
