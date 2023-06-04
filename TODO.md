@@ -14,8 +14,6 @@
 - Add support for IPv6:
   https://www.reddit.com/r/ruby/comments/lyen23/understanding_ipv6_and_why_its_important_to_you/
 
-- Check why `throttled_loop` inside of `move_on_after` fails to stop
-
 - Override stock `::SizedQueue` impl with Queue with capacity
 
 - Add support for `break` and `StopIteration` in all loops (with tests)
