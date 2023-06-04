@@ -3,7 +3,7 @@
 count = ARGV[0] ? ARGV[0].to_i : 100
 test_name = ARGV[1]
 
-$test_cmd = +'ruby test/run.rb'
+$test_cmd = +'ruby test/test_scenarios.rb'
 if test_name
   $test_cmd << " --name #{test_name}"
 end

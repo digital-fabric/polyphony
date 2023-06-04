@@ -28,11 +28,6 @@
 
 ## Roadmap for Polyphony 1.0
 
-- Add test that mimics the original design for Monocrono:
-  - 256 fibers each waiting for a message
-  - When message received do some blocking work using a `ThreadPool`
-  - Send messages, collect responses, check for correctness
-
 - io_uring
   - Use playground.c to find out why we when submitting and waiting for
     completion in single syscall signals seem to be blocked until the syscall
@@ -116,7 +111,7 @@
 
 - Allow locking the scheduler on to one fiber
   - Add instance var `@fiber_lock`
-  - API is `Thread#fiber_lock` which sets the fiber_lock instance varwhile
+  - API is `Thread#fiber_lock` which sets the fiber_lock instance var while
     running the block:
 
     ```ruby
@@ -126,6 +121,7 @@
       end
     end
     ```
+
   - When `@fiber_lock` is set, it is considered as the only one in the run
     queue:
 

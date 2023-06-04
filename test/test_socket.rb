@@ -477,5 +477,4 @@ class MultishotAcceptTest < MiniTest::Test
     server_fiber.await
     assert_kind_of Errno::EBADF, error
   end
-
 end
