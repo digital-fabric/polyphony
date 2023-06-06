@@ -16,14 +16,12 @@
 
 - Override stock `::SizedQueue` impl with Queue with capacity
 
-- Add support for `break` and `StopIteration` in all loops (with tests)
-
 - More tight loops
   - `IO#gets_loop`, `Socket#gets_loop`, `OpenSSL::Socket#gets_loop` (medium effort)
 
 - Add support for `close` to io_uring backend
 
-## Roadmap for Polyphony 1.0
+## Roadmap for Polyphony 1.1
 
 - io_uring
   - Use playground.c to find out why we when submitting and waiting for

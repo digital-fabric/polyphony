@@ -672,6 +672,27 @@ class IOClassMethodsTest < MiniTest::Test
     assert_equal [:ready, 'foo', 'bar', :done], buf
   end
 
+  def test_read_loop_break
+    i, o = IO.pipe
+
+    buf = []
+    f = spin do
+      buf << :ready
+      i.read_loop do |d|
+        buf << d
+        break if d == 'bar'
+      end
+      buf << :done
+    end
+
+    # writing always causes snoozing
+    o << 'foo'
+    3.times { snooze }
+    o << 'bar'
+    f.await
+    assert_equal [:ready, 'foo', 'bar', :done], buf
+  end
+
   def test_read_loop_with_max_len
     r, w = IO.pipe
 
