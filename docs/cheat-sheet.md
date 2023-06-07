@@ -191,7 +191,7 @@ dest2.tee_from(source, 8192)
 dest1.splice_from(source, 8192)
 # or:
 IO.tee(src, dest2)
-IO.splice(src, dest2)
+IO.splice(src, dest1)
 ```
 
 ### Splice data between two arbitrary file descriptors, without creating a pipe
