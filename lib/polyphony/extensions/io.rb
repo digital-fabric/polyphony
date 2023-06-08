@@ -100,8 +100,8 @@ class ::IO
       Polyphony.backend_splice(src, dest, maxlen)
     end
 
-    # Creates a pipe and splices data between the two given IOs using the
-    # pipe, splicing until EOF.
+    # Creates a pipe and splices data between the two given IOs, using the pipe,
+    # splicing until EOF.
     #
     # @param src [IO, Polyphony::Pipe] source to splice from
     # @param dest [IO, Polyphony::Pipe] destination to splice to

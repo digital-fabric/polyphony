@@ -321,10 +321,35 @@ class IOTest < MiniTest::Test
     assert_equal 6, len
   end
 
+  def test_splice_class_method_with_eof_detection
+    i1, o1 = IO.pipe
+    i2, o2 = IO.pipe
+    splice_lens = []
+
+    spin {
+      loop {
+        len = IO.splice(i1, o2, 1000)
+        splice_lens << len
+        break if len == 0
+      }
+      
+      o2.close
+    }
+
+    o1.write('foobar')
+    snooze
+    o1.close
+
+    result = i2.read
+    assert_equal 'foobar', result
+    assert_equal [6, 0], splice_lens
+  end
+
   def test_splice_from_to_eof
     i1, o1 = IO.pipe
     i2, o2 = IO.pipe
     len = nil
+
 
     f = spin {
       len = o2.splice_from(i1, -1000)
