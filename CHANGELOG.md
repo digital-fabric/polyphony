@@ -1,3 +1,7 @@
+## 1.1.1 2023-06-08
+
+- Minor improvements to documentation
+
 ## 1.1 2023-06-08
 
 - Add advanced I/O doc page
