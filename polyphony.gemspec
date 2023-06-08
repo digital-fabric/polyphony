@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.author      = 'Sharon Rosner'
   s.email       = 'sharon@noteflakes.com'
   s.files       = `git ls-files --recurse-submodules`.split.reject { |fn| fn =~ /liburing\/man/ }
-  s.homepage    = 'https://digital-fabric.github.io/polyphony'
+  s.homepage    = 'https://github.com/digital-fabric/polyphony'
   s.metadata    = {
     "source_code_uri" => "https://github.com/digital-fabric/polyphony",
     "documentation_uri" => "https://www.rubydoc.info/gems/polyphony",
