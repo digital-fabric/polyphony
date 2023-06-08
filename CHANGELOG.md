@@ -1,3 +1,8 @@
+## 1.1 2023-06-08
+
+- Add advanced I/O doc page
+- Add `Fiber#receive_loop` API
+
 ## 1.0.2 2023-05-28
 
 - Remove liburing man files from gemspec (#103)
