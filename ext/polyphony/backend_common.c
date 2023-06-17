@@ -8,6 +8,8 @@
 #include "ruby/io/buffer.h"
 #endif
 
+VALUE cBackend;
+
 inline void backend_base_initialize(struct Backend_base *base) {
   runqueue_initialize(&base->runqueue);
   runqueue_initialize(&base->parked_runqueue);
@@ -603,4 +605,13 @@ VALUE coerce_io_string_or_buffer(VALUE buf) {
     default:
       return StringValue(buf);
   }
+}
+
+inline VALUE Backend_for_current_thread(void) {
+  VALUE backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
+  if (backend == Qnil) {
+    backend = rb_funcall(cBackend, ID_new, 0);
+    rb_ivar_set(rb_thread_current(), ID_ivar_backend, backend);
+  }
+  return backend;
 }

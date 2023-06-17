@@ -25,7 +25,7 @@
   #define FIBER_TRANSFER(fiber, value) rb_funcall(fiber, ID_transfer, 1, value)
 #endif
 
-#define BACKEND() (rb_ivar_get(rb_thread_current(), ID_ivar_backend))
+#define BACKEND() Backend_for_current_thread()
 
 // SAFE is used to cast functions used in rb_ensure
 #define SAFE(f) (VALUE (*)(VALUE))(f)
@@ -94,6 +94,8 @@ VALUE Pipe_close(VALUE self);
 #endif
 
 // Backend public interface
+
+VALUE Backend_for_current_thread();
 
 VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class);
 VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class);

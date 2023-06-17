@@ -1610,7 +1610,7 @@ void Backend_unpark_fiber(VALUE self, VALUE fiber) {
 void Init_Backend(void) {
   ev_set_allocator(xrealloc);
 
-  VALUE cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cObject);
+  cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cObject);
   rb_define_alloc_func(cBackend, Backend_allocate);
 
   rb_define_method(cBackend, "initialize", Backend_initialize, 0);

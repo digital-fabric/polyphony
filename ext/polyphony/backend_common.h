@@ -10,6 +10,8 @@
 #include "ruby/io.h"
 #include "runqueue.h"
 
+extern VALUE cBackend;
+
 #ifndef HAVE_RB_IO_DESCRIPTOR
 static int rb_io_descriptor_fallback(VALUE io) {
   rb_io_t *fptr;
