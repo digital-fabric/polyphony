@@ -1,3 +1,12 @@
+## 1.2 2023-06-17
+
+- Require Ruby 3.1 or newer
+- Add cancellation doc page
+- Cleanup code
+- Accept array of fiber in `Fiber.await` (in addition to accepting multiple fibers)
+- Automatically create backend for thread if not already created (#100)
+- Fix trap API when used with debug gem (#100)
+
 ## 1.1.1 2023-06-08
 
 - Minor improvements to documentation
