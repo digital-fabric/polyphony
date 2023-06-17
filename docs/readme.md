@@ -53,7 +53,7 @@ the hood, Polyphony uses
 In order to use Polyphony you need to have:
 
 - Linux or MacOS (support for Windows will come at a later stage)
-- Ruby (MRI) 3.0 or newer
+- Ruby (MRI) 3.1 or newer
 
 ### Installing the Polyphony Gem
 

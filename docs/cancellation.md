@@ -1,17 +1,17 @@
 # @title All About Cancellation: How to Stop Concurrent Operations
 
-# All About Cancellation: How to Stop
+# All About Cancellation: How to Stop Concurrent Operations
 
 ## The Problem of Cancellation
 
-Being able to cancel an operation is a crucial aspect of concurrent programming.
-When you have multiple operations going on at the same time, you want to be able
-to stop an operation in certain circumstances. Imagine sending a an HTTP request
-to some server, and waiting for it to respond. We can wait forever, or we can
-use some kind of mechanism for stopping the operation and declaring it a
-failure. This mechanism, which is generally called cancellation, plays a crucial
-part in how Polyphony works. Let's examine how operations are cancelled in
-Polyphony.
+Being able to cancel an operation is an important aspect of concurrent
+programming. When you have multiple operations going on at the same time, you
+want to be able to stop an operation in certain circumstances. Imagine sending a
+an HTTP request to some server, and waiting for it to respond. We can wait
+forever, or we can use some kind of mechanism for stopping the operation and
+declaring it a failure. This mechanism, which is generally called cancellation,
+plays a crucial part in how Polyphony works. Let's examine how operations are
+cancelled in Polyphony.
 
 ## Cancellation in Polyphony
 
