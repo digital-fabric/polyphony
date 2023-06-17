@@ -26,9 +26,8 @@ end
 
 # Socket extensions # TODO: rewrite in C
 class ::Socket < ::BasicSocket
-
   # Accepts an incoming connection.
-
+  #
   # @return [TCPSocket] new connection
   def accept
     Polyphony.backend_accept(self, TCPSocket)
@@ -73,12 +72,9 @@ class ::Socket < ::BasicSocket
   # @param buf [String, nil] buffer to read into
   # @param buf_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(len = nil, buf = nil, buf_pos = 0)
+  def read(len = nil, buf = nil, buffer_pos: 0)
     return '' if len == 0
-
-    if buf
-      return Polyphony.backend_read(self, buf, len, true, buf_pos)
-    end
+    return Polyphony.backend_read(self, buf, len, true, buffer_pos) if buf
 
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
@@ -167,8 +163,8 @@ class ::Socket < ::BasicSocket
   # @param buf_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, buf = +'', buf_pos = 0, raise_on_eof = true)
-    result = Polyphony.backend_recv(self, buf, maxlen, buf_pos)
+  def readpartial(maxlen, buf = +'', buffer_pos: 0, raise_on_eof: true)
+    result = Polyphony.backend_recv(self, buf, maxlen, buffer_pos)
     raise EOFError if !result && raise_on_eof
 
     result
@@ -210,8 +206,8 @@ class ::Socket < ::BasicSocket
   end
 
   class << self
-  # @!visibility private
-  alias_method :orig_getaddrinfo, :getaddrinfo
+    # @!visibility private
+    alias_method :orig_getaddrinfo, :getaddrinfo
 
     # Resolves the given addr using a worker thread from the default thread
     # pool.
@@ -337,12 +333,9 @@ class ::TCPSocket < ::IPSocket
   # @param buf [String, nil] buffer to read into
   # @param buf_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(len = nil, buf = nil, buf_pos = 0)
+  def read(len = nil, buf = nil, buffer_pos: 0)
     return '' if len == 0
-
-    if buf
-      return Polyphony.backend_read(self, buf, len, true, buf_pos)
-    end
+    return Polyphony.backend_read(self, buf, len, true, buffer_pos) if buf
 
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
@@ -413,9 +406,10 @@ class ::TCPSocket < ::IPSocket
   # @param buf_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, buf = +'', buf_pos = 0, raise_on_eof = true)
-    result = Polyphony.backend_recv(self, buf, maxlen, buf_pos)
+  def readpartial(maxlen, buf = +'', buffer_pos: 0, raise_on_eof: true)
+    result = Polyphony.backend_recv(self, buf, maxlen, buffer_pos)
     raise EOFError if !result && raise_on_eof
+
     result
   end
 
@@ -430,7 +424,7 @@ class ::TCPSocket < ::IPSocket
   # @param exception [bool] whether to raise an exception if not ready for reading
   # @return [String, :wait_readable] read buffer
   def read_nonblock(maxlen, buf = nil, exception: true)
-    @io.read_nonblock(maxlen, buf, exception: exception)
+    @io.read_nonblock(maxlen, buf, exception:)
   end
 
   # Performs a non-blocking to the socket. If the socket is not ready for
@@ -442,13 +436,12 @@ class ::TCPSocket < ::IPSocket
   # @param exception [bool] whether to raise an exception if not ready for reading
   # @return [Integer, :wait_readable] number of bytes written
   def write_nonblock(buf, exception: true)
-    @io.write_nonblock(buf, exception: exception)
+    @io.write_nonblock(buf, exception:)
   end
 end
 
 # TCPServer extensions
 class ::TCPServer < ::TCPSocket
-
   # Initializes the TCP server socket.
   #
   # @param hostname [String, nil] hostname to connect to
@@ -546,12 +539,9 @@ class ::UNIXSocket < ::BasicSocket
   # @param buf [String, nil] buffer to read into
   # @param buf_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(len = nil, buf = nil, buf_pos = 0)
+  def read(len = nil, buf = nil, buffer_pos: 0)
     return '' if len == 0
-
-    if buf
-      return Polyphony.backend_read(self, buf, len, true, buf_pos)
-    end
+    return Polyphony.backend_read(self, buf, len, true, buffer_pos) if buf
 
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
@@ -648,9 +638,10 @@ class ::UNIXSocket < ::BasicSocket
   # @param buf_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, buf = +'', buf_pos = 0, raise_on_eof = true)
-    result = Polyphony.backend_recv(self, buf, maxlen, buf_pos)
+  def readpartial(maxlen, buf = +'', buffer_pos: 0, raise_on_eof: true)
+    result = Polyphony.backend_recv(self, buf, maxlen, buffer_pos)
     raise EOFError if !result && raise_on_eof
+
     result
   end
 
@@ -665,7 +656,7 @@ class ::UNIXSocket < ::BasicSocket
   # @param exception [bool] whether to raise an exception if not ready for reading
   # @return [String, :wait_readable] read buffer
   def read_nonblock(maxlen, buf = nil, exception: true)
-    @io.read_nonblock(maxlen, buf, exception: exception)
+    @io.read_nonblock(maxlen, buf, exception:)
   end
 
   # Performs a non-blocking to the socket. If the socket is not ready for
@@ -677,7 +668,7 @@ class ::UNIXSocket < ::BasicSocket
   # @param exception [bool] whether to raise an exception if not ready for reading
   # @return [Integer, :wait_readable] number of bytes written
   def write_nonblock(buf, exception: true)
-    @io.write_nonblock(buf, exception: exception)
+    @io.write_nonblock(buf, exception:)
   end
 end
 
@@ -724,13 +715,13 @@ class ::UDPSocket < ::IPSocket
   # @return [Integer] bytes sent
   def send(msg, flags, *addr)
     sockaddr =  case addr.size
-    when 2
-      Socket.sockaddr_in(addr[1], addr[0])
-    when 1
-      addr[0]
-    else
-      nil
-    end
+                when 2
+                  Socket.sockaddr_in(addr[1], addr[0])
+                when 1
+                  addr[0]
+                else
+                  nil
+                end
 
     Polyphony.backend_sendmsg(self, msg, flags, sockaddr, nil)
   end

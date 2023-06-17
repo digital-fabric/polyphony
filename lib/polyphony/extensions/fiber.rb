@@ -119,7 +119,7 @@ class ::Fiber
   def cancel(exception = Polyphony::Cancel)
     return if @running == false
 
-    value = (Class === exception) ? exception.new : exception
+    value = exception.is_a?(Class) ? exception.new : exception
     schedule value
     self
   end
@@ -143,7 +143,7 @@ class ::Fiber
   #
   # @param graceful [bool] Whether to perform a graceful shutdown
   # @return [Fiber] self
-  def terminate(graceful = false)
+  def terminate(graceful: false)
     return if @running == false
 
     @graceful_shutdown = graceful
@@ -265,7 +265,7 @@ class ::Fiber
   #
   # @param graceful [bool] whether to perform a graceful termination
   # @return [Fiber] self
-  def terminate_all_children(graceful = false)
+  def terminate_all_children(graceful: false)
     return self unless @children
 
     e = Polyphony::Terminate.new
@@ -283,23 +283,24 @@ class ::Fiber
   def await_all_children
     return unless @children && !@children.empty?
 
-    Fiber.await(*@children.keys.reject { |c| c.dead? })
+    Fiber.await(@children.keys.reject(&:dead?))
   end
 
   # Terminates and blocks until all child fibers have terminated.
   #
   # @return [Fiber] self
-  def shutdown_all_children(graceful = false)
+  def shutdown_all_children(graceful: false)
     return self unless @children
 
     pending = []
-    @children.keys.each do |c|
+    child_fibers = @children.keys
+    child_fibers.each do |c|
       next if c.dead?
 
-      c.terminate(graceful)
+      c.terminate(graceful:)
       pending << c
     end
-    Fiber.await(*pending)
+    Fiber.await(pending)
     self
   end
 
@@ -308,7 +309,8 @@ class ::Fiber
   # @param parent [Fiber] new parent
   # @return [Fiber] self
   def attach_all_children_to(parent)
-    @children&.keys.each { |c| c.attach_to(parent) }
+    child_fibers = @children&.keys
+    child_fibers&.each { |c| c.attach_to(parent) }
     self
   end
 
@@ -361,7 +363,7 @@ class ::Fiber
   # @param child_fiber [Fiber] child fiber to be removed
   # @return [Fiber] self
   def remove_child(child_fiber)
-    @children.delete(child_fiber) if @children
+    @children&.delete(child_fiber)
     self
   end
 
@@ -382,7 +384,7 @@ class ::Fiber
     @parent = parent
     @caller = caller
     @block = block
-    Thread.backend.trace(:spin, self, Kernel.caller[1..-1])
+    Thread.backend.trace(:spin, self, Kernel.caller[1..])
     schedule
     self
   end
@@ -405,7 +407,7 @@ class ::Fiber
     finalize(e.value)
   rescue Exception => e
     e.source_fiber = self
-    finalize(e, true)
+    finalize(e, uncaught_exception: true)
   end
 
   # Performs setup for a "raw" Fiber created using Fiber.new. Note that this
@@ -446,7 +448,7 @@ class ::Fiber
   # @param result [any] return value
   # @param uncaught_exception [Exception, nil] uncaught exception
   # @return [false]
-  def finalize(result, uncaught_exception = false)
+  def finalize(result, uncaught_exception: false)
     result, uncaught_exception = finalize_children(result, uncaught_exception)
     Thread.backend.trace(:terminate, self, result)
     @result = result
@@ -468,7 +470,7 @@ class ::Fiber
   # @param uncaught_exception [Exception, nil] uncaught exception
   # @return [Array] array containing result and uncaught exception if any
   def finalize_children(result, uncaught_exception)
-    shutdown_all_children(graceful_shutdown?)
+    shutdown_all_children(graceful: graceful_shutdown?)
     [result, uncaught_exception]
   rescue Exception => e
     [e, true]
@@ -486,7 +488,7 @@ class ::Fiber
     end
 
     if uncaught_exception && @parent
-      parent_is_monitor = @monitors&.has_key?(@parent)
+      parent_is_monitor = @monitors&.key?(@parent)
       @parent.schedule_with_priority(result) unless parent_is_monitor
     end
 
@@ -548,7 +550,7 @@ class ::Fiber
         fibers = first
       end
 
-      current_fiber = self.current
+      current_fiber = Fiber.current
       mailbox = current_fiber.monitor_mailbox
       results = {}
       fibers.each do |f|
@@ -564,16 +566,18 @@ class ::Fiber
       while !fibers.empty?
         (fiber, result) = mailbox.shift
         next unless fibers.include?(fiber)
+
         fibers.delete(fiber)
         current_fiber.remove_child(fiber) if fiber.parent == current_fiber
         if result.is_a?(Exception)
           exception ||= result
-          fibers.each { |f| f.terminate }
+          fibers.each(&:terminate)
         else
           results[fiber] = result
         end
       end
       raise exception if exception
+
       results.values
     end
     alias_method :join, :await
@@ -587,7 +591,7 @@ class ::Fiber
     def select(*fibers)
       return nil if fibers.empty?
 
-      current_fiber = self.current
+      current_fiber = Fiber.current
       mailbox = current_fiber.monitor_mailbox
       fibers.each do |f|
         if f.dead?
@@ -602,11 +606,9 @@ class ::Fiber
         next unless fibers.include?(fiber)
 
         fibers.each { |f| f.unmonitor(current_fiber) }
-        if result.is_a?(Exception)
-          raise result
-        else
-          return [fiber, result]
-        end
+        raise result if result.is_a?(Exception)
+
+        return [fiber, result]
       end
     end
 
@@ -640,7 +642,7 @@ class ::Fiber
       fiber.tag = :oob
       fiber.thread = Thread.current
       location = block.source_location
-      fiber.set_caller(["#{location.join(':')}"])
+      fiber.set_caller([location.join(':')])
     end
   end
 
@@ -662,11 +664,11 @@ class ::Fiber
     restart = opts[:restart]
     return nil unless block || restart
 
-    error_only = !!opts[:on_error]
+    error_only = opts[:on_error]
     restart_always = (restart == :always) || (restart == true)
     restart_on_error = restart == :on_error
 
-    ->(f, r) do
+    lambda do |f, r|
       is_error = r.is_a?(Exception)
       block.(f, r) if block && (!error_only || is_error)
       f.restart if restart_always || (restart_on_error && is_error)

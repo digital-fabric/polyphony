@@ -39,7 +39,7 @@ class ::OpenSSL::SSL::SSLSocket
 
   # @!visibility private
   def fill_rbuff
-    data = self.sysread(BLOCK_SIZE)
+    data = sysread(BLOCK_SIZE)
     if data
       @rbuffer << data
     else
@@ -103,15 +103,13 @@ class ::OpenSSL::SSL::SSLSocket
   # @param buf [String, nil] buffer to read into
   # @param buf_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(maxlen = nil, buf = nil, buf_pos = 0)
-    return readpartial(maxlen, buf, buf_pos) if buf
+  def read(maxlen = nil, buf = nil, buffer_pos: 0)
+    return readpartial(maxlen, buf, buffer_pos:) if buf
 
     buf = +''
     return readpartial(maxlen, buf) if maxlen
 
-    while true
-      readpartial(4096, buf, -1)
-    end
+    readpartial(4096, buf, buffer_pos: -1) while true
   rescue EOFError
     buf
   end
@@ -132,7 +130,7 @@ class ::OpenSSL::SSL::SSLSocket
   # @param buf_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, buf = +'', buf_pos = 0, raise_on_eof = true)
+  def readpartial(maxlen, buf = +'', buffer_pos: 0, raise_on_eof: true)
     if buf_pos != 0
       if (result = sysread(maxlen, +''))
         if buf_pos == -1
@@ -265,7 +263,7 @@ class ::OpenSSL::SSL::SSLServer
   # @param ignore_errors [boolean] whether to ignore IO and SSL errors
   # @yield [OpenSSL::SSL::SSLSocket] accepted socket
   # @return [OpenSSL::SSL::SSLServer] self
-  def accept_loop(ignore_errors = true)
+  def accept_loop(ignore_errors: true)
     loop do
       yield accept
     rescue OpenSSL::SSL::SSLError, SystemCallError => e

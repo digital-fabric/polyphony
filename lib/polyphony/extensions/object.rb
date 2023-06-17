@@ -84,7 +84,7 @@ class ::Object
   def spin_loop(tag = nil, rate: nil, interval: nil, &block)
     if rate || interval
       Fiber.current.spin(tag, caller) do
-        throttled_loop(rate: rate, interval: interval, &block)
+        throttled_loop(rate:, interval:, &block)
       end
     else
       spin_loop_without_throttling(tag, caller, block)
@@ -200,8 +200,11 @@ class ::Object
   # @param duration [Number, nil] duration
   # @return [any]
   def sleep(duration = nil)
-    duration ?
-    Polyphony.backend_sleep(duration) : Polyphony.backend_wait_event(true)
+    if duration
+      Polyphony.backend_sleep(duration)
+    else
+      Polyphony.backend_wait_event(true)
+    end
   end
 
   # Starts a throttled loop with the given rate. If `count:` is given, the
@@ -220,9 +223,7 @@ class ::Object
     if opts[:count]
       opts[:count].times { |_i| throttler.(&block) }
     else
-      while true
-        throttler.(&block)
-      end
+      throttler.(&block) while true
     end
   rescue LocalJumpError, StopIteration
     # break called or StopIteration raised

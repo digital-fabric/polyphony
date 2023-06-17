@@ -98,7 +98,7 @@ class TCPSocketTest < MiniTest::Test
 
     buf = +'def'
     client << 'foobar'
-    assert_equal 'deffoobar', client.read(6, buf, -1)
+    assert_equal 'deffoobar', client.read(6, buf, buffer_pos: -1)
     assert_equal 'deffoobar', buf
 
     client.close
@@ -365,7 +365,7 @@ class SSLSocketTest < MiniTest::Test
     f = spin do
       ## without ignoring errors
       f2 = spin do
-        server.accept_loop(false) { |s| handle_http_request(s) }
+        server.accept_loop(ignore_errors: false) { |s| handle_http_request(s) }
       end
       f2.await
     rescue => e

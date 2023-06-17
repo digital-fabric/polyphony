@@ -3,10 +3,8 @@
 require 'etc'
 
 module Polyphony
-
   # Implements a pool of threads
   class ThreadPool
-
     # The pool size.
     attr_reader :size
 
@@ -79,9 +77,7 @@ module Polyphony
 
     # Runs a processing loop on a worker thread.
     def thread_loop
-      while true
-        run_queued_task
-      end
+      run_queued_task while true
     end
 
     # Runs the first queued task in the task queue.

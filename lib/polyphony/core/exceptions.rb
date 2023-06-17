@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module Polyphony
-
   # Base exception class for interrupting fibers. These exceptions allow control
   # of fibers. BaseException exceptions can encapsulate a value and thus provide
   # a way to interrupt long-running blocking operations while still passing a
@@ -9,7 +8,6 @@ module Polyphony
   # cancel scope in order to allow correct bubbling of exceptions through nested
   # cancel scopes.
   class BaseException < ::Exception
-
     # Exception value, used mainly for `MoveOn` exceptions.
     attr_reader :value
 
@@ -39,7 +37,6 @@ module Polyphony
 
   # Interjection is used to run arbitrary code on arbitrary fibers at any point
   class Interjection < BaseException
-
     # Initializes an Interjection with the given proc.
     #
     # @param proc [Proc] interjection proc

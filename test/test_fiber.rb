@@ -1264,7 +1264,7 @@ class GracefulTerminationTest < MiniTest::Test
     end
 
     3.times { snooze }
-    f.terminate(false)
+    f.terminate(graceful: false)
     f.await
     assert_equal [1, 2], buffer
 
@@ -1280,7 +1280,7 @@ class GracefulTerminationTest < MiniTest::Test
     end
 
     3.times { snooze }
-    f.terminate(true)
+    f.terminate(graceful: true)
     f.await
     assert_equal [1, 2, 4], buffer
   end
@@ -1302,12 +1302,12 @@ class GracefulTerminationTest < MiniTest::Test
 
       sleep
     ensure
-      Fiber.current.terminate_all_children(true) if Fiber.current.graceful_shutdown?
+      Fiber.current.terminate_all_children(graceful: true) if Fiber.current.graceful_shutdown?
       Fiber.current.await_all_children
     end
 
     3.times { snooze }
-    f0.terminate(true)
+    f0.terminate(graceful: true)
     f0.await
 
     assert_equal [1, 2], buffer

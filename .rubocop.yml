@@ -64,8 +64,7 @@ Layout/HashAlignment:
 
 Naming/AccessorMethodName:
   Exclude:
-    - lib/polyphony/http/server/http1.rb
-    - lib/polyphony/http/server/http2_stream.rb
+    - lib/polyphony/extensions/fiber.rb
     - examples/**/*.rb
 
 Naming/MethodName:
@@ -74,16 +73,11 @@ Naming/MethodName:
 
 Lint/SuppressedException:
   Exclude:
-    - lib/polyphony/http/server/http1.rb
-    - lib/polyphony/http/server/http2.rb
-    - lib/polyphony/http/server/http2_stream.rb
-    - lib/polyphony/http/server.rb
     - examples/**/*.rb
 
 Metrics/MethodLength:
   Max: 12
   Exclude:
-    - lib/polyphony/http/server/rack.rb
     - lib/polyphony/extensions/io.rb
     - lib/polyphony/extensions/fiber.rb
     - test/**/*.rb
@@ -96,7 +90,6 @@ Metrics/ModuleLength:
 
 Metrics/ClassLength:
   Exclude:
-    - lib/polyphony/http/server/http1.rb
     - lib/polyphony/extensions/io.rb
     - lib/polyphony/extensions/fiber.rb
     - lib/polyphony/extensions/object.rb
@@ -175,6 +168,21 @@ Lint/RaiseException:
 
 Lint/StructNewOverride:
   Enabled: true
+
+Style/NegatedIf:
+  Enabled: false
+
+Style/NegatedWhile:
+  Enabled: false
+
+Style/CombinableLoops:
+  Enabled: false
+
+Style/InfiniteLoop:
+  Enabled: false
+
+Style/RedundantReturn:
+  Enabled: false
 
 Style/ExponentialNotation:
   Enabled: true

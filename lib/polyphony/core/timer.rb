@@ -1,13 +1,11 @@
 # frozen_string_literal: true
 
 module Polyphony
-
   # Implements a common timer for running multiple timeouts. This class may be
   # used to reduce the timer granularity in case a large number of timeouts is
   # used concurrently. This class basically provides the same methods as global
   # methods concerned with timeouts, such as `#cancel_after`, `#every` etc.
   class Timer
-
     # Initializes a new timer with the given resolution.
     #
     # @param tag [any] tag to use for the timer's fiber
@@ -31,7 +29,7 @@ module Polyphony
     def sleep(duration)
       fiber = Fiber.current
       @timeouts[fiber] = {
-        interval: duration,
+        interval:     duration,
         target_stamp: now + duration
       }
       Polyphony.backend_wait_event(true)
@@ -58,9 +56,9 @@ module Polyphony
     def every(interval)
       fiber = Fiber.current
       @timeouts[fiber] = {
-        interval: interval,
+        interval:,
         target_stamp: now + interval,
-        recurring: true
+        recurring:    true
       }
       while true
         Polyphony.backend_wait_event(true)
@@ -113,9 +111,9 @@ module Polyphony
     def cancel_after(interval, with_exception: Polyphony::Cancel)
       fiber = Fiber.current
       @timeouts[fiber] = {
-        interval: interval,
+        interval:,
         target_stamp: now + interval,
-        exception: with_exception
+        exception:    with_exception
       }
       yield
     ensure
@@ -166,9 +164,9 @@ module Polyphony
     def move_on_after(interval, with_value: nil)
       fiber = Fiber.current
       @timeouts[fiber] = {
-        interval: interval,
+        interval:,
         target_stamp: now + interval,
-        exception: [Polyphony::MoveOn, with_value]
+        exception:    [Polyphony::MoveOn, with_value]
       }
       yield
     rescue Polyphony::MoveOn => e

@@ -60,7 +60,7 @@ module Polyphony
       rescue Polyphony::MoveOn
         exit!
       rescue Exception => e
-        STDERR << e.full_message
+        $stderr << e.full_message
         exit!
       ensure
         exit_forked_process
@@ -143,13 +143,10 @@ module Polyphony
   install_at_exit_handler
 end
 
-
 if (debug_socket_path = ENV['POLYPHONY_DEBUG_SOCKET_PATH'])
   puts "Starting debug server on #{debug_socket_path}"
   require 'polyphony/debugger'
   Polyphony.start_debug_server(debug_socket_path)
 end
 
-if Object.const_defined?(:IRB)
-  require_relative './polyphony/adapters/irb'
-end
+require_relative './polyphony/adapters/irb' if Object.const_defined?(:IRB)

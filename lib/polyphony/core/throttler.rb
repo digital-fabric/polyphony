@@ -3,7 +3,6 @@
 module Polyphony
   # Implements general-purpose throttling
   class Throttler
-
     # Initializes a throttler instance with the given rate.
     #
     # @param rate [Number] throttler rate in times per second

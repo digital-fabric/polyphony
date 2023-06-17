@@ -3,6 +3,7 @@
 require 'open3'
 
 module Polyphony
+  # Intercepts calls to #trap
   module TrapInterceptor
     def trap(sig, command = nil, &block)
       return super(sig, command) if command.is_a? String
@@ -79,7 +80,7 @@ module ::Kernel
     strs = args.inject([]) do |m, a|
       m << a.inspect << "\n"
     end
-    STDOUT.write(*strs)
+    $stdout.write(*strs)
     args.size == 1 ? args.first : args
   end
 
@@ -111,7 +112,6 @@ module ::Kernel
       nil
     end
   end
-
 
   # @!visibility private
   alias_method :orig_trap, :trap

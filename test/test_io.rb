@@ -89,7 +89,7 @@ class IOTest < MiniTest::Test
 
     buf = +'def'
     o << 'foobar'
-    assert_equal 'deffoobar', i.read(6, buf, -1)
+    assert_equal 'deffoobar', i.read(6, buf, buffer_pos: -1)
     assert_equal 'deffoobar', buf
   end
 

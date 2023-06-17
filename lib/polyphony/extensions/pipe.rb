@@ -43,10 +43,8 @@ class Polyphony::Pipe
   # @param buf [String, nil] buffer to read into
   # @param buf_pos [Integer] buffer position to read into
   # @return [String] read data
-  def read(len = nil, buf = nil, buf_pos = 0)
-    if buf
-      return Polyphony.backend_read(self, buf, len, true, buf_pos)
-    end
+  def read(len = nil, buf = nil, buffer_pos: 0)
+    return Polyphony.backend_read(self, buf, len, true, buffer_pos) if buf
 
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
@@ -64,8 +62,8 @@ class Polyphony::Pipe
   # @param buf_pos [Integer] buffer position to read into
   # @param raise_on_eof [boolean] whether to raise an error if EOF is detected
   # @return [String] read data
-  def readpartial(len, buf = +'', buf_pos = 0, raise_on_eof = true)
-    result = Polyphony.backend_read(self, buf, len, false, buf_pos)
+  def readpartial(len, buf = +'', buffer_pos: 0, raise_on_eof: true)
+    result = Polyphony.backend_read(self, buf, len, false, buffer_pos)
     raise EOFError if !result && raise_on_eof
 
     result
@@ -106,7 +104,7 @@ class Polyphony::Pipe
       idx = @read_buffer.index(sep)
       return @read_buffer.slice!(0, idx + sep_size) if idx
 
-      result = readpartial(8192, @read_buffer, -1)
+      result = readpartial(8192, @read_buffer, buffer_pos: -1)
       return nil unless result
     end
   rescue EOFError

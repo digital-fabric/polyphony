@@ -80,7 +80,6 @@ class ::IO
     # @!visibility private
     alias_method :orig_popen, :popen
 
-
     # @!visibility private
     def popen(cmd, mode = 'r')
       return orig_popen(cmd, mode) unless block_given?
@@ -163,7 +162,6 @@ class ::IO
   # @!visibility private
   alias_method :orig_getbyte, :getbyte
 
-
   # @!visibility private
   def getbyte
     char = getc
@@ -172,7 +170,6 @@ class ::IO
 
   # @!visibility private
   alias_method :orig_getc, :getc
-
 
   # @!visibility private
   def getc
@@ -186,12 +183,12 @@ class ::IO
   end
 
   # @!visibility private
-  def ungetc(c)
-    c = c.chr if c.is_a?(Integer)
+  def ungetc(chr)
+    chr = chr.chr if chr.is_a?(Integer)
     if @read_buffer
-      @read_buffer.prepend(c)
+      @read_buffer.prepend(chr)
     else
-      @read_buffer = +c
+      @read_buffer = +chr
     end
   end
   alias_method :ungetbyte, :ungetc
@@ -199,14 +196,10 @@ class ::IO
   # @!visibility private
   alias_method :orig_read, :read
 
-
   # @!visibility private
-  def read(len = nil, buf = nil, buf_pos = 0)
+  def read(len = nil, buf = nil, buffer_pos: 0)
     return '' if len == 0
-
-    if buf
-      return Polyphony.backend_read(self, buf, len, true, buf_pos)
-    end
+    return Polyphony.backend_read(self, buf, len, true, buffer_pos) if buf
 
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
@@ -221,7 +214,7 @@ class ::IO
   alias_method :orig_readpartial, :read
 
   # @!visibility private
-  def readpartial(len, str = +'', buffer_pos = 0, raise_on_eof = true)
+  def readpartial(len, str = +'', buffer_pos: 0, raise_on_eof: true)
     result = Polyphony.backend_read(self, str, len, false, buffer_pos)
     raise EOFError if !result && raise_on_eof
 
@@ -262,7 +255,7 @@ class ::IO
       idx = @read_buffer.index(sep)
       return @read_buffer.slice!(0, idx + sep_size) if idx
 
-      result = readpartial(8192, @read_buffer, -1)
+      result = readpartial(8192, @read_buffer, buffer_pos: -1)
       return nil unless result
     end
   rescue EOFError
@@ -287,7 +280,7 @@ class ::IO
         yield line
       end
 
-      result = readpartial(8192, @read_buffer, -1)
+      result = readpartial(8192, @read_buffer, buffer_pos: -1)
       return self if !result
     end
   rescue EOFError
@@ -306,7 +299,7 @@ class ::IO
   # @!visibility private
   LINEFEED = "\n"
   # @!visibility private
-  LINEFEED_RE = /\n$/.freeze
+  LINEFEED_RE = /\n$/
 
   # @!visibility private
   alias_method :orig_puts, :puts
@@ -395,7 +388,7 @@ class ::IO
   # @param timeout [Integer, nil] optional timeout in seconds.
   # @return [IO] self
   def wait_readable(timeout = nil)
-    return self if @read_buffer && @read_buffer.size > 0
+    return self if @read_buffer && !@read_buffer.empty?
 
     if timeout
       move_on_after(timeout) do

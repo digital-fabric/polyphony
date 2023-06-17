@@ -289,7 +289,7 @@ class SuperviseTest < MiniTest::Test
       s = spin { supervise }.detach
       Fiber.current.attach_all_children_to(s)
 
-      s.terminate(true)
+      s.terminate(graceful: true)
     }
 
     f.await

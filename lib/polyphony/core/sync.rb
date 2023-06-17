@@ -1,11 +1,9 @@
 # frozen_string_literal: true
 
 module Polyphony
-
   # Implements mutex lock for synchronizing access to a shared resource. This
   # class replaces the stock `Thread::Mutex` class.
   class Mutex
-
     # Initializes a new mutex.
     def initialize
       @store = Queue.new
@@ -130,7 +128,6 @@ module Polyphony
 
   # Implements a fiber-aware ConditionVariable
   class ConditionVariable
-
     # Initializes the condition variable.
     def initialize
       @queue = Polyphony::Queue.new

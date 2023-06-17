@@ -4,7 +4,6 @@ require 'timeout'
 
 # Timeout extensions
 module ::Timeout
-
   # Sets a timeout for the given block. This method provides an equivalent API
   # to the stock Timeout API provided by Ruby. In case of a timeout, the block
   # will be interrupted and an exception will be raised according to the given

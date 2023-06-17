@@ -28,7 +28,7 @@ server = Polyphony::Net.tcp_listen('localhost', 1234, opts)
 puts 'Serving HTTPS on port 1234'
 
 begin
-  server.accept_loop(false) do |socket|
+  server.accept_loop(ignore_errors: false) do |socket|
     spin do
       while (data = socket.gets("\n", 8192))
         if data.chomp.empty?

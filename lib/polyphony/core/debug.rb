@@ -2,7 +2,7 @@
 module ::Kernel
   # Prints a trace message to `STDOUT`, bypassing the Polyphony backend.
   def trace(*args)
-    STDOUT.orig_write(format_trace(args))
+    $stdout.orig_write(format_trace(args))
   end
 
   # Formats a trace message.
@@ -20,12 +20,10 @@ module ::Kernel
 end
 
 module Polyphony
-
   # Trace provides tools for tracing the activity of the current thread's
   # backend.
   module Trace
     class << self
-
       # Starts tracing, emitting events converted to hashes to the given block.
       # If an IO instance is given, events are dumped to it instead.
       #
@@ -48,7 +46,7 @@ module Polyphony
         elsif block
           ->(*e) { block.(trace_event_info(e)) }
         else
-          raise "Please provide an io or a block"
+          raise 'Please provide an io or a block'
         end
       end
 
@@ -56,12 +54,12 @@ module Polyphony
       #
       # @param e [Array] event as emitted by the backend
       # @return [Hash] event hash
-      def trace_event_info(e)
+      def trace_event_info(event)
         {
           stamp: Time.now,
-          event: e[0]
+          event: event[0]
         }.merge(
-          send(:"event_props_#{e[0]}", e)
+          send(:"event_props_#{event[0]}", event)
         )
       end
 
@@ -69,10 +67,10 @@ module Polyphony
       #
       # @param e [Array] event array
       # @return [Hash] event hash
-      def event_props_block(e)
+      def event_props_block(event)
         {
-          fiber: e[1],
-          caller: e[2]
+          fiber:  event[1],
+          caller: event[2]
         }
       end
 
@@ -80,7 +78,7 @@ module Polyphony
       #
       # @param e [Array] event array
       # @return [Hash] event hash
-      def event_props_enter_poll(e)
+      def event_props_enter_poll(_event)
         {}
       end
 
@@ -88,7 +86,7 @@ module Polyphony
       #
       # @param e [Array] event array
       # @return [Hash] event hash
-      def event_props_leave_poll(e)
+      def event_props_leave_poll(_event)
         {}
       end
 
@@ -96,11 +94,11 @@ module Polyphony
       #
       # @param e [Array] event array
       # @return [Hash] event hash
-      def event_props_schedule(e)
+      def event_props_schedule(event)
         {
-          fiber: e[1],
-          value: e[2],
-          caller: e[4],
+          fiber:        event[1],
+          value:        event[2],
+          caller:       event[4],
           source_fiber: Fiber.current
         }
       end
@@ -109,10 +107,10 @@ module Polyphony
       #
       # @param e [Array] event array
       # @return [Hash] event hash
-      def event_props_spin(e)
+      def event_props_spin(event)
         {
-          fiber: e[1],
-          caller: e[2],
+          fiber:        event[1],
+          caller:       event[2],
           source_fiber: Fiber.current
         }
       end
@@ -121,10 +119,10 @@ module Polyphony
       #
       # @param e [Array] event array
       # @return [Hash] event hash
-      def event_props_terminate(e)
+      def event_props_terminate(event)
         {
-          fiber: e[1],
-          value: e[2],
+          fiber: event[1],
+          value: event[2]
         }
       end
 
@@ -132,11 +130,11 @@ module Polyphony
       #
       # @param e [Array] event array
       # @return [Hash] event hash
-      def event_props_unblock(e)
+      def event_props_unblock(event)
         {
-          fiber: e[1],
-          value: e[2],
-          caller: e[3],
+          fiber:  event[1],
+          value:  event[2],
+          caller: event[3]
         }
       end
 
@@ -170,11 +168,9 @@ module Polyphony
       #   generic_event_format
       # end
 
-
       # def event_format_schedule(e)
       #   "#{fiber_event_format} %<value>-24.24p %<caller>-120.120s <= %<origin_fiber>s"
       # end
-
 
       # def event_format_unblock(e)
       #   "#{fiber_event_format} %<value>-24.24p %<caller>-120.120s"
@@ -187,7 +183,6 @@ module Polyphony
       # def event_format_block(e)
       #   "#{fiber_event_format} #{' ' * 24} %<caller>-120.120s"
       # end
-
 
       # def event_format_spin(e)
       #   "#{fiber_event_format} #{' ' * 24} %<caller>-120.120s <= %<origin_fiber>s"

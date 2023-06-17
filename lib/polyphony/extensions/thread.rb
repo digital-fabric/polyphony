@@ -81,7 +81,6 @@ class ::Thread
     return self if @terminated
 
     raise Polyphony::Terminate
-    self
   end
 
   # @!visibility private
@@ -160,9 +159,8 @@ class ::Thread
   #
   # @param result [any] thread's return value
   def finalize(result)
-    unless Fiber.current.children.empty?
-      Fiber.current.shutdown_all_children
-    end
+    Fiber.current.shutdown_all_children if !Fiber.current.children.empty?
+
     @finalization_mutex.synchronize do
       @terminated = true
       @result = result

@@ -3,7 +3,6 @@
 # Extensions to the Exception class
 class ::Exception
   class << self
-
     # Set to true to disable sanitizing the backtrace (to remove frames occuring
     # in the Polyphony code itself.)
     attr_accessor :__disable_sanitized_backtrace__
