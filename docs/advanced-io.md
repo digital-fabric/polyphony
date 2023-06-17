@@ -72,6 +72,10 @@ def send_file_using_splice(src, dest)
   end
   IO.splice(pipe, dest, -2**14)
 end
+
+# +----+  IO.splice()  +------+  IO.splice()  +--------+
+# | io |-------------->| pipe |-------------->| socket |
+# +----+               +------+               +--------+
 ```
 
 There are a few things to notice here: While we have two concurrent operations
@@ -293,11 +297,15 @@ def send_compressed_chunked_response_from_io(socket, io)
   spin { IO.gzip(io, pipe) }
   IO.http1_splice_chunked(pipe, socket, MAX_CHUNK_SIZE)
 end
+
+# +----+  IO.gzip()  +------+  IO.http1_splice_chunked()  +--------+
+# | io |------------>| pipe |---------------------------->| socket |
+# +----+             +------+                             +--------+
 ```
 
 The code above looks simple enough, but it actually packs a lot of power in just
 3 lines of code: we create a pipe, then spin up a fiber that compresses data
-data `io` into the pipe. We then serve data from the pipe to the socket using
+from `io` into the pipe. We then splice data from the pipe to the socket using
 chunked transfer encoding. As discussed above, we do this without actually
 allocating any Ruby strings for holding the data, we take maximum advantage of
 kernel buffers (a.k.a. pipes) and we perform the two operations - compressing
