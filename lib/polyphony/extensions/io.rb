@@ -351,97 +351,97 @@ class ::IO
 
   # @!visibility private
   def write_nonblock(string, _options = {})
-  write(string)
-end
+    write(string)
+  end
 
-# @!visibility private
-alias_method :orig_read_nonblock, :read_nonblock
+  # @!visibility private
+  alias_method :orig_read_nonblock, :read_nonblock
 
-# @!visibility private
-def read_nonblock(maxlen, buf = nil, _options = nil)
-  buf ? readpartial(maxlen, buf) : readpartial(maxlen)
-end
+  # @!visibility private
+  def read_nonblock(maxlen, buf = nil, _options = nil)
+    buf ? readpartial(maxlen, buf) : readpartial(maxlen)
+  end
 
-# Reads up to `maxlen` bytes at a time in an infinite loop. Read data
-# will be passed to the given block.
-#
-# @param maxlen [Integer] maximum bytes to receive
-# @yield [String] read data
-# @return [IO] self
-def read_loop(maxlen = 8192, &block)
-  Polyphony.backend_read_loop(self, maxlen, &block)
-end
+  # Reads up to `maxlen` bytes at a time in an infinite loop. Read data
+  # will be passed to the given block.
+  #
+  # @param maxlen [Integer] maximum bytes to receive
+  # @yield [String] read data
+  # @return [IO] self
+  def read_loop(maxlen = 8192, &block)
+    Polyphony.backend_read_loop(self, maxlen, &block)
+  end
 
-# Receives data from the io in an infinite loop, passing the data to the given
-# receiver using the given method. If a block is given, the result of the
-# method call to the receiver is passed to the block.
-#
-# This method can be used to feed data into parser objects. The following
-# example shows how to feed data from a io directly into a MessagePack
-# unpacker:
-#
-#   unpacker = MessagePack::Unpacker.new
-#   io.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
-#
-# @param receiver [any] receiver object
-# @param method [Symbol] method to call
-# @return [IO] self
-def feed_loop(receiver, method = :call, &block)
-  Polyphony.backend_feed_loop(self, receiver, method, &block)
-end
+  # Receives data from the io in an infinite loop, passing the data to the given
+  # receiver using the given method. If a block is given, the result of the
+  # method call to the receiver is passed to the block.
+  #
+  # This method can be used to feed data into parser objects. The following
+  # example shows how to feed data from a io directly into a MessagePack
+  # unpacker:
+  #
+  #   unpacker = MessagePack::Unpacker.new
+  #   io.feed_loop(unpacker, :feed_each) { |msg| handle_msg(msg) }
+  #
+  # @param receiver [any] receiver object
+  # @param method [Symbol] method to call
+  # @return [IO] self
+  def feed_loop(receiver, method = :call, &block)
+    Polyphony.backend_feed_loop(self, receiver, method, &block)
+  end
 
-# Waits for the IO to become readable, with an optional timeout.
-#
-# @param timeout [Integer, nil] optional timeout in seconds.
-# @return [IO] self
-def wait_readable(timeout = nil)
-  return self if @read_buffer && @read_buffer.size > 0
+  # Waits for the IO to become readable, with an optional timeout.
+  #
+  # @param timeout [Integer, nil] optional timeout in seconds.
+  # @return [IO] self
+  def wait_readable(timeout = nil)
+    return self if @read_buffer && @read_buffer.size > 0
 
-  if timeout
-    move_on_after(timeout) do
+    if timeout
+      move_on_after(timeout) do
+        Polyphony.backend_wait_io(self, false)
+        self
+      end
+    else
       Polyphony.backend_wait_io(self, false)
       self
     end
-  else
-    Polyphony.backend_wait_io(self, false)
-    self
   end
-end
 
-# Waits for the IO to become writeable, with an optional timeout.
-#
-# @param timeout [Integer, nil] optional timeout in seconds.
-# @return [IO] self
-def wait_writable(timeout = nil)
-  if timeout
-    move_on_after(timeout) do
+  # Waits for the IO to become writeable, with an optional timeout.
+  #
+  # @param timeout [Integer, nil] optional timeout in seconds.
+  # @return [IO] self
+  def wait_writable(timeout = nil)
+    if timeout
+      move_on_after(timeout) do
+        Polyphony.backend_wait_io(self, true)
+        self
+      end
+    else
       Polyphony.backend_wait_io(self, true)
       self
     end
-  else
-    Polyphony.backend_wait_io(self, true)
-    self
   end
-end
 
-# Splices data from the given IO. If maxlen is negative, splices repeatedly
-# using absolute value of maxlen until EOF is encountered.
-#
-# @param src [IO, Polpyhony::Pipe] source to splice from
-# @param maxlen [Integer] maximum bytes to splice
-# @return [Integer] bytes spliced
-def splice_from(src, maxlen)
-  Polyphony.backend_splice(src, self, maxlen)
-end
-
-if RUBY_PLATFORM =~ /linux/
-  # Tees data from the given IO.
+  # Splices data from the given IO. If maxlen is negative, splices repeatedly
+  # using absolute value of maxlen until EOF is encountered.
   #
-  # @param src [IO, Polpyhony::Pipe] source to tee from
-  # @param maxlen [Integer] maximum bytes to tee
-  # @return [Integer] bytes teed
-  def tee_from(src, maxlen)
-    Polyphony.backend_tee(src, self, maxlen)
+  # @param src [IO, Polpyhony::Pipe] source to splice from
+  # @param maxlen [Integer] maximum bytes to splice
+  # @return [Integer] bytes spliced
+  def splice_from(src, maxlen)
+    Polyphony.backend_splice(src, self, maxlen)
   end
-end
+
+  if RUBY_PLATFORM =~ /linux/
+    # Tees data from the given IO.
+    #
+    # @param src [IO, Polpyhony::Pipe] source to tee from
+    # @param maxlen [Integer] maximum bytes to tee
+    # @return [Integer] bytes teed
+    def tee_from(src, maxlen)
+      Polyphony.backend_tee(src, self, maxlen)
+    end
+  end
 end

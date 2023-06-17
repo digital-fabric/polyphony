@@ -987,7 +987,7 @@ class MailboxTest < MiniTest::Test
     f << :foo
     snooze
     assert_equal [:foo], buffer
-    
+
     f << :bar
     snooze
     assert_equal [:foo, :bar], buffer
@@ -1011,7 +1011,7 @@ class MailboxTest < MiniTest::Test
     f << :foo
     snooze
     assert_equal [:foo], buffer
-    
+
     f << :bar
     snooze
     assert_equal [:foo, :bar, :done], buffer

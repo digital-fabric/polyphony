@@ -6,9 +6,9 @@ module Polyphony
   module TrapInterceptor
     def trap(sig, command = nil, &block)
       return super(sig, command) if command.is_a? String
-  
+
       block = command if !block && command.respond_to?(:call)
-  
+
       # The signal trap can be invoked at any time, including while the system
       # backend is blocking while polling for events. In order to deal with this
       # correctly, we run the signal handler code in an out-of-band, priority

@@ -26,7 +26,7 @@ class ::Enumerator
     fiber_count = 0
     results = []
     workers = []
-      
+
     each_with_index do |i, idx|
       if fiber_count < max_fibers
         workers << Object.spin do

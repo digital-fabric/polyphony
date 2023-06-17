@@ -332,7 +332,7 @@ class IOTest < MiniTest::Test
         splice_lens << len
         break if len == 0
       }
-      
+
       o2.close
     }
 
