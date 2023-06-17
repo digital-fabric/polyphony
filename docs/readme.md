@@ -79,6 +79,7 @@ $ gem install polyphony
 
 - {file:/docs/overview.md           Overview}
 - {file:/docs/tutorial.md           Tutorial}
+- {file:/docs/cancellation.md       All About Cancellation: How to Stop Concurrent Operations}
 - {file:/docs/advanced-io.md        Advanced I/O with Polyphony}
 - {file:/docs/cheat-sheet.md        Cheat-Sheet}
 - {file:/docs/faq.md                FAQ}
