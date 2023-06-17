@@ -532,10 +532,21 @@ class ::Fiber
     # terminates with an uncaught exception, `Fiber.await` will await all the
     # other fibers to terminate, then reraise the exception.
     #
-    # @param fibers [Array<Fiber>] fibers to wait for
-    # @return [Array<any>] return values of given fibers
+    # This method can be called with multiple fibers as multiple arguments, or
+    # with a single array containing one or more fibers.
+    #
+    # @overload Fiber.await(f1, f2, ...)
+    #   @param fibers [Array<Fiber>] fibers to wait for
+    #   @return [Array<any>] return values of given fibers
+    # @overload Fiber.await(fibers)
+    #   @param fibers [Array<Fiber>] fibers to wait for
+    #   @return [Array<any>] return values of given fibers
     def await(*fibers)
       return [] if fibers.empty?
+
+      if (first = fibers.first).is_a?(Array)
+        fibers = first
+      end
 
       current_fiber = self.current
       mailbox = current_fiber.monitor_mailbox
