@@ -2,6 +2,26 @@
 
 require 'open3'
 
+module Polyphony
+  module TrapInterceptor
+    def trap(sig, command = nil, &block)
+      return super(sig, command) if command.is_a? String
+  
+      block = command if !block && command.respond_to?(:call)
+  
+      # The signal trap can be invoked at any time, including while the system
+      # backend is blocking while polling for events. In order to deal with this
+      # correctly, we run the signal handler code in an out-of-band, priority
+      # scheduled fiber, that will pass any uncaught exception (including
+      # SystemExit and Interrupt) to the main thread's main fiber. See also
+      # `Fiber#schedule_priority_oob_fiber`.
+      super(sig) do
+        Fiber.schedule_priority_oob_fiber(&block)
+      end
+    end
+  end
+end
+
 # Kernel extensions (methods available to all objects / call sites)
 module ::Kernel
   # @!visibility private
@@ -73,6 +93,9 @@ module ::Kernel
 
   class << self
     # @!visibility private
+    alias_method :orig_trap, :trap
+
+    # @!visibility private
     alias_method :orig_system, :system
 
     # @!visibility private
@@ -89,30 +112,43 @@ module ::Kernel
     end
   end
 
+
   # @!visibility private
   alias_method :orig_trap, :trap
 
-  # @!visibility private
-  def trap(sig, command = nil, &block)
-    return orig_trap(sig, command) if command.is_a? String
+  prepend Polyphony::TrapInterceptor
 
-    block = command if !block && command.respond_to?(:call)
-
-    # The signal trap can be invoked at any time, including while the system
-    # backend is blocking while polling for events. In order to deal with this
-    # correctly, we run the signal handler code in an out-of-band, priority
-    # scheduled fiber, that will pass any uncaught exception (including
-    # SystemExit and Interrupt) to the main thread's main fiber. See also
-    # `Fiber#schedule_priority_oob_fiber`.
-    orig_trap(sig) do
-      Fiber.schedule_priority_oob_fiber(&block)
-    end
+  class << self
+    prepend Polyphony::TrapInterceptor
   end
+
+  # # @!visibility private
+  # def trap(sig, command = nil, &block)
+  #   return orig_trap(sig, command) if command.is_a? String
+
+  #   block = command if !block && command.respond_to?(:call)
+
+  #   # The signal trap can be invoked at any time, including while the system
+  #   # backend is blocking while polling for events. In order to deal with this
+  #   # correctly, we run the signal handler code in an out-of-band, priority
+  #   # scheduled fiber, that will pass any uncaught exception (including
+  #   # SystemExit and Interrupt) to the main thread's main fiber. See also
+  #   # `Fiber#schedule_priority_oob_fiber`.
+  #   orig_trap(sig) do
+  #     Fiber.schedule_priority_oob_fiber(&block)
+  #   end
+  # end
 
   private
 
   # @!visibility private
   def pipe_to_eof(src, dest)
     src.read_loop { |data| dest << data }
+  end
+end
+
+module ::Process
+  class << self
+    prepend Polyphony::TrapInterceptor
   end
 end

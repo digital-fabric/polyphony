@@ -92,8 +92,8 @@ module Polyphony
     # @!visibility private
     def install_terminating_signal_handlers
       trap('SIGTERM') { raise SystemExit }
-      orig_trap('SIGINT') do
-        orig_trap('SIGINT') { exit! }
+      Kernel.orig_trap('SIGINT') do
+        Kernel.orig_trap('SIGINT') { exit! }
         Fiber.schedule_priority_oob_fiber { raise Interrupt }
       end
     end
