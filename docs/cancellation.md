@@ -101,10 +101,11 @@ with_timeout(5) { sleep 10; :bar } #=> MyTimeoutError raised!
 In the code above, we create a `with_timeout` method that takes a duration
 argument. It starts by spinning up a fiber that will sleep for the given
 duration, then raise a custom exception. It then runs the given block by calling
-`yield`. If the given block stops running before the timeout, it exists
-normally, not before making sure to stop the timeout fiber. If the given block
-runs longer than the timeout, the exception raised by the timeout fiber will be
-propagated to the fiber running the block, causing it to be stopped.
+`yield`. If the given block returns before the timeout, its return value is
+returned from the call to `with_timeout`, not before making sure to stop the
+timeout fiber. If the given block runs longer than the timeout, the exception
+raised by the timeout will interrupt the fiber running the block, and will
+propagate to the call site.
 
 Now that we have an idea of how we can construct timeouts, let's look at the
 different timeout APIs included in Polyphony:
