@@ -1539,6 +1539,10 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
     RAISE_IF_EXCEPTION(resume_value);
     RB_GC_GUARD(resume_value);
   }
+  else {
+    int e = errno;
+    rb_syserr_fail(e, strerror(e));
+  }
 
   ret = waitpid(pid_int, &status, WNOHANG);
   if (ret < 0) {
