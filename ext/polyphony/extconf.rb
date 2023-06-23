@@ -44,11 +44,13 @@ if config[:io_uring]
     end
   end
 
-  if !find_header 'liburing.h', File.expand_path('../../vendor/liburing/src/include', __dir__)
+  if !find_header 'liburing.h', File.join(liburing_path, 'src/include')
     raise "Couldn't find liburing.h"
   end
 
-  find_library('uring', nil, File.expand_path('../../vendor/liburing/src', __dir__))
+  if !find_library('uring', nil, File.join(liburing_path, 'src'))
+    raise "Couldn't find liburing.a"
+  end
 end
 
 def define_bool(name, value)
@@ -92,12 +94,8 @@ $defs << '-DPOLYPHONY_PLAYGROUND' if ENV['POLYPHONY_PLAYGROUND']
 
 CONFIG['optflags'] << ' -fno-strict-aliasing' unless RUBY_PLATFORM =~ /mswin/
 
-if RUBY_VERSION >= '3.1'
-  have_func('rb_fiber_transfer', 'ruby.h')
-end
-
 have_header('ruby/io/buffer.h')
-
+have_func('rb_fiber_transfer')
 have_func('rb_io_path')
 have_func('rb_io_descriptor')
 have_func('rb_io_get_write_io')
