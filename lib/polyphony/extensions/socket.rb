@@ -177,7 +177,7 @@ class ::Socket < ::BasicSocket
   #
   # @return [::Socket] self
   def dont_linger
-    setsockopt(Socket::SOL_SOCKET, Socket::SO_LINGER, ZERO_LINGER)
+    setsockopt(Socket::SOL_SOCKET, Socket::SO_LINGER, Socket::ZERO_LINGER)
     self
   end
 
@@ -287,7 +287,7 @@ class ::TCPSocket < ::IPSocket
   #
   # @return [::Socket] self
   def dont_linger
-    setsockopt(Socket::SOL_SOCKET, Socket::SO_LINGER, ZERO_LINGER)
+    setsockopt(Socket::SOL_SOCKET, Socket::SO_LINGER, Socket::ZERO_LINGER)
     self
   end
 

@@ -163,6 +163,17 @@ class TCPSocketTest < MiniTest::Test
     server_fiber&.await
     server&.close
   end
+
+  def test_sockopt
+    client = TCPSocket.open('ipinfo.io', 80)
+
+    client.dont_linger
+    client.no_delay
+    client.reuse_addr
+    client.reuse_port
+  ensure
+    client.close
+  end
 end
 
 class UNIXSocketTest < MiniTest::Test
