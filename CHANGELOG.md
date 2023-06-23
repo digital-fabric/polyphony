@@ -1,3 +1,10 @@
+## 1.3 2023-06-23
+
+- Improve cancellation doc page
+- Fix linking to liburing under certain conditions (#107)
+- Fix reference to `Socket::ZERO_LINGER` (#106 @floriandejonckheere)
+- Handle error when calling `pidfd_open`
+
 ## 1.2 2023-06-17
 
 - Require Ruby 3.1 or newer
