@@ -48,7 +48,7 @@ if config[:io_uring]
     raise "Couldn't find liburing.h"
   end
 
-  $LDFLAGS << " -L#{File.expand_path('../../vendor/liburing/src', __dir__)} -l uring"
+  find_library('uring', nil, File.expand_path('../../vendor/liburing/src', __dir__))
 end
 
 def define_bool(name, value)

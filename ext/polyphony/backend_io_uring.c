@@ -14,7 +14,7 @@
 #include <errno.h>
 
 #include "polyphony.h"
-#include "liburing.h"
+#include <liburing.h>
 #include "backend_io_uring_context.h"
 #include "ruby/thread.h"
 #include "ruby/io.h"
@@ -141,8 +141,6 @@ typedef struct poll_context {
   int                 result;
 } poll_context_t;
 
-extern int __sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complete, unsigned flags, sigset_t *sig);
-
 void *io_uring_backend_poll_without_gvl(void *ptr) {
   poll_context_t *ctx = (poll_context_t *)ptr;
   ctx->result = io_uring_wait_cqe(ctx->ring, &ctx->cqe);
@@ -215,7 +213,7 @@ again:
   if (overflow_checked) goto done;
 
   if (cq_ring_needs_flush(ring)) {
-    __sys_io_uring_enter(ring->ring_fd, 0, 0, IORING_ENTER_GETEVENTS, NULL);
+    io_uring_enter(ring->ring_fd, 0, 0, IORING_ENTER_GETEVENTS, NULL);
     overflow_checked = true;
     goto again;
   }
