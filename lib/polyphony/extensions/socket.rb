@@ -59,7 +59,7 @@ class ::Socket < ::BasicSocket
 
   # Reads from the socket. If `maxlen` is given, reads up to `maxlen` bytes from
   # the socket, otherwise reads to `EOF`. If `buf` is given, it is used as the
-  # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
+  # buffer to read into, otherwise a new string is allocated. If `buffer_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
   # given buffer offset is negative, it is calculated from the current end of
   # the buffer (`-1` means the read data will be appended to the end of the
@@ -70,9 +70,9 @@ class ::Socket < ::BasicSocket
   #
   # @param len [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
-  # @param buf_pos [Number] buffer position to read into
+  # @param buffer_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(len = nil, buf = nil, buffer_pos: 0)
+  def read(len = nil, buf = nil, buffer_pos = 0)
     return '' if len == 0
     return Polyphony.backend_read(self, buf, len, true, buffer_pos) if buf
 
@@ -148,7 +148,7 @@ class ::Socket < ::BasicSocket
   end
 
   # Reads up to `maxlen` from the socket. If `buf` is given, it is used as the
-  # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
+  # buffer to read into, otherwise a new string is allocated. If `buffer_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
   # given buffer offset is negative, it is calculated from the current end of
   # the buffer (`-1` means the read data will be appended to the end of the
@@ -160,10 +160,10 @@ class ::Socket < ::BasicSocket
   #
   # @param maxlen [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
-  # @param buf_pos [Number] buffer position to read into
+  # @param buffer_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, buf = +'', buffer_pos: 0, raise_on_eof: true)
+  def readpartial(maxlen, buf = +'', buffer_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_recv(self, buf, maxlen, buffer_pos)
     raise EOFError if !result && raise_on_eof
 
@@ -320,7 +320,7 @@ class ::TCPSocket < ::IPSocket
 
   # Reads from the socket. If `maxlen` is given, reads up to `maxlen` bytes from
   # the socket, otherwise reads to `EOF`. If `buf` is given, it is used as the
-  # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
+  # buffer to read into, otherwise a new string is allocated. If `buffer_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
   # given buffer offset is negative, it is calculated from the current end of
   # the buffer (`-1` means the read data will be appended to the end of the
@@ -331,9 +331,9 @@ class ::TCPSocket < ::IPSocket
   #
   # @param len [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
-  # @param buf_pos [Number] buffer position to read into
+  # @param buffer_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(len = nil, buf = nil, buffer_pos: 0)
+  def read(len = nil, buf = nil, buffer_pos = 0)
     return '' if len == 0
     return Polyphony.backend_read(self, buf, len, true, buffer_pos) if buf
 
@@ -391,7 +391,7 @@ class ::TCPSocket < ::IPSocket
   end
 
   # Reads up to `maxlen` from the socket. If `buf` is given, it is used as the
-  # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
+  # buffer to read into, otherwise a new string is allocated. If `buffer_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
   # given buffer offset is negative, it is calculated from the current end of
   # the buffer (`-1` means the read data will be appended to the end of the
@@ -403,10 +403,10 @@ class ::TCPSocket < ::IPSocket
   #
   # @param maxlen [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
-  # @param buf_pos [Number] buffer position to read into
+  # @param buffer_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, buf = +'', buffer_pos: 0, raise_on_eof: true)
+  def readpartial(maxlen, buf = +'', buffer_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_recv(self, buf, maxlen, buffer_pos)
     raise EOFError if !result && raise_on_eof
 
@@ -526,7 +526,7 @@ class ::UNIXSocket < ::BasicSocket
 
   # Reads from the socket. If `maxlen` is given, reads up to `maxlen` bytes from
   # the socket, otherwise reads to `EOF`. If `buf` is given, it is used as the
-  # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
+  # buffer to read into, otherwise a new string is allocated. If `buffer_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
   # given buffer offset is negative, it is calculated from the current end of
   # the buffer (`-1` means the read data will be appended to the end of the
@@ -537,9 +537,9 @@ class ::UNIXSocket < ::BasicSocket
   #
   # @param len [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
-  # @param buf_pos [Number] buffer position to read into
+  # @param buffer_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(len = nil, buf = nil, buffer_pos: 0)
+  def read(len = nil, buf = nil, buffer_pos = 0)
     return '' if len == 0
     return Polyphony.backend_read(self, buf, len, true, buffer_pos) if buf
 
@@ -623,7 +623,7 @@ class ::UNIXSocket < ::BasicSocket
   end
 
   # Reads up to `maxlen` from the socket. If `buf` is given, it is used as the
-  # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
+  # buffer to read into, otherwise a new string is allocated. If `buffer_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
   # given buffer offset is negative, it is calculated from the current end of
   # the buffer (`-1` means the read data will be appended to the end of the
@@ -635,10 +635,10 @@ class ::UNIXSocket < ::BasicSocket
   #
   # @param maxlen [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
-  # @param buf_pos [Number] buffer position to read into
+  # @param buffer_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, buf = +'', buffer_pos: 0, raise_on_eof: true)
+  def readpartial(maxlen, buf = +'', buffer_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_recv(self, buf, maxlen, buffer_pos)
     raise EOFError if !result && raise_on_eof
 
