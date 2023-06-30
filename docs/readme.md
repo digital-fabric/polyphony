@@ -25,58 +25,24 @@
 ## What is Polyphony?
 
 Polyphony is a library for building concurrent applications in Ruby. Polyphony
-harnesses the power of [Ruby fibers](https://ruby-doc.org/core-2.5.1/Fiber.html)
-to provide a cooperative, sequential coroutine-based concurrency model. Under
-the hood, Polyphony uses
-[io_uring](https://unixism.net/loti/what_is_io_uring.html) or
+harnesses the power of [Ruby fibers](https://rubyapi.org/3.2/o/fiber) to provide
+a cooperative, sequential coroutine-based concurrency model. Under the hood,
+Polyphony uses [io_uring](https://unixism.net/loti/what_is_io_uring.html) or
 [libev](https://github.com/enki/libev) to maximize I/O performance.
 
 ## Features
 
-* Co-operative scheduling of concurrent tasks using Ruby fibers.
-* High-performance event reactor for handling I/O events and timers.
-* Natural, sequential programming style that makes it easy to reason about
-  concurrent code.
-* Abstractions and constructs for controlling the execution of concurrent code:
-  supervisors, cancel scopes, throttling, resource pools etc.
-* Code can use native networking classes and libraries, growing support for
-  third-party gems such as `pg` and `redis`.
-* Use stdlib classes such as `TCPServer`, `TCPSocket` and
-  `OpenSSL::SSL::SSLSocket`.
-* Competitive performance and scalability characteristics, in terms of both
-  throughput and memory consumption.
-
-## Installing
-
-### System Requirements
-
-In order to use Polyphony you need to have:
-
-- Linux or MacOS (support for Windows will come at a later stage)
-- Ruby (MRI) 3.1 or newer
-
-### Installing the Polyphony Gem
-
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'polyphony'
-```
-
-And then execute:
-
-```bash
-$ bundle
-```
-
-Or install it yourself as:
-
-```bash
-$ gem install polyphony
-```
+* Ruby fibers as the main unit of concurrency.
+* [Structured concurrency](https://en.wikipedia.org/wiki/Structured_concurrency)
+  coupled with robust exception handling.
+* Message passing between fibers, even across threads!
+* High-performance I/O using the core Ruby I/O classes and
+  [io_uring](https://unixism.net/loti/what_is_io_uring.html) with support for
+  {file:/docs/advanced-io.md advanced I/O patterns}.
 
 ## Usage
 
+- {file:/docs/installation.md       Installation}
 - {file:/docs/overview.md           Overview}
 - {file:/docs/tutorial.md           Tutorial}
 - {file:/docs/cancellation.md       All About Cancellation: How to Stop Concurrent Operations}

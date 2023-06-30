@@ -52,7 +52,7 @@ module Polyphony
 
       # Converts an event (expressed as an array) to a hash.
       #
-      # @param e [Array] event as emitted by the backend
+      # @param event [Array] event as emitted by the backend
       # @return [Hash] event hash
       def trace_event_info(event)
         {
@@ -65,7 +65,7 @@ module Polyphony
 
       # Returns an event hash for a `:block` event.
       #
-      # @param e [Array] event array
+      # @param event [Array] event array
       # @return [Hash] event hash
       def event_props_block(event)
         {
@@ -76,7 +76,7 @@ module Polyphony
 
       # Returns an event hash for a `:enter_poll` event.
       #
-      # @param e [Array] event array
+      # @param _event [Array] event array
       # @return [Hash] event hash
       def event_props_enter_poll(_event)
         {}
@@ -84,7 +84,7 @@ module Polyphony
 
       # Returns an event hash for a `:leave_poll` event.
       #
-      # @param e [Array] event array
+      # @param _event [Array] event array
       # @return [Hash] event hash
       def event_props_leave_poll(_event)
         {}
@@ -92,7 +92,7 @@ module Polyphony
 
       # Returns an event hash for a `:schedule` event.
       #
-      # @param e [Array] event array
+      # @param event [Array] event array
       # @return [Hash] event hash
       def event_props_schedule(event)
         {
@@ -105,7 +105,7 @@ module Polyphony
 
       # Returns an event hash for a `:spin` event.
       #
-      # @param e [Array] event array
+      # @param event [Array] event array
       # @return [Hash] event hash
       def event_props_spin(event)
         {
@@ -117,7 +117,7 @@ module Polyphony
 
       # Returns an event hash for a `:terminate` event.
       #
-      # @param e [Array] event array
+      # @param event [Array] event array
       # @return [Hash] event hash
       def event_props_terminate(event)
         {
@@ -128,7 +128,7 @@ module Polyphony
 
       # Returns an event hash for a `:unblock` event.
       #
-      # @param e [Array] event array
+      # @param event [Array] event array
       # @return [Hash] event hash
       def event_props_unblock(event)
         {

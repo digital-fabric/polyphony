@@ -18,6 +18,7 @@
 ./ext/polyphony
 -
 docs/readme.md
+docs/installation.md
 docs/overview.md
 docs/tutorial.md
 docs/cancellation.md
