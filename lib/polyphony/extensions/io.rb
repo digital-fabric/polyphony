@@ -197,7 +197,7 @@ class ::IO
   alias_method :orig_read, :read
 
   # @!visibility private
-  def read(len = nil, buf = nil, buffer_pos: 0)
+  def read(len = nil, buf = nil, buffer_pos = 0)
     return '' if len == 0
     return Polyphony.backend_read(self, buf, len, true, buffer_pos) if buf
 
@@ -214,7 +214,7 @@ class ::IO
   alias_method :orig_readpartial, :read
 
   # @!visibility private
-  def readpartial(len, str = +'', buffer_pos: 0, raise_on_eof: true)
+  def readpartial(len, str = +'', buffer_pos = 0, raise_on_eof = true)
     result = Polyphony.backend_read(self, str, len, false, buffer_pos)
     raise EOFError if !result && raise_on_eof
 
@@ -255,7 +255,7 @@ class ::IO
       idx = @read_buffer.index(sep)
       return @read_buffer.slice!(0, idx + sep_size) if idx
 
-      result = readpartial(8192, @read_buffer, buffer_pos: -1)
+      result = readpartial(8192, @read_buffer, -1)
       return nil unless result
     end
   rescue EOFError
@@ -280,7 +280,7 @@ class ::IO
         yield line
       end
 
-      result = readpartial(8192, @read_buffer, buffer_pos: -1)
+      result = readpartial(8192, @read_buffer, -1)
       return self if !result
     end
   rescue EOFError

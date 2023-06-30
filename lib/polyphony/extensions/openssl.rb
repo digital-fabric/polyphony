@@ -90,7 +90,7 @@ class ::OpenSSL::SSL::SSLSocket
 
   # Reads from the socket. If `maxlen` is given, reads up to `maxlen` bytes from
   # the socket, otherwise reads to `EOF`. If `buf` is given, it is used as the
-  # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
+  # buffer to read into, otherwise a new string is allocated. If `buffer_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
   # given buffer offset is negative, it is calculated from the current end of
   # the buffer (`-1` means the read data will be appended to the end of the
@@ -101,21 +101,21 @@ class ::OpenSSL::SSL::SSLSocket
   #
   # @param maxlen [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
-  # @param buf_pos [Number] buffer position to read into
+  # @param buffer_pos [Number] buffer position to read into
   # @return [String] buffer used for reading
-  def read(maxlen = nil, buf = nil, buffer_pos: 0)
-    return readpartial(maxlen, buf, buffer_pos:) if buf
+  def read(maxlen = nil, buf = nil, buffer_pos = 0)
+    return readpartial(maxlen, buf, buffer_pos) if buf
 
     buf = +''
     return readpartial(maxlen, buf) if maxlen
 
-    readpartial(4096, buf, buffer_pos: -1) while true
+    readpartial(4096, buf, -1) while true
   rescue EOFError
     buf
   end
 
   # Reads up to `maxlen` from the socket. If `buf` is given, it is used as the
-  # buffer to read into, otherwise a new string is allocated. If `buf_pos` is
+  # buffer to read into, otherwise a new string is allocated. If `buffer_pos` is
   # given, reads into the given offset (in bytes) in the given buffer. If the
   # given buffer offset is negative, it is calculated from the current end of
   # the buffer (`-1` means the read data will be appended to the end of the
@@ -127,16 +127,16 @@ class ::OpenSSL::SSL::SSLSocket
   #
   # @param maxlen [Integer, nil] maximum bytes to read from socket
   # @param buf [String, nil] buffer to read into
-  # @param buf_pos [Number] buffer position to read into
+  # @param buffer_pos [Number] buffer position to read into
   # @param raise_on_eof [bool] whether to raise an exception on `EOF`
   # @return [String, nil] buffer used for reading or nil on `EOF`
-  def readpartial(maxlen, buf = +'', buffer_pos: 0, raise_on_eof: true)
-    if buf_pos != 0
+  def readpartial(maxlen, buf = +'', buffer_pos = 0, raise_on_eof = true)
+    if buffer_pos != 0
       if (result = sysread(maxlen, +''))
-        if buf_pos == -1
+        if buffer_pos == -1
           result = buf + result
         else
-          result = buf[0...buf_pos] + result
+          result = buf[0...buffer_pos] + result
         end
       end
     else
