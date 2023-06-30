@@ -1363,34 +1363,33 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   return self;
 }
 
-// VALUE Backend_close(VALUE self, VALUE io) {
-//   Backend_t *backend;
-//   rb_io_t *fptr;
-//   VALUE resume_value = Qnil;
-//   op_context_t *ctx;
-//   struct io_uring_sqe *sqe;
-//   int result;
-//   int completed;
+VALUE Backend_close(VALUE self, VALUE io) {
+  Backend_t *backend;
+  rb_io_t *fptr;
+  VALUE resume_value = Qnil;
+  op_context_t *ctx;
+  struct io_uring_sqe *sqe;
+  int result;
+  int completed;
+  int fd = fd_from_io(io, &fptr, 0, 0);
+  if (fd < 0) return Qnil;
 
-//   if (fd < 0) return Qnil;
+  GetBackend(self, backend);
+  ctx = context_store_acquire(&backend->store, OP_CLOSE);
+  sqe = io_uring_backend_get_sqe(backend);
+  io_uring_prep_close(sqe, fd);
+  result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+  completed = context_store_release(&backend->store, ctx);
+  RAISE_IF_EXCEPTION(resume_value);
+  if (!completed) return resume_value;
+  RB_GC_GUARD(resume_value);
 
-//   io_unset_nonblock(io, fd);
+  if (result < 0) rb_syserr_fail(-result, strerror(-result));
 
-//   ctx = context_store_acquire(&backend->store, OP_CLOSE);
-//   sqe = io_uring_backend_get_sqe(backend);
-//   io_uring_prep_close(sqe, fd);
-//   result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
-//   completed = context_store_release(&backend->store, ctx);
-//   RAISE_IF_EXCEPTION(resume_value);
-//   if (!completed) return resume_value;
-//   RB_GC_GUARD(resume_value);
-
-//   if (result < 0) rb_syserr_fail(-result, strerror(-result));
-
-//   fptr_finalize(fptr);
-//   // fd = -1;
-//   return io;
-// }
+  fptr_finalize(fptr);
+  // fd = -1;
+  return io;
+}
 
 inline struct __kernel_timespec double_to_timespec(double duration) {
   double duration_integral;
@@ -2015,7 +2014,7 @@ void Init_Backend(void) {
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "write", Backend_write_m, -1);
-  // rb_define_method(cBackend, "close", Backend_close, 1);
+  rb_define_method(cBackend, "close", Backend_close, 1);
 
   SYM_io_uring = ID2SYM(rb_intern("io_uring"));
   SYM_send = ID2SYM(rb_intern("send"));

@@ -427,6 +427,16 @@ class ::IO
     Polyphony.backend_splice(src, self, maxlen)
   end
 
+  # @!visibility private
+  alias_method :orig_close, :close
+
+  def close
+    return if closed?
+
+    Polyphony.backend_close(self)
+    nil
+  end
+
   if RUBY_PLATFORM =~ /linux/
     # Tees data from the given IO.
     #

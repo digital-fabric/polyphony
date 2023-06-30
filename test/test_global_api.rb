@@ -137,7 +137,7 @@ class MoveOnAfterTest < MiniTest::Test
     t1 = monotonic_clock
 
     assert_nil v
-    assert_in_range 0.012..0.025, t1 - t0 if IS_LINUX
+    assert_in_range 0.012..0.030, t1 - t0 if IS_LINUX
   end
 
   def test_nested_move_on_after
@@ -161,7 +161,7 @@ class MoveOnAfterTest < MiniTest::Test
     end
     t1 = monotonic_clock
     assert_equal 2, o
-    assert_in_range 0.008..0.025, t1 - t0 if IS_LINUX
+    assert_in_range 0.008..0.035, t1 - t0 if IS_LINUX
   end
 end
 

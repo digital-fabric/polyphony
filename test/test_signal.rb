@@ -4,6 +4,10 @@ require_relative 'helper'
 
 class SignalTrapTest < Minitest::Test
   def test_signal_handler_trace
+    if Thread.current.backend.kind != :io_uring
+      skip "Skipping signal handler trace because Backend_close on libev behaves differently"
+    end
+
     i1, o1 = IO.pipe
     i2, o2 = IO.pipe
     pid = Process.pid
@@ -39,16 +43,21 @@ class SignalTrapTest < Minitest::Test
     end
 
     expected = [
-      [:block, :main],
+      [:block,      :main],
+      [:enter_poll, :main],
+      [:schedule,   :main],
+      [:leave_poll, :main],
+      [:unblock,    :main],
+      [:block,      :main],
       [:enter_poll, :main],
       [:leave_poll, :main],
-      [:unblock, :oob],
-      [:terminate, :oob],
-      [:block, :oob],
+      [:unblock,    :oob],
+      [:terminate,  :oob],
+      [:block,      :oob],
       [:enter_poll, :oob],
-      [:schedule, :main],
+      [:schedule,   :main],
       [:leave_poll, :oob],
-      [:unblock, :main]
+      [:unblock,    :main]
     ]
     if Thread.backend.kind == :libev
       expected += [

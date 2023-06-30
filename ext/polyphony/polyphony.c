@@ -404,9 +404,11 @@ VALUE Polyphony_raw_buffer_size(VALUE self, VALUE buffer) {
   return INT2FIX(buffer_spec->len);
 }
 
-// VALUE Polyphony_backend_close(VALUE self, VALUE io) {
-//   return Backend_close(BACKEND(), io);
-// }
+/* @!visibility private */
+
+VALUE Polyphony_backend_close(VALUE self, VALUE io) {
+  return Backend_close(BACKEND(), io);
+}
 
 void Init_Polyphony(void) {
   mPolyphony = rb_define_module("Polyphony");
@@ -448,7 +450,7 @@ void Init_Polyphony(void) {
   rb_define_singleton_method(mPolyphony, "backend_wait_io", Polyphony_backend_wait_io, 2);
   rb_define_singleton_method(mPolyphony, "backend_waitpid", Polyphony_backend_waitpid, 1);
   rb_define_singleton_method(mPolyphony, "backend_write", Polyphony_backend_write, -1);
-  // rb_define_singleton_method(mPolyphony, "backend_close", Polyphony_backend_close, 1);
+  rb_define_singleton_method(mPolyphony, "backend_close", Polyphony_backend_close, 1);
   rb_define_singleton_method(mPolyphony, "backend_verify_blocking_mode", Backend_verify_blocking_mode, 2);
 
   rb_define_singleton_method(mPolyphony, "__with_raw_buffer__", Polyphony_with_raw_buffer, 1);

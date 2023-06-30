@@ -1135,6 +1135,31 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
   return libev_wait_fd(backend, fd, events, 1);
 }
 
+VALUE Backend_close(VALUE self, VALUE io) {
+  Backend_t *backend;
+  rb_io_t *fptr;
+  VALUE resume_value = Qnil;
+  int result;
+  int fd = fd_from_io(io, &fptr, 0, 0);
+  if (fd < 0) return Qnil;
+
+  GetBackend(self, backend);
+
+  result = close(fd);
+  if (result == -1) {
+    int err = errno;
+    rb_syserr_fail(err, strerror(err));
+  }
+
+  resume_value = backend_snooze(&backend->base);
+  RAISE_IF_EXCEPTION(resume_value);
+  RB_GC_GUARD(resume_value);
+
+  fptr_finalize(fptr);
+  // fd = -1;
+  return io;
+}
+
 struct libev_timer {
   struct ev_timer timer;
   VALUE fiber;
@@ -1654,6 +1679,7 @@ void Init_Backend(void) {
   rb_define_method(cBackend, "wait_io", Backend_wait_io, 2);
   rb_define_method(cBackend, "waitpid", Backend_waitpid, 1);
   rb_define_method(cBackend, "write", Backend_write_m, -1);
+  rb_define_method(cBackend, "close", Backend_close, 1);
 
   SYM_libev = ID2SYM(rb_intern("libev"));
 

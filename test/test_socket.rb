@@ -73,12 +73,8 @@ class TCPSocketTest < MiniTest::Test
   def test_read
     port, server = start_tcp_server_on_random_port
     server_fiber = spin do
-      while (socket = server.accept)
-        spin do
-          while (data = socket.readpartial(8192))
-            socket << data
-          end
-        end
+      server.accept_loop do |socket|
+        spin { socket.recv_loop { |data| socket << data } }
       end
     end
 

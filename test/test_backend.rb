@@ -544,4 +544,11 @@ class BackendChainTest < MiniTest::Test
     # released properly before raising the error (for the time being this has
     # been verified manually).
   end
+
+  def test_backend_close
+    r, w = IO.pipe
+    w << 'abc'
+    Thread.backend.close(w)
+    assert w.closed?
+  end
 end
