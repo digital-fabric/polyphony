@@ -1,3 +1,9 @@
+## 1.4 2023-07-01
+
+- Implement concurrent `IO#close`
+- Improve docs
+- Use only positional arguments in `IO#read` and `IO#readpartial` (#109 @floriandejonckheere)
+
 ## 1.3 2023-06-23
 
 - Improve cancellation doc page
