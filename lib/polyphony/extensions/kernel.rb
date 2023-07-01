@@ -5,6 +5,22 @@ require 'open3'
 module Polyphony
   # Intercepts calls to #trap
   module TrapInterceptor
+    # Installs a signal handler. If a block is given (or the command parameter
+    # is a Proc or a callable), it is executed inside an out-of-band,
+    # prioritized fiber.
+    #
+    # If the command is the string “IGNORE” or “SIG_IGN”, the signal will be
+    # ignored. If the command is “DEFAULT” or “SIG_DFL”, the Ruby’s default
+    # handler will be invoked. If the command is “EXIT”, the script will be
+    # terminated by the signal. If the command is “SYSTEM_DEFAULT”, the
+    # operating system’s default handler will be invoked. Otherwise, the given
+    # command or block will be run. The special signal name “EXIT” or signal
+    # number zero will be invoked just prior to program termination.
+    #
+    # trap returns the previous handler for the given signal.
+    #
+    # @param sig [String, Symbol, Integer] signal name or number
+    # @param command [String, Proc] command to perform
     def trap(sig, command = nil, &block)
       return super(sig, command) if command.is_a? String
 

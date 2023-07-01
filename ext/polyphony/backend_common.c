@@ -458,7 +458,7 @@ VALUE Backend_stats(VALUE self) {
 
 VALUE Backend_verify_blocking_mode(VALUE self, VALUE io, VALUE blocking) {
   io_verify_blocking_mode(io, rb_io_descriptor(io), blocking);
-  return self;
+  return io;
 }
 
 void backend_setup_stats_symbols(void) {

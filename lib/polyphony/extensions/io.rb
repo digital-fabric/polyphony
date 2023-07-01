@@ -430,6 +430,9 @@ class ::IO
   # @!visibility private
   alias_method :orig_close, :close
 
+  # Closes the IO instance
+  #
+  # @return [void]
   def close
     return if closed?
 
