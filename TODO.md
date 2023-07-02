@@ -5,6 +5,10 @@
   - if `io_uring_get_sqe` returns null, call `io_uring_submit`, (snooze fiber)?
     and try again
 
+- closing and shutdown:
+  - `Pipe_free()` - can we use the backend to close the pipe fds?
+  - Implement `BasicSocket#shutdown`, add `Backend_shutdown` API.
+
 - Tracing:
   - Emit events on I/O ops, e.g.:
     - [:op_read_submit, id, io, len]
@@ -19,9 +23,7 @@
 - More tight loops
   - `IO#gets_loop`, `Socket#gets_loop`, `OpenSSL::Socket#gets_loop` (medium effort)
 
-- Add support for `close` to io_uring backend
-
-## Roadmap for Polyphony 1.1
+## Roadmap for Polyphony 2
 
 - io_uring
   - Use playground.c to find out why we when submitting and waiting for

@@ -267,21 +267,25 @@ VALUE libev_wait_fd(Backend_t *backend, int fd, int events, int raise_exception)
 }
 
 static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int rectify_file_pos) {
+  if (TYPE(io) == T_FIXNUM) {
+    *fptr = NULL;
+    return FIX2INT(io);
+  }
+  
   if (rb_obj_class(io) == cPipe) {
     *fptr = NULL;
     Pipe_verify_blocking_mode(io, Qfalse);
     return Pipe_get_fd(io, write_mode);
   }
-  else {
-    VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
-    if (underlying_io != Qnil) io = underlying_io;
 
-    GetOpenFile(io, *fptr);
-    int fd = rb_io_descriptor(io);
-    io_verify_blocking_mode(io, fd, Qfalse);
-    if (rectify_file_pos) rectify_io_file_pos(*fptr);
-    return fd;
-  }
+  VALUE underlying_io = rb_ivar_get(io, ID_ivar_io);
+  if (underlying_io != Qnil) io = underlying_io;
+
+  GetOpenFile(io, *fptr);
+  int fd = rb_io_descriptor(io);
+  io_verify_blocking_mode(io, fd, Qfalse);
+  if (rectify_file_pos) rectify_io_file_pos(*fptr);
+  return fd;
 }
 
 VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eof, VALUE pos) {
@@ -1155,7 +1159,7 @@ VALUE Backend_close(VALUE self, VALUE io) {
   RAISE_IF_EXCEPTION(resume_value);
   RB_GC_GUARD(resume_value);
 
-  fptr_finalize(fptr);
+  if (fptr) fptr_finalize(fptr);
   // fd = -1;
   return io;
 }

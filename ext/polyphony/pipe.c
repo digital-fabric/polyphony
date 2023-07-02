@@ -97,8 +97,8 @@ VALUE Pipe_close(VALUE self) {
   if (pipe->w_closed)
     rb_raise(rb_eRuntimeError, "Pipe is already closed for writing");
 
+  Backend_close(BACKEND(), INT2FIX(pipe->fds[1]));
   pipe->w_closed = 1;
-  close(pipe->fds[1]);
   return self;
 }
 
