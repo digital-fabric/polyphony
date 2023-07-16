@@ -468,20 +468,20 @@ class MultishotAcceptTest < MiniTest::Test
     server&.close
   end
 
-  def test_multishot_accept_error
+  def test_multishot_accept_interrupt
     port, server = start_tcp_server_on_random_port
-    error = nil
     server_fiber = spin do
       server.multishot_accept do
         server.accept_loop { |s| spin_client(s) }
-      rescue SystemCallError => e
-        error = e
       end
     end
-    snooze
+    10.times { snooze }
+    server_socket = server.instance_variable_get(:@io)
+    assert server_socket.instance_variable_get(:@multishot_accept_queue)
     server.close
-    snooze
+    server_fiber.stop
+    10.times { snooze }
     server_fiber.await
-    assert_kind_of Errno::EBADF, error
+    assert_nil server_socket.instance_variable_get(:@multishot_accept_queue)
   end
 end

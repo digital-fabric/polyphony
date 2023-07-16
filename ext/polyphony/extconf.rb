@@ -17,7 +17,8 @@ def get_config
   version, major_revision, distribution = m[1].to_i, m[2].to_i, m[4]
 
   combined_version = version.to_i * 100 + major_revision.to_i
-
+  
+  config[:kernel_version]     = combined_version
   config[:pidfd_open]         = combined_version > 503
   config[:multishot_recv]     = combined_version >= 600
   config[:multishot_recvmsg]  = combined_version >= 600
@@ -31,7 +32,7 @@ def get_config
 end
 
 config = get_config
-puts "Building Polyphony... (#{config.inspect})"
+puts "Building Polyphony (\n#{config.map { |(k, v)| "  #{k}: #{v}\n"}.join})"
 
 require_relative 'zlib_conf'
 

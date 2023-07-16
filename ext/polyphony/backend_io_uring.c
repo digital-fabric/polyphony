@@ -152,6 +152,8 @@ static inline bool cq_ring_needs_flush(struct io_uring *ring) {
   return IO_URING_READ_ONCE(*ring->sq.kflags) & IORING_SQ_CQ_OVERFLOW;
 }
 
+#define MULTISHOT_ACCEPT_QUEUE(socket) (rb_ivar_get(socket, ID_ivar_multishot_accept_queue))
+
 static void handle_multishot_accept_completion(op_context_t *ctx, struct io_uring_cqe *cqe, Backend_t *backend) {
   // printf("handle_multishot_accept_completion result: %d\n", ctx->result);
   if (ctx->result == -ECANCELED) {
@@ -162,9 +164,9 @@ static void handle_multishot_accept_completion(op_context_t *ctx, struct io_urin
     if (!(cqe->flags & IORING_CQE_F_MORE)) {
       context_store_release(&backend->store, ctx);
     }
-    VALUE queue = rb_ivar_get(ctx->resume_value, ID_ivar_multishot_accept_queue);
+    VALUE queue = MULTISHOT_ACCEPT_QUEUE(ctx->resume_value);
     if (queue != Qnil)
-      Queue_push(queue, INT2NUM(ctx->result));
+      Queue_push(queue, INT2FIX(ctx->result));
   }
 }
 
@@ -972,6 +974,19 @@ VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE des
   return INT2FIX(buffer_spec.len);
 }
 
+inline VALUE create_socket_from_fd(int fd, VALUE socket_class) {
+  rb_io_t *fp;
+
+  VALUE socket = rb_obj_alloc(socket_class);
+  MakeOpenFile(socket, fp);
+  rb_update_max_fd(fd);
+  fp->fd = fd;
+  fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
+  rb_io_ascii8bit_binmode(socket);
+  rb_io_synchronized(fp);
+  return socket;
+}
+
 VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE socket_class, int loop) {
   int server_fd;
   rb_io_t *server_fptr;
@@ -999,19 +1014,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE soc
     if (fd < 0)
       rb_syserr_fail(-fd, strerror(-fd));
     else {
-      rb_io_t *fp;
-
-      socket = rb_obj_alloc(socket_class);
-      MakeOpenFile(socket, fp);
-      rb_update_max_fd(fd);
-      fp->fd = fd;
-      fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
-      rb_io_ascii8bit_binmode(socket);
-      rb_io_synchronized(fp);
-
-      // if (rsock_do_not_reverse_lookup) {
-      //   fp->mode |= FMODE_NOREVLOOKUP;
-      // }
+      socket = create_socket_from_fd(fd, socket_class);
       if (loop) {
         rb_yield(socket);
         socket = Qnil;
@@ -1026,24 +1029,14 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE soc
 
 VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
 #ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
-  VALUE accept_queue = rb_ivar_get(server_socket, ID_ivar_multishot_accept_queue);
+  VALUE accept_queue = MULTISHOT_ACCEPT_QUEUE(server_socket);
   if (accept_queue != Qnil) {
     VALUE next = Queue_shift(0, 0, accept_queue);
     int fd = NUM2INT(next);
     if (fd < 0)
       rb_syserr_fail(-fd, strerror(-fd));
-    else {
-      rb_io_t *fp;
-
-      VALUE socket = rb_obj_alloc(socket_class);
-      MakeOpenFile(socket, fp);
-      rb_update_max_fd(fd);
-      fp->fd = fd;
-      fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
-      rb_io_ascii8bit_binmode(socket);
-      rb_io_synchronized(fp);
-      return socket;
-    }
+    else
+      return create_socket_from_fd(fd, socket_class);
   }
 #endif
 
@@ -1105,32 +1098,26 @@ VALUE Backend_multishot_accept(VALUE self, VALUE server_socket) {
   );
 }
 
+static inline VALUE accept_loop_from_queue(VALUE server_socket, VALUE socket_class) {
+  VALUE accept_queue = MULTISHOT_ACCEPT_QUEUE(server_socket);
+  if (accept_queue == Qnil) return Qnil;
+
+  while (true) {
+    VALUE next = Queue_shift(0, 0, accept_queue);
+    int fd = NUM2INT(next);
+    if (fd < 0)
+      rb_syserr_fail(-fd, strerror(-fd));
+    else
+      rb_yield(create_socket_from_fd(fd, socket_class));
+  }
+  return Qtrue;
+}
 #endif
 
 VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
 #ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
-  VALUE accept_queue = rb_ivar_get(server_socket, ID_ivar_multishot_accept_queue);
-  if (accept_queue != Qnil) {
-    while (true) {
-      VALUE next = Queue_shift(0, 0, accept_queue);
-      int fd = NUM2INT(next);
-      if (fd < 0)
-        rb_syserr_fail(-fd, strerror(-fd));
-      else {
-        rb_io_t *fp;
-
-        VALUE socket = rb_obj_alloc(socket_class);
-        MakeOpenFile(socket, fp);
-        rb_update_max_fd(fd);
-        fp->fd = fd;
-        fp->mode = FMODE_READWRITE | FMODE_DUPLEX;
-        rb_io_ascii8bit_binmode(socket);
-        rb_io_synchronized(fp);
-        rb_yield(socket);
-      }
-    }
-    return self;
-  }
+  VALUE result = accept_loop_from_queue(server_socket, socket_class);
+  if (RTEST(result)) return self;
 #endif
 
   Backend_t *backend;
