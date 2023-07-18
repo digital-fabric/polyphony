@@ -25,13 +25,6 @@
 
 ## Roadmap for Polyphony 2
 
-- io_uring
-  - Use playground.c to find out why we when submitting and waiting for
-    completion in single syscall signals seem to be blocked until the syscall
-    returns. Is this a bug in io_uring/liburing?
-
------------------------------------------------------
-
 - allow backend selection at runtime?
 - Debugging
   - Eat your own dogfood: need a good tool to check what's going on when some

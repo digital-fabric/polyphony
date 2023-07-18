@@ -138,12 +138,28 @@ VALUE Backend_post_fork(VALUE self) {
 typedef struct poll_context {
   struct io_uring     *ring;
   struct io_uring_cqe *cqe;
+  int                 pending_sqes;
   int                 result;
 } poll_context_t;
 
+// This function combines the functionality of io_uring_wait_cqe() and io_uring_submit_and_wait()
+static inline int io_uring_submit_and_wait_cqe(struct io_uring *ring,
+				    struct io_uring_cqe **cqe_ptr)
+{
+	if (!__io_uring_peek_cqe(ring, cqe_ptr, NULL) && *cqe_ptr) {
+    io_uring_submit(ring);
+		return 0;
+  }
+
+  *cqe_ptr = NULL;
+  return io_uring_submit_and_wait(ring, 1);
+}
+
 void *io_uring_backend_poll_without_gvl(void *ptr) {
   poll_context_t *ctx = (poll_context_t *)ptr;
-  ctx->result = io_uring_wait_cqe(ctx->ring, &ctx->cqe);
+  ctx->result = ctx->pending_sqes ?
+    io_uring_submit_and_wait_cqe(ctx->ring, &ctx->cqe) :
+    io_uring_wait_cqe(ctx->ring, &ctx->cqe);
   return NULL;
 }
 
@@ -238,7 +254,7 @@ inline void io_uring_backend_defer_submit(Backend_t *backend) {
 void io_uring_backend_poll(Backend_t *backend) {
   poll_context_t poll_ctx;
   poll_ctx.ring = &backend->ring;
-  if (backend->pending_sqes) io_uring_backend_immediate_submit(backend);
+  poll_ctx.pending_sqes = backend->pending_sqes;
 
 wait_cqe:
   backend->base.currently_polling = 1;
@@ -249,8 +265,10 @@ wait_cqe:
     return;
   }
 
-  io_uring_backend_handle_completion(poll_ctx.cqe, backend);
-  io_uring_cqe_seen(&backend->ring, poll_ctx.cqe);
+  if (poll_ctx.cqe) {
+    io_uring_backend_handle_completion(poll_ctx.cqe, backend);
+    io_uring_cqe_seen(&backend->ring, poll_ctx.cqe);
+  }
 }
 
 inline VALUE Backend_poll(VALUE self, VALUE blocking) {
