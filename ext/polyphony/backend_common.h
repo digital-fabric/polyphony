@@ -2,7 +2,11 @@
 #define BACKEND_COMMON_H
 
 #include <sys/types.h>
+#ifdef POLYPHONY_WINDOWS
+#include <winsock2.h>
+#else
 #include <arpa/inet.h>
+#endif
 #include <netinet/in.h>
 #include <netdb.h>
 

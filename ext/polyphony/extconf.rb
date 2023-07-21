@@ -2,12 +2,14 @@
 
 require 'rubygems'
 require 'mkmf'
+require 'rbconfig'
 
 dir_config 'polyphony_ext'
 
 KERNEL_INFO_RE = /Linux (\d)\.(\d+)(?:\.)?((?:\d+\.?)*)(?:\-)?([\w\-]+)?/
 def get_config
   config = { linux: !!(RUBY_PLATFORM =~ /linux/) }
+  config[:windows] = !!(RbConfig::CONFIG['host_os'] =~ /mswin|mingw|cygwin/)
   return config if !config[:linux]
 
   kernel_info = `uname -sr`
@@ -72,6 +74,7 @@ if config[:io_uring]
 else
   $defs << "-DPOLYPHONY_BACKEND_LIBEV"
   $defs << "-DPOLYPHONY_LINUX" if config[:linux]
+  $defs << "-DPOLYPHONY_WINDOWS" if config[:windows]
 
   $defs << "-DEV_STANDALONE" # prevent libev from assuming "config.h" exists
 
