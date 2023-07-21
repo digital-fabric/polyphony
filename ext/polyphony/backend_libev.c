@@ -1506,6 +1506,7 @@ done:
 #endif
 }
 
+#ifdef POLYPHONY_LINUX
 VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VALUE postfix, VALUE chunk_prefix, VALUE chunk_postfix, VALUE chunk_size) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -1595,6 +1596,7 @@ error:
   if (pipefd[1] != -1) close(pipefd[1]);
   return RAISE_EXCEPTION(result);
 }
+#endif
 
 VALUE Backend_trace(int argc, VALUE *argv, VALUE self) {
   Backend_t *backend;
@@ -1660,7 +1662,10 @@ void Init_Backend(void) {
   rb_define_method(cBackend, "chain", Backend_chain, -1);
   rb_define_method(cBackend, "idle_gc_period=", Backend_idle_gc_period_set, 1);
   rb_define_method(cBackend, "idle_proc=", Backend_idle_proc_set, 1);
+  
+  #ifdef POLYPHONY_LINUX
   rb_define_method(cBackend, "splice_chunks", Backend_splice_chunks, 7);
+  #endif
 
   rb_define_method(cBackend, "accept", Backend_accept, 2);
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);

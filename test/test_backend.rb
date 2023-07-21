@@ -317,6 +317,8 @@ class BackendTest < MiniTest::Test
   end
 
   def test_splice_chunks
+    skip if !Thread.current.backend.respond_to?(:splice_chunks)
+    
     body = 'abcd' * 4
     chunk_size = 12
 
