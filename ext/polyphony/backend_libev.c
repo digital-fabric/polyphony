@@ -42,12 +42,9 @@ thread.
 #define _GNU_SOURCE 1
 #endif
 
-#include <netdb.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <stdnoreturn.h>
 #include <sys/types.h>
 #include <sys/wait.h>
