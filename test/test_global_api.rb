@@ -128,16 +128,16 @@ class MoveOnAfterTest < MiniTest::Test
 
   def test_move_on_after_with_reset
     t0 = monotonic_clock
-    v = move_on_after(0.01, with_value: :moved_on) do |timeout|
-      sleep 0.006
+    v = move_on_after(0.1, with_value: :moved_on) do |timeout|
+      sleep 0.06
       timeout.reset
-      sleep 0.006
+      sleep 0.06
       nil
     end
     t1 = monotonic_clock
 
     assert_nil v
-    assert_in_range 0.012..0.030, t1 - t0 if IS_LINUX
+    assert_in_range 0.12..0.30, t1 - t0 if IS_LINUX
   end
 
   def test_nested_move_on_after
