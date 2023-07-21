@@ -6,8 +6,8 @@
 #include <winsock2.h>
 #else
 #include <arpa/inet.h>
-#endif
 #include <netinet/in.h>
+#endif
 #include <netdb.h>
 
 #include "ruby.h"
