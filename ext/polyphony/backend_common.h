@@ -7,8 +7,8 @@
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#endif
 #include <netdb.h>
+#endif
 
 #include "ruby.h"
 #include "ruby/io.h"
