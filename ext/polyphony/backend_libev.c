@@ -1336,6 +1336,9 @@ void Backend_child_callback(EV_P_ ev_child *w, int revents) {
 }
 
 VALUE Backend_waitpid(VALUE self, VALUE pid) {
+#ifdef POLYPHONY_WINDOWS
+  rb_raise(rb_eStandardError, "Not implemented");
+#else
   Backend_t *backend;
   struct libev_child watcher;
   VALUE switchpoint_result = Qnil;
@@ -1353,6 +1356,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
+#endif
 }
 #endif
 
