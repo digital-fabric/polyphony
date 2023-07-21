@@ -42,8 +42,11 @@ thread.
 #define _GNU_SOURCE 1
 #endif
 
-#include <sys/socket.h>
+#ifdef POLYPHONY_WINDOWS
+#include "win_uio.h"
+#else
 #include <sys/uio.h>
+#endif
 #include <unistd.h>
 #include <stdnoreturn.h>
 #include <sys/types.h>
