@@ -47,10 +47,15 @@ thread.
 #else
 #include <sys/uio.h>
 #endif
+
 #include <unistd.h>
 #include <stdnoreturn.h>
 #include <sys/types.h>
+
+#ifdef POLYPHONY_USE_PIDFD_OPEN
 #include <sys/wait.h>
+#endif
+
 #include <fcntl.h>
 
 #include "polyphony.h"
