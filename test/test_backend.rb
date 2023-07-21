@@ -318,7 +318,7 @@ class BackendTest < MiniTest::Test
 
   def test_splice_chunks
     skip if !Thread.current.backend.respond_to?(:splice_chunks)
-    
+
     body = 'abcd' * 4
     chunk_size = 12
 
@@ -348,8 +348,8 @@ class BackendTest < MiniTest::Test
     expected = "Content-Type: foo\r\n\r\n#{12.to_s(16)}\r\n#{body[0..11]}\r\n#{4.to_s(16)}\r\n#{body[12..15]}\r\n0\r\n\r\n"
     assert_equal expected, buf
   ensure
-    o.close
-    w.close
+    o&.close
+    w&.close
   end
 
   def test_idle_gc
