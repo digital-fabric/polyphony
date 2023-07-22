@@ -565,6 +565,7 @@ error:
   return RAISE_EXCEPTION(switchpoint_result);
 }
 
+#ifndef POLYPHONY_WINDOWS
 VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   Backend_t *backend;
   struct libev_io watcher;
@@ -636,15 +637,23 @@ error:
   free(iov);
   return RAISE_EXCEPTION(switchpoint_result);
 }
+#endif
 
 VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
   if (argc < 2)
     // TODO: raise ArgumentError
     rb_raise(rb_eRuntimeError, "(wrong number of arguments (expected 2 or more))");
 
+#ifdef POLYPHONY_WINDOWS
+  int total = 0;
+  for (int i = 1; i < argc; i++)
+    total += FIX2INT(Backend_write(self, argv[0], argv[i]));
+  return INT2FIX(total);
+#else
   return (argc == 2) ?
     Backend_write(self, argv[0], argv[1]) :
     Backend_writev(self, argv[0], argc - 1, argv + 1);
+#endif
 }
 
 VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
