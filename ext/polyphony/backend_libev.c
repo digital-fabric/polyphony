@@ -124,21 +124,15 @@ static VALUE Backend_initialize(VALUE self) {
 
   GetBackend(self, backend);
 
-  printf("Backend_initialize 1\n");
   backend_base_initialize(&backend->base);
-  printf("Backend_initialize 2\n");
   backend->ev_loop = libev_new_loop();
-  printf("Backend_initialize 3\n");
 
   // start async watcher used for breaking a poll op (from another thread)
   ev_async_init(&backend->break_async, break_async_callback);
-  printf("Backend_initialize 3.1\n");
   ev_async_start(backend->ev_loop, &backend->break_async);
-  printf("Backend_initialize 3.2\n");
   // the break_async watcher is unreferenced, in order for Backend_poll to not
   // block when no other watcher is active
   ev_unref(backend->ev_loop);
-  printf("Backend_initialize 4\n");
 
   return Qnil;
 }
