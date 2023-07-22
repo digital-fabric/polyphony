@@ -42,12 +42,6 @@ thread.
 #define _GNU_SOURCE 1
 #endif
 
-#ifdef POLYPHONY_WINDOWS
-#include "win_uio.h"
-#else
-#include <sys/uio.h>
-#endif
-
 #include <unistd.h>
 #include <stdnoreturn.h>
 #include <sys/types.h>
@@ -61,6 +55,10 @@ thread.
 #include "polyphony.h"
 #include "../libev/ev.h"
 #include "ruby/io.h"
+
+#ifndef POLYPHONY_WINDOWS
+#include <sys/uio.h>
+#endif
 
 #include "../libev/ev.h"
 #include "backend_common.h"
