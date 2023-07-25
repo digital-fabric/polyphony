@@ -1086,7 +1086,6 @@ static inline VALUE accept_loop_from_queue(VALUE server_socket, VALUE socket_cla
   }
   return Qtrue;
 }
-#endif
 
 VALUE multishot_accept_start(struct multishot_accept_ctx *ctx) {
   int server_fd;
@@ -1127,6 +1126,7 @@ VALUE multishot_accept_loop(Backend_t *backend, VALUE server_socket, VALUE socke
     SAFE(multishot_accept_cleanup), (VALUE)&ctx
   );
 }
+#endif
 
 VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   Backend_t *backend;
