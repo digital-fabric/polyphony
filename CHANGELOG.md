@@ -1,3 +1,7 @@
+- Rework support for io_uring multishot accept
+- Combine SQE submission and waiting for CQE into a single syscall
+- Use io_uring for closing a `Polyphony::Pipe`, removing call to `close()`
+
 ## 1.4 2023-07-01
 
 - Implement concurrent `IO#close`
