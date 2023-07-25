@@ -80,20 +80,6 @@ VALUE Polyphony_backend_accept_loop(VALUE self, VALUE server_socket, VALUE socke
   return Backend_accept_loop(BACKEND(), server_socket, socket_class);
 }
 
-#ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
-/* Starts a multishot accept operation on the given server socket. This API is
- * available only for the io_uring backend.
- *
- * @param server_socket [Socket] socket to accept on
- * @return [any] block return value
- */
-
-VALUE Polyphony_backend_multishot_accept(VALUE self, VALUE server_socket) {
-  return Backend_multishot_accept(BACKEND(), server_socket);
-}
-#endif
-
-
 /* Connects the given socket to the given address and port.
  *
  * @param io [Socket] socket to connect
@@ -433,12 +419,6 @@ void Init_Polyphony(void) {
   rb_define_singleton_method(mPolyphony, "backend_accept_loop", Polyphony_backend_accept_loop, 2);
   rb_define_singleton_method(mPolyphony, "backend_connect", Polyphony_backend_connect, 3);
   rb_define_singleton_method(mPolyphony, "backend_feed_loop", Polyphony_backend_feed_loop, 3);
-
-  #ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
-  rb_define_singleton_method(mPolyphony, "backend_multishot_accept", Polyphony_backend_multishot_accept, 1);
-  #endif
-
-
   rb_define_singleton_method(mPolyphony, "backend_read", Polyphony_backend_read, 5);
   rb_define_singleton_method(mPolyphony, "backend_read_loop", Polyphony_backend_read_loop, 2);
   rb_define_singleton_method(mPolyphony, "backend_recv", Polyphony_backend_recv, 4);

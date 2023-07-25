@@ -101,11 +101,6 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class);
 VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class);
 VALUE Backend_connect(VALUE self, VALUE io, VALUE addr, VALUE port);
 VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method);
-
-#ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
-VALUE Backend_multishot_accept(VALUE self, VALUE io);
-#endif
-
 VALUE Backend_read(VALUE self, VALUE io, VALUE str, VALUE length, VALUE to_eof, VALUE pos);
 VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen);
 VALUE Backend_recv(VALUE self, VALUE io, VALUE str, VALUE length, VALUE pos);

@@ -464,20 +464,6 @@ class ::TCPServer < ::TCPSocket
     Polyphony.backend_accept(@io, TCPSocket)
   end
 
-  if Polyphony.methods(false).include?(:backend_multishot_accept)
-    # Starts a multishot accept operation (only available with io_uring
-    # backend). Example usage:
-    #
-    #   server.multishot_accept do
-    #     server.accept_loop { |c| handle_connection(c) }
-    #   end
-    #
-    # @return [any] return value of code block
-    def multishot_accept(&block)
-      Polyphony.backend_multishot_accept(@io, &block)
-    end
-  end
-
   # Accepts incoming connections in an infinite loop.
   #
   # @yield [TCPSocket] accepted socket

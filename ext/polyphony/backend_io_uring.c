@@ -1068,53 +1068,9 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
 struct multishot_accept_ctx {
   Backend_t *backend;
   VALUE server_socket;
+  VALUE socket_class;
   op_context_t *op_ctx;
 };
-
-VALUE multishot_accept_start(struct multishot_accept_ctx *ctx) {
-  int server_fd;
-  rb_io_t *server_fptr;
-  server_fd = fd_from_io(ctx->server_socket, &server_fptr, 0, 0);
-  VALUE accept_queue = rb_funcall(cQueue, ID_new, 0);
-  rb_ivar_set(ctx->server_socket, ID_ivar_multishot_accept_queue, accept_queue);
-
-  ctx->op_ctx = context_store_acquire(&ctx->backend->store, OP_MULTISHOT_ACCEPT);
-  ctx->op_ctx->ref_count = -1;
-  ctx->op_ctx->resume_value = ctx->server_socket;
-  struct io_uring_sqe *sqe = io_uring_backend_get_sqe(ctx->backend);
-  io_uring_prep_multishot_accept(sqe, server_fd, 0, 0, 0);
-  io_uring_sqe_set_data(sqe, ctx->op_ctx);
-  io_uring_backend_defer_submit(ctx->backend);
-
-  rb_yield(ctx->server_socket);
-
-  return Qnil;
-}
-
-VALUE multishot_accept_cleanup(struct multishot_accept_ctx *ctx) {
-  struct io_uring_sqe *sqe = io_uring_backend_get_sqe(ctx->backend);
-  io_uring_prep_cancel(sqe, ctx->op_ctx, 0);
-  io_uring_sqe_set_data(sqe, NULL);
-  io_uring_backend_defer_submit(ctx->backend);
-
-  rb_ivar_set(ctx->server_socket, ID_ivar_multishot_accept_queue, Qnil);
-
-  return Qnil;
-}
-
-VALUE Backend_multishot_accept(VALUE self, VALUE server_socket) {
-  Backend_t *backend;
-  GetBackend(self, backend);
-
-  struct multishot_accept_ctx ctx;
-  ctx.backend = backend;
-  ctx.server_socket = server_socket;
-
-  return rb_ensure(
-    SAFE(multishot_accept_start), (VALUE)&ctx,
-    SAFE(multishot_accept_cleanup), (VALUE)&ctx
-  );
-}
 
 static inline VALUE accept_loop_from_queue(VALUE server_socket, VALUE socket_class) {
   VALUE accept_queue = MULTISHOT_ACCEPT_QUEUE(server_socket);
@@ -1132,15 +1088,56 @@ static inline VALUE accept_loop_from_queue(VALUE server_socket, VALUE socket_cla
 }
 #endif
 
-VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
-#ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
-  VALUE result = accept_loop_from_queue(server_socket, socket_class);
-  if (RTEST(result)) return self;
-#endif
+VALUE multishot_accept_start(struct multishot_accept_ctx *ctx) {
+  int server_fd;
+  rb_io_t *server_fptr;
+  server_fd = fd_from_io(ctx->server_socket, &server_fptr, 0, 0);
+  VALUE accept_queue = rb_funcall(cQueue, ID_new, 0);
+  rb_ivar_set(ctx->server_socket, ID_ivar_multishot_accept_queue, accept_queue);
 
+  ctx->op_ctx = context_store_acquire(&ctx->backend->store, OP_MULTISHOT_ACCEPT);
+  ctx->op_ctx->ref_count = -1;
+  ctx->op_ctx->resume_value = ctx->server_socket;
+  struct io_uring_sqe *sqe = io_uring_backend_get_sqe(ctx->backend);
+  io_uring_prep_multishot_accept(sqe, server_fd, 0, 0, 0);
+  io_uring_sqe_set_data(sqe, ctx->op_ctx);
+  io_uring_backend_defer_submit(ctx->backend);
+
+  accept_loop_from_queue(ctx->server_socket, ctx->socket_class);
+
+  return Qnil;
+}
+
+VALUE multishot_accept_cleanup(struct multishot_accept_ctx *ctx) {
+  struct io_uring_sqe *sqe = io_uring_backend_get_sqe(ctx->backend);
+  io_uring_prep_cancel(sqe, ctx->op_ctx, 0);
+  io_uring_sqe_set_data(sqe, NULL);
+  io_uring_backend_defer_submit(ctx->backend);
+
+  rb_ivar_set(ctx->server_socket, ID_ivar_multishot_accept_queue, Qnil);
+
+  return Qnil;
+}
+
+VALUE multishot_accept_loop(Backend_t *backend, VALUE server_socket, VALUE socket_class) {
+  struct multishot_accept_ctx ctx = { backend, server_socket, socket_class };
+
+  return rb_ensure(
+    SAFE(multishot_accept_start), (VALUE)&ctx,
+    SAFE(multishot_accept_cleanup), (VALUE)&ctx
+  );
+}
+
+VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
   Backend_t *backend;
   GetBackend(self, backend);
+
+#ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
+  multishot_accept_loop(backend, server_socket, socket_class);
+#else
   io_uring_backend_accept(backend, server_socket, socket_class, 1);
+#endif
+  
   return self;
 }
 
@@ -1997,10 +1994,6 @@ void Init_Backend(void) {
   rb_define_method(cBackend, "accept_loop", Backend_accept_loop, 2);
   rb_define_method(cBackend, "connect", Backend_connect, 3);
   rb_define_method(cBackend, "feed_loop", Backend_feed_loop, 3);
-
-  #ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
-  rb_define_method(cBackend, "multishot_accept", Backend_multishot_accept, 1);
-  #endif
 
   rb_define_method(cBackend, "read", Backend_read, 5);
   rb_define_method(cBackend, "read_loop", Backend_read_loop, 2);
