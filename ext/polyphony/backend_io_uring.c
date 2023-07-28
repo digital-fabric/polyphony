@@ -304,6 +304,7 @@ inline void Backend_unschedule_fiber(VALUE self, VALUE fiber) {
   runqueue_delete(&backend->base.runqueue, fiber);
 }
 
+// This function is deprecated
 inline VALUE Backend_switch_fiber(VALUE self) {
   Backend_t *backend;
   GetBackend(self, backend);
@@ -351,7 +352,22 @@ VALUE Backend_wakeup(VALUE self) {
   return Qnil;
 }
 
+static inline VALUE io_uring_backend_await(VALUE self, struct Backend_t *backend) {
+  backend->base.pending_count++;
+
+  VALUE ret = backend_base_switch_fiber(self, &backend->base);
+
+  // run next fiber
+  COND_TRACE(&backend->base, 4, SYM_unblock, rb_fiber_current(), ret, CALLER());
+
+  backend->base.pending_count--;
+  RB_GC_GUARD(ret);
+  return ret;
+
+}
+
 int io_uring_backend_defer_submit_and_await(
+  VALUE self,
   Backend_t *backend,
   struct io_uring_sqe *sqe,
   op_context_t *ctx,
@@ -364,7 +380,7 @@ int io_uring_backend_defer_submit_and_await(
   if (sqe) io_uring_sqe_set_data(sqe, ctx);
   io_uring_backend_defer_submit(backend);
 
-  switchpoint_result = backend_await((struct Backend_base *)backend);
+  switchpoint_result = io_uring_backend_await(self, backend);
 
   if (ctx->ref_count > 1) {
     struct io_uring_sqe *sqe;
@@ -383,14 +399,14 @@ int io_uring_backend_defer_submit_and_await(
   return ctx->result;
 }
 
-VALUE io_uring_backend_wait_fd(Backend_t *backend, int fd, int write) {
+VALUE io_uring_backend_wait_fd(VALUE self, Backend_t *backend, int fd, int write) {
   op_context_t *ctx = context_store_acquire(&backend->store, OP_POLL);
   VALUE resumed_value = Qnil;
 
   struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_poll_add(sqe, fd, write ? POLLOUT : POLLIN);
 
-  io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resumed_value);
+  io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resumed_value);
   context_store_release(&backend->store, ctx);
 
   RB_GC_GUARD(resumed_value);
@@ -439,7 +455,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eo
 
     io_uring_prep_read(sqe, fd, buffer_spec.ptr, buffer_spec.len, -1);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -500,7 +516,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
 
     io_uring_prep_read(sqe, fd, ptr, len, -1);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -549,7 +565,7 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
 
     io_uring_prep_read(sqe, fd, ptr, len, -1);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -593,7 +609,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE buffer) {
 
     io_uring_prep_write(sqe, fd, buffer_spec.ptr, left, -1);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -644,7 +660,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 
     io_uring_prep_writev(sqe, fd, iov_ptr, iov_count, -1);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       free(iov);
@@ -710,7 +726,7 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE pos) 
 
     io_uring_prep_recv(sqe, fd, buffer_spec.ptr, buffer_spec.len, 0);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -768,7 +784,7 @@ VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE po
 
     io_uring_prep_recvmsg(sqe, fd, &msg, NUM2INT(flags));
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -818,7 +834,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
 
     io_uring_prep_recv(sqe, fd, ptr, len, 0);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -866,7 +882,7 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
 
     io_uring_prep_recv(sqe, fd, ptr, len, 0);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -910,7 +926,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
 
     io_uring_prep_send(sqe, fd, buffer_spec.ptr, left, flags_int);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -971,7 +987,7 @@ VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE des
 
     io_uring_prep_sendmsg(sqe, fd, &msg, flags_int);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
       context_attach_buffers(ctx, 1, &buffer);
@@ -1005,7 +1021,7 @@ inline VALUE create_socket_from_fd(int fd, VALUE socket_class) {
   return socket;
 }
 
-VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE socket_class, int loop) {
+VALUE io_uring_backend_accept(VALUE self, Backend_t *backend, VALUE server_socket, VALUE socket_class, int loop) {
   int server_fd;
   rb_io_t *server_fptr;
   struct sockaddr addr;
@@ -1023,7 +1039,7 @@ VALUE io_uring_backend_accept(Backend_t *backend, VALUE server_socket, VALUE soc
 
     io_uring_prep_accept(sqe, server_fd, &addr, &len, 0);
 
-    fd = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    fd = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     RAISE_IF_EXCEPTION(resume_value);
     if (!completed) return resume_value;
@@ -1060,7 +1076,7 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
 
   Backend_t *backend;
   GetBackend(self, backend);
-  return io_uring_backend_accept(backend, server_socket, socket_class, 0);
+  return io_uring_backend_accept(self, backend, server_socket, socket_class, 0);
 }
 
 #ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
@@ -1135,13 +1151,13 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
 #ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
   multishot_accept_loop(backend, server_socket, socket_class);
 #else
-  io_uring_backend_accept(backend, server_socket, socket_class, 1);
+  io_uring_backend_accept(self, backend, server_socket, socket_class, 1);
 #endif
   
   return self;
 }
 
-VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, int maxlen) {
+VALUE io_uring_backend_splice(VALUE self, Backend_t *backend, VALUE src, VALUE dest, int maxlen) {
   int src_fd;
   int dest_fd;
   rb_io_t *src_fptr;
@@ -1162,7 +1178,7 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, int max
 
     io_uring_prep_splice(sqe, src_fd, -1, dest_fd, -1, maxlen, 0);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     RAISE_IF_EXCEPTION(resume_value);
     if (!completed) return resume_value;
@@ -1180,10 +1196,11 @@ VALUE io_uring_backend_splice(Backend_t *backend, VALUE src, VALUE dest, int max
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
   Backend_t *backend;
   GetBackend(self, backend);
-  return io_uring_backend_splice(backend, src, dest, FIX2INT(maxlen));
+  return io_uring_backend_splice(self, backend, src, dest, FIX2INT(maxlen));
 }
 
 struct double_splice_ctx {
+  VALUE self;
   Backend_t *backend;
   VALUE src;
   VALUE dest;
@@ -1228,7 +1245,7 @@ VALUE double_splice_safe(struct double_splice_ctx *ctx) {
     io_uring_backend_immediate_submit(ctx->backend);
 
   while (1) {
-    resume_value = backend_await((struct Backend_base *)ctx->backend);
+    resume_value = io_uring_backend_await(ctx->self, ctx->backend);
 
     if ((ctx_src && ctx_src->ref_count == 2 && ctx_dest && ctx_dest->ref_count == 2) || TEST_EXCEPTION(resume_value)) {
       if (ctx_src) {
@@ -1279,7 +1296,7 @@ VALUE double_splice_cleanup(struct double_splice_ctx *ctx) {
 }
 
 VALUE Backend_double_splice(VALUE self, VALUE src, VALUE dest) {
-  struct double_splice_ctx ctx = { NULL, src, dest, {0, 0} };
+  struct double_splice_ctx ctx = { self, NULL, src, dest, {0, 0} };
   GetBackend(self, ctx.backend);
   if (pipe(ctx.pipefd) == -1) rb_syserr_fail(errno, strerror(errno));
 
@@ -1310,7 +1327,7 @@ VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
     io_uring_prep_tee(sqe, src_fd, dest_fd, FIX2INT(maxlen), 0);
 
-    result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+    result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     RAISE_IF_EXCEPTION(resume_value);
     if (!completed) return resume_value;
@@ -1343,7 +1360,7 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   ctx = context_store_acquire(&backend->store, OP_CONNECT);
   sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_connect(sqe, fd, ai_addr, ai_addrlen);
-  result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+  result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
   completed = context_store_release(&backend->store, ctx);
   RAISE_IF_EXCEPTION(resume_value);
   if (!completed) return resume_value;
@@ -1362,7 +1379,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 
   GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, write_mode, 0);
-  resume_value = io_uring_backend_wait_fd(backend, fd, write_mode);
+  resume_value = io_uring_backend_wait_fd(self, backend, fd, write_mode);
 
   RAISE_IF_EXCEPTION(resume_value);
   RB_GC_GUARD(resume_value);
@@ -1384,7 +1401,7 @@ VALUE Backend_close(VALUE self, VALUE io) {
   ctx = context_store_acquire(&backend->store, OP_CLOSE);
   sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_close(sqe, fd);
-  result = io_uring_backend_defer_submit_and_await(backend, sqe, ctx, &resume_value);
+  result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
   completed = context_store_release(&backend->store, ctx);
   RAISE_IF_EXCEPTION(resume_value);
   if (!completed) return resume_value;
@@ -1411,13 +1428,13 @@ inline struct __kernel_timespec duration_to_timespec(VALUE duration) {
 }
 
 // returns true if completed, 0 otherwise
-int io_uring_backend_submit_timeout_and_await(Backend_t *backend, double duration, VALUE *resume_value) {
+int io_uring_backend_submit_timeout_and_await(VALUE self, Backend_t *backend, double duration, VALUE *resume_value) {
   struct __kernel_timespec ts = double_to_timespec(duration);
   struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
   op_context_t *ctx = context_store_acquire(&backend->store, OP_TIMEOUT);
 
   io_uring_prep_timeout(sqe, &ts, 0, 0);
-  io_uring_backend_defer_submit_and_await(backend, sqe, ctx, resume_value);
+  io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, resume_value);
   return context_store_release(&backend->store, ctx);
 }
 
@@ -1426,7 +1443,7 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
   Backend_t *backend;
   GetBackend(self, backend);
 
-  io_uring_backend_submit_timeout_and_await(backend, NUM2DBL(duration), &resume_value);
+  io_uring_backend_submit_timeout_and_await(self, backend, NUM2DBL(duration), &resume_value);
   RAISE_IF_EXCEPTION(resume_value);
   RB_GC_GUARD(resume_value);
   return resume_value;
@@ -1445,7 +1462,7 @@ VALUE Backend_timer_loop(VALUE self, VALUE interval) {
     if (next_time_ns == 0) next_time_ns = now_ns + interval_ns;
     if (next_time_ns > now_ns) {
       double sleep_duration = ((double)(next_time_ns - now_ns))/1e9;
-      int completed = io_uring_backend_submit_timeout_and_await(backend, sleep_duration, &resume_value);
+      int completed = io_uring_backend_submit_timeout_and_await(self, backend, sleep_duration, &resume_value);
       RAISE_IF_EXCEPTION(resume_value);
       if (!completed) return resume_value;
     }
@@ -1537,7 +1554,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
     Backend_t *backend;
     GetBackend(self, backend);
 
-    resume_value = io_uring_backend_wait_fd(backend, fd, 0);
+    resume_value = io_uring_backend_wait_fd(self, backend, fd, 0);
     close(fd);
     RAISE_IF_EXCEPTION(resume_value);
     RB_GC_GUARD(resume_value);
@@ -1592,7 +1609,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   else
     backend->event_fd_ctx->ref_count += 1;
 
-  resume_value = backend_await((struct Backend_base *)backend);
+  resume_value = io_uring_backend_await(self, backend);
   context_store_release(&backend->store, backend->event_fd_ctx);
 
   if (backend->event_fd_ctx->ref_count == 1) {
@@ -1725,7 +1742,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
   backend->base.op_count += sqe_count;
   ctx->ref_count = sqe_count + 1;
   io_uring_backend_defer_submit(backend);
-  resume_value = backend_await((struct Backend_base *)backend);
+  resume_value = io_uring_backend_await(self, backend);
   result = ctx->result;
   completed = context_store_release(&backend->store, ctx);
   if (!completed) {
@@ -1809,6 +1826,7 @@ static inline void splice_chunks_cancel(Backend_t *backend, op_context_t *ctx) {
 }
 
 static inline int splice_chunks_await_ops(
+  VALUE self,
   Backend_t *backend,
   op_context_t **ctx,
   int *result,
@@ -1816,7 +1834,7 @@ static inline int splice_chunks_await_ops(
 )
 {
   int completed;
-  int res = io_uring_backend_defer_submit_and_await(backend, 0, *ctx, switchpoint_result);
+  int res = io_uring_backend_defer_submit_and_await(self, backend, 0, *ctx, switchpoint_result);
 
   if (result) (*result) = res;
   completed = context_store_release(&backend->store, *ctx);
@@ -1828,8 +1846,8 @@ static inline int splice_chunks_await_ops(
   return 0;
 }
 
-#define SPLICE_CHUNKS_AWAIT_OPS(backend, ctx, result, switchpoint_result) \
-  if (splice_chunks_await_ops(backend, ctx, result, switchpoint_result)) goto error;
+#define SPLICE_CHUNKS_AWAIT_OPS(self, backend, ctx, result, switchpoint_result) \
+  if (splice_chunks_await_ops(self, backend, ctx, result, switchpoint_result)) goto error;
 
 VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VALUE postfix, VALUE chunk_prefix, VALUE chunk_postfix, VALUE chunk_size) {
   Backend_t *backend;
@@ -1872,7 +1890,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     splice_chunks_prep_splice(ctx, sqe, src_fd, pipefd[1], maxlen);
     backend->base.op_count++;
 
-    SPLICE_CHUNKS_AWAIT_OPS(backend, &ctx, &chunk_len, &switchpoint_result);
+    SPLICE_CHUNKS_AWAIT_OPS(self, backend, &ctx, &chunk_len, &switchpoint_result);
     if (chunk_len == 0) break;
 
     total += chunk_len;
@@ -1907,7 +1925,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
     backend->base.op_count++;
   }
   if (ctx) {
-    SPLICE_CHUNKS_AWAIT_OPS(backend, &ctx, 0, &switchpoint_result);
+    SPLICE_CHUNKS_AWAIT_OPS(self, backend, &ctx, 0, &switchpoint_result);
   }
 
   RB_GC_GUARD(chunk_len_value);
