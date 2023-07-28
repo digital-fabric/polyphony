@@ -14,6 +14,10 @@ module ::Timeout
   # @param message [String] exception message
   # @return [any] block's return value
   def self.timeout(sec, klass = Timeout::Error, message = 'execution expired', &block)
-    cancel_after(sec, with_exception: [klass, message], &block)
+    if sec.nil? || sec == 0
+      block.call
+    else
+      cancel_after(sec, with_exception: [klass, message], &block)
+    end
   end
 end

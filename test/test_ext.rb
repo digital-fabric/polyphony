@@ -242,6 +242,20 @@ class TimeoutTest < MiniTest::Test
     assert_equal [0, 1, 2], buffer
   end
 
+  def test_timeout_with_nil_or_zero
+    v = Timeout.timeout(nil) do
+      sleep 0.01
+      :foo
+    end
+    assert_equal :foo, v
+
+    v = Timeout.timeout(0) do
+      sleep 0.01
+      :bar
+    end
+    assert_equal :bar, v
+  end
+
   class MyTimeout < Exception
   end
 
