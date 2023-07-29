@@ -1,3 +1,7 @@
+## 1.5 2023-07-28
+
+- Refactor backend_await in io_uring backend
+- Fix calling `Timeout.timeout` with `nil` or `0` (#114)
 - Rework support for io_uring multishot accept
 - Combine SQE submission and waiting for CQE into a single syscall
 - Use io_uring for closing a `Polyphony::Pipe`, removing call to `close()`
