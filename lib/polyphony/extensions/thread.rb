@@ -68,7 +68,12 @@ class ::Thread
     error = error.new if error.is_a?(Class)
 
     sleep 0.0001 until @ready
-    main_fiber&.raise(error)
+
+    if Thread.current == self
+      Kernel.raise(error)
+    else
+      @main_fiber&.raise(error)
+    end
   end
 
   # @!visibility private
@@ -80,7 +85,7 @@ class ::Thread
   def kill
     return self if @terminated
 
-    raise Polyphony::Terminate
+    self.raise Polyphony::Terminate
   end
 
   # @!visibility private

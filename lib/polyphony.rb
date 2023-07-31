@@ -131,12 +131,17 @@ module Polyphony
   verbose = $VERBOSE
   $VERBOSE = nil
   Object.const_set(:Queue, Polyphony::Queue)
+  Thread.const_set(:Queue, Polyphony::Queue)
+
   Object.const_set(:Mutex, Polyphony::Mutex)
+  Thread.const_set(:Mutex, Polyphony::Mutex)
 
   require 'monitor'
-  Object.const_set(:Monitor, Polyphony::Mutex)
+  Object.const_set(:Monitor, Polyphony::Monitor)
 
   Object.const_set(:ConditionVariable, Polyphony::ConditionVariable)
+  Thread.const_set(:ConditionVariable, Polyphony::ConditionVariable)
+
   $VERBOSE = verbose
 
   install_terminating_signal_handlers

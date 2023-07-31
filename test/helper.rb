@@ -79,6 +79,36 @@ module Minitest::Assertions
     msg = message(msg) { "Expected #{mu_pp(act)} to be in range #{mu_pp(exp_range)}" }
     assert exp_range.include?(act), msg
   end
+
+  def assert_join_threads(threads, message = nil)
+    errs = []
+    values = []
+    while th = threads.shift
+      begin
+        values << th.value
+      rescue Exception
+        errs << [th, $!]
+        th = nil
+      end
+    end
+    values
+  ensure
+    if th&.alive?
+      th.raise(Timeout::Error.new)
+      th.join rescue errs << [th, $!]
+    end
+    if !errs.empty?
+      msg = "exceptions on #{errs.length} threads:\n" +
+        errs.map {|t, err|
+        "#{t.inspect}:\n" +
+          (err.respond_to?(:full_message) ? err.full_message(highlight: false, order: :top) : err.message)
+      }.join("\n---\n")
+      if message
+        msg = "#{message}\n#{msg}"
+      end
+      raise MiniTest::Assertion, msg
+    end
+  end
 end
 
 puts "Polyphony backend: #{Thread.current.backend.kind}"

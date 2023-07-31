@@ -155,3 +155,49 @@ class MutexTest < MiniTest::Test
     assert_equal true, r
   end
 end
+
+class MonitorTest < MiniTest::Test
+  def test_monitor
+    m = Monitor.new
+
+    assert_kind_of Polyphony::Monitor, m
+  end
+
+  def safe_check_owner(m)
+    m.mon_check_owner
+    true
+  rescue ThreadError
+    false
+  end
+
+  def test_monitor_mon_check_owner
+    m = Monitor.new
+
+    assert_equal false, safe_check_owner(m)
+    
+    m.enter
+    assert_equal true, safe_check_owner(m)
+
+    spin do
+      assert_equal false, safe_check_owner(m)
+    end.join
+  end
+
+  def test_monitor_reentrancy
+    m = Monitor.new
+
+    assert_equal false, safe_check_owner(m)
+
+    m.enter
+    assert_equal true, safe_check_owner(m)
+
+    m.enter
+    assert_equal true, safe_check_owner(m)
+
+    m.exit
+    assert_equal true, safe_check_owner(m)
+
+    m.exit
+    assert_equal false, safe_check_owner(m)
+  end
+end
