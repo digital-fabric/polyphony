@@ -128,6 +128,11 @@ class ::Thread
     backend.idle_proc = block
   end
 
+  def value
+    join
+    @result.is_a?(Exception) ? raise(@result) : @result
+  end
+
   private
 
   # Runs the thread's block, handling any uncaught exceptions.

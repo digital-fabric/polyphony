@@ -241,4 +241,13 @@ class ThreadTest < MiniTest::Test
     t.join
     assert_equal [1, 2, 3], buf
   end
+
+  def test_value
+    t = Thread.new { sleep 0.01; :foo }
+    assert_equal :foo, t.value
+
+    t = Thread.new { sleep 0.01; raise 'foo' }
+    assert_raises { t.value }
+    assert !t.alive?
+  end
 end
