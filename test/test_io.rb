@@ -345,6 +345,39 @@ class IOTest < MiniTest::Test
     assert_equal [6, 0], splice_lens
   end
 
+  def test_copy_stream
+    p1 = Polyphony::Pipe.new
+    p2 = Polyphony::Pipe.new
+
+    spin { p1 << 'foobar'; p1.close }
+
+    count = IO.copy_stream(p1, p2)
+    p2.close
+    assert_equal 6, count
+    assert_equal 'foobar', p2.read
+  end
+
+  def test_copy_stream_with_length
+    p1 = Polyphony::Pipe.new
+    p2 = Polyphony::Pipe.new
+
+    spin { p1 << 'foobar'; p1.close }
+
+    count = IO.copy_stream(p1, p2, 3)
+    p2.close
+    assert_equal 3, count
+    assert_equal 'foo', p2.read
+  end
+
+  def test_copy_stream_with_length_and_offset
+    p2 = Polyphony::Pipe.new
+
+    count = IO.copy_stream(__FILE__, p2, 34, 4)
+    p2.close
+    assert_equal 34, count
+    assert_equal IO.read(__FILE__)[4, 34], p2.read
+  end
+
   def test_splice_from_to_eof
     i1, o1 = IO.pipe
     i2, o2 = IO.pipe

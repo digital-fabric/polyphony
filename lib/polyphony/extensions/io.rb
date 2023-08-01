@@ -87,6 +87,39 @@ class ::IO
       Open3.popen2(cmd) { |_i, o, _t| yield o }
     end
 
+    def copy_stream(src, dst, src_length = nil, src_offset = 0)
+      close_src = false
+      close_dst = false
+      if !src.respond_to?(:readpartial)
+        src = File.open(src, 'r+')
+        close_src = true
+      end
+      if !dst.respond_to?(:readpartial)
+        dst = File.open(dst, 'w+')
+        close_dst = true
+      end
+      src.seek(src_offset) if src_offset > 0
+
+      pipe = Polyphony::Pipe.new
+
+      pipe_to_dst = spin { dst.splice_from(pipe, -65536) }
+
+      count = 0
+      if src_length
+        while count < src_length
+          count += pipe.splice_from(src, src_length)
+        end
+      else
+        count = pipe.splice_from(src, -65536)
+      end
+
+      count
+    ensure
+      pipe_to_dst&.stop
+      src.close if close_src
+      dst.close if close_dst
+    end
+
     # Splices from one IO to another IO. At least one of the IOs must be a pipe.
     # If maxlen is negative, splices repeatedly using absolute value of maxlen
     # until EOF is encountered.
