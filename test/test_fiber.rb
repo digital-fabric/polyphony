@@ -43,6 +43,16 @@ class FiberTest < MiniTest::Test
     f&.stop
   end
 
+  def test_value
+    f = Fiber.current.spin do
+      snooze
+      :foo
+    end
+    assert_equal :foo, f.value
+  ensure
+    f&.stop
+  end
+
   def test_await_dead_children
     f1 = spin { :foo }
     f2 = spin { :bar }

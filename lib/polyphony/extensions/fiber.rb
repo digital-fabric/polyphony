@@ -182,13 +182,24 @@ class ::Fiber
     raise Polyphony::Interjection.new(block)
   end
 
-  # Blocks until the fiber has terminated, returning its return value.
+  # Waits for the fiber to terminate, and returns its return value (the result
+  # of its last statement). If the fiber has terminated with an ancaught
+  # exception, the exception will be raised.
   #
-  # @return [any] fiber's return value
+  #     f = spin { :foo; :bar }
+  #     f.await #=> :bar
+  #
+  # @overload await
+  #   @return [any] fiber's return value
+  # @overload join
+  #   @return [any] fiber's return value
+  # @overload value
+  #   @return [any] fiber's return value
   def await
     Fiber.await(self).first
   end
   alias_method :join, :await
+  alias_method :value, :await
 
   #############################
   # Fiber supervision methods #

@@ -1,3 +1,5 @@
+- Reimplement `open3` API using fibers
+
 - Look at RPC benchmark more closely: is there a way to reduce the overhead of
   the `backend_base_switch_fiber` function?
 
