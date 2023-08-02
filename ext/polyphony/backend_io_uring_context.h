@@ -36,6 +36,7 @@ typedef struct op_context {
   unsigned int      buffer_count;
   VALUE             buffer0;
   VALUE             *buffers;
+  double            ts; // timestamp for tracing
 } op_context_t;
 
 typedef struct op_context_store {
