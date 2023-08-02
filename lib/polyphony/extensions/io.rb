@@ -168,11 +168,6 @@ class ::IO
 
     if RUBY_PLATFORM !~ /linux/
       # @!visibility private
-      def double_splice(src, dest)
-        raise NotImplementedError
-      end
-
-      # @!visibility private
       def tee(src, dest, maxlen)
         raise NotImplementedError
       end
