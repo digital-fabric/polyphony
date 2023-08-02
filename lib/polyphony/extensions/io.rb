@@ -236,7 +236,7 @@ class ::IO
 
     @read_buffer ||= +''
     result = Polyphony.backend_read(self, @read_buffer, len, true, -1)
-    return nil unless result
+    return '' unless result
 
     already_read = @read_buffer
     @read_buffer = +''
