@@ -1336,10 +1336,7 @@ struct libev_child {
 #ifndef POLYPHONY_WINDOWS
 void Backend_child_callback(EV_P_ ev_child *w, int revents) {
   struct libev_child *watcher = (struct libev_child *)w;
-  int exit_status = WEXITSTATUS(w->rstatus);
-  VALUE status;
-
-  status = rb_ary_new_from_args(2, INT2FIX(w->rpid), INT2FIX(exit_status));
+  VALUE status = rb_ary_new_from_args(2, INT2FIX(w->rpid), INT2FIX(w->rstatus));
   Fiber_make_runnable(watcher->fiber, status);
 }
 #endif
@@ -1365,9 +1362,9 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   RB_GC_GUARD(watcher.fiber);
   RB_GC_GUARD(switchpoint_result);
   return switchpoint_result;
-#endif
+#endif // #ifdef POLYPHONY_WINDOWS
 }
-#endif
+#endif // #ifdef POLYPHONY_USE_PIDFD_OPEN
 
 void Backend_async_callback(EV_P_ ev_async *w, int revents) { }
 
