@@ -689,6 +689,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     if (!completed) {
+      TRACE_FREE(iov);
       free(iov);
       context_attach_buffers(ctx, argc, argv);
       RAISE_IF_EXCEPTION(resume_value);
@@ -697,6 +698,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     RB_GC_GUARD(resume_value);
 
     if (result < 0) {
+      TRACE_FREE(iov);
       free(iov);
       rb_syserr_fail(-result, strerror(-result));
     }
@@ -719,6 +721,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     }
   }
 
+  TRACE_FREE(iov);
   free(iov);
   return INT2FIX(total_written);
 }

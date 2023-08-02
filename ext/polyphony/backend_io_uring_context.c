@@ -79,7 +79,10 @@ inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
   ctx->ref_count--;
   if (ctx->ref_count) return 0;
 
-  if (ctx->buffer_count > 1) free(ctx->buffers);
+  if (ctx->buffer_count > 1) {
+    TRACE_FREE(ctx->buffers);
+    free(ctx->buffers);
+  }
 
   store->taken_count--;
   store->available_count++;
@@ -98,11 +101,13 @@ inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
 void context_store_free(op_context_store_t *store) {
   while (store->available) {
     op_context_t *next = store->available->next;
+    TRACE_FREE(store->available);
     free(store->available);
     store->available = next;
   }
   while (store->taken) {
     op_context_t *next = store->taken->next;
+    TRACE_FREE(store->taken);
     free(store->taken);
     store->taken = next;
   }

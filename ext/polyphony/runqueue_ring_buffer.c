@@ -10,6 +10,7 @@ inline void runqueue_ring_buffer_init(runqueue_ring_buffer *buffer) {
 }
 
 inline void runqueue_ring_buffer_free(runqueue_ring_buffer *buffer) {
+  TRACE_FREE(buffer->entries);
   free(buffer->entries);
 }
 

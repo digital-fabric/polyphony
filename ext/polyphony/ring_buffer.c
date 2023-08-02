@@ -10,6 +10,7 @@ void ring_buffer_init(ring_buffer *buffer) {
 }
 
 void ring_buffer_free(ring_buffer *buffer) {
+  TRACE_FREE(buffer->entries);
   free(buffer->entries);
 }
 

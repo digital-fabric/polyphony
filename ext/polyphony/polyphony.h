@@ -10,6 +10,7 @@
 #define INSPECT(str, obj) { printf(str); VALUE s = rb_funcall(obj, rb_intern("inspect"), 0); printf(": %s\n", StringValueCStr(s)); }
 #define CALLER() rb_funcall(rb_mKernel, rb_intern("caller"), 0)
 #define TRACE_CALLER() INSPECT("caller: ", CALLER())
+#define TRACE_FREE(ptr) //printf("Free %p %s:%d\n", ptr, __FILE__, __LINE__)
 
 // exceptions
 #define TEST_EXCEPTION(ret) (rb_obj_is_kind_of(ret, rb_eException) == Qtrue)
