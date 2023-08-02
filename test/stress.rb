@@ -13,16 +13,19 @@ puts
 puts $test_cmd
 puts
 
+@failure_count = 0
+
 def run_test(count)
   puts "#{count}: running tests..."
   # sleep 1
   system($test_cmd)
   puts
 
-  return if $?.exitstatus == 0
-
-  puts "Failure after #{count} tests"
-  exit!
+  if $?.exitstatus != 0
+    puts "Test failed (#{count})..."
+    exit!
+    @failure_count += 1
+  end
 end
 
 trap('INT') { exit! }
@@ -32,8 +35,9 @@ count.times do |i|
 end
 elapsed = Time.now - t0
 puts format(
-  "Successfully ran %d tests in %f seconds (%f per test)",
+  "Ran %d tests in %f seconds (%f per test), failures: %d",
   count,
   elapsed,
-  elapsed / count
+  elapsed / count,
+  @failure_count
 )

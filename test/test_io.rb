@@ -100,6 +100,12 @@ class IOTest < MiniTest::Test
     assert_equal '', i.read(0)
   end
 
+  def test_read_empty_pipe
+    i, o = IO.pipe
+    o.close
+    assert_equal '', i.read
+  end
+
   def test_readpartial
     i, o = IO.pipe
 

@@ -8,9 +8,9 @@ class KernelTest < MiniTest::Test
     FileUtils.rm(fn) rescue nil
 
     counter = 0
-    timer = spin { throttled_loop(200) { counter += 1 } }
+    timer = spin { throttled_loop(20) { counter += 1 } }
 
-    system('sleep 0.01')
+    system('sleep 0.13')
     assert(counter >= 2)
 
     system('echo "hello" > ' + fn)

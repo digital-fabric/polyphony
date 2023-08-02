@@ -41,9 +41,12 @@ class TCPSocketTest < MiniTest::Test
     client = TCPSocket.open('ipinfo.io', 80)
     client.write("GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n")
     result = nil
-    move_on_after(3) {
-      result = client.read
-    }
+    3.times do
+      move_on_after(3) {
+        result = client.read
+      }
+      break if result
+    end
     assert result =~ /HTTP\/1.0 200 OK/
   end
 

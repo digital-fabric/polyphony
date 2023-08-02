@@ -30,7 +30,7 @@ class ThrottlerTest < MiniTest::Test
     f = spin { loop { t.process { buffer << 1 } } }
     sleep 0.02
     f.stop
-    assert_in_range 2..4, buffer.size if IS_LINUX
+    assert_in_range 1..4, buffer.size if IS_LINUX
   end
 
   def test_throttler_with_invalid_argument

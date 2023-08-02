@@ -144,11 +144,11 @@ class TimerMiscTest < MiniTest::Test
 
   def test_timer_after
     buffer = []
-    f = @timer.after(0.01) { buffer << 2 }
+    f = @timer.after(0.1) { buffer << 2 }
     assert_kind_of Fiber, f
     snooze
     assert_equal [], buffer
-    sleep 0.1
+    sleep 0.2
     assert_equal [2], buffer
   end
 

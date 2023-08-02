@@ -115,7 +115,8 @@ class ProcessTest < MiniTest::Test
     result = w.await
 
     assert_equal [0, 1, 2], buffer
-    assert_equal [pid, 42], result
+    assert_equal pid, result.pid
+    assert_equal 42, result.exitstatus
   end
 end
 
