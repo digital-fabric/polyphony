@@ -199,6 +199,12 @@ static inline void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, 
   op_context_t *ctx = io_uring_cqe_get_data(cqe);
   if (!ctx) return;
 
+  // if (ctx->type == OP_TIMEOUT) {
+  //   double now = current_time_ns() / 1e9;
+  //   double elapsed = now - ctx->ts;
+  //   printf("%13.6f CQE timeout %p:%d (elapsed: %9.6f)\n", now, ctx, ctx->id, elapsed);
+  // }
+
   // printf("cqe ctx %p id: %d result: %d (%s, ref_count: %d)\n", ctx, ctx->id, cqe->res, op_type_to_str(ctx->type), ctx->ref_count);
   ctx->result = cqe->res;
   if (ctx->ref_count == MULTISHOT_REFCOUNT) {
@@ -1432,6 +1438,10 @@ int io_uring_backend_submit_timeout_and_await(VALUE self, Backend_t *backend, do
   struct __kernel_timespec ts = double_to_timespec(duration);
   struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
   op_context_t *ctx = context_store_acquire(&backend->store, OP_TIMEOUT);
+
+  // double now = current_time_ns() / 1e9;
+  // ctx->ts = now;
+  // printf("%13.6f SQE timeout %p:%d (%g)\n", now, ctx, ctx->id, duration);
 
   io_uring_prep_timeout(sqe, &ts, 0, 0);
   io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, resume_value);
