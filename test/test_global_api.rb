@@ -424,11 +424,12 @@ end
 class GlobalAPIEtcTest < MiniTest::Test
   def test_after
     buffer = []
-    f = after(0.001) { buffer << 2 }
-    snooze
-    assert_equal [], buffer
-    sleep 0.0015
-    assert_equal [2], buffer
+    f3 = after(0.3) { buffer << 3 }
+    f2 = after(0.2) { buffer << 2 }
+    f1 = after(0.1) { buffer << 1 }
+
+    Fiber.await(f1, f2, f3)
+    assert_equal [1, 2, 3], buffer
   end
 
   def test_every
