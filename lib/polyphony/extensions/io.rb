@@ -59,12 +59,12 @@ class ::IO
       end
     end
 
-    # alias_method :orig_readlines, :readlines
-    # def readlines(name, sep = $/, limit = nil, getline_args = EMPTY_HASH)
-    #   File.open(name, 'r') do |f|
-    #     f.readlines(sep, limit, getline_args)
-    #   end
-    # end
+    alias_method :orig_readlines, :readlines
+    def readlines(name, sep = $/, limit = nil, getline_args = EMPTY_HASH)
+      File.open(name, 'r') do |f|
+        f.readlines(sep, **getline_args)
+      end
+    end
 
     # @!visibility private
     alias_method :orig_write, :write
@@ -112,7 +112,10 @@ class ::IO
       else
         count = pipe.splice_from(src, -65536)
       end
-
+      
+      pipe.close
+      pipe_to_dst.await
+      
       count
     ensure
       pipe_to_dst&.stop
@@ -140,6 +143,17 @@ class ::IO
     # @return [Integer] total bytes spliced
     def double_splice(src, dest)
       Polyphony.backend_double_splice(src, dest)
+    end
+
+    if !Polyphony.respond_to?(:backend_double_splice)
+      def double_splice(src, dest)
+        pipe = Polyphony::Pipe.new
+        f = spin { Polyphony.backend_splice(pipe, dest, -65536) }
+        Polyphony.backend_splice(src, pipe, -65536)
+        pipe.close
+      ensure
+        f.stop
+      end
     end
 
     # Tees data from the source to the desination.
@@ -313,7 +327,7 @@ class ::IO
         yield line
       end
 
-      result = readpartial(8192, @read_buffer, -1)
+      result = Polyphony.backend_read(self, @read_buffer, 8192, false, -1)
       return self if !result
     end
   rescue EOFError
@@ -469,7 +483,7 @@ class ::IO
   def close
     return if closed?
 
-    Polyphony.backend_close(self)
+    Polyphony.backend_close(self) rescue nil
     nil
   end
 
