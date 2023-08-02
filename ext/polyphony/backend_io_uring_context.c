@@ -6,20 +6,23 @@
 
 const char *op_type_to_str(enum op_type type) {
   switch (type) {
-  case OP_ACCEPT:   return "ACCEPT";
-  case OP_CHAIN:    return "CHAIN";
-  case OP_CLOSE:    return "CLOSE";
-  case OP_CONNECT:  return "CONNECT";
-  case OP_POLL:     return "POLL";
-  case OP_READ:     return "READ";
-  case OP_RECV:     return "RECV";
-  case OP_RECVMSG:  return "RECVMSG";
-  case OP_SEND:     return "SEND";
-  case OP_SENDMSG:  return "SENDMSG";
-  case OP_SPLICE:   return "SPLICE";
-  case OP_TIMEOUT:  return "TIMEOUT";
-  case OP_WRITEV:   return "WRITEV";
-  case OP_WRITE:    return "WRITE";
+  case OP_ACCEPT:             return "ACCEPT";
+  case OP_CHAIN:              return "CHAIN";
+  case OP_CLOSE:              return "CLOSE";
+  case OP_CONNECT:            return "CONNECT";
+  case OP_POLL:               return "POLL";
+  case OP_READ:               return "READ";
+  case OP_RECV:               return "RECV";
+  case OP_RECVMSG:            return "RECVMSG";
+  case OP_SEND:               return "SEND";
+  case OP_SENDMSG:            return "SENDMSG";
+  case OP_SPLICE:             return "SPLICE";
+  case OP_TIMEOUT:            return "TIMEOUT";
+  case OP_WRITEV:             return "WRITEV";
+  case OP_WRITE:              return "WRITE";
+
+  case OP_MULTISHOT_ACCEPT:   return "ACCEPT MULTISHOT";
+  case OP_MULTISHOT_TIMEOUT:  return "ACCEPT MULTISHOT";
 
   default: return "";
   };
@@ -71,9 +74,7 @@ inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
 
   // If a multishot ctx is released, we pretend its ref count is 1, so it will
   // be returned to the store.
-  if (ctx->ref_count == MULTISHOT_REFCOUNT) {
-    ctx->ref_count = 1;
-  }
+  if (ctx->ref_count == MULTISHOT_REFCOUNT) ctx->ref_count = 1;
 
   ctx->ref_count--;
   if (ctx->ref_count) return 0;

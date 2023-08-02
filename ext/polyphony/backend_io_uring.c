@@ -186,10 +186,30 @@ static void handle_multishot_accept_completion(op_context_t *ctx, struct io_urin
   }
 }
 
+static void handle_multishot_timeout_completion(
+  op_context_t *ctx, struct io_uring_cqe *cqe, Backend_t *backend
+)
+{
+  if (ctx->result == -ECANCELED) {
+    context_store_release(&backend->store, ctx);
+  }
+  else {
+    int has_more = cqe->flags & IORING_CQE_F_MORE;
+    if (!has_more) {
+      context_store_release(&backend->store, ctx);
+    }
+    if (ctx->fiber) {
+      Fiber_make_runnable(ctx->fiber, has_more ? Qtrue : Qnil);
+    }
+  }
+}
+
 static void handle_multishot_completion(op_context_t *ctx, struct io_uring_cqe *cqe, Backend_t *backend) {
   switch (ctx->type) {
     case OP_MULTISHOT_ACCEPT:
       return handle_multishot_accept_completion(ctx, cqe, backend);
+    case OP_MULTISHOT_TIMEOUT:
+      return handle_multishot_timeout_completion(ctx, cqe, backend);
     default:
       printf("Unexpected multishot completion for op type %d\n", ctx->type);
   }
