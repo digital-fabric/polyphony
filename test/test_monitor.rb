@@ -1,3 +1,5 @@
+# Adapted from: https://github.com/ruby/ruby/blob/master/test/monitor/test_monitor.rb
+
 # frozen_string_literal: true
 
 require_relative 'helper'
@@ -83,26 +85,25 @@ class TestMonitor < MiniTest::Test
 
   def test_synchronize
     ary = []
-    queue = Thread::Queue.new
-    th = Thread.new {
-      queue.pop
+    f1 = spin {
+      receive
       @monitor.synchronize do
         for i in 6 .. 10
           ary.push(i)
-          Thread.pass
+          snooze
         end
       end
     }
-    th2 = Thread.new {
+    f2 = spin {
       @monitor.synchronize do
-        queue.enq(nil)
+        f1 << :continue
         for i in 1 .. 5
           ary.push(i)
-          Thread.pass
+          snooze
         end
       end
     }
-    assert_join_threads([th, th2])
+    Fiber.await(f1, f2)
     assert_equal((1..10).to_a, ary)
   end
 

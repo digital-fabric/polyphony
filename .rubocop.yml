@@ -81,6 +81,7 @@ Metrics/MethodLength:
   Exclude:
     - lib/polyphony/extensions/io.rb
     - lib/polyphony/extensions/fiber.rb
+    - lib/polyphony/adapters/open3.rb
     - test/**/*.rb
     - examples/**/*.rb
 

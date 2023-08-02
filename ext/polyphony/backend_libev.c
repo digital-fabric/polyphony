@@ -1325,7 +1325,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
     int e = errno;
     rb_syserr_fail(e, strerror(e));
   }
-  return rb_ary_new_from_args(2, INT2FIX(ret), INT2FIX(WEXITSTATUS(status)));
+  return rb_ary_new_from_args(2, INT2FIX(ret), INT2FIX(status));
 }
 #else
 struct libev_child {

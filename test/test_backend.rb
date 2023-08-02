@@ -131,7 +131,7 @@ class BackendTest < MiniTest::Test
     end
 
     result = @backend.waitpid(pid)
-    assert_equal [pid, 42], result
+    assert_equal [pid, 42 << 8], result
   end
 
   def test_read_loop
@@ -374,8 +374,9 @@ class BackendTest < MiniTest::Test
     # The idle tasks are ran at most once per fiber switch, before the backend
     # is polled. Therefore, the second sleep will not have triggered a GC, since
     # only 0.05s have passed since the gc period was set.
-    sleep 0.07
+    sleep 0.05
     assert_equal count, GC.count
+
     # Upon the third sleep the GC should be triggered, at 0.12s post setting the
     # GC period.
     sleep 0.05

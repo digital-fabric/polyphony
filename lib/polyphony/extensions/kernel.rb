@@ -123,7 +123,7 @@ module ::Kernel
         i.close
         pipe_to_eof(o, $stdout)
       end
-      waiter.await.last == 0
+      waiter.value.success?
     rescue SystemCallError
       nil
     end

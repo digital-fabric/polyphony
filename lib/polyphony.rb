@@ -14,6 +14,7 @@ require_relative './polyphony/core/sync'
 require_relative './polyphony/core/timer'
 require_relative './polyphony/net'
 require_relative './polyphony/adapters/process'
+require_relative './polyphony/adapters/open3'
 
 # Polyphony API
 module Polyphony
@@ -102,6 +103,9 @@ module Polyphony
     def terminate_threads
       threads = Thread.list - [Thread.current]
       return if threads.empty?
+
+      trace '*' * 40
+      trace threads_left: threads
 
       threads.each(&:kill)
       threads.each(&:join)
