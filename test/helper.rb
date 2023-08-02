@@ -41,20 +41,23 @@ end
 class MiniTest::Test
   def setup
     # trace "* setup #{self.name}"
+    @__stamp = Time.now
     Fiber.current.setup_main_fiber
     Thread.current.backend.finalize
     Thread.current.backend = Polyphony::Backend.new
-    sleep 0.001
-    @__stamp = Time.now
+    sleep 0.0001
   end
 
   def teardown
-    # trace "* teardown #{self.name} (#{Time.now - @__stamp}s)"
+    Polyphony::ThreadPool.reset
+
+    # trace "* teardown #{self.name} (#{@__stamp ? (Time.now - @__stamp) : '?'}s)"
     Fiber.current.shutdown_all_children
     if Fiber.current.children.size > 0
       puts "Children left after #{self.name}: #{Fiber.current.children.inspect}"
       exit!
     end
+    # trace "* teardown done"
   rescue => e
     puts e
     puts e.backtrace.join("\n")

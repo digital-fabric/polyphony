@@ -8,6 +8,11 @@ class ThreadPoolTest < MiniTest::Test
     @pool = Polyphony::ThreadPool.new
   end
 
+  def teardown
+    @pool.stop
+    super
+  end
+
   def test_process
     current_thread = Thread.current
 
