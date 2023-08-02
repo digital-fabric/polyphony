@@ -22,9 +22,10 @@ def get_config
   
   config[:kernel_version]     = combined_version
   config[:pidfd_open]         = combined_version > 503
+  config[:multishot_accept]   = combined_version >= 519
   config[:multishot_recv]     = combined_version >= 600
   config[:multishot_recvmsg]  = combined_version >= 600
-  config[:multishot_accept]   = combined_version >= 519
+  config[:multishot_timeout]  = combined_version >= 640
   config[:submit_all_flag]    = combined_version >= 518
   config[:coop_taskrun_flag]  = combined_version >= 519
 
@@ -62,21 +63,22 @@ end
 
 $defs << '-DPOLYPHONY_USE_PIDFD_OPEN' if config[:pidfd_open]
 if config[:io_uring]
-  $defs << "-DPOLYPHONY_BACKEND_LIBURING"
-  $defs << "-DPOLYPHONY_LINUX"
-  $defs << "-DPOLYPHONY_UNSET_NONBLOCK" if RUBY_VERSION =~ /^3/
-  $defs << "-DHAVE_IO_URING_PREP_MULTISHOT_ACCEPT" if config[:multishot_accept]
-  $defs << "-DHAVE_IO_URING_PREP_RECV_MULTISHOT" if config[:multishot_recv]
-  $defs << "-DHAVE_IO_URING_PREP_RECVMSG_MULTISHOT" if config[:multishot_recvmsg]
-  $defs << "-DHAVE_IORING_SETUP_SUBMIT_ALL" if config[:submit_all_flag]
-  $defs << "-DHAVE_IORING_SETUP_COOP_TASKRUN" if config[:coop_taskrun_flag]
-  $CFLAGS << " -Wno-pointer-arith"
+  $defs << '-DPOLYPHONY_BACKEND_LIBURING'
+  $defs << '-DPOLYPHONY_LINUX'
+  $defs << '-DPOLYPHONY_UNSET_NONBLOCK' if RUBY_VERSION =~ /^3/
+  $defs << '-DHAVE_IO_URING_PREP_MULTISHOT_ACCEPT'  if config[:multishot_accept]
+  $defs << '-DHAVE_IO_URING_PREP_RECV_MULTISHOT'    if config[:multishot_recv]
+  $defs << '-DHAVE_IO_URING_PREP_RECVMSG_MULTISHOT' if config[:multishot_recvmsg]
+  $defs << '-DHAVE_IO_URING_TIMEOUT_MULTISHOT'      if config[:multishot_timeout]
+  $defs << '-DHAVE_IORING_SETUP_SUBMIT_ALL'         if config[:submit_all_flag]
+  $defs << '-DHAVE_IORING_SETUP_COOP_TASKRUN'       if config[:coop_taskrun_flag]
+  $CFLAGS << ' -Wno-pointer-arith'
 else
-  $defs << "-DPOLYPHONY_BACKEND_LIBEV"
-  $defs << "-DPOLYPHONY_LINUX" if config[:linux]
-  $defs << "-DPOLYPHONY_WINDOWS" if config[:windows]
+  $defs << '-DPOLYPHONY_BACKEND_LIBEV'
+  $defs << '-DPOLYPHONY_LINUX' if config[:linux]
+  $defs << '-DPOLYPHONY_WINDOWS' if config[:windows]
 
-  $defs << "-DEV_STANDALONE" # prevent libev from assuming "config.h" exists
+  $defs << '-DEV_STANDALONE' # prevent libev from assuming "config.h" exists
 
   define_bool('EV_USE_EPOLL', have_header('sys/epoll.h'))
   define_bool('EV_USE_KQUEUE', have_header('sys/event.h') && have_header('sys/queue.h'))
@@ -88,10 +90,10 @@ else
 
   $defs << '-DHAVE_SYS_RESOURCE_H' if have_header('sys/resource.h')
 
-  $CFLAGS << " -Wno-comment"
-  $CFLAGS << " -Wno-unused-result"
-  $CFLAGS << " -Wno-dangling-else"
-  $CFLAGS << " -Wno-parentheses"
+  $CFLAGS << ' -Wno-comment'
+  $CFLAGS << ' -Wno-unused-result'
+  $CFLAGS << ' -Wno-dangling-else'
+  $CFLAGS << ' -Wno-parentheses'
 end
 
 $defs << '-DPOLYPHONY_PLAYGROUND' if ENV['POLYPHONY_PLAYGROUND']
