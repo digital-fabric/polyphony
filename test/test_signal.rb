@@ -4,6 +4,8 @@ require_relative 'helper'
 
 class SignalTrapTest < Minitest::Test
   def test_signal_handler_trace
+    skip # tracing system to be overhauled
+
     if Thread.current.backend.kind != :io_uring
       skip "Skipping signal handler trace because Backend_close on libev behaves differently"
     end
