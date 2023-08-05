@@ -26,11 +26,11 @@ class EventTest < MiniTest::Test
     count = 0
     a = Polyphony::Event.new
 
-    coproc = spin {
+    f = spin {
       loop {
         a.await
         count += 1
-        spin { coproc.stop }
+        spin { f.stop }
       }
     }
     snooze
@@ -40,7 +40,7 @@ class EventTest < MiniTest::Test
       3.times { a.signal }
     end
 
-    coproc.await
+    f.await
     assert_equal 1, count
   ensure
     t&.kill
@@ -56,5 +56,12 @@ class EventTest < MiniTest::Test
     assert_raises(RuntimeError) do
       f.await
     end
+  end
+
+  def test_event_signal_before_await
+    e = Polyphony::Event.new
+    e.signal(:foo)
+
+    assert_equal :foo, e.await
   end
 end

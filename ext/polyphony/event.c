@@ -3,6 +3,8 @@
 
 typedef struct event {
   VALUE waiting_fiber;
+  int signaled;
+  VALUE result;
 } Event_t;
 
 VALUE cEvent = Qnil;
@@ -10,6 +12,7 @@ VALUE cEvent = Qnil;
 static void Event_mark(void *ptr) {
   Event_t *event = ptr;
   rb_gc_mark(event->waiting_fiber);
+  rb_gc_mark(event->result);
 }
 
 static void Event_free(void *ptr) {
@@ -41,6 +44,8 @@ static VALUE Event_initialize(VALUE self) {
   GetEvent(self, event);
 
   event->waiting_fiber = Qnil;
+  event->signaled = 0;
+  event->result = Qnil;
 
   return self;
 }
@@ -50,10 +55,17 @@ VALUE Event_signal(int argc, VALUE *argv, VALUE self) {
   Event_t *event;
   GetEvent(self, event);
 
+  if (event->signaled) goto done;
+
+  event->signaled = 1;
+  event->result = value;
+
   if (event->waiting_fiber != Qnil) {
     Fiber_make_runnable(event->waiting_fiber, value);
     event->waiting_fiber = Qnil;
   }
+
+done:
   return self;
 }
 
@@ -67,10 +79,19 @@ VALUE Event_await(VALUE self) {
   if (event->waiting_fiber != Qnil)
     rb_raise(rb_eRuntimeError, "Event is already awaited by another fiber");
 
+  if (event->signaled) {
+    VALUE result = event->result;
+    event->signaled = 0;
+    event->result = Qnil;
+    return result;
+  }
+
   backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
   event->waiting_fiber = rb_fiber_current();
   switchpoint_result = Backend_wait_event(backend, Qnil);
   event->waiting_fiber = Qnil;
+  event->signaled = 0;
+  event->result = Qnil;
 
   RAISE_IF_EXCEPTION(switchpoint_result);
   RB_GC_GUARD(backend);
