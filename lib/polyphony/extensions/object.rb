@@ -240,25 +240,13 @@ class ::Object
     fiber = Fiber.current
     canceller = spin do
       Polyphony.backend_sleep(interval)
-      exception = cancel_exception(exception)
+      exception = Exception.instantiate(exception)
       exception.raising_fiber = Fiber.current
       fiber.cancel(exception)
     end
     block.call(canceller)
   ensure
     canceller.stop
-  end
-
-  # Converts the given exception spec to an exception instance.
-  #
-  # @param exception [Exception, Class, Array<class, message>] exception spec
-  # @return [Exception] exception instance
-  def cancel_exception(exception)
-    case exception
-    when Class then exception.new
-    when Array then exception[0].new(exception[1])
-    else RuntimeError.new(exception)
-    end
   end
 
   # Helper method for performing `#spin_loop` without throttling. Spins up a

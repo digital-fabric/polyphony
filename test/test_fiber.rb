@@ -1157,9 +1157,11 @@ class FiberControlTest < MiniTest::Test
   end
 
   def test_select_with_interruption
-    f1 = spin { sleep 0.01; :foo }
+    f1 = spin { sleep 0.1; :foo }
     f2 = spin { sleep 1; :bar }
-    spin { snooze; f2.interrupt(:baz) }
+    snooze
+    f2.interrupt(:baz)
+
     result = Fiber.select(f1, f2)
     assert_equal [f2, :baz], result
   end

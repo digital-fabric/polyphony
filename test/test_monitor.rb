@@ -8,6 +8,7 @@ class TestMonitor < MiniTest::Test
   Queue = Polyphony::Queue
 
   def setup
+    super
     @monitor = Polyphony::Monitor.new
   end
 
@@ -21,25 +22,25 @@ class TestMonitor < MiniTest::Test
   def test_enter
     ary = []
     queue = Thread::Queue.new
-    th = Thread.new {
+    f1 = spin {
       queue.pop
       @monitor.enter
       for i in 6 .. 10
         ary.push(i)
-        Thread.pass
+        snooze
       end
       @monitor.exit
     }
-    th2 = Thread.new {
+    f2 = spin {
       @monitor.enter
       queue.enq(nil)
       for i in 1 .. 5
         ary.push(i)
-        Thread.pass
+        snooze
       end
       @monitor.exit
     }
-    assert_join_threads([th, th2])
+    Fiber.await(f1, f2)
     assert_equal((1..10).to_a, ary)
   end
 
@@ -271,16 +272,15 @@ class TestMonitor < MiniTest::Test
         cond.signal
       end
     end
-    th2 = Thread.new do
-      @monitor.synchronize do
-        queue2.enq(nil)
-        assert_equal("foo", b)
-        result2 = cond.wait(0.1)
-        assert_equal(true, result2)
-        assert_equal("bar", b)
-      end
+    result2 = nil
+    @monitor.synchronize do
+      queue2.enq(nil)
+      assert_equal("foo", b)
+      result2 = cond.wait(0.1)
+      assert_equal(true, result2)
+      assert_equal("bar", b)
     end
-    assert_join_threads([th, th2])
+    th.join
 
     c = "foo"
     queue3 = Thread::Queue.new

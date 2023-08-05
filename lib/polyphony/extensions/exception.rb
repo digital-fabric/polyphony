@@ -6,6 +6,21 @@ class ::Exception
     # Set to true to disable sanitizing the backtrace (to remove frames occuring
     # in the Polyphony code itself.)
     attr_accessor :__disable_sanitized_backtrace__
+
+    # Creates an exception instance from the given error according to its type.
+    #
+    # @param error [nil, String, Class, Exception] error
+    # @param message [nil, String] error message
+    # @return [Exception] exception instance
+    def instantiate(error = nil, message = nil)
+      case error
+      when String then    RuntimeError.new(error)
+      when Array then     error[0].new(error[1])
+      when Class then     error.new(message)
+      when Exception then error
+      else                RuntimeError.new
+      end
+    end
   end
 
   # Set to the fiber in which the exception was *originally* raised (in case the

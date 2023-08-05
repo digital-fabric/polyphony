@@ -3,7 +3,6 @@
 
 ID ID_ivar_auto_watcher;
 ID ID_ivar_mailbox;
-ID ID_ivar_result;
 ID ID_ivar_waiting_fibers;
 
 VALUE SYM_dead;
@@ -239,7 +238,6 @@ void Init_Fiber(void) {
 
   ID_ivar_auto_watcher    = rb_intern("@auto_watcher");
   ID_ivar_mailbox         = rb_intern("@mailbox");
-  ID_ivar_result          = rb_intern("@result");
   ID_ivar_waiting_fibers  = rb_intern("@waiting_fibers");
 
   SYM_spin                = ID2SYM(rb_intern("spin"));

@@ -29,8 +29,7 @@ module Polyphony
     #
     # @return [nil]
     def conditional_release
-      @store << @token
-      @token = nil
+      @store << true
       @holding_fiber = nil
     end
 
@@ -39,7 +38,7 @@ module Polyphony
     #
     # @return [Fiber] current fiber
     def conditional_reacquire
-      @token = @store.shift
+      @store.shift
       @holding_fiber = Fiber.current
     end
 
@@ -65,7 +64,7 @@ module Polyphony
       check_dead_holder
       raise ThreadError if owned?
 
-      @token = @store.shift
+      @store.shift
       @holding_fiber = Fiber.current
       self
     end
@@ -78,8 +77,7 @@ module Polyphony
       raise ThreadError if !owned?
 
       @holding_fiber = nil
-      @store << @token if @token
-      @token = nil
+      @store << true
     end
 
     # Attempts to obtain the lock and returns immediately. Returns `true` if the
@@ -89,7 +87,7 @@ module Polyphony
     def try_lock
       return false if @holding_fiber
 
-      @token = @store.shift
+      @store.shift
       @holding_fiber = Fiber.current
       true
     end
@@ -117,14 +115,13 @@ module Polyphony
     #
     # @return [any] return value of given block.
     def synchronize_not_holding
-      @token = @store.shift
+      @store.shift
       begin
         @holding_fiber = Fiber.current
         yield
       ensure
         @holding_fiber = nil
-        @store << @token if @token
-        @token = nil
+        @store << true
       end
     end
 
@@ -132,8 +129,7 @@ module Polyphony
       return if !@holding_fiber&.dead?
 
       @holding_fiber = nil
-      @store << @token if @token
-      @token = nil
+      @store << true
     end
   end
 

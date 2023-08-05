@@ -13,6 +13,7 @@ class BackendTest < MiniTest::Test
   def teardown
     @backend.finalize
     Thread.current.backend = @prev_backend
+    super
   end
 
   def test_sleep
@@ -443,6 +444,7 @@ class BackendChainTest < MiniTest::Test
   def teardown
     @backend.finalize
     Thread.current.backend = @prev_backend
+    super
   end
 
   def test_simple_write_chain

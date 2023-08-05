@@ -13,6 +13,7 @@ ID ID_ivar_blocking_mode;
 ID ID_ivar_io;
 ID ID_ivar_multishot_accept_queue;
 ID ID_ivar_parked;
+ID ID_ivar_result;
 ID ID_ivar_runnable;
 ID ID_ivar_running;
 ID ID_ivar_thread;
@@ -474,6 +475,7 @@ void Init_Polyphony(void) {
   ID_ivar_io                      = rb_intern("@io");
   ID_ivar_multishot_accept_queue  = rb_intern("@multishot_accept_queue");
   ID_ivar_parked                  = rb_intern("@parked");
+  ID_ivar_result                  = rb_intern("@result");
   ID_ivar_runnable                = rb_intern("@runnable");
   ID_ivar_running                 = rb_intern("@running");
   ID_ivar_thread                  = rb_intern("@thread");

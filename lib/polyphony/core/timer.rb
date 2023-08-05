@@ -192,38 +192,20 @@ module Polyphony
       ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
     end
 
-    # Converts a timeout record's exception spec to an exception instance.
-    #
-    # @param record [Array, Class, Exception, String] exception spec
-    # @return [Exception] exception instance
-    def timeout_exception(record)
-      case (exception = record[:exception])
-      when Array
-        exception[0].new(exception[1])
-      when Class
-        exception.new
-      when Exception
-        exception
-      else
-        RuntimeError.new(exception)
-      end
-    end
-
     # Runs a timer iteration, invoking any timeouts that are due.
     def update
       return if @timeouts.empty?
 
-      @timeouts.each do |fiber, record|
-        next if record[:target_stamp] > now
+      @timeouts.each do |f, r|
+        next if r[:target_stamp] > now
 
-        value = record[:exception] ? timeout_exception(record) : record[:value]
-        fiber.schedule value
+        f.schedule(
+          r[:exception] ? Exception.instantiate(r[:exception]) : r[:value]
+        )
 
-        next unless record[:recurring]
+        next if !r[:recurring]
 
-        while record[:target_stamp] <= now
-          record[:target_stamp] += record[:interval]
-        end
+        r[:target_stamp] += r[:interval] while r[:target_stamp] <= now
       end
     end
   end

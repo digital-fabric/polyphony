@@ -17,6 +17,14 @@ require 'minitest/autorun'
 IS_LINUX = RUBY_PLATFORM =~ /linux/
 
 module ::Kernel
+  def debug(**h)
+    k, v = h.first
+    h.delete(k)
+
+    rest = h.inject(+'') { |s, (k, v)| s << "  #{k}: #{v.inspect}\n" }
+    STDOUT.orig_write("#{k}=>#{v} #{caller[0]}\n#{rest}")
+  end
+
   def trace(*args)
     STDOUT.orig_write(format_trace(args))
   end
@@ -42,9 +50,10 @@ class MiniTest::Test
   def setup
     # trace "* setup #{self.name}"
     @__stamp = Time.now
-    Fiber.current.setup_main_fiber
     Thread.current.backend.finalize
     Thread.current.backend = Polyphony::Backend.new
+    Fiber.current.setup_main_fiber
+    Fiber.current.instance_variable_set(:@auto_watcher, nil)
     sleep 0.0001
   end
 

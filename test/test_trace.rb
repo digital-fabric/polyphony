@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+__END__
+
 require_relative 'helper'
 require 'polyphony/core/debug'
 
