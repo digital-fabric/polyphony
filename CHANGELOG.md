@@ -1,3 +1,17 @@
+## 1.6 2023-08-05
+
+- Refactor exception instantiation
+- Fix race condition in `Thread#join`
+- Fix race condition in `Event` class
+- Add support for open3 API
+- Update liburing to version 2.4
+- Various fixes to `IO` instance methods
+- Fix `IO#double_splice` on non-Linux OSes
+- Implement `IO.copy_stream`
+- Add `Fiber#value` as alias to `Fiber#await`
+- Implement fiber-aware `Monitor` class (#113)
+- Implement Thread#value
+
 ## 1.5 2023-07-28
 
 - Refactor backend_await in io_uring backend
