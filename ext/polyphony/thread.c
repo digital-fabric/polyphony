@@ -3,9 +3,12 @@
 
 ID ID_deactivate_all_watchers_post_fork;
 ID ID_ivar_backend;
+ID ID_ivar_done;
 ID ID_ivar_join_wait_queue;
 ID ID_ivar_main_fiber;
+ID ID_ivar_ready;
 ID ID_ivar_terminated;
+ID ID_ivar_waiters;
 ID ID_stop;
 
 /* :nop-doc: */
@@ -83,11 +86,68 @@ VALUE Thread_class_backend(VALUE _self) {
   return rb_ivar_get(rb_thread_current(), ID_ivar_backend);
 }
 
+
+VALUE Thread_done_p(VALUE self)
+{
+  return rb_ivar_get(self, ID_ivar_done);
+}
+
+VALUE Thread_kill_safe(VALUE self)
+{
+  static VALUE eTerminate = Qnil;
+  if (rb_ivar_get(self, ID_ivar_done) == Qtrue) return self;
+
+  if (eTerminate == Qnil)
+    eTerminate = rb_const_get(mPolyphony, rb_intern("Terminate"));
+
+  while (rb_ivar_get(self, ID_ivar_ready) != Qtrue)
+    rb_thread_schedule();
+
+  VALUE main_fiber = rb_ivar_get(self, ID_ivar_main_fiber);
+  VALUE exception = rb_funcall(eTerminate, ID_new, 0);
+  Thread_schedule_fiber(self, main_fiber, exception);
+  return self;
+}
+
+VALUE Thread_mark_as_done(VALUE self, VALUE result)
+{
+  rb_ivar_set(self, ID_ivar_done, Qtrue);
+  VALUE waiters = rb_ivar_get(self, ID_ivar_waiters);
+  if (waiters == Qnil) return self;
+
+  int len = RARRAY_LEN(waiters);
+  for (int i = 0; i < len; i++) {
+    VALUE waiter = RARRAY_AREF(waiters, i);
+    Event_signal(1, &result, waiter);
+  }
+  return self;
+}
+
+VALUE Thread_await_done(VALUE self)
+{
+  if (Thread_done_p(self) == Qtrue) return rb_ivar_get(self, ID_ivar_result);
+
+  VALUE waiter = Fiber_auto_watcher(rb_fiber_current());
+  VALUE waiters = rb_ivar_get(self, ID_ivar_waiters);
+  if (waiters == Qnil) {
+    waiters = rb_ary_new();
+    rb_ivar_set(self, ID_ivar_waiters, waiters);
+  }
+  rb_ary_push(waiters, waiter);
+
+  return Event_await(waiter);
+}
+
 void Init_Thread(void) {
   rb_define_method(rb_cThread, "setup_fiber_scheduling", Thread_setup_fiber_scheduling, 0);
   rb_define_method(rb_cThread, "schedule_and_wakeup", Thread_fiber_schedule_and_wakeup, 2);
   rb_define_method(rb_cThread, "switch_fiber", Thread_switch_fiber, 0);
   rb_define_method(rb_cThread, "fiber_unschedule", Thread_fiber_unschedule, 1);
+
+  rb_define_method(rb_cThread, "done?", Thread_done_p, 0);
+  rb_define_method(rb_cThread, "kill_safe", Thread_kill_safe, 0);
+  rb_define_method(rb_cThread, "mark_as_done", Thread_mark_as_done, 1);
+  rb_define_method(rb_cThread, "await_done", Thread_await_done, 0);
 
   rb_define_singleton_method(rb_cThread, "backend", Thread_class_backend, 0);
 
@@ -95,8 +155,11 @@ void Init_Thread(void) {
 
   ID_deactivate_all_watchers_post_fork  = rb_intern("deactivate_all_watchers_post_fork");
   ID_ivar_backend                       = rb_intern("@backend");
+  ID_ivar_done                          = rb_intern("@done");
   ID_ivar_join_wait_queue               = rb_intern("@join_wait_queue");
   ID_ivar_main_fiber                    = rb_intern("@main_fiber");
+  ID_ivar_ready                         = rb_intern("@ready");
   ID_ivar_terminated                    = rb_intern("@terminated");
+  ID_ivar_waiters                       = rb_intern("@waiters");
   ID_stop                               = rb_intern("stop");
 }

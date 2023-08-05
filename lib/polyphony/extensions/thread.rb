@@ -14,7 +14,6 @@ class ::Thread
   # @param args [Array] arguments to pass to thread block
   def initialize(*args, &block)
     @join_wait_queue = []
-    @finalization_mutex = Mutex.new
     @args = args
     @block = block
     orig_initialize { execute }
@@ -41,16 +40,7 @@ class ::Thread
   # @param timeout [Number] timeout interval
   # @return [any] thread's return value
   def join(timeout = nil)
-    watcher = Fiber.current.auto_watcher
-
-    @finalization_mutex.synchronize do
-      if @terminated
-        @result.is_a?(Exception) ? (raise @result) : (return @result)
-      else
-        @join_wait_queue << watcher
-      end
-    end
-    timeout ? move_on_after(timeout) { watcher.await } : watcher.await
+    timeout ? move_on_after(timeout) { await_done } : await_done
   end
   alias_method :await, :join
 
@@ -82,11 +72,7 @@ class ::Thread
   # Terminates the thread.
   #
   # @return [Thread] self
-  def kill
-    return self if @terminated
-
-    self.raise Polyphony::Terminate
-  end
+  alias_method :kill, :kill_safe
 
   # @!visibility private
   alias_method :orig_inspect, :inspect
@@ -169,13 +155,13 @@ class ::Thread
   #
   # @param result [any] thread's return value
   def finalize(result)
+    # We need to make sure the fiber is not on the runqueue. This, in order to
+    # prevent a race condition between #finalize and #kill.
+    fiber_unschedule(Fiber.current)
     Fiber.current.shutdown_all_children if !Fiber.current.children.empty?
 
-    @finalization_mutex.synchronize do
-      @terminated = true
-      @result = result
-      signal_waiters(result)
-    end
+    @result = result
+    mark_as_done(result)
     @backend&.finalize
   end
 

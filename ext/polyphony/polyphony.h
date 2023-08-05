@@ -48,6 +48,7 @@ extern ID ID_ivar_blocking_mode;
 extern ID ID_ivar_io;
 extern ID ID_ivar_multishot_accept_queue;
 extern ID ID_ivar_parked;
+extern ID ID_ivar_result;
 extern ID ID_ivar_runnable;
 extern ID ID_ivar_running;
 extern ID ID_ivar_thread;
@@ -147,6 +148,9 @@ VALUE Backend_snooze(VALUE self);
 void Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 void Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);
 VALUE Thread_switch_fiber(VALUE thread);
+
+VALUE Event_signal(int argc, VALUE *argv, VALUE event);
+VALUE Event_await(VALUE event);
 
 VALUE Polyphony_snooze(VALUE self);
 

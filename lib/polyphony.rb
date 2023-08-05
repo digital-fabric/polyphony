@@ -104,9 +104,6 @@ module Polyphony
       threads = Thread.list - [Thread.current]
       return if threads.empty?
 
-      trace '*' * 40
-      trace threads_left: threads
-
       threads.each(&:kill)
       threads.each(&:join)
     end
@@ -123,10 +120,10 @@ module Polyphony
       # processes,) we use a separate mechanism to terminate fibers in forked
       # processes (see Polyphony.fork).
       at_exit do
-        next unless @original_pid == ::Process.pid
-
-        terminate_threads
-        Fiber.current.shutdown_all_children
+        if @original_pid == ::Process.pid
+          terminate_threads
+          Fiber.current.shutdown_all_children
+        end
       end
     end
   end
