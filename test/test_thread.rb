@@ -60,7 +60,7 @@ class ThreadTest < MiniTest::Test
   def test_thread_await_alias_method
     buffer = []
     spin { (1..3).each { |i| snooze; buffer << i } }
-    t = Thread.new { sleep 0.01; buffer << 4; :foo }
+    t = Thread.new { sleep 0.1; buffer << 4; :foo }
     r = t.await
     t = nil
 

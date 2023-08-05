@@ -4,11 +4,13 @@ require_relative 'helper'
 
 class TimerMoveOnAfterTest < MiniTest::Test
   def setup
+    super
     @timer = Polyphony::Timer.new(resolution: 0.01)
   end
 
   def teardown
     @timer.stop
+    super
   end
 
   def test_timer_move_on_after
@@ -56,11 +58,13 @@ end
 
 class TimerCancelAfterTest < MiniTest::Test
   def setup
+    super
     @timer = Polyphony::Timer.new(resolution: 0.01)
   end
 
   def teardown
     @timer.stop
+    super
   end
 
   def test_timer_cancel_after
@@ -134,12 +138,14 @@ end
 
 class TimerMiscTest < MiniTest::Test
   def setup
+    super
     @timer = Polyphony::Timer.new(resolution: 0.001)
     sleep 0
   end
 
   def teardown
     @timer.stop
+    super
   end
 
   def test_timer_after

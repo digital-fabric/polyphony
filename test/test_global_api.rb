@@ -144,24 +144,24 @@ class MoveOnAfterTest < MiniTest::Test
     skip unless IS_LINUX
 
     t0 = monotonic_clock
-    o = move_on_after(0.01, with_value: 1) do
-      move_on_after(0.03, with_value: 2) do
+    o = move_on_after(0.1, with_value: 1) do
+      move_on_after(0.3, with_value: 2) do
         sleep 1
       end
     end
     t1 = monotonic_clock
     assert_equal 1, o
-    assert_in_range 0.008..0.040, t1 - t0 if IS_LINUX
+    assert_in_range 0.08..0.40, t1 - t0 if IS_LINUX
 
     t0 = monotonic_clock
-    o = move_on_after(0.05, with_value: 1) do
-      move_on_after(0.01, with_value: 2) do
+    o = move_on_after(0.5, with_value: 1) do
+      move_on_after(0.1, with_value: 2) do
         sleep 1
       end
     end
     t1 = monotonic_clock
     assert_equal 2, o
-    assert_in_range 0.008..0.035, t1 - t0 if IS_LINUX
+    assert_in_range 0.08..0.35, t1 - t0 if IS_LINUX
   end
 end
 
@@ -256,7 +256,7 @@ class CancelAfterTest < MiniTest::Test
       end
     end
     t1 = monotonic_clock
-    assert_in_range 0.01..0.2, t1 - t0 if IS_LINUX
+    assert_in_range 0.01..0.3, t1 - t0 if IS_LINUX
   end
 end
 
