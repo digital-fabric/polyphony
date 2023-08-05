@@ -28,7 +28,7 @@ def handle_client(conn)
         parser << msg
         break if done
       end
-  
+
       conn << "HTTP/1.1 200 OK\r\nContent-Length: 14\r\n\r\nHello, world!\n"
       done = false
       headers = nil

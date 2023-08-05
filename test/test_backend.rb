@@ -355,7 +355,7 @@ class BackendTest < MiniTest::Test
 
   def test_idle_gc
     skip
-    
+
     GC.disable
 
     count = GC.count

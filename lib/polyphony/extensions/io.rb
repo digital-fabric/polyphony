@@ -112,10 +112,10 @@ class ::IO
       else
         count = pipe.splice_from(src, -65536)
       end
-      
+
       pipe.close
       pipe_to_dst.await
-      
+
       count
     ensure
       pipe_to_dst&.stop

@@ -174,7 +174,7 @@ class MonitorTest < MiniTest::Test
     m = Monitor.new
 
     assert_equal false, safe_check_owner(m)
-    
+
     m.enter
     assert_equal true, safe_check_owner(m)
 

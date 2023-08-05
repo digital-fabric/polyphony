@@ -274,7 +274,7 @@ static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int recti
     *fptr = NULL;
     return FIX2INT(io);
   }
-  
+
   if (rb_obj_class(io) == cPipe) {
     *fptr = NULL;
     Pipe_verify_blocking_mode(io, Qfalse);
@@ -1672,7 +1672,7 @@ void Init_Backend(void) {
   rb_define_method(cBackend, "chain", Backend_chain, -1);
   rb_define_method(cBackend, "idle_gc_period=", Backend_idle_gc_period_set, 1);
   rb_define_method(cBackend, "idle_proc=", Backend_idle_proc_set, 1);
-  
+
   #ifdef POLYPHONY_LINUX
   rb_define_method(cBackend, "splice_chunks", Backend_splice_chunks, 7);
   #endif

@@ -444,7 +444,7 @@ static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int recti
     *fptr = NULL;
     return FIX2INT(io);
   }
-  
+
   if (rb_obj_class(io) == cPipe) {
     *fptr = NULL;
     return Pipe_get_fd(io, write_mode);
@@ -1182,7 +1182,7 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
 #else
   io_uring_backend_accept(self, backend, server_socket, socket_class, 1);
 #endif
-  
+
   return self;
 }
 
