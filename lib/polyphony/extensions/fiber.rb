@@ -167,7 +167,7 @@ class ::Fiber
   #   @param any [Exception] exception to raise
   #   @return [Fiber] self
   def raise(*args)
-    error = error_from_raise_args(args)
+    error = Exception.instantiate(*args)
     schedule(error)
     self
   end
@@ -658,16 +658,6 @@ class ::Fiber
   end
 
   private
-
-  # @!visibility private
-  def error_from_raise_args(args)
-    case (arg = args.shift)
-    when String then RuntimeError.new(arg)
-    when Class  then arg.new(args.shift)
-    when Exception then arg
-    else RuntimeError.new
-    end
-  end
 
   # @!visibility private
   def supervise_opts_to_block(opts)

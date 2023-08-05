@@ -52,13 +52,9 @@ class ::Thread
   #
   # @param error [Exception, Class, nil] exception spec
   def raise(error = nil)
-    Thread.pass until @main_fiber
-    error = RuntimeError.new if error.nil?
-    error = RuntimeError.new(error) if error.is_a?(String)
-    error = error.new if error.is_a?(Class)
-
     sleep 0.0001 until @ready
 
+    error = Exception.instantiate(error)
     if Thread.current == self
       Kernel.raise(error)
     else
