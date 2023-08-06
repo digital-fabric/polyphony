@@ -157,6 +157,18 @@ static inline int io_stream_prep_for_reading(IOStream_t *io_stream, int min_len)
   return (io_stream->eof) ? -1 : 0;
 }
 
+static inline void io_stream_cursor_advance(IOStream_t *io_stream)
+{
+  if (io_stream->cursor_desc) {
+    io_stream->cursor_desc->prev = io_stream->cursor_desc->next = NULL;
+  }
+  io_stream->cursor_desc = io_stream->cursor_desc->next;
+  io_stream->cursor_pos = 0;
+  if (!io_stream->cursor_desc) {
+    io_stream->head = io_stream->tail = NULL;
+  }
+}
+
 VALUE IOStream_getbyte(VALUE self)
 {
   IOStream_t *io_stream = RTYPEDDATA_DATA(self);
@@ -165,10 +177,8 @@ VALUE IOStream_getbyte(VALUE self)
 
   int byte = io_stream->cursor_desc->ptr[io_stream->cursor_pos];
   io_stream->cursor_pos++;
-  if (io_stream->cursor_pos == io_stream->cursor_desc->len) {
-    io_stream->cursor_desc = io_stream->cursor_desc->next;
-    io_stream->cursor_pos = 0;
-  }
+  if (io_stream->cursor_pos == io_stream->cursor_desc->len)
+    io_stream_cursor_advance(io_stream);
 
   return INT2FIX(byte);
 eof:
@@ -184,14 +194,36 @@ VALUE IOStream_getc(VALUE self)
   // TODO: add support for multi-byte chars
   VALUE chr = rb_str_new(io_stream->cursor_desc->ptr + io_stream->cursor_pos, 1);
   io_stream->cursor_pos++;
-  if (io_stream->cursor_pos == io_stream->cursor_desc->len) {
-    io_stream->cursor_desc = io_stream->cursor_desc->next;
-    io_stream->cursor_pos = 0;
-  }
+  if (io_stream->cursor_pos == io_stream->cursor_desc->len)
+    io_stream_cursor_advance(io_stream);
 
   return chr;
 eof:
   return Qnil;
+}
+
+VALUE IOStream_to_a(VALUE self, VALUE all)
+{
+  IOStream_t *io_stream = RTYPEDDATA_DATA(self);
+  int from_cursor = !RTEST(all);
+  buffer_descriptor *desc = from_cursor ? io_stream->cursor_desc : io_stream->head;
+  VALUE array = rb_ary_new();
+
+  while (desc) {
+    VALUE str;
+    if (from_cursor) {
+      int pos = io_stream->cursor_pos;
+      from_cursor = 0;
+      str = rb_str_new(desc->ptr + pos, desc->len - pos);
+    }
+    else
+      str = rb_str_new(desc->ptr, desc->len);
+    
+    rb_ary_push(array, str);
+    desc = desc->next;
+  }
+  RB_GC_GUARD(array);
+  return array;
 }
 
 void Init_IOStream(void) {
@@ -201,6 +233,8 @@ void Init_IOStream(void) {
   rb_define_method(cIOStream, "initialize", IOStream_initialize, 1);
   rb_define_method(cIOStream, "left", IOStream_left, 0);
   rb_define_method(cIOStream, "<<", IOStream_push_string, 1);
+  rb_define_method(cIOStream, "to_a", IOStream_to_a, 1);
+
   rb_define_method(cIOStream, "getbyte", IOStream_getbyte, 0);
   rb_define_method(cIOStream, "getc", IOStream_getc, 0);
 }

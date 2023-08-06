@@ -14,6 +14,25 @@ class IOStreamTest < MiniTest::Test
     assert_equal 6, s.left
   end
 
+  def test_to_a
+    s = Polyphony::IOStream.new(nil)
+    assert_equal [], s.to_a(false)
+    assert_equal [], s.to_a(true)
+
+    s << 'abc'
+    assert_equal ['abc'], s.to_a(false)
+    assert_equal ['abc'], s.to_a(true)
+
+    s << 'def'
+    assert_equal ['abc', 'def'], s.to_a(false)
+    assert_equal ['abc', 'def'], s.to_a(true)
+
+    c = s.getc
+    assert_equal 'a', c
+    assert_equal ['bc', 'def'], s.to_a(false)
+    assert_equal ['abc', 'def'], s.to_a(true)
+  end
+
   def test_getbyte
     p = Polyphony.pipe
     s = Polyphony::IOStream.new(p)
