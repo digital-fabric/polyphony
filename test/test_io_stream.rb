@@ -110,6 +110,14 @@ class IOStreamTest < MiniTest::Test
     assert_nil s.getc
   end
 
+  def test_getc_with_empty_pipe
+    p = Polyphony.pipe
+    s = Polyphony::IOStream.new(p)
+    
+    p.close
+    assert_nil s.getc
+  end
+
   def test_blocking_getc_with_exception
     p = Polyphony.pipe
     s = Polyphony::IOStream.new(p)
@@ -133,5 +141,53 @@ class IOStreamTest < MiniTest::Test
     assert_equal :done, c
     assert_equal 0, s.left
     assert_equal [0], buffer_status.values.uniq
+  end
+
+  def test_eof?
+    p = Polyphony.pipe
+    s = Polyphony::IOStream.new(p)
+
+    p << 'abc'
+
+    assert_equal false, s.eof?
+    3.times { s.getc }
+    assert_equal false, s.eof?
+
+    p.close
+    assert_nil s.getc
+    assert_equal true, s.eof?
+  end
+
+  def test_readpartial
+    p = Polyphony.pipe
+    s = Polyphony::IOStream.new(p)
+
+    p << 'abcd'
+    p << 'efgh'
+    p.close
+
+    assert_equal 'abcde', s.readpartial(5)
+    assert_equal 'fgh', s.readpartial(5)
+
+    assert_raises(EOFError) { s.readpartial(5) }
+  end
+
+  def test_readpartial_with_buf
+    p = Polyphony.pipe
+    s = Polyphony::IOStream.new(p)
+
+    p << 'abcd'
+    p << 'efgh'
+    p.close
+
+    buf = +''
+    r = s.readpartial(5, buf)
+    assert_equal 'abcde', buf
+    assert_same r, buf
+
+    buf = +''
+    r = s.readpartial(5, buf)
+    assert_equal 'fgh', buf
+    assert_same r, buf
   end
 end

@@ -154,9 +154,15 @@ static inline void io_stream_fill_from_io(IOStream_t *io_stream, int min_len) {
   }
 }
 
+static inline int io_stream_eof_p(IOStream_t *io_stream)
+{
+  return io_stream->eof &&
+    (!io_stream->cursor_desc || io_stream->cursor_pos >= io_stream->cursor_desc->len);
+}
+
 static inline int io_stream_prep_for_reading(IOStream_t *io_stream, int min_len)
 {
-  if (io_stream->eof) return -1;
+  if (io_stream_eof_p(io_stream)) return -1;
   buffer_descriptor *desc = io_stream->cursor_desc;
   while (desc && (min_len > 0)) {
     int left = io_stream->cursor_desc->len - io_stream->cursor_pos;
@@ -167,8 +173,9 @@ static inline int io_stream_prep_for_reading(IOStream_t *io_stream, int min_len)
       desc = desc->next;
     }
   }
-  io_stream_fill_from_io(io_stream, min_len);
-  return (io_stream->eof) ? -1 : 0;
+  if (!io_stream->eof)
+    io_stream_fill_from_io(io_stream, min_len);
+  return io_stream_eof_p(io_stream);
 }
 
 static inline void io_stream_cursor_advance(IOStream_t *io_stream)
@@ -214,6 +221,46 @@ VALUE IOStream_getc(VALUE self)
   return chr;
 eof:
   return Qnil;
+}
+
+VALUE IOStream_readpartial(int argc, VALUE *argv, VALUE self)
+{
+  IOStream_t *io_stream = RTYPEDDATA_DATA(self);
+  VALUE maxlen;
+  VALUE buf = Qnil;
+
+  rb_scan_args(argc, argv, "11", &maxlen, &buf);
+  size_t maxlen_i = FIX2INT(maxlen);
+
+  if (buf == Qnil)
+    buf = rb_str_new(0, maxlen_i);
+  rb_str_modify(buf);
+  if (rb_str_capacity(buf) < maxlen_i)
+    rb_str_resize(buf, maxlen_i);
+
+  if (io_stream_prep_for_reading(io_stream, maxlen_i)) goto eof;
+
+  char *ptr = RSTRING_PTR(buf);
+  size_t total = 0;
+  while (maxlen_i) {
+    char *src = io_stream->cursor_desc->ptr + io_stream->cursor_pos;
+    size_t len = io_stream->cursor_desc->len - io_stream->cursor_pos;
+    if (len > maxlen_i) len = maxlen_i;
+    memcpy(ptr, src, len);
+    total += len;
+    maxlen_i -= len;
+    if (io_stream->cursor_pos + len < io_stream->cursor_desc->len)
+      io_stream->cursor_pos += len;
+    else {
+      io_stream->cursor_desc = io_stream->cursor_desc->next;
+      io_stream->cursor_pos = 0;
+      if (!io_stream->cursor_desc) break;
+    }
+  }
+  rb_str_set_len(buf, total);
+  return buf;
+eof:
+  rb_raise(rb_eEOFError, "End of file");
 }
 
 VALUE IOStream_to_a(VALUE self, VALUE all)
@@ -321,6 +368,16 @@ VALUE IOStream_seek(VALUE self, VALUE ofs)
   return self;
 }
 
+VALUE IO_eof_p(VALUE self)
+{
+  IOStream_t *io_stream = RTYPEDDATA_DATA(self);
+
+  if (!io_stream->eof) return Qfalse;
+  if (io_stream->cursor_desc && io_stream->cursor_pos < io_stream->cursor_desc->len) return Qfalse;
+
+  return Qtrue;
+}
+
 void Init_IOStream(void) {
   cIOStream = rb_define_class_under(mPolyphony, "IOStream", rb_cObject);
   rb_define_alloc_func(cIOStream, IOStream_allocate);
@@ -332,7 +389,10 @@ void Init_IOStream(void) {
   rb_define_method(cIOStream, "reset", IOStream_reset, 0);
   rb_define_method(cIOStream, "rewind", IOStream_rewind, 0);
   rb_define_method(cIOStream, "seek", IOStream_seek, 1);
+  rb_define_method(cIOStream, "eof?", IO_eof_p, 0);
 
   rb_define_method(cIOStream, "getbyte", IOStream_getbyte, 0);
   rb_define_method(cIOStream, "getc", IOStream_getc, 0);
+  
+  rb_define_method(cIOStream, "readpartial", IOStream_readpartial, -1);
 }
