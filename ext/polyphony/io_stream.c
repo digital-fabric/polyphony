@@ -111,7 +111,7 @@ VALUE IOStream_push_string(VALUE self, VALUE str)
   return self;
 }
 
-inline void io_stream_fill_from_io(IOStream_t *io_stream, int min_len) {
+static inline void io_stream_fill_from_io(IOStream_t *io_stream, int min_len) {
   while (min_len > 0) {
     buffer_descriptor *desc;
     int read;
@@ -140,7 +140,7 @@ inline void io_stream_fill_from_io(IOStream_t *io_stream, int min_len) {
   }
 }
 
-inline int io_stream_prep_for_reading(IOStream_t *io_stream, int min_len)
+static inline int io_stream_prep_for_reading(IOStream_t *io_stream, int min_len)
 {
   if (io_stream->eof) return -1;
   buffer_descriptor *desc = io_stream->cursor_desc;

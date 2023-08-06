@@ -146,7 +146,7 @@ void Backend_park_fiber(VALUE self, VALUE fiber);
 void Backend_unpark_fiber(VALUE self, VALUE fiber);
 
 VALUE Backend_snooze(VALUE self);
-VALUE Backend_stream_read(VALUE self, VALUE io, buffer_descriptor *desc, int len, int *read);
+VALUE Backend_stream_read(VALUE self, VALUE io, buffer_descriptor *desc, int len, int *result);
 
 void Thread_schedule_fiber(VALUE thread, VALUE fiber, VALUE value);
 void Thread_schedule_fiber_with_priority(VALUE thread, VALUE fiber, VALUE value);
@@ -158,6 +158,6 @@ VALUE Event_await(VALUE event);
 VALUE Polyphony_snooze(VALUE self);
 
 // IOStream reading API
-VALUE Polyphony_stream_read(VALUE io, buffer_descriptor *desc, int len, int *read);
+VALUE Polyphony_stream_read(VALUE io, buffer_descriptor *desc, int len, int *result);
 
 #endif /* POLYPHONY_H */
