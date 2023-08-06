@@ -72,8 +72,17 @@ class IOStreamTest < MiniTest::Test
 
     s.seek(-3)
     assert_equal ['abc', 'def'], s.to_a(false)
-  end
 
+    assert_equal 'a', s.getc
+
+    s.seek(2)
+    assert_equal 'd', s.getc
+
+    s << 'ghi'
+    
+    s.seek(2)
+    assert_equal 'g', s.getc
+  end
 
   def test_getbyte
     p = Polyphony.pipe
