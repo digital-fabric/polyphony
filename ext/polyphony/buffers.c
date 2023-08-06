@@ -123,7 +123,7 @@ int bm_buffer_from_string(buffer_descriptor **desc, VALUE str)
   return 0; 
 }
 
-int bm_dispose_managed(buffer_descriptor *desc) {
+int bm_release_managed(buffer_descriptor *desc) {
   int power = normalized_power_of_two(desc->capacity);
   int idx = FREE_LIST_IDX(power);
 
@@ -131,26 +131,26 @@ int bm_dispose_managed(buffer_descriptor *desc) {
   return 0;
 }
 
-int bm_dispose_single_use(buffer_descriptor *desc) {
+int bm_release_single_use(buffer_descriptor *desc) {
   free(desc->ptr);
   free(desc);
   return 0;
 }
 
-int bm_dispose_string(buffer_descriptor *desc) {
+int bm_release_string(buffer_descriptor *desc) {
   free(desc);
   return 0;
 }
 
-int bm_dispose(buffer_descriptor *desc)
+int bm_release(buffer_descriptor *desc)
 {
   switch (desc->type) {
   case BT_MANAGED:
-    return bm_dispose_managed(desc);
+    return bm_release_managed(desc);
   case BT_SINGLE_USE:
-    return bm_dispose_single_use(desc);
+    return bm_release_single_use(desc);
   case BT_STRING:
-    return bm_dispose_string(desc);
+    return bm_release_string(desc);
   }
   return -1;
 }
@@ -240,7 +240,7 @@ void Init_BufferManager(void)
   // bm_trace();
 
   // printf("Disposing buffer...\n");
-  // bm_dispose(desc);
+  // bm_release(desc);
 
   // bm_trace();
 }

@@ -40,7 +40,7 @@ typedef struct {
 
 int bm_prep_buffer(buffer_descriptor **desc, enum buffer_type type, size_t len);
 int bm_buffer_from_string(buffer_descriptor **desc, VALUE str);
-int bm_dispose(buffer_descriptor *desc);
+int bm_release(buffer_descriptor *desc);
 int bm_mark(void);
 
 void bm_reset(void);

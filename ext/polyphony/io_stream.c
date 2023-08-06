@@ -33,7 +33,7 @@ void io_stream_dispose(IOStream_t *io_stream)
 
   while (desc) {
     buffer_descriptor *next = desc->next;
-    bm_dispose(desc);
+    bm_release(desc);
     desc = next;
   }
 }
@@ -135,14 +135,14 @@ static inline void io_stream_fill_from_io(IOStream_t *io_stream, int min_len) {
 
     VALUE result = Polyphony_stream_read(io_stream->io, desc, 8192, &read);
     if (IS_EXCEPTION(result)) {
-      bm_dispose(desc);
+      bm_release(desc);
       RAISE_EXCEPTION(result);
     }
 
     if (read < 0)
       rb_syserr_fail(-read, strerror(-read));
     if (!read) {
-      bm_dispose(desc);
+      bm_release(desc);
       io_stream->eof = true;
       return;
     }
