@@ -58,9 +58,6 @@ static VALUE Queue_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &Queue_type, queue);
 }
 
-#define GetQueue(obj, queue) \
-  TypedData_Get_Struct((obj), Queue_t, &Queue_type, (queue))
-
 /* Initializes a queue instance. If the capacity is given, the queue becomes
  * capped, i.e. it cannot contain more elements than its capacity. When trying
  * to add items to a capped queue that is full, the current fiber will block
@@ -72,8 +69,7 @@ static VALUE Queue_allocate(VALUE klass) {
  */
 
 static VALUE Queue_initialize(int argc, VALUE *argv, VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   queue->closed = 0;
   ring_buffer_init(&queue->values);
@@ -135,8 +131,7 @@ static inline void capped_queue_block_push(Queue_t *queue) {
  */
 
 VALUE Queue_push(VALUE self, VALUE value) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   if (queue->closed)
     rb_raise(cClosedQueueError, "queue closed");
@@ -157,8 +152,7 @@ VALUE Queue_push(VALUE self, VALUE value) {
  */
 
 VALUE Queue_unshift(VALUE self, VALUE value) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   if (queue->closed)
     rb_raise(cClosedQueueError, "queue closed");
@@ -230,9 +224,8 @@ VALUE Queue_shift_block(Queue_t *queue) {
  */
 
 VALUE Queue_shift(int argc,VALUE *argv, VALUE self) {
+  Queue_t *queue = RTYPEDDATA_DATA(self);
   int nonblock = argc && RTEST(argv[0]);
-  Queue_t *queue;
-  GetQueue(self, queue);
 
   return nonblock ?
     Queue_shift_nonblock(queue) :
@@ -245,8 +238,7 @@ VALUE Queue_shift(int argc,VALUE *argv, VALUE self) {
  */
 
 VALUE Queue_delete(VALUE self, VALUE value) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   ring_buffer_delete(&queue->values, value);
 
@@ -264,9 +256,8 @@ VALUE Queue_delete(VALUE self, VALUE value) {
  */
 
 VALUE Queue_cap(VALUE self, VALUE cap) {
+  Queue_t *queue = RTYPEDDATA_DATA(self);
   unsigned int new_capacity = NUM2UINT(cap);
-  Queue_t *queue;
-  GetQueue(self, queue);
   queue->capacity = new_capacity;
 
   if (queue->capacity)
@@ -283,8 +274,7 @@ VALUE Queue_cap(VALUE self, VALUE cap) {
  */
 
 VALUE Queue_capped_p(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   return queue->capacity ? INT2FIX(queue->capacity) : Qnil;
 }
@@ -295,8 +285,7 @@ VALUE Queue_capped_p(VALUE self) {
  */
 
 VALUE Queue_clear(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   ring_buffer_clear(&queue->values);
   if (queue->capacity) queue_schedule_blocked_fibers_to_capacity(queue);
@@ -305,8 +294,7 @@ VALUE Queue_clear(VALUE self) {
 }
 
 long Queue_len(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   return queue->values.count;
 }
@@ -319,8 +307,7 @@ long Queue_len(VALUE self) {
  */
 
 VALUE Queue_shift_each(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   ring_buffer_shift_each(&queue->values);
   if (queue->capacity) queue_schedule_blocked_fibers_to_capacity(queue);
@@ -333,10 +320,8 @@ VALUE Queue_shift_each(VALUE self) {
  */
 
 VALUE Queue_shift_all(VALUE self) {
-  Queue_t *queue;
+  Queue_t *queue = RTYPEDDATA_DATA(self);
   VALUE result;
-
-  GetQueue(self, queue);
 
   result = ring_buffer_shift_all(&queue->values);
   if (queue->capacity) queue_schedule_blocked_fibers_to_capacity(queue);
@@ -351,8 +336,7 @@ VALUE Queue_shift_all(VALUE self) {
  */
 
 VALUE Queue_flush_waiters(VALUE self, VALUE value) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   while(1) {
     VALUE fiber = ring_buffer_shift(&queue->shift_queue);
@@ -370,8 +354,7 @@ VALUE Queue_flush_waiters(VALUE self, VALUE value) {
  */
 
 VALUE Queue_empty_p(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   return (!queue->values.count) ? Qtrue : Qfalse;
 }
@@ -383,8 +366,7 @@ VALUE Queue_empty_p(VALUE self) {
  */
 
 VALUE Queue_pending_p(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   return (queue->shift_queue.count) ? Qtrue : Qfalse;
 }
@@ -396,8 +378,7 @@ VALUE Queue_pending_p(VALUE self) {
  */
 
 VALUE Queue_num_waiting(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   return INT2FIX(queue->shift_queue.count);
 }
@@ -412,8 +393,7 @@ VALUE Queue_num_waiting(VALUE self) {
  */
 
 VALUE Queue_size_m(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   return INT2FIX(queue->values.count);
 }
@@ -424,8 +404,7 @@ VALUE Queue_size_m(VALUE self) {
  */
 
 VALUE Queue_closed_p(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   return (queue->closed) ? Qtrue : Qfalse;
 }
@@ -438,8 +417,7 @@ VALUE Queue_closed_p(VALUE self) {
  */
 
 VALUE Queue_close(VALUE self) {
-  Queue_t *queue;
-  GetQueue(self, queue);
+  Queue_t *queue = RTYPEDDATA_DATA(self);
 
   if (queue->closed) goto end;
   queue->closed = 1;

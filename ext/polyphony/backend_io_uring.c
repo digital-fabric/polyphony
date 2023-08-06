@@ -74,12 +74,8 @@ static VALUE Backend_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &Backend_type, backend);
 }
 
-#define GetBackend(obj, backend) \
-  TypedData_Get_Struct((obj), Backend_t, &Backend_type, (backend))
-
 static VALUE Backend_initialize(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   backend_base_initialize(&backend->base);
   backend->pending_sqes = 0;
@@ -114,8 +110,7 @@ static VALUE Backend_initialize(VALUE self) {
 }
 
 VALUE Backend_finalize(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   if (backend->ring_initialized) io_uring_queue_exit(&backend->ring);
   if (backend->event_fd != -1) close(backend->event_fd);
@@ -124,8 +119,7 @@ VALUE Backend_finalize(VALUE self) {
 }
 
 VALUE Backend_post_fork(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   io_uring_queue_exit(&backend->ring);
   io_uring_queue_init(backend->prepared_limit, &backend->ring, 0);
@@ -299,8 +293,7 @@ wait_cqe:
 
 inline VALUE Backend_poll(VALUE self, VALUE blocking) {
   int is_blocking = blocking == Qtrue;
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   backend->base.poll_count++;
 
@@ -317,30 +310,26 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
 }
 
 inline void Backend_schedule_fiber(VALUE thread, VALUE self, VALUE fiber, VALUE value, int prioritize) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   backend_base_schedule_fiber(thread, self, &backend->base, fiber, value, prioritize);
 }
 
 inline void Backend_unschedule_fiber(VALUE self, VALUE fiber) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   runqueue_delete(&backend->base.runqueue, fiber);
 }
 
 // This function is deprecated
 inline VALUE Backend_switch_fiber(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   return backend_base_switch_fiber(self, &backend->base);
 }
 
 inline struct backend_stats backend_get_stats(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   return backend_base_stats(&backend->base);
 }
@@ -361,8 +350,7 @@ done:
 }
 
 VALUE Backend_wakeup(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   if (backend->base.currently_polling) {
     // Since we're currently blocking while waiting for a completion, we add a
@@ -461,14 +449,13 @@ static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int recti
 }
 
 VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eof, VALUE pos) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
   struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 0);
   long total = 0;
   int read_to_eof = RTEST(to_eof);
 
-  GetBackend(self, backend);
   backend_prepare_read_buffer(buffer, length, &buffer_spec, FIX2INT(pos));
   fd = fd_from_io(io, &fptr, 0, 1);
 
@@ -519,7 +506,7 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eo
 }
 
 VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
   VALUE buffer;
@@ -530,7 +517,6 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
 
   READ_LOOP_PREPARE_STR();
 
-  GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 0, 1);
 
   while (1) {
@@ -567,7 +553,7 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
 }
 
 VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
   VALUE buffer;
@@ -579,7 +565,6 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
 
   READ_LOOP_PREPARE_STR();
 
-  GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 0, 1);
 
   while (1) {
@@ -616,14 +601,11 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
 }
 
 VALUE Backend_write(VALUE self, VALUE io, VALUE buffer) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
-
   struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 1);
   long left = buffer_spec.len;
-
-  GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 1, 0);
 
   while (left > 0) {
@@ -656,17 +638,14 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE buffer) {
 }
 
 VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
-  Backend_t *backend;
-  int fd;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   rb_io_t *fptr;
   long total_length = 0;
   long total_written = 0;
   struct iovec *iov = 0;
   struct iovec *iov_ptr = 0;
   int iov_count = argc;
-
-  GetBackend(self, backend);
-  fd = fd_from_io(io, &fptr, 1, 0);
+  int fd = fd_from_io(io, &fptr, 1, 0);
 
   iov = malloc(iov_count * sizeof(struct iovec));
   for (int i = 0; i < argc; i++) {
@@ -736,15 +715,12 @@ VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
 }
 
 VALUE Backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE pos) {
-  Backend_t *backend;
-  int fd;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   rb_io_t *fptr;
   struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 0);
   long total = 0;
-
-  GetBackend(self, backend);
+  int fd = fd_from_io(io, &fptr, 0, 0);
   backend_prepare_read_buffer(buffer, length, &buffer_spec, FIX2INT(pos));
-  fd = fd_from_io(io, &fptr, 0, 0);
 
   while (1) {
     VALUE resume_value = Qnil;
@@ -779,15 +755,13 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE pos) 
 }
 
 VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE pos, VALUE flags, VALUE maxcontrollen, VALUE opts) {
-  Backend_t *backend;
-  int fd;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   rb_io_t *fptr;
   struct backend_buffer_spec buffer_spec = backend_get_buffer_spec(buffer, 0);
   long total = 0;
+  int fd = fd_from_io(io, &fptr, 0, 0);
 
-  GetBackend(self, backend);
   backend_prepare_read_buffer(buffer, maxlen, &buffer_spec, FIX2INT(pos));
-  fd = fd_from_io(io, &fptr, 0, 0);
 
   char addr_buffer[64];
   struct iovec iov;
@@ -840,7 +814,7 @@ VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE po
 }
 
 VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
   VALUE buffer;
@@ -851,7 +825,6 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
 
   READ_LOOP_PREPARE_STR();
 
-  GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 0, 0);
 
   while (1) {
@@ -887,7 +860,7 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
 }
 
 VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
   VALUE buffer;
@@ -899,7 +872,6 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
 
   READ_LOOP_PREPARE_STR();
 
-  GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 0, 0);
 
   while (1) {
@@ -935,7 +907,7 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
 }
 
 VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
 
@@ -943,7 +915,6 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
   long left = buffer_spec.len;
   int flags_int = FIX2INT(flags);
 
-  GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 1, 0);
 
   while (left > 0) {
@@ -976,7 +947,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
 }
 
 VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE dest_sockaddr, VALUE controls) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
 
@@ -984,7 +955,6 @@ VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE des
   long left = buffer_spec.len;
   int flags_int = FIX2INT(flags);
 
-  GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, 1, 0);
 
   struct iovec iov;
@@ -1103,8 +1073,7 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
   }
 #endif
 
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   return io_uring_backend_accept(self, backend, server_socket, socket_class, 0);
 }
 
@@ -1174,8 +1143,7 @@ VALUE multishot_accept_loop(Backend_t *backend, VALUE server_socket, VALUE socke
 #endif
 
 VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
 #ifdef HAVE_IO_URING_PREP_MULTISHOT_ACCEPT
   multishot_accept_loop(backend, server_socket, socket_class);
@@ -1223,8 +1191,7 @@ VALUE io_uring_backend_splice(VALUE self, Backend_t *backend, VALUE src, VALUE d
 }
 
 VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   return io_uring_backend_splice(self, backend, src, dest, FIX2INT(maxlen));
 }
 
@@ -1326,7 +1293,7 @@ VALUE double_splice_cleanup(struct double_splice_ctx *ctx) {
 
 VALUE Backend_double_splice(VALUE self, VALUE src, VALUE dest) {
   struct double_splice_ctx ctx = { self, NULL, src, dest, {0, 0} };
-  GetBackend(self, ctx.backend);
+  ctx.backend = RTYPEDDATA_DATA(self);
   if (pipe(ctx.pipefd) == -1) rb_syserr_fail(errno, strerror(errno));
 
   return rb_ensure(
@@ -1336,8 +1303,7 @@ VALUE Backend_double_splice(VALUE self, VALUE src, VALUE dest) {
 }
 
 VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   int src_fd;
   int dest_fd;
@@ -1371,7 +1337,7 @@ VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 }
 
 VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
   struct sockaddr *ai_addr;
@@ -1384,7 +1350,6 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
 
   ai_addrlen = backend_getaddrinfo(host, port, &ai_addr);
 
-  GetBackend(self, backend);
   fd = fd_from_io(sock, &fptr, 1, 0);
   ctx = context_store_acquire(&backend->store, OP_CONNECT);
   sqe = io_uring_backend_get_sqe(backend);
@@ -1400,13 +1365,12 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
 }
 
 VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int fd;
   rb_io_t *fptr;
   VALUE resume_value;
   int write_mode = RTEST(write);
 
-  GetBackend(self, backend);
   fd = fd_from_io(io, &fptr, write_mode, 0);
   resume_value = io_uring_backend_wait_fd(self, backend, fd, write_mode);
 
@@ -1416,7 +1380,7 @@ VALUE Backend_wait_io(VALUE self, VALUE io, VALUE write) {
 }
 
 VALUE Backend_close(VALUE self, VALUE io) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   rb_io_t *fptr;
   VALUE resume_value = Qnil;
   op_context_t *ctx;
@@ -1426,7 +1390,6 @@ VALUE Backend_close(VALUE self, VALUE io) {
   int fd = fd_from_io(io, &fptr, 0, 0);
   if (fd < 0) return Qnil;
 
-  GetBackend(self, backend);
   ctx = context_store_acquire(&backend->store, OP_CLOSE);
   sqe = io_uring_backend_get_sqe(backend);
   io_uring_prep_close(sqe, fd);
@@ -1473,8 +1436,7 @@ int io_uring_backend_submit_timeout_and_await(VALUE self, Backend_t *backend, do
 
 VALUE Backend_sleep(VALUE self, VALUE duration) {
   VALUE resume_value = Qnil;
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   io_uring_backend_submit_timeout_and_await(self, backend, NUM2DBL(duration), &resume_value);
   RAISE_IF_EXCEPTION(resume_value);
@@ -1483,12 +1445,10 @@ VALUE Backend_sleep(VALUE self, VALUE duration) {
 }
 
 VALUE Backend_timer_loop(VALUE self, VALUE interval) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   uint64_t interval_ns = NUM2DBL(interval) * 1e9;
   uint64_t next_time_ns = 0;
   VALUE resume_value = Qnil;
-
-  GetBackend(self, backend);
 
   while (1) {
     double now_ns = current_time_ns();
@@ -1536,13 +1496,13 @@ VALUE Backend_timeout_ensure(VALUE arg) {
 }
 
 VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   VALUE duration;
   VALUE exception;
   VALUE move_on_value = Qnil;
   struct Backend_timeout_ctx timeout_ctx;
   op_context_t *ctx;
   struct io_uring_sqe *sqe;
-  Backend_t *backend;
   struct __kernel_timespec ts;
   VALUE result = Qnil;
   VALUE timeout;
@@ -1550,7 +1510,6 @@ VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
   rb_scan_args(argc, argv, "21", &duration, &exception, &move_on_value);
 
   ts = duration_to_timespec(duration);
-  GetBackend(self, backend);
   timeout = rb_funcall(cTimeoutException, ID_new, 0);
 
   sqe = io_uring_backend_get_sqe(backend);
@@ -1584,8 +1543,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
 
   if (fd >= 0) {
     VALUE resume_value;
-    Backend_t *backend;
-    GetBackend(self, backend);
+    Backend_t *backend = RTYPEDDATA_DATA(self);
 
     resume_value = io_uring_backend_wait_fd(self, backend, fd, 0);
     close(fd);
@@ -1616,10 +1574,8 @@ completions even when no other I/O operations are pending.
 The eventfd is refcounted in order to allow multiple fibers to be blocked.
 */
 VALUE Backend_wait_event(VALUE self, VALUE raise) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   VALUE resume_value;
-
-  GetBackend(self, backend);
 
   if (backend->event_fd == -1) {
     backend->event_fd = eventfd(0, 0);
@@ -1721,15 +1677,14 @@ void Backend_chain_ctx_attach_buffers(op_context_t *ctx, int argc, VALUE *argv) 
 
 
 VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   VALUE resume_value = Qnil;
   unsigned int sqe_count = 0;
   struct io_uring_sqe *last_sqe = 0;
-  Backend_t *backend;
   int result;
   int completed;
   op_context_t *ctx;
 
-  GetBackend(self, backend);
   if (argc == 0) return resume_value;
 
   ctx = context_store_acquire(&backend->store, OP_CHAIN);
@@ -1798,23 +1753,20 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
 }
 
 VALUE Backend_idle_gc_period_set(VALUE self, VALUE period) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   backend->base.idle_gc_period = NUM2DBL(period);
   backend->base.idle_gc_last_time = current_time();
   return self;
 }
 
 VALUE Backend_idle_proc_set(VALUE self, VALUE block) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   backend->base.idle_proc = block;
   return self;
 }
 
 inline VALUE Backend_run_idle_tasks(VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   backend_run_idle_tasks(&backend->base);
   return self;
 }
@@ -1883,7 +1835,7 @@ static inline int splice_chunks_await_ops(
   if (splice_chunks_await_ops(self, backend, ctx, result, switchpoint_result)) goto error;
 
 VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VALUE postfix, VALUE chunk_prefix, VALUE chunk_postfix, VALUE chunk_size) {
-  Backend_t *backend;
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   int total = 0;
   int err = 0;
   VALUE switchpoint_result = Qnil;
@@ -1897,7 +1849,6 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
   rb_io_t *dest_fptr;
   int pipefd[2] = { -1, -1 };
 
-  GetBackend(self, backend);
   src_fd = fd_from_io(src, &src_fptr, 0, 0);
   dest_fd = fd_from_io(dest, &dest_fptr, 1, 0);
 
@@ -1978,25 +1929,22 @@ error:
 }
 
 VALUE Backend_trace(int argc, VALUE *argv, VALUE self) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   backend_trace(&backend->base, argc, argv);
   return self;
 }
 
 VALUE Backend_trace_proc_set(VALUE self, VALUE block) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   backend->base.trace_proc = block;
   return self;
 }
 
 VALUE Backend_snooze(VALUE self) {
+  Backend_t *backend = RTYPEDDATA_DATA(self);
   VALUE ret;
   VALUE fiber = rb_fiber_current();
-  Backend_t *backend;
-  GetBackend(self, backend);
 
   Fiber_make_runnable(fiber, Qnil);
   ret = backend_base_switch_fiber(self, &backend->base);
@@ -2009,15 +1957,13 @@ VALUE Backend_snooze(VALUE self) {
 }
 
 void Backend_park_fiber(VALUE self, VALUE fiber) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   backend_base_park_fiber(&backend->base, fiber);
 }
 
 void Backend_unpark_fiber(VALUE self, VALUE fiber) {
-  Backend_t *backend;
-  GetBackend(self, backend);
+  Backend_t *backend = RTYPEDDATA_DATA(self);
 
   backend_base_unpark_fiber(&backend->base, fiber);
 }

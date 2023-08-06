@@ -33,15 +33,11 @@ static VALUE Pipe_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &Pipe_type, pipe);
 }
 
-#define GetPipe(obj, pipe) \
-  TypedData_Get_Struct((obj), Pipe_t, &Pipe_type, (pipe))
-
 /* Creates a new pipe.
  */
 
 static VALUE Pipe_initialize(VALUE self) {
-  Pipe_t *pipe_struct;
-  GetPipe(self, pipe_struct);
+  Pipe_t *pipe_struct = RTYPEDDATA_DATA(self);
 
   int ret = pipe(pipe_struct->fds);
   if (ret) {
@@ -54,20 +50,18 @@ static VALUE Pipe_initialize(VALUE self) {
 }
 
 void Pipe_verify_blocking_mode(VALUE self, VALUE blocking) {
-  Pipe_t *pipe_struct;
+  Pipe_t *pipe = RTYPEDDATA_DATA(self);
   VALUE blocking_mode = rb_ivar_get(self, ID_ivar_blocking_mode);
   if (blocking == blocking_mode) return;
 
   rb_ivar_set(self, ID_ivar_blocking_mode, blocking);
-  GetPipe(self, pipe_struct);
 
-  set_fd_blocking_mode(pipe_struct->fds[0], blocking == Qtrue);
-  set_fd_blocking_mode(pipe_struct->fds[1], blocking == Qtrue);
+  set_fd_blocking_mode(pipe->fds[0], blocking == Qtrue);
+  set_fd_blocking_mode(pipe->fds[1], blocking == Qtrue);
 }
 
 int Pipe_get_fd(VALUE self, int write_mode) {
-  Pipe_t *pipe;
-  GetPipe(self, pipe);
+  Pipe_t *pipe = RTYPEDDATA_DATA(self);
 
   if (write_mode && pipe->w_closed)
     rb_raise(cClosedPipeError, "Pipe is closed for writing");
@@ -81,8 +75,8 @@ int Pipe_get_fd(VALUE self, int write_mode) {
  */
 
 VALUE Pipe_closed_p(VALUE self) {
-  Pipe_t *pipe;
-  GetPipe(self, pipe);
+  Pipe_t *pipe = RTYPEDDATA_DATA(self);
+
   return pipe->w_closed ? Qtrue : Qfalse;
 }
 
@@ -92,8 +86,8 @@ VALUE Pipe_closed_p(VALUE self) {
  */
 
 VALUE Pipe_close(VALUE self) {
-  Pipe_t *pipe;
-  GetPipe(self, pipe);
+  Pipe_t *pipe = RTYPEDDATA_DATA(self);
+
   if (pipe->w_closed)
     rb_raise(rb_eRuntimeError, "Pipe is already closed for writing");
 
@@ -109,8 +103,7 @@ VALUE Pipe_close(VALUE self) {
  */
 
 VALUE Pipe_fds(VALUE self) {
-  Pipe_t *pipe;
-  GetPipe(self, pipe);
+  Pipe_t *pipe = RTYPEDDATA_DATA(self);
 
   return rb_ary_new_from_args(2, INT2FIX(pipe->fds[0]), INT2FIX(pipe->fds[1]));
 }

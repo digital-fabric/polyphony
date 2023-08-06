@@ -36,12 +36,8 @@ static VALUE Event_allocate(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &Event_type, event);
 }
 
-#define GetEvent(obj, event) \
-  TypedData_Get_Struct((obj), Event_t, &Event_type, (event))
-
 static VALUE Event_initialize(VALUE self) {
-  Event_t *event;
-  GetEvent(self, event);
+  Event_t *event = RTYPEDDATA_DATA(self);
 
   event->waiting_fiber = Qnil;
   event->signaled = 0;
@@ -52,8 +48,7 @@ static VALUE Event_initialize(VALUE self) {
 
 VALUE Event_signal(int argc, VALUE *argv, VALUE self) {
   VALUE value = argc > 0 ? argv[0] : Qnil;
-  Event_t *event;
-  GetEvent(self, event);
+  Event_t *event = RTYPEDDATA_DATA(self);
 
   if (event->signaled) goto done;
 
@@ -70,11 +65,9 @@ done:
 }
 
 VALUE Event_await(VALUE self) {
-  Event_t *event;
+  Event_t *event = RTYPEDDATA_DATA(self);
   VALUE switchpoint_result;
   VALUE backend;
-
-  GetEvent(self, event);
 
   if (event->waiting_fiber != Qnil)
     rb_raise(rb_eRuntimeError, "Event is already awaited by another fiber");
