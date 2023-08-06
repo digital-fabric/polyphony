@@ -33,6 +33,48 @@ class IOStreamTest < MiniTest::Test
     assert_equal ['abc', 'def'], s.to_a(true)
   end
 
+  def test_reset
+    s = Polyphony::IOStream.new(nil)
+    s << 'abc'
+    s << 'def'
+    assert_equal ['abc', 'def'], s.to_a(false)
+    assert_equal ['abc', 'def'], s.to_a(true)
+
+    s.reset
+    assert_equal [], s.to_a(false)
+    assert_equal [], s.to_a(true)
+  end
+
+  def test_seek
+    s = Polyphony::IOStream.new(nil)
+    s << 'abc'
+    s << 'def'
+    assert_equal ['abc', 'def'], s.to_a(false)
+
+    s.seek(2)
+    assert_equal ['c', 'def'], s.to_a(false)
+
+    s.seek(1)
+    assert_equal ['def'], s.to_a(false)
+
+    s.seek(5)
+    assert_equal [], s.to_a(false)
+    assert_equal ['abc', 'def'], s.to_a(true)
+
+    s.seek(-3)
+    assert_equal ['def'], s.to_a(false)
+
+    s.seek(-2)
+    assert_equal ['bc', 'def'], s.to_a(false)
+
+    s.seek(-1)
+    assert_equal ['abc', 'def'], s.to_a(false)
+
+    s.seek(-3)
+    assert_equal ['abc', 'def'], s.to_a(false)
+  end
+
+
   def test_getbyte
     p = Polyphony.pipe
     s = Polyphony::IOStream.new(p)

@@ -27,8 +27,22 @@ static void IOStream_mark(void *ptr)
   }
 }
 
+void io_stream_dispose(IOStream_t *io_stream)
+{
+  buffer_descriptor *desc = io_stream->head;
+
+  while (desc) {
+    buffer_descriptor *next = desc->next;
+    bm_dispose(desc);
+    desc = next;
+  }
+}
+
 static void IOStream_free(void *ptr)
 {
+  IOStream_t *io_stream = ptr;
+
+  io_stream_dispose(io_stream);
   xfree(ptr);
 }
 
@@ -226,6 +240,87 @@ VALUE IOStream_to_a(VALUE self, VALUE all)
   return array;
 }
 
+VALUE IOStream_reset(VALUE self)
+{
+  IOStream_t *io_stream = RTYPEDDATA_DATA(self);
+
+  io_stream_dispose(io_stream);
+  io_stream->head = io_stream->tail = io_stream->cursor_desc = NULL;
+  io_stream->cursor_pos = 0;
+  return self;
+}
+
+VALUE IOStream_rewind(VALUE self)
+{
+  IOStream_t *io_stream = RTYPEDDATA_DATA(self);
+
+  io_stream->cursor_desc = io_stream->head;
+  io_stream->cursor_pos = 0;
+  return self;
+}
+
+void io_stream_seek_forward(IOStream_t *io_stream, int ofs)
+{
+  while (ofs > 0) {
+    if (!io_stream->cursor_desc) {
+      return;
+    }
+    
+    int left = io_stream->cursor_desc->len - io_stream->cursor_pos;
+    if (left > ofs) {
+      io_stream->cursor_pos += ofs;
+      return;
+    }
+    else {
+      ofs -= left;
+      io_stream->cursor_desc = io_stream->cursor_desc->next;
+      io_stream->cursor_pos = 0;
+      if (!io_stream->cursor_desc)
+        return;
+    }
+  }
+}
+
+void io_stream_seek_backward(IOStream_t *io_stream, int ofs)
+{
+  if (!io_stream->cursor_desc && io_stream->tail) {
+    io_stream->cursor_desc = io_stream->tail;
+    io_stream->cursor_pos = io_stream->cursor_desc->len;
+  }
+
+  while (ofs > 0) {
+    if (!io_stream->cursor_desc) return;
+    
+    int left = io_stream->cursor_pos;
+    if (left >= ofs) {
+      io_stream->cursor_pos -= ofs;
+      return;
+    }
+    else {
+      ofs -= left;
+      buffer_descriptor *prev = io_stream->cursor_desc->prev;
+      if (prev) {
+        io_stream->cursor_desc = io_stream->cursor_desc->prev;
+        io_stream->cursor_pos = io_stream->cursor_desc->len;
+      }
+      else {
+        io_stream->cursor_pos = 0;
+        return;
+      }
+    }
+  }
+}
+
+VALUE IOStream_seek(VALUE self, VALUE ofs)
+{
+  IOStream_t *io_stream = RTYPEDDATA_DATA(self);
+  int ofs_i = FIX2INT(ofs);
+
+  if (ofs_i > 0) io_stream_seek_forward(io_stream, ofs_i);
+  if (ofs_i < 0) io_stream_seek_backward(io_stream, -ofs_i);
+  return self;
+}
+
 void Init_IOStream(void) {
   cIOStream = rb_define_class_under(mPolyphony, "IOStream", rb_cObject);
   rb_define_alloc_func(cIOStream, IOStream_allocate);
@@ -234,6 +329,9 @@ void Init_IOStream(void) {
   rb_define_method(cIOStream, "left", IOStream_left, 0);
   rb_define_method(cIOStream, "<<", IOStream_push_string, 1);
   rb_define_method(cIOStream, "to_a", IOStream_to_a, 1);
+  rb_define_method(cIOStream, "reset", IOStream_reset, 0);
+  rb_define_method(cIOStream, "rewind", IOStream_rewind, 0);
+  rb_define_method(cIOStream, "seek", IOStream_seek, 1);
 
   rb_define_method(cIOStream, "getbyte", IOStream_getbyte, 0);
   rb_define_method(cIOStream, "getc", IOStream_getc, 0);
