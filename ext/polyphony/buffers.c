@@ -113,6 +113,19 @@ inline int bm_prep_buffer(buffer_descriptor **desc, enum buffer_type type, size_
   return -1;
 }
 
+int bm_buffer_from_string(buffer_descriptor **desc, VALUE str)
+{
+  (*desc) = malloc(sizeof(buffer_descriptor));
+  (*desc)->type = BT_STRING;
+  (*desc)->str = str;
+  (*desc)->ptr = RSTRING_PTR(str);
+  (*desc)->len = RSTRING_LEN(str);
+  (*desc)->capacity = rb_str_capacity(str);
+  (*desc)->prev = NULL;
+  (*desc)->next = NULL;
+  return 0; 
+}
+
 int bm_dispose_managed(buffer_descriptor *desc) {
   int power = normalized_power_of_two(desc->capacity);
   int idx = FREE_LIST_IDX(power);
@@ -177,23 +190,23 @@ int bm_mark(void)
 void Init_BufferManager(void)
 {
   memset(&bm, 0, sizeof(bm));
-  bm_trace();
+  // bm_trace();
 
-  bm_populate(0);
-  bm_populate(3);
-  bm_populate(6);
-  bm_trace();
+  // bm_populate(0);
+  // bm_populate(3);
+  // bm_populate(6);
+  // bm_trace();
 
-  buffer_descriptor *desc;
-  int ret = bm_prep_buffer(&desc, BT_MANAGED, 30000);
-  if (!ret)
-    printf("Got buffer: capacity: %d\n", desc->capacity);
-  else
-    rb_raise(rb_eRuntimeError, "Failed to get buffer");
-  bm_trace();
+  // buffer_descriptor *desc;
+  // int ret = bm_prep_buffer(&desc, BT_MANAGED, 30000);
+  // if (!ret)
+  //   printf("Got buffer: capacity: %d\n", desc->capacity);
+  // else
+  //   rb_raise(rb_eRuntimeError, "Failed to get buffer");
+  // bm_trace();
 
-  printf("Disposing buffer...\n");
-  bm_dispose(desc);
+  // printf("Disposing buffer...\n");
+  // bm_dispose(desc);
 
-  bm_trace();
+  // bm_trace();
 }

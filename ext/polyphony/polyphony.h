@@ -35,6 +35,7 @@ extern VALUE mPolyphony;
 extern VALUE cPipe;
 extern VALUE cQueue;
 extern VALUE cEvent;
+extern VALUE cIOStream;
 extern VALUE cTimeoutException;
 
 extern ID ID_call;
