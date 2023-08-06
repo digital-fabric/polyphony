@@ -148,8 +148,10 @@ static inline int io_stream_prep_for_reading(IOStream_t *io_stream, int min_len)
     int left = io_stream->cursor_desc->len - io_stream->cursor_pos;
     if (left >= min_len)
       return 0;
-    else
+    else {
       min_len -= left;
+      desc = desc->next;
+    }
   }
   io_stream_fill_from_io(io_stream, min_len);
   return (io_stream->eof) ? -1 : 0;

@@ -39,4 +39,29 @@ class IOStreamTest < MiniTest::Test
     assert_equal 'c', s.getc
     assert_nil s.getc
   end
+
+  def test_blocking_getc_with_exception
+    p = Polyphony.pipe
+    s = Polyphony::IOStream.new(p)
+
+    buffer_status = Polyphony.buffer_manager_status;
+
+    assert_equal 0, s.left
+    assert_equal [0], buffer_status.values.uniq
+
+    main_f = Fiber.current
+    f = spin do
+      main_f << :ready
+      s.getc
+    end
+
+    assert_equal :ready, receive
+    snooze
+    f.stop(:done)
+    c = f.await
+
+    assert_equal :done, c
+    assert_equal 0, s.left
+    assert_equal [0], buffer_status.values.uniq
+  end
 end

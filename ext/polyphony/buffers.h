@@ -43,4 +43,7 @@ int bm_buffer_from_string(buffer_descriptor **desc, VALUE str);
 int bm_dispose(buffer_descriptor *desc);
 int bm_mark(void);
 
+void bm_reset(void);
+void bm_get_status(VALUE hash);
+
 #endif /* BUFFERS_H */

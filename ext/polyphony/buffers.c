@@ -41,20 +41,17 @@ void bm_shift(int free_list_idx, buffer_descriptor **desc)
 void bm_populate(int free_list_idx)
 {
   size_t len = 1 << (FREE_LIST_MIN_POWER_OF_TWO + free_list_idx);
-  int times = (len <= MULTI_ALLOC_THRESHOLD) ? 4 : 1;
-  
-  buffer_descriptor *base = malloc(sizeof(buffer_descriptor) * times);
-  memset(base, 0, sizeof(buffer_descriptor) * times);
+    buffer_descriptor *desc = malloc(sizeof(buffer_descriptor));
+  if (!desc)
+    rb_raise(rb_eRuntimeError, "Failed to allocate buffer descriptor");
+  memset(desc, 0, sizeof(buffer_descriptor));
 
-  char *buffer_base = malloc(len * times);
-
-  for (int i = 0; i < times; i++) {
-    buffer_descriptor *desc = base + i;
-    desc->type = BT_MANAGED;
-    desc->ptr = buffer_base + (len * i);
-    desc->capacity = len;
-    bm_unshift(free_list_idx, desc);
-  }
+  desc->type = BT_MANAGED;
+  desc->ptr = malloc(len);
+  if (!desc->ptr)
+    rb_raise(rb_eRuntimeError, "Failed to allocate buffer");
+  desc->capacity = len;
+  bm_unshift(free_list_idx, desc);
 }
 
 int bm_prep_buffer_managed(buffer_descriptor **desc, size_t len)
@@ -158,6 +155,13 @@ int bm_dispose(buffer_descriptor *desc)
   return -1;
 }
 
+int bm_free_managed(buffer_descriptor *desc)
+{
+  free(desc->ptr);
+  free(desc);
+  return 0;
+}
+
 void bm_trace(void)
 {
   printf("**********************\n");
@@ -173,6 +177,23 @@ void bm_trace(void)
   }
 }
 
+void bm_get_status(VALUE hash)
+{
+  for (int i = 0; i < FREE_LIST_COUNT; i++) {
+    int count = 0;
+    buffer_descriptor *desc = bm.free_lists[i];
+    while (desc) {
+      count++;
+      desc = desc->next;
+    }
+
+    VALUE key = INT2FIX(1 << (FREE_LIST_MIN_POWER_OF_TWO + i));
+    VALUE value = INT2FIX(count);
+
+    rb_hash_aset(hash, key, value);
+  }
+}
+
 int bm_mark(void)
 {
   for (int i = 0; i < FREE_LIST_COUNT; i++) {
@@ -185,6 +206,19 @@ int bm_mark(void)
     }
   }
   return 0;
+}
+
+void bm_reset(void)
+{
+  for (int i = 0; i < FREE_LIST_COUNT; i++) {
+    buffer_descriptor *desc = bm.free_lists[i];
+    while (desc) {
+      buffer_descriptor *next = desc->next;
+      bm_free_managed(desc);
+      desc = next;
+    }
+    bm.free_lists[i] = NULL;
+  }
 }
 
 void Init_BufferManager(void)
