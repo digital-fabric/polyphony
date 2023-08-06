@@ -412,6 +412,11 @@ VALUE Polyphony_backend_verify_blocking_mode(VALUE self, VALUE io, VALUE blockin
   return Backend_verify_blocking_mode(BACKEND(), io, blocking);
 }
 
+VALUE Polyphony_stream_read(VALUE io, buffer_descriptor *desc, int len, int *read)
+{
+  return Backend_stream_read(BACKEND(), io, desc, len, read);
+}
+
 void Init_Polyphony(void) {
   mPolyphony = rb_define_module("Polyphony");
 

@@ -15,11 +15,11 @@ class IOStreamTest < MiniTest::Test
   end
 
   def test_getbyte
-    s = Polyphony::IOStream.new(nil)
-    
-    assert_nil s.getbyte
+    p = Polyphony.pipe
+    s = Polyphony::IOStream.new(p)
 
-    s << 'abc'
+    p << 'abc'
+    p.close
 
     assert_equal 97, s.getbyte
     assert_equal 98, s.getbyte
@@ -28,11 +28,11 @@ class IOStreamTest < MiniTest::Test
   end
 
   def test_getc
-    s = Polyphony::IOStream.new(nil)
+    p = Polyphony.pipe
+    s = Polyphony::IOStream.new(p)
     
-    assert_nil s.getc
-
-    s << 'abc'
+    p << 'abc'
+    p.close
 
     assert_equal 'a', s.getc
     assert_equal 'b', s.getc

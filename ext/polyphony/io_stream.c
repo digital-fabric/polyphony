@@ -10,6 +10,8 @@ typedef struct io_stream {
 
   buffer_descriptor *cursor_desc;
   unsigned int cursor_pos;
+
+  int eof;
 } IOStream_t;
 
 VALUE cIOStream = Qnil;
@@ -58,6 +60,7 @@ static VALUE IOStream_initialize(VALUE self, VALUE io)
   io_stream->tail = NULL;
   io_stream->cursor_desc = NULL;
   io_stream->cursor_pos = 0;
+  io_stream->eof = 0;
 
   return self;
 }
@@ -108,12 +111,55 @@ VALUE IOStream_push_string(VALUE self, VALUE str)
   return self;
 }
 
+inline void io_stream_fill_from_io(IOStream_t *io_stream, int min_len) {
+  while (min_len > 0) {
+    buffer_descriptor *desc;
+    int read;
+
+    if (bm_prep_buffer(&desc, BT_MANAGED, 8192))
+      rb_raise(rb_eRuntimeError, "Failed to prepare managed buffer");
+
+    VALUE result = Polyphony_stream_read(io_stream->io, desc, 8192, &read);
+    if (IS_EXCEPTION(result)) {
+      bm_dispose(desc);
+      RAISE_EXCEPTION(result);
+    }
+
+    if (read < 0)
+      rb_syserr_fail(-read, strerror(-read));
+    if (!read) {
+      bm_dispose(desc);
+      io_stream->eof = true;
+      return;
+    }
+
+    io_stream_push_desc(io_stream, desc);
+
+    if (read >= min_len) return;
+    min_len -= read;
+  }
+}
+
+inline int io_stream_prep_for_reading(IOStream_t *io_stream, int min_len)
+{
+  if (io_stream->eof) return -1;
+  buffer_descriptor *desc = io_stream->cursor_desc;
+  while (desc && (min_len > 0)) {
+    int left = io_stream->cursor_desc->len - io_stream->cursor_pos;
+    if (left >= min_len)
+      return 0;
+    else
+      min_len -= left;
+  }
+  io_stream_fill_from_io(io_stream, min_len);
+  return (io_stream->eof) ? -1 : 0;
+}
+
 VALUE IOStream_getbyte(VALUE self)
 {
   IOStream_t *io_stream = RTYPEDDATA_DATA(self);
 
-  if (!io_stream->cursor_desc)
-    return Qnil;
+  if (io_stream_prep_for_reading(io_stream, 1)) goto eof;
 
   int byte = io_stream->cursor_desc->ptr[io_stream->cursor_pos];
   io_stream->cursor_pos++;
@@ -123,14 +169,15 @@ VALUE IOStream_getbyte(VALUE self)
   }
 
   return INT2FIX(byte);
+eof:
+  return Qnil;
 }
 
 VALUE IOStream_getc(VALUE self)
 {
   IOStream_t *io_stream = RTYPEDDATA_DATA(self);
 
-  if (!io_stream->cursor_desc)
-    return Qnil;
+  if (io_stream_prep_for_reading(io_stream, 1)) goto eof;
 
   // TODO: add support for multi-byte chars
   VALUE chr = rb_str_new(io_stream->cursor_desc->ptr + io_stream->cursor_pos, 1);
@@ -141,6 +188,8 @@ VALUE IOStream_getc(VALUE self)
   }
 
   return chr;
+eof:
+  return Qnil;
 }
 
 void Init_IOStream(void) {

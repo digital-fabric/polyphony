@@ -6,7 +6,7 @@
 enum buffer_type {
   BT_SINGLE_USE,
   BT_MANAGED,
-  BT_STRING
+  BT_STRING,
 };
 
 typedef struct buffer_descriptor {
@@ -23,7 +23,6 @@ typedef struct buffer_descriptor {
   char * ptr;
   unsigned int len;
   unsigned int capacity;
-  int eof;
 
   struct buffer_descriptor *prev;
   struct buffer_descriptor *next;
