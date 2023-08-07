@@ -197,9 +197,11 @@ class IOStreamTest < MiniTest::Test
     s = Polyphony::IOStream.new(p)
 
     b = []
+    mf = Fiber.current
     f = spin do
       loop do
         r = s.read(3)
+        mf << true
         b << r
         break if !r
       end
@@ -209,15 +211,15 @@ class IOStreamTest < MiniTest::Test
     assert_equal [], b
 
     p << 'abcd'
-    5.times { snooze }
+    receive
     assert_equal ['abc'], b
 
     p << 'efgh'
-    5.times { snooze }
+    receive
     assert_equal ['abc', 'def'], b
 
     p.close
-    5.times { snooze }
+    receive
     assert_equal ['abc', 'def', 'gh', nil], b
   end
 end
