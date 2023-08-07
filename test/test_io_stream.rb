@@ -57,31 +57,22 @@ class IOStreamTest < MiniTest::Test
     s.seek(1)
     assert_equal ['def'], s.to_a(false)
 
-    s.seek(5)
-    assert_equal [], s.to_a(false)
-    assert_equal ['abc', 'def'], s.to_a(true)
-
-    s.seek(-3)
-    assert_equal ['def'], s.to_a(false)
+    s.seek(2)
+    assert_equal ['f'], s.to_a(false)
+    assert_equal ['def'], s.to_a(true)
 
     s.seek(-2)
-    assert_equal ['bc', 'def'], s.to_a(false)
+    assert_equal ['def'], s.to_a(false)
 
-    s.seek(-1)
-    assert_equal ['abc', 'def'], s.to_a(false)
-
-    s.seek(-3)
-    assert_equal ['abc', 'def'], s.to_a(false)
-
-    assert_equal 'a', s.getc
-
-    s.seek(2)
     assert_equal 'd', s.getc
+
+    s.seek(1)
+    assert_equal 'f', s.getc
 
     s << 'ghi'
     
     s.seek(2)
-    assert_equal 'g', s.getc
+    assert_equal 'i', s.getc
   end
 
   def test_getbyte
@@ -189,5 +180,44 @@ class IOStreamTest < MiniTest::Test
     r = s.readpartial(5, buf)
     assert_equal 'fgh', buf
     assert_same r, buf
+  end
+
+  def test_readpartial_from_prepopulated_stream
+    s = Polyphony::IOStream.new(nil)
+
+    s << 'abc'
+    s << 'def'
+
+    r = s.readpartial(5)
+    assert_equal 'abcde', r
+  end
+
+  def test_read
+    p = Polyphony.pipe
+    s = Polyphony::IOStream.new(p)
+
+    b = []
+    f = spin do
+      loop do
+        r = s.read(3)
+        b << r
+        break if !r
+      end
+    end
+
+    5.times { snooze }
+    assert_equal [], b
+
+    p << 'abcd'
+    5.times { snooze }
+    assert_equal ['abc'], b
+
+    p << 'efgh'
+    5.times { snooze }
+    assert_equal ['abc', 'def'], b
+
+    p.close
+    5.times { snooze }
+    assert_equal ['abc', 'def', 'gh', nil], b
   end
 end
