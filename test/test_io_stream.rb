@@ -220,6 +220,7 @@ class IOStreamTest < MiniTest::Test
 
     p.close
     receive
+    receive
     assert_equal ['abc', 'def', 'gh', nil], b
   end
 end
