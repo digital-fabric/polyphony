@@ -28,6 +28,7 @@ def get_config
   config[:multishot_timeout]  = combined_version >= 640
   config[:submit_all_flag]    = combined_version >= 518
   config[:coop_taskrun_flag]  = combined_version >= 519
+  config[:single_issuer_flag] = combined_version >= 600
 
   force_libev = ENV['POLYPHONY_LIBEV'] != nil
   config[:io_uring] = !force_libev && (combined_version >= 506) && (distribution != 'linuxkit')
@@ -72,6 +73,7 @@ if config[:io_uring]
   $defs << '-DHAVE_IO_URING_TIMEOUT_MULTISHOT'      if config[:multishot_timeout]
   $defs << '-DHAVE_IORING_SETUP_SUBMIT_ALL'         if config[:submit_all_flag]
   $defs << '-DHAVE_IORING_SETUP_COOP_TASKRUN'       if config[:coop_taskrun_flag]
+  $defs << '-DHAVE_IORING_SETUP_SINGLE_ISSUER'      if config[:single_issuer_flag]
   $CFLAGS << ' -Wno-pointer-arith'
 else
   $defs << '-DPOLYPHONY_BACKEND_LIBEV'

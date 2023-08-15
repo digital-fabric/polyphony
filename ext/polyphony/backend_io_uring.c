@@ -93,6 +93,9 @@ static VALUE Backend_initialize(VALUE self) {
   #ifdef HAVE_IORING_SETUP_COOP_TASKRUN
   flags |= IORING_SETUP_COOP_TASKRUN;
   #endif
+  #ifdef HAVE_IORING_SETUP_SINGLE_ISSUER
+  flags |= IORING_SETUP_SINGLE_ISSUER;
+  #endif
 
   while (1) {
     int ret = io_uring_queue_init(backend->prepared_limit, &backend->ring, flags);
