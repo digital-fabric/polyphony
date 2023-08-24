@@ -38,7 +38,7 @@ void context_store_initialize(op_context_store_t *store) {
 
 inline op_context_t *context_store_acquire(op_context_store_t *store, enum op_type type) {
   op_context_t *ctx = store->available;
-  if (ctx) {
+  if (likely(ctx)) {
     if (ctx->next) ctx->next->prev = NULL;
     store->available = ctx->next;
     store->available_count--;
@@ -74,7 +74,7 @@ inline int context_store_release(op_context_store_t *store, op_context_t *ctx) {
 
   // If a multishot ctx is released, we pretend its ref count is 1, so it will
   // be returned to the store.
-  if (ctx->ref_count == MULTISHOT_REFCOUNT) ctx->ref_count = 1;
+  if (unlikely(ctx->ref_count == MULTISHOT_REFCOUNT)) ctx->ref_count = 1;
 
   ctx->ref_count--;
   if (ctx->ref_count) return 0;

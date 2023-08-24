@@ -31,8 +31,8 @@ inline void backend_base_finalize(struct Backend_base *base) {
 }
 
 inline void backend_base_mark(struct Backend_base *base) {
-  if (base->idle_proc != Qnil) rb_gc_mark(base->idle_proc);
-  if (base->trace_proc != Qnil) rb_gc_mark(base->trace_proc);
+  if (unlikely(base->idle_proc != Qnil)) rb_gc_mark(base->idle_proc);
+  if (unlikely(base->trace_proc != Qnil)) rb_gc_mark(base->trace_proc);
   runqueue_mark(&base->runqueue);
   runqueue_mark(&base->parked_runqueue);
 }
@@ -58,7 +58,7 @@ void backend_base_reset(struct Backend_base *base) {
 const unsigned int ANTI_STARVE_SWITCH_COUNT_THRESHOLD = 64;
 
 inline void conditional_nonblocking_poll(VALUE backend, struct Backend_base *base, VALUE current, VALUE next) {
-  if ((base->switch_count % ANTI_STARVE_SWITCH_COUNT_THRESHOLD) == 0 || next == current)
+  if (unlikely((base->switch_count % ANTI_STARVE_SWITCH_COUNT_THRESHOLD) == 0 || next == current))
     Backend_poll(backend, Qnil);
 }
 
@@ -73,7 +73,7 @@ inline void conditional_nonblocking_poll(VALUE backend, struct Backend_base *bas
 // allow it to be passed to this macro, and if not we call it on the spot.
 #define CHECK_FIBER_THREAD_REF(fiber, current_thread) { \
   VALUE thread = rb_ivar_get(fiber, ID_ivar_thread); \
-  if (thread == Qnil)  { \
+  if (unlikely(thread == Qnil))  { \
     thread = (current_thread != Qnil) ? current_thread : rb_thread_current(); \
     rb_ivar_set(fiber, ID_ivar_thread, thread); \
   } \
@@ -109,7 +109,7 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
       break;
     }
 
-    if (!idle_tasks_run_count) {
+    if (unlikely(!idle_tasks_run_count)) {
       idle_tasks_run_count++;
       backend_run_idle_tasks(base);
     }
@@ -118,7 +118,7 @@ VALUE backend_base_switch_fiber(VALUE backend, struct Backend_base *base) {
     backend_was_polled = 1;
   }
 
-  if (next.fiber == Qnil) return Qnil;
+  if (unlikely(next.fiber == Qnil)) return Qnil;
 
   // run next fiber
   rb_ivar_set(next.fiber, ID_ivar_runnable, Qnil);
@@ -132,7 +132,7 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
   int already_runnable;
   runqueue_t *runqueue;
 
-  if (rb_fiber_alive_p(fiber) != Qtrue) return;
+  if (unlikely(rb_fiber_alive_p(fiber) != Qtrue)) return;
   already_runnable = rb_ivar_get(fiber, ID_ivar_runnable) != Qnil;
 
   COND_TRACE(base, 5, SYM_schedule, fiber, value, prioritize ? Qtrue : Qfalse, CALLER());
@@ -140,9 +140,9 @@ void backend_base_schedule_fiber(VALUE thread, VALUE backend, struct Backend_bas
   runqueue = rb_ivar_get(fiber, ID_ivar_parked) == Qtrue ? &base->parked_runqueue : &base->runqueue;
 
   (prioritize ? runqueue_unshift : runqueue_push)(runqueue, fiber, value, already_runnable);
-  if (!already_runnable) {
+  if (likely(!already_runnable)) {
     rb_ivar_set(fiber, ID_ivar_runnable, Qtrue);
-    if (rb_thread_current() != thread) {
+    if (unlikely(rb_thread_current() != thread)) {
       // If the fiber scheduling is done across threads, we need to make sure the
       // target thread is woken up in case it is in the middle of running its
       // event selector. Otherwise it's gonna be stuck waiting for an event to
@@ -162,7 +162,7 @@ inline void backend_base_unpark_fiber(struct Backend_base *base, VALUE fiber) {
 }
 
 inline void backend_trace(struct Backend_base *base, int argc, VALUE *argv) {
-  if (base->trace_proc == Qnil || base->in_trace_proc) return;
+  if (likely(base->trace_proc == Qnil || base->in_trace_proc)) return;
 
   base->in_trace_proc = 1;
   rb_funcallv(base->trace_proc, ID_call, argc, argv);
@@ -326,7 +326,7 @@ inline uint64_t current_time_ns(void) {
 }
 
 inline VALUE backend_timeout_exception(VALUE exception) {
-  if (rb_obj_is_kind_of(exception, rb_cArray) == Qtrue)
+  if (unlikely(rb_obj_is_kind_of(exception, rb_cArray) == Qtrue))
     return rb_funcall(rb_ary_entry(exception, 0), ID_new, 1, rb_ary_entry(exception, 1));
   else if (rb_obj_is_kind_of(exception, rb_cClass) == Qtrue)
     return rb_funcall(exception, ID_new, 0);
@@ -358,7 +358,7 @@ VALUE Backend_sendv(VALUE self, VALUE io, VALUE ary, VALUE flags) {
   case 1:
     return Backend_send(self, io, RARRAY_AREF(ary, 0), flags);
   default:
-    if (empty_string == Qnil) {
+    if (unlikely(empty_string == Qnil)) {
       empty_string = rb_str_new_literal("");
       rb_global_variable(&empty_string);
     }
@@ -393,7 +393,7 @@ inline void set_fd_blocking_mode(int fd, int blocking) {
 
 inline void io_verify_blocking_mode(VALUE io, int fd, VALUE blocking) {
   VALUE blocking_mode = rb_ivar_get(io, ID_ivar_blocking_mode);
-  if (blocking == blocking_mode) return;
+  if (likely(blocking == blocking_mode)) return;
 
   rb_ivar_set(io, ID_ivar_blocking_mode, blocking);
   set_fd_blocking_mode(fd, blocking == Qtrue);
@@ -402,13 +402,13 @@ inline void io_verify_blocking_mode(VALUE io, int fd, VALUE blocking) {
 inline void backend_run_idle_tasks(struct Backend_base *base) {
   double now;
 
-  if (base->idle_proc != Qnil)
+  if (unlikely(base->idle_proc != Qnil))
     rb_funcall(base->idle_proc, ID_call, 0);
 
-  if (base->idle_gc_period == 0) return;
+  if (likely(base->idle_gc_period == 0)) return;
 
   now = current_time();
-  if (now - base->idle_gc_last_time < base->idle_gc_period) return;
+  if (unlikely(now - base->idle_gc_last_time < base->idle_gc_period)) return;
 
   base->idle_gc_last_time = now;
   rb_gc_enable();
@@ -492,7 +492,7 @@ int backend_getaddrinfo(VALUE host, VALUE port, struct sockaddr **ai_addr) {
   port_string = rb_funcall(port, ID_to_s, 0);
   ret = getaddrinfo(StringValueCStr(host), StringValueCStr(port_string), &hints, &addrinfo_result);
   RB_GC_GUARD(port_string);
-  if (ret != 0) {
+  if (unlikely(ret != 0)) {
     VALUE msg = rb_str_new2(gai_strerror(ret));
     rb_funcall(rb_mKernel, ID_raise, 1, msg);
     RB_GC_GUARD(msg);
@@ -509,7 +509,7 @@ inline VALUE name_to_addrinfo(void *name, socklen_t len) {
       char buf[INET_ADDRSTRLEN];
 
       VALUE port = INT2NUM(ntohs(info->sin_port));
-      if (!inet_ntop(AF_INET, &info->sin_addr, buf, sizeof(buf)))
+      if (unlikely(!inet_ntop(AF_INET, &info->sin_addr, buf, sizeof(buf))))
         rb_raise(rb_eRuntimeError, "Failed to get AF_INET addr");
       VALUE addr = rb_str_new_cstr(buf);
       return rb_ary_new_from_args(4, rb_str_new_literal("AF_INET"), port, addr, addr);
@@ -521,7 +521,7 @@ inline VALUE name_to_addrinfo(void *name, socklen_t len) {
       char buf[INET6_ADDRSTRLEN];
 
       VALUE port = INT2NUM(ntohs(info->sin6_port));
-      if (!inet_ntop(AF_INET6, &info->sin6_addr, buf, sizeof(buf)))
+      if (unlikely(!inet_ntop(AF_INET6, &info->sin6_addr, buf, sizeof(buf))))
         rb_raise(rb_eRuntimeError, "Failed to get AF_INET addr");
       VALUE addr = rb_str_new_cstr(buf);
       return rb_ary_new_from_args(4, rb_str_new_literal("AF_INET6"), port, addr, addr);
@@ -609,7 +609,7 @@ VALUE coerce_io_string_or_buffer(VALUE buf) {
 
 inline VALUE Backend_for_current_thread(void) {
   VALUE backend = rb_ivar_get(rb_thread_current(), ID_ivar_backend);
-  if (backend == Qnil) {
+  if (unlikely(backend == Qnil)) {
     backend = rb_funcall(cBackend, ID_new, 0);
     rb_ivar_set(rb_thread_current(), ID_ivar_backend, backend);
   }

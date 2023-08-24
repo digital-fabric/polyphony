@@ -12,12 +12,20 @@
 #define TRACE_CALLER() INSPECT("caller: ", CALLER())
 #define TRACE_FREE(ptr) //printf("Free %p %s:%d\n", ptr, __FILE__, __LINE__)
 
+// branching
+
+#ifndef unlikely
+#define unlikely(cond)	__builtin_expect(!!(cond), 0)
+#endif
+
+#ifndef likely
+#define likely(cond)	__builtin_expect(!!(cond), 1)
+#endif
+
 // exceptions
-#define TEST_EXCEPTION(ret) (rb_obj_is_kind_of(ret, rb_eException) == Qtrue)
 #define RAISE_EXCEPTION(e) rb_funcall(e, ID_invoke, 0);
-#define IS_EXCEPTION(o) (rb_obj_is_kind_of(o, rb_eException) == Qtrue)
+#define IS_EXCEPTION(o) unlikely(rb_obj_is_kind_of(o, rb_eException) == Qtrue)
 #define RAISE_IF_EXCEPTION(o) if (IS_EXCEPTION(o)) { RAISE_EXCEPTION(o); }
-#define RAISE_IF_NOT_NIL(o) if (o != Qnil) { RAISE_EXCEPTION(o); }
 
 // Fiber#transfer
 #if HAVE_RB_FIBER_TRANSFER

@@ -99,10 +99,10 @@ static VALUE Backend_initialize(VALUE self) {
 
   while (1) {
     int ret = io_uring_queue_init(backend->prepared_limit, &backend->ring, flags);
-    if (!ret) break;
+    if (likely(!ret)) break;
 
     // if ENOMEM is returned, use a smaller limit
-    if (ret == -ENOMEM && backend->prepared_limit > 64)
+    if (unlikely(ret == -ENOMEM && backend->prepared_limit > 64))
       backend->prepared_limit = backend->prepared_limit / 2;
     else
       rb_syserr_fail(-ret, strerror(-ret));
@@ -115,7 +115,7 @@ static VALUE Backend_initialize(VALUE self) {
 VALUE Backend_finalize(VALUE self) {
   Backend_t *backend = RTYPEDDATA_DATA(self);
 
-  if (backend->ring_initialized) io_uring_queue_exit(&backend->ring);
+  if (likely(backend->ring_initialized)) io_uring_queue_exit(&backend->ring);
   if (backend->event_fd != -1) close(backend->event_fd);
   context_store_free(&backend->store);
   return self;
@@ -169,16 +169,16 @@ static inline bool cq_ring_needs_flush(struct io_uring *ring) {
 
 static void handle_multishot_accept_completion(op_context_t *ctx, struct io_uring_cqe *cqe, Backend_t *backend) {
   // printf("handle_multishot_accept_completion result: %d\n", ctx->result);
-  if (ctx->result == -ECANCELED) {
+  if (unlikely(ctx->result == -ECANCELED)) {
     context_store_release(&backend->store, ctx);
     rb_ivar_set(ctx->resume_value, ID_ivar_multishot_accept_queue, Qnil);
   }
   else {
-    if (!(cqe->flags & IORING_CQE_F_MORE)) {
+    if (unlikely(!(cqe->flags & IORING_CQE_F_MORE))) {
       context_store_release(&backend->store, ctx);
     }
     VALUE queue = MULTISHOT_ACCEPT_QUEUE(ctx->resume_value);
-    if (queue != Qnil)
+    if (likely(queue != Qnil))
       Queue_push(queue, INT2FIX(ctx->result));
   }
 }
@@ -192,10 +192,10 @@ static void handle_multishot_timeout_completion(
   }
   else {
     int has_more = cqe->flags & IORING_CQE_F_MORE;
-    if (!has_more) {
+    if (unlikely(!has_more)) {
       context_store_release(&backend->store, ctx);
     }
-    if (ctx->fiber) {
+    if (likely(ctx->fiber)) {
       Fiber_make_runnable(ctx->fiber, has_more ? Qtrue : Qnil);
     }
   }
@@ -214,7 +214,7 @@ static void handle_multishot_completion(op_context_t *ctx, struct io_uring_cqe *
 
 static inline void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, Backend_t *backend) {
   op_context_t *ctx = io_uring_cqe_get_data(cqe);
-  if (!ctx) return;
+  if (unlikely(!ctx)) return;
 
   // if (ctx->type == OP_TIMEOUT) {
   //   double now = current_time_ns() / 1e9;
@@ -228,7 +228,7 @@ static inline void io_uring_backend_handle_completion(struct io_uring_cqe *cqe, 
     handle_multishot_completion(ctx, cqe, backend);
   }
   else {
-    if (ctx->ref_count == 2 && ctx->result != -ECANCELED && ctx->fiber)
+    if (likely(ctx->ref_count == 2 && ctx->result != -ECANCELED && ctx->fiber))
       Fiber_make_runnable(ctx->fiber, ctx->resume_value);
     context_store_release(&backend->store, ctx);
   }
@@ -270,7 +270,7 @@ inline void io_uring_backend_immediate_submit(Backend_t *backend) {
 
 inline void io_uring_backend_defer_submit(Backend_t *backend) {
   backend->pending_sqes += 1;
-  if (backend->pending_sqes >= backend->prepared_limit)
+  if (unlikely(backend->pending_sqes >= backend->prepared_limit))
     io_uring_backend_immediate_submit(backend);
 }
 
@@ -283,12 +283,12 @@ wait_cqe:
   backend->base.currently_polling = 1;
   rb_thread_call_without_gvl(io_uring_backend_poll_without_gvl, (void *)&poll_ctx, RUBY_UBF_IO, 0);
   backend->base.currently_polling = 0;
-  if (poll_ctx.result < 0) {
+  if (unlikely(poll_ctx.result < 0)) {
     if (poll_ctx.result == -EINTR && runqueue_empty_p(&backend->base.runqueue)) goto wait_cqe;
     return;
   }
 
-  if (poll_ctx.cqe) {
+  if (likely(poll_ctx.cqe)) {
     io_uring_backend_handle_completion(poll_ctx.cqe, backend);
     io_uring_cqe_seen(&backend->ring, poll_ctx.cqe);
   }
@@ -300,11 +300,11 @@ inline VALUE Backend_poll(VALUE self, VALUE blocking) {
 
   backend->base.poll_count++;
 
-  if (!is_blocking && backend->pending_sqes) io_uring_backend_immediate_submit(backend);
+  if (unlikely(!is_blocking && backend->pending_sqes)) io_uring_backend_immediate_submit(backend);
 
   COND_TRACE(&backend->base, 2, SYM_enter_poll, rb_fiber_current());
 
-  if (is_blocking) io_uring_backend_poll(backend);
+  if (likely(is_blocking)) io_uring_backend_poll(backend);
   io_uring_backend_handle_ready_cqes(backend);
 
   COND_TRACE(&backend->base, 2, SYM_leave_poll, rb_fiber_current());
@@ -340,9 +340,9 @@ inline struct backend_stats backend_get_stats(VALUE self) {
 static inline struct io_uring_sqe *io_uring_backend_get_sqe(Backend_t *backend) {
   struct io_uring_sqe *sqe;
   sqe = io_uring_get_sqe(&backend->ring);
-  if (sqe) goto done;
+  if (likely(sqe)) goto done;
 
-  if (backend->pending_sqes)
+  if (likely(backend->pending_sqes))
     io_uring_backend_immediate_submit(backend);
   else {
     VALUE resume_value = backend_snooze(&backend->base);
@@ -394,12 +394,12 @@ int io_uring_backend_defer_submit_and_await(
   VALUE switchpoint_result = Qnil;
 
   backend->base.op_count++;
-  if (sqe) io_uring_sqe_set_data(sqe, ctx);
+  if (likely(sqe)) io_uring_sqe_set_data(sqe, ctx);
   io_uring_backend_defer_submit(backend);
 
   switchpoint_result = io_uring_backend_await(self, backend);
 
-  if (ctx->ref_count > 1) {
+  if (unlikely(ctx->ref_count > 1)) {
     struct io_uring_sqe *sqe;
 
     // op was not completed (an exception was raised), so we need to cancel it
@@ -410,7 +410,7 @@ int io_uring_backend_defer_submit_and_await(
     io_uring_backend_immediate_submit(backend);
   }
 
-  if (value_ptr) (*value_ptr) = switchpoint_result;
+  if (likely(value_ptr)) (*value_ptr) = switchpoint_result;
   RB_GC_GUARD(switchpoint_result);
   RB_GC_GUARD(ctx->fiber);
   return ctx->result;
@@ -447,7 +447,7 @@ static inline int fd_from_io(VALUE io, rb_io_t **fptr, int write_mode, int recti
   GetOpenFile(io, *fptr);
   int fd = rb_io_descriptor(io);
   io_unset_nonblock(io, fd);
-  if (rectify_file_pos) rectify_io_file_pos(*fptr);
+  if (unlikely(rectify_file_pos)) rectify_io_file_pos(*fptr);
   return fd;
 }
 
@@ -473,14 +473,14 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eo
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else if (!result)
       break; // EOF
@@ -533,14 +533,14 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else if (!result)
       break; // EOF
@@ -581,14 +581,14 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else if (!result)
       break; // EOF
@@ -622,14 +622,14 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE buffer) {
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else {
       buffer_spec.ptr += result;
@@ -670,7 +670,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       TRACE_FREE(iov);
       free(iov);
       context_attach_buffers(ctx, argc, argv);
@@ -679,7 +679,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0) {
+    if (unlikely(result < 0)) {
       TRACE_FREE(iov);
       free(iov);
       rb_syserr_fail(-result, strerror(-result));
@@ -709,7 +709,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 }
 
 VALUE Backend_write_m(int argc, VALUE *argv, VALUE self) {
-  if (argc < 2)
+  if (unlikely(argc < 2))
     rb_raise(eArgumentError, "(wrong number of arguments (expected 2 or more))");
 
   return (argc == 2) ?
@@ -736,14 +736,14 @@ VALUE Backend_recv(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE pos) 
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else {
       total += result;
@@ -792,14 +792,14 @@ VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE po
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else {
       total += result;
@@ -841,14 +841,14 @@ VALUE Backend_recv_loop(VALUE self, VALUE io, VALUE maxlen) {
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else if (!result)
       break; // EOF
@@ -888,14 +888,14 @@ VALUE Backend_recv_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method)
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else if (!result)
       break; // EOF
@@ -931,14 +931,14 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else {
       buffer_spec.ptr += result;
@@ -991,14 +991,14 @@ VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE des
 
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
-    if (!completed) {
+    if (unlikely(!completed)) {
       context_attach_buffers(ctx, 1, &buffer);
       RAISE_IF_EXCEPTION(resume_value);
       return resume_value;
     }
     RB_GC_GUARD(resume_value);
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
     else {
       iov.iov_base += result;
@@ -1044,10 +1044,10 @@ VALUE io_uring_backend_accept(VALUE self, Backend_t *backend, VALUE server_socke
     fd = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (unlikely(!completed)) return resume_value;
     RB_GC_GUARD(resume_value);
 
-    if (fd < 0)
+    if (unlikely(fd < 0))
       rb_syserr_fail(-fd, strerror(-fd));
     else {
       socket = create_socket_from_fd(fd, socket_class);
@@ -1069,7 +1069,7 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
   if (accept_queue != Qnil) {
     VALUE next = Queue_shift(0, 0, accept_queue);
     int fd = NUM2INT(next);
-    if (fd < 0)
+    if (unlikely(fd < 0))
       rb_syserr_fail(-fd, strerror(-fd));
     else
       return create_socket_from_fd(fd, socket_class);
@@ -1091,12 +1091,12 @@ struct multishot_accept_ctx {
 
 static inline VALUE accept_loop_from_queue(VALUE server_socket, VALUE socket_class) {
   VALUE accept_queue = MULTISHOT_ACCEPT_QUEUE(server_socket);
-  if (accept_queue == Qnil) return Qnil;
+  if (unlikely(accept_queue == Qnil)) return Qnil;
 
   while (true) {
     VALUE next = Queue_shift(0, 0, accept_queue);
     int fd = NUM2INT(next);
-    if (fd < 0)
+    if (unlikely(fd < 0))
       rb_syserr_fail(-fd, strerror(-fd));
     else
       rb_yield(create_socket_from_fd(fd, socket_class));
@@ -1181,9 +1181,9 @@ VALUE io_uring_backend_splice(VALUE self, Backend_t *backend, VALUE src, VALUE d
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (unlikely(!completed)) return resume_value;
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
 
     total += result;
@@ -1240,13 +1240,13 @@ VALUE double_splice_safe(struct double_splice_ctx *ctx) {
   op_context_t *ctx_src = prepare_double_splice_ctx(ctx->backend, src_fd, ctx->pipefd[1]);
   op_context_t *ctx_dest = prepare_double_splice_ctx(ctx->backend, ctx->pipefd[0], dest_fd);
 
-  if (ctx->backend->pending_sqes >= ctx->backend->prepared_limit)
+  if (unlikely(ctx->backend->pending_sqes >= ctx->backend->prepared_limit))
     io_uring_backend_immediate_submit(ctx->backend);
 
   while (1) {
     resume_value = io_uring_backend_await(ctx->self, ctx->backend);
 
-    if ((ctx_src && ctx_src->ref_count == 2 && ctx_dest && ctx_dest->ref_count == 2) || TEST_EXCEPTION(resume_value)) {
+    if (unlikely((ctx_src && ctx_src->ref_count == 2 && ctx_dest && ctx_dest->ref_count == 2) || IS_EXCEPTION(resume_value))) {
       if (ctx_src) {
         context_store_release(&ctx->backend->store, ctx_src);
         io_uring_backend_cancel(ctx->backend, ctx_src);
@@ -1281,7 +1281,7 @@ VALUE double_splice_safe(struct double_splice_ctx *ctx) {
       }
     }
 
-    if (ctx->backend->pending_sqes >= ctx->backend->prepared_limit)
+    if (unlikely(ctx->backend->pending_sqes >= ctx->backend->prepared_limit))
       io_uring_backend_immediate_submit(ctx->backend);
   }
   RB_GC_GUARD(resume_value);
@@ -1289,15 +1289,15 @@ VALUE double_splice_safe(struct double_splice_ctx *ctx) {
 }
 
 VALUE double_splice_cleanup(struct double_splice_ctx *ctx) {
-  if (ctx->pipefd[0]) close(ctx->pipefd[0]);
-  if (ctx->pipefd[1]) close(ctx->pipefd[1]);
+  if (likely(ctx->pipefd[0])) close(ctx->pipefd[0]);
+  if (likely(ctx->pipefd[1])) close(ctx->pipefd[1]);
   return Qnil;
 }
 
 VALUE Backend_double_splice(VALUE self, VALUE src, VALUE dest) {
   struct double_splice_ctx ctx = { self, NULL, src, dest, {0, 0} };
   ctx.backend = RTYPEDDATA_DATA(self);
-  if (pipe(ctx.pipefd) == -1) rb_syserr_fail(errno, strerror(errno));
+  if (unlikely(pipe(ctx.pipefd) == -1)) rb_syserr_fail(errno, strerror(errno));
 
   return rb_ensure(
     SAFE(double_splice_safe), (VALUE)&ctx,
@@ -1328,9 +1328,9 @@ VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
     result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
     completed = context_store_release(&backend->store, ctx);
     RAISE_IF_EXCEPTION(resume_value);
-    if (!completed) return resume_value;
+    if (unlikely(!completed)) return resume_value;
 
-    if (result < 0)
+    if (unlikely(result < 0))
       rb_syserr_fail(-result, strerror(-result));
 
     return INT2FIX(result);
@@ -1360,10 +1360,10 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
   result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
   completed = context_store_release(&backend->store, ctx);
   RAISE_IF_EXCEPTION(resume_value);
-  if (!completed) return resume_value;
+  if (unlikely(!completed)) return resume_value;
   RB_GC_GUARD(resume_value);
 
-  if (result < 0) rb_syserr_fail(-result, strerror(-result));
+  if (unlikely(result < 0)) rb_syserr_fail(-result, strerror(-result));
   return sock;
 }
 
@@ -1391,7 +1391,7 @@ VALUE Backend_close(VALUE self, VALUE io) {
   int result;
   int completed;
   int fd = fd_from_io(io, &fptr, 0, 0);
-  if (fd < 0) return Qnil;
+  if (unlikely(fd < 0)) return Qnil;
 
   ctx = context_store_acquire(&backend->store, OP_CLOSE);
   sqe = io_uring_backend_get_sqe(backend);
@@ -1399,10 +1399,10 @@ VALUE Backend_close(VALUE self, VALUE io) {
   result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
   completed = context_store_release(&backend->store, ctx);
   RAISE_IF_EXCEPTION(resume_value);
-  if (!completed) return resume_value;
+  if (unlikely(!completed)) return resume_value;
   RB_GC_GUARD(resume_value);
 
-  if (result < 0) rb_syserr_fail(-result, strerror(-result));
+  if (unlikely(result < 0)) rb_syserr_fail(-result, strerror(-result));
 
   if (fptr) fptr_finalize(fptr);
   // fd = -1;
@@ -1455,12 +1455,12 @@ VALUE Backend_timer_loop(VALUE self, VALUE interval) {
 
   while (1) {
     double now_ns = current_time_ns();
-    if (next_time_ns == 0) next_time_ns = now_ns + interval_ns;
-    if (next_time_ns > now_ns) {
+    if (unlikely(next_time_ns == 0)) next_time_ns = now_ns + interval_ns;
+    if (likely(next_time_ns > now_ns)) {
       double sleep_duration = ((double)(next_time_ns - now_ns))/1e9;
       int completed = io_uring_backend_submit_timeout_and_await(self, backend, sleep_duration, &resume_value);
       RAISE_IF_EXCEPTION(resume_value);
-      if (!completed) return resume_value;
+      if (unlikely(!completed)) return resume_value;
     }
     else {
       resume_value = backend_snooze(&backend->base);
@@ -1484,7 +1484,7 @@ struct Backend_timeout_ctx {
 
 VALUE Backend_timeout_ensure(VALUE arg) {
   struct Backend_timeout_ctx *timeout_ctx = (struct Backend_timeout_ctx *)arg;
-  if (timeout_ctx->ctx->ref_count) {
+  if (unlikely(timeout_ctx->ctx->ref_count)) {
     struct io_uring_sqe *sqe;
 
     timeout_ctx->ctx->result = -ECANCELED;
@@ -1528,7 +1528,7 @@ VALUE Backend_timeout(int argc, VALUE *argv, VALUE self) {
   result = rb_ensure(Backend_timeout_ensure_safe, Qnil, Backend_timeout_ensure, (VALUE)&timeout_ctx);
 
   if (result == timeout) {
-    if (exception == Qnil) return move_on_value;
+    if (likely(exception == Qnil)) return move_on_value;
     RAISE_EXCEPTION(backend_timeout_exception(exception));
   }
 
@@ -1544,7 +1544,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   int status;
   pid_t ret;
 
-  if (fd >= 0) {
+  if (likely(fd >= 0)) {
     VALUE resume_value;
     Backend_t *backend = RTYPEDDATA_DATA(self);
 
@@ -1561,7 +1561,7 @@ VALUE Backend_waitpid(VALUE self, VALUE pid) {
   ret = waitpid(pid_int, &status, WNOHANG);
   if (ret < 0) {
     int e = errno;
-    if (e == ECHILD)
+    if (likely(e == ECHILD))
       ret = pid_int;
     else
       rb_syserr_fail(e, strerror(e));
@@ -1580,15 +1580,15 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   Backend_t *backend = RTYPEDDATA_DATA(self);
   VALUE resume_value;
 
-  if (backend->event_fd == -1) {
+  if (unlikely(backend->event_fd == -1)) {
     backend->event_fd = eventfd(0, 0);
-    if (backend->event_fd == -1) {
+    if (unlikely(backend->event_fd == -1)) {
       int n = errno;
       rb_syserr_fail(n, strerror(n));
     }
   }
 
-  if (!backend->event_fd_ctx) {
+  if (unlikely(!backend->event_fd_ctx)) {
     struct io_uring_sqe *sqe;
 
     backend->event_fd_ctx = context_store_acquire(&backend->store, OP_POLL);
@@ -1604,7 +1604,7 @@ VALUE Backend_wait_event(VALUE self, VALUE raise) {
   resume_value = io_uring_backend_await(self, backend);
   context_store_release(&backend->store, backend->event_fd_ctx);
 
-  if (backend->event_fd_ctx->ref_count == 1) {
+  if (unlikely(backend->event_fd_ctx->ref_count == 1)) {
 
     // last fiber to use the eventfd, so we cancel the ongoing poll
     struct io_uring_sqe *sqe;
@@ -1688,7 +1688,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
   int completed;
   op_context_t *ctx;
 
-  if (argc == 0) return resume_value;
+  if (unlikely(argc == 0)) return resume_value;
 
   ctx = context_store_acquire(&backend->store, OP_CHAIN);
   for (int i = 0; i < argc; i++) {
@@ -1736,7 +1736,7 @@ VALUE Backend_chain(int argc,VALUE *argv, VALUE self) {
   resume_value = io_uring_backend_await(self, backend);
   result = ctx->result;
   completed = context_store_release(&backend->store, ctx);
-  if (!completed) {
+  if (unlikely(!completed)) {
     struct io_uring_sqe *sqe;
 
     Backend_chain_ctx_attach_buffers(ctx, argc, argv);
@@ -1794,7 +1794,7 @@ static inline void splice_chunks_get_sqe(
   enum op_type type
 )
 {
-  if (*ctx) {
+  if (likely(*ctx)) {
     if (*sqe) (*sqe)->flags |= IOSQE_IO_LINK;
     (*ctx)->ref_count++;
   }
@@ -1826,16 +1826,16 @@ static inline int splice_chunks_await_ops(
 
   if (result) (*result) = res;
   completed = context_store_release(&backend->store, *ctx);
-  if (!completed) {
+  if (unlikely(!completed)) {
     splice_chunks_cancel(backend, *ctx);
-    if (TEST_EXCEPTION(*switchpoint_result)) return 1;
+    if (IS_EXCEPTION(*switchpoint_result)) return 1;
   }
   *ctx = 0;
   return 0;
 }
 
 #define SPLICE_CHUNKS_AWAIT_OPS(self, backend, ctx, result, switchpoint_result) \
-  if (splice_chunks_await_ops(self, backend, ctx, result, switchpoint_result)) goto error;
+  if (unlikely(splice_chunks_await_ops(self, backend, ctx, result, switchpoint_result))) goto error;
 
 VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VALUE postfix, VALUE chunk_prefix, VALUE chunk_postfix, VALUE chunk_size) {
   Backend_t *backend = RTYPEDDATA_DATA(self);
@@ -1857,7 +1857,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
   maxlen = FIX2INT(chunk_size);
 
-  if (pipe(pipefd) == -1) {
+  if (unlikely(pipe(pipefd) == -1)) {
     err = errno;
     goto syscallerror;
   }

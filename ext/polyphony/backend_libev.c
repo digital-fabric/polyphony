@@ -170,7 +170,7 @@ ev_run:
   errno = 0;
   ev_run(backend->ev_loop, blocking == Qtrue ? EVRUN_ONCE : EVRUN_NOWAIT);
   backend->base.currently_polling = 0;
-  if (errno == EINTR && runqueue_empty_p(&backend->base.runqueue)) goto ev_run;
+  if (unlikely(errno == EINTR && runqueue_empty_p(&backend->base.runqueue))) goto ev_run;
 
   COND_TRACE(&backend->base, 2, SYM_leave_poll, rb_fiber_current());
 
@@ -302,11 +302,11 @@ VALUE Backend_read(VALUE self, VALUE io, VALUE buffer, VALUE length, VALUE to_eo
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_READ);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       switchpoint_result = backend_snooze(&backend->base);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
 
       if (!result) break; // EOF
 
@@ -381,11 +381,11 @@ VALUE Backend_recvmsg(VALUE self, VALUE io, VALUE buffer, VALUE maxlen, VALUE po
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_READ);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       switchpoint_result = backend_snooze(&backend->base);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
 
       if (!result) break; // EOF
 
@@ -433,12 +433,12 @@ VALUE Backend_read_loop(VALUE self, VALUE io, VALUE maxlen) {
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_READ);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       switchpoint_result = backend_snooze(&backend->base);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
 
       if (n == 0) break; // EOF
       total = n;
@@ -481,12 +481,12 @@ VALUE Backend_feed_loop(VALUE self, VALUE io, VALUE receiver, VALUE method) {
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_READ);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       switchpoint_result = backend_snooze(&backend->base);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
 
       if (n == 0) break; // EOF
       total = n;
@@ -525,7 +525,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE buffer) {
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       buffer_spec.ptr += result;
@@ -536,7 +536,7 @@ VALUE Backend_write(VALUE self, VALUE io, VALUE buffer) {
   if (watcher.fiber == Qnil) {
     switchpoint_result = backend_snooze(&backend->base);
 
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    if (IS_EXCEPTION(switchpoint_result)) goto error;
   }
 
   RB_GC_GUARD(watcher.fiber);
@@ -584,7 +584,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       total_written += n;
@@ -606,7 +606,7 @@ VALUE Backend_writev(VALUE self, VALUE io, int argc, VALUE *argv) {
   }
   if (watcher.fiber == Qnil) {
     switchpoint_result = backend_snooze(&backend->base);
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    if (IS_EXCEPTION(switchpoint_result)) goto error;
   }
 
   RB_GC_GUARD(watcher.fiber);
@@ -659,14 +659,14 @@ VALUE Backend_accept(VALUE self, VALUE server_socket, VALUE socket_class) {
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, server_fd, &watcher, EV_READ);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       VALUE socket;
       rb_io_t *fp;
       switchpoint_result = backend_snooze(&backend->base);
 
-      if (TEST_EXCEPTION(switchpoint_result)) {
+      if (IS_EXCEPTION(switchpoint_result)) {
         close(fd); // close fd since we're raising an exception
         goto error;
       }
@@ -714,13 +714,13 @@ VALUE Backend_accept_loop(VALUE self, VALUE server_socket, VALUE socket_class) {
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, server_fd, &watcher, EV_READ);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       rb_io_t *fp;
       switchpoint_result = backend_snooze(&backend->base);
 
-      if (TEST_EXCEPTION(switchpoint_result)) {
+      if (IS_EXCEPTION(switchpoint_result)) {
         close(fd); // close fd since we're raising an exception
         goto error;
       }
@@ -769,12 +769,12 @@ VALUE Backend_connect(VALUE self, VALUE sock, VALUE host, VALUE port) {
 
     switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
 
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    if (IS_EXCEPTION(switchpoint_result)) goto error;
   }
   else {
     switchpoint_result = backend_snooze(&backend->base);
 
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    if (IS_EXCEPTION(switchpoint_result)) goto error;
   }
   RB_GC_GUARD(switchpoint_result);
   return sock;
@@ -805,7 +805,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       buffer_spec.ptr += result;
@@ -816,7 +816,7 @@ VALUE Backend_send(VALUE self, VALUE io, VALUE buffer, VALUE flags) {
   if (watcher.fiber == Qnil) {
     switchpoint_result = backend_snooze(&backend->base);
 
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    if (IS_EXCEPTION(switchpoint_result)) goto error;
   }
 
   RB_GC_GUARD(watcher.fiber);
@@ -870,7 +870,7 @@ VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE des
 
       switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_WRITE);
 
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       iov.iov_base = (buffer_spec.ptr += result);
@@ -882,7 +882,7 @@ VALUE Backend_sendmsg(VALUE self, VALUE io, VALUE buffer, VALUE flags, VALUE des
   if (watcher.fiber == Qnil) {
     switchpoint_result = backend_snooze(&backend->base);
 
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    if (IS_EXCEPTION(switchpoint_result)) goto error;
   }
 
   RB_GC_GUARD(watcher.fiber);
@@ -970,7 +970,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
       switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, &watcher);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       total += len;
@@ -980,7 +980,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   if (watcher.ctx.fiber == Qnil) {
     switchpoint_result = backend_snooze(&backend->base);
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    if (IS_EXCEPTION(switchpoint_result)) goto error;
   }
 
   RB_GC_GUARD(watcher.ctx.fiber);
@@ -1013,7 +1013,7 @@ VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
       if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
       switchpoint_result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, &watcher);
-      if (TEST_EXCEPTION(switchpoint_result)) goto error;
+      if (IS_EXCEPTION(switchpoint_result)) goto error;
     }
     else {
       break;
@@ -1022,7 +1022,7 @@ VALUE Backend_tee(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   if (watcher.ctx.fiber == Qnil) {
     switchpoint_result = backend_snooze(&backend->base);
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    if (IS_EXCEPTION(switchpoint_result)) goto error;
   }
 
   RB_GC_GUARD(watcher.ctx.fiber);
@@ -1064,7 +1064,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
         if ((e != EWOULDBLOCK && e != EAGAIN)) rb_syserr_fail(e, strerror(e));
 
         switchpoint_result = libev_wait_fd_with_watcher(backend, src_fd, &watcher, EV_READ);
-        if (TEST_EXCEPTION(switchpoint_result)) goto error;
+        if (IS_EXCEPTION(switchpoint_result)) goto error;
       }
       else {
         total += left = n;
@@ -1082,7 +1082,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
         switchpoint_result = libev_wait_fd_with_watcher(backend, dest_fd, &watcher, EV_WRITE);
 
-        if (TEST_EXCEPTION(switchpoint_result)) goto error;
+        if (IS_EXCEPTION(switchpoint_result)) goto error;
       }
       else {
         ptr += n;
@@ -1094,7 +1094,7 @@ VALUE Backend_splice(VALUE self, VALUE src, VALUE dest, VALUE maxlen) {
 
   if (watcher.fiber == Qnil) {
     switchpoint_result = backend_snooze(&backend->base);
-    if (TEST_EXCEPTION(switchpoint_result)) goto error;
+    if (IS_EXCEPTION(switchpoint_result)) goto error;
   }
 
   RB_GC_GUARD(watcher.fiber);
@@ -1411,7 +1411,7 @@ static inline int splice_chunks_write(Backend_t *backend, int fd, VALUE buffer, 
       if ((err != EWOULDBLOCK && err != EAGAIN)) return err;
 
       *result = libev_wait_rw_fd_with_watcher(backend, -1, fd, watcher);
-      if (TEST_EXCEPTION(*result)) return -1;
+      if (IS_EXCEPTION(*result)) return -1;
     }
     else {
       ptr += n;
@@ -1433,7 +1433,7 @@ static inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_
     if (err != EWOULDBLOCK && err != EAGAIN) return err;
 
     *result = libev_wait_rw_fd_with_watcher(backend, src_fd, dest_fd, watcher);
-    if (TEST_EXCEPTION(*result)) return -1;
+    if (IS_EXCEPTION(*result)) return -1;
   }
 #else
   char *buf = malloc(maxlen);
@@ -1448,7 +1448,7 @@ static inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_
     if ((ret != EWOULDBLOCK && ret != EAGAIN)) goto done;
 
     *result = libev_wait_rw_fd_with_watcher(backend, src_fd, -1, watcher);
-    if (TEST_EXCEPTION(*result)) goto exception;
+    if (IS_EXCEPTION(*result)) goto exception;
   }
 
   backend->base.op_count++;
@@ -1462,7 +1462,7 @@ static inline int splice_chunks_splice(Backend_t *backend, int src_fd, int dest_
 
       *result = libev_wait_rw_fd_with_watcher(backend, -1, dest_fd, watcher);
 
-      if (TEST_EXCEPTION(*result)) goto exception;
+      if (IS_EXCEPTION(*result)) goto exception;
     }
     else {
       ptr += n;
@@ -1551,7 +1551,7 @@ VALUE Backend_splice_chunks(VALUE self, VALUE src, VALUE dest, VALUE prefix, VAL
 
   if (watcher.ctx.fiber == Qnil) {
     result = backend_snooze(&backend->base);
-    if (TEST_EXCEPTION(result)) goto error;
+    if (IS_EXCEPTION(result)) goto error;
   }
   RB_GC_GUARD(buffer);
   RB_GC_GUARD(chunk_len_value);

@@ -63,7 +63,7 @@ void backend_trace(struct Backend_base *base, int argc, VALUE *argv);
 struct backend_stats backend_base_stats(struct Backend_base *base);
 
 // tracing
-#define SHOULD_TRACE(base) ((base)->trace_proc != Qnil && !(base)->in_trace_proc)
+#define SHOULD_TRACE(base) unlikely((base)->trace_proc != Qnil && !(base)->in_trace_proc)
 #define TRACE(base, ...) { \
   (base)->in_trace_proc = 1; \
   rb_funcall((base)->trace_proc, ID_call, __VA_ARGS__); \
