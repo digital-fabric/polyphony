@@ -79,7 +79,8 @@ return value of `Fiber#transfer`, which returns when the fiber resumes, at every
 exception, it is raised in the context of the resumed fiber, and is then subject
 to any `rescue` statements in the context of that fiber.
 
-Exceptions can be passed to arbitrary fibers by using `Fiber#raise`. They can also be manually raised in fibers by using `Fiber#schedule`:
+Exceptions can be passed to arbitrary fibers by using `Fiber#raise`. They can
+also be manually raised in fibers by using `Fiber#schedule`:
 
 ```ruby
 f = spin do
@@ -91,7 +92,7 @@ end
 f.schedule(RuntimeError.new('foo')) #=> will print 'foo'
 ```
 
-## Cleaning Up After Exceptions - Using Ensure
+## Cleaning Up After Exceptions - Using ensure
 
 A major issue when handling exceptions is cleaning up - freeing up resources
 that have been allocated, cancelling ongoing operations, etc. Polyphony allows
@@ -188,10 +189,19 @@ finished executing.
 
 ## The Special Problem of Signal Handling
 
-Ruby by default handles process signals by generating exceptions, allowing the
-handling of signals in a structured manner. However, process signals may arrive
-at any moment, and may be trapped while any arbitrary fiber is running, and even
-while an event loop is running.
+In Ruby, signals are handled using `Kernel#trap`, which installs a signal
+handler. The problem with signal handlers is that they can be run at any moment,
+interrupting whatever work your program is busy with. In order to make signal
+handling play nice with the constraints of structured concurrency and the
+propagation of exceptions, Polyphony performs signal handling asynchronously.
+
+When a signal is intercepted, instead of running the signal handler immediately,
+Polyphony creates a special-purpose fiber that will run the signal handling
+code. This fiber is added to the top of the main thread's runqueue. When the
+currently running fiber yields control, the special signal handling fiber will
+be the next to run. Consequently, signal handlers in Polyphony can perform any
+action, from file I/O, printing stuff to STDOUT, or simply raising an
+exception.
 
 Two signals in particular require special care as they involve the stopping of
 the entire process: `TERM` and `INT`. The `TERM` signal should be handled
@@ -207,11 +217,8 @@ running, and that the corresponding exceptions (namely `SystemExit` and
 ### Graceful process termination
 
 In order to ensure your application terminates gracefully upon receiving an
-`INT` or `TERM` signal, you'll need to:
-
-1. Rescue the corresponding exceptions in the main fiber.
-2. Rescue `Polyphony::Terminate` exceptions in each fiber that needs to perform
-   operations such as handling any pending requests, etc.
+`INT` or `TERM` signal, you'll need to rescue the corresponding exceptions in
+the main fiber:
 
 ```ruby
 # In a worker fiber
@@ -231,43 +238,6 @@ begin
 rescue Interrupt, SystemExit
   Fiber.current.terminate_all_children
   Fiber.current.await_all_children
-end
-```
-
-### Handling other signals
-
-Care should be taken when handling other signals. There are two options for
-correctly handling the signals: using Ruby's stock `trap` method, and using
-Polyphony's signal watchers. The stock method involves trapping signals as
-usual, but making sure we're not inside the event loop:
-
-```ruby
-trap('SIGHUP') do
-  Thread.current.break_out_of_ev_loop(Thread.current.main_fiber, nil)
-  handle_hup_signal
-end
-```
-
-A second technique that might be useful is to use a `Gyro::Async` watcher and
-signal it when the process signal is trapped:
-
-```ruby
-sighup_async = Gyro::Async.new
-sighup_handler = spin_loop do
-  sighup_async.await
-  handle_sighup
-end
-
-trap('SIGHUP') { sighup_async.signal }
-```
-
-Another alternative is to use `Polyphony.wait_for_signal`, which uses a
-`Gyro::Signal` watcher under the hood:
-
-```ruby
-hup_handler = spin_loop do
-  Polyphony.wait_for_signal('SIGHUP')
-  handle_hup_signal
 end
 ```
 
