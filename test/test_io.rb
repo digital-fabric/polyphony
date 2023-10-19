@@ -197,6 +197,33 @@ class IOTest < MiniTest::Test
     assert_equal [102, 103], buf
   end
 
+  def test_each_line_with_block
+    file = Tempfile.new
+    file << "foo\nbar\nbaz\n"
+    file.close
+
+    strings = ["foo\n", "bar\n", "baz\n"]
+
+    i = 0
+    File.open(file, 'r').each_line do |line|
+      assert_equal line, strings[i]
+
+      i += 1
+    end
+  end
+
+  def test_each_line_iterator
+    file = Tempfile.new
+    file << "foo\nbar\nbaz\n"
+    file.close
+
+    it = File.open(file, 'r').each_line
+
+    assert_equal it.next, "foo\n"
+    assert_equal it.next, "bar\n"
+    assert_equal it.next, "baz\n"
+  end
+
   # see https://github.com/digital-fabric/polyphony/issues/30
   def test_reopened_tempfile
     file = Tempfile.new
