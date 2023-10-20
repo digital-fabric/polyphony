@@ -306,6 +306,8 @@ class ::IO
 
   # @!visibility private
   def each_line(sep = $/, limit = nil, chomp: false)
+    return to_enum(:each_line, sep, limit, chomp: chomp) unless block_given?
+
     if sep.is_a?(Integer)
       limit = sep
       sep = $/
