@@ -1971,6 +1971,31 @@ void Backend_unpark_fiber(VALUE self, VALUE fiber) {
   backend_base_unpark_fiber(&backend->base, fiber);
 }
 
+VALUE Backend_stream_read(VALUE self, VALUE io, buffer_descriptor *desc, int len, int *result)
+{
+  Backend_t *backend = RTYPEDDATA_DATA(self);
+  rb_io_t *fptr;
+  int fd = fd_from_io(io, &fptr, 0, 1);
+  VALUE resume_value = Qnil;
+  int completed;
+
+  op_context_t *ctx = context_store_acquire(&backend->store, OP_READ);
+  struct io_uring_sqe *sqe = io_uring_backend_get_sqe(backend);
+
+  io_uring_prep_read(sqe, fd, desc->ptr, len, -1);
+
+  *result = io_uring_backend_defer_submit_and_await(self, backend, sqe, ctx, &resume_value);
+  completed = context_store_release(&backend->store, ctx);
+  if (!completed) {
+    // TODO: wait for cancel completion, otherwise we risk a race condition
+    // where io_uring uses the given buffer, but we already disposed of it.
+    return resume_value;
+  }
+  desc->len = *result;
+  RB_GC_GUARD(resume_value);
+  return Qtrue;
+}
+
 void Init_Backend(void) {
   cBackend = rb_define_class_under(mPolyphony, "Backend", rb_cObject);
   rb_define_alloc_func(cBackend, Backend_allocate);

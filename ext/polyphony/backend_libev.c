@@ -1611,6 +1611,44 @@ void Backend_unpark_fiber(VALUE self, VALUE fiber) {
   backend_base_unpark_fiber(&backend->base, fiber);
 }
 
+VALUE Backend_stream_read(VALUE self, VALUE io, buffer_descriptor *desc, int len, int *result)
+{
+  Backend_t *backend = RTYPEDDATA_DATA(self);
+  rb_io_t *fptr;
+  int fd = fd_from_io(io, &fptr, 0, 1);
+  VALUE switchpoint_result = Qnil;
+  struct libev_io watcher;
+
+  watcher.fiber = Qnil;
+  while (1) {
+    backend->base.op_count++;
+    ssize_t ret = read(fd, desc->ptr, len);
+    if (ret < 0) {
+      int e = errno;
+      if (e != EWOULDBLOCK && e != EAGAIN) {
+        *result = -e;
+        break;
+      }
+
+      switchpoint_result = libev_wait_fd_with_watcher(backend, fd, &watcher, EV_READ);
+
+      if (IS_EXCEPTION(switchpoint_result)) return switchpoint_result;
+    }
+    else {
+      switchpoint_result = backend_snooze(&backend->base);
+      if (IS_EXCEPTION(switchpoint_result)) return switchpoint_result;
+
+      *result = desc->len = ret;
+      break;
+    }
+  }
+
+  RB_GC_GUARD(watcher.fiber);
+  RB_GC_GUARD(switchpoint_result);
+
+  return Qtrue;
+}
+
 void Init_Backend(void) {
   ev_set_allocator(xrealloc);
 

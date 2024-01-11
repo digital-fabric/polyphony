@@ -1,5 +1,4 @@
 #include "polyphony.h"
-#include "ring_buffer.h"
 
 typedef struct event {
   VALUE waiting_fiber;

@@ -7,6 +7,8 @@ void Init_Queue();
 void Init_Event();
 void Init_Fiber();
 void Init_Thread();
+void Init_BufferManager();
+void Init_IOStream();
 
 void Init_IOExtensions();
 void Init_SocketExtensions();
@@ -24,6 +26,9 @@ void Init_polyphony_ext(void) {
   Init_Event();
   Init_Fiber();
   Init_Thread();
+
+  Init_BufferManager();
+  Init_IOStream();
 
   Init_IOExtensions();
   Init_SocketExtensions();

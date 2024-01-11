@@ -412,6 +412,25 @@ VALUE Polyphony_backend_verify_blocking_mode(VALUE self, VALUE io, VALUE blockin
   return Backend_verify_blocking_mode(BACKEND(), io, blocking);
 }
 
+VALUE Polyphony_stream_read(VALUE io, buffer_descriptor *desc, int len, int *result)
+{
+  return Backend_stream_read(BACKEND(), io, desc, len, result);
+}
+
+VALUE Polyphony_buffer_manager_reset(VALUE self)
+{
+  bm_reset();
+  return self;
+}
+
+VALUE Polyphony_buffer_manager_status(VALUE self)
+{
+  VALUE hash = rb_hash_new();
+  bm_get_status(hash);
+  RB_GC_GUARD(hash);
+  return hash;
+}
+
 void Init_Polyphony(void) {
   mPolyphony = rb_define_module("Polyphony");
 
@@ -453,6 +472,9 @@ void Init_Polyphony(void) {
   rb_define_singleton_method(mPolyphony, "__raw_buffer_get__", Polyphony_raw_buffer_get, -1);
   rb_define_singleton_method(mPolyphony, "__raw_buffer_set__", Polyphony_raw_buffer_set, 2);
   rb_define_singleton_method(mPolyphony, "__raw_buffer_size__", Polyphony_raw_buffer_size, 1);
+
+  rb_define_singleton_method(mPolyphony, "buffer_manager_reset", Polyphony_buffer_manager_reset, 0);
+  rb_define_singleton_method(mPolyphony, "buffer_manager_status", Polyphony_buffer_manager_status, 0);
 
   rb_define_global_function("snooze", Polyphony_snooze, 0);
   rb_define_global_function("suspend", Polyphony_suspend, 0);

@@ -54,6 +54,8 @@ class MiniTest::Test
     Thread.current.backend = Polyphony::Backend.new
     Fiber.current.setup_main_fiber
     Fiber.current.instance_variable_set(:@auto_watcher, nil)
+    Polyphony.buffer_manager_reset
+    Fiber.current.mailbox.clear
     sleep 0.0001
   end
 
