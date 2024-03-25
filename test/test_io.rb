@@ -642,6 +642,12 @@ class IOClassMethodsTest < MiniTest::Test
     assert_equal "end\n", lines[-1]
   end
 
+  def test_readlines_with_chomp
+    lines = IO.readlines(__FILE__, chomp: true)
+    assert_equal "# frozen_string_literal: true", lines[0]
+    assert_equal "end", lines[-1]
+  end
+
   WRITE_DATA = "foo\nbar קוקו"
 
   def test_write_class_method

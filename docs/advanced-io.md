@@ -119,7 +119,7 @@ minimizing memory use and GC pressure.
 ## Compressing and decompressing in-flight data
 
 You might be familiar with Ruby's [zlib](https://github.com/ruby/zlib) gem (docs
-[here](https://rubyapi.org/3.2/o/zlib)), which can be used to compress and
+[here](https://rubyapi.org/3.3/o/zlib)), which can be used to compress and
 uncompress data using the popular gzip format. Imagine we want to implement an
 HTTP server that can serve files compressed using gzip:
 

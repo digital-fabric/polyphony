@@ -1,5 +1,5 @@
 AllCops:
-  TargetRubyVersion: 3.2
+  TargetRubyVersion: 3.3
   RubyInterpreters:
     - ruby
   Exclude:
@@ -9,6 +9,7 @@ AllCops:
     - 'Gemfile*'
     - 'ext/**/*.rb'
     - lib/polyphony/adapters/irb.rb
+  NewCops: enable
 
 Style/LambdaCall:
   Enabled: false
