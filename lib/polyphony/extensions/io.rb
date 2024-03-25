@@ -60,9 +60,9 @@ class ::IO
     end
 
     alias_method :orig_readlines, :readlines
-    def readlines(name, sep = $/, limit = nil, getline_args = EMPTY_HASH)
+    def readlines(name, sep = $/, limit = nil, getline_args = EMPTY_HASH, chomp: false)
       File.open(name, 'r') do |f|
-        f.readlines(sep, **getline_args)
+        f.readlines(sep, chomp: chomp, **getline_args)
       end
     end
 
