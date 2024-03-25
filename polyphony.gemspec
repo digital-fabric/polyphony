@@ -31,4 +31,10 @@ Gem::Specification.new do |s|
   s.add_development_dependency  'localhost',            '1.2.0'
   s.add_development_dependency  'debug',                '1.9.1'
   s.add_development_dependency  'benchmark-ips',        '2.13.0'
+
+  # FIXME: remove gems when all other dependencies have bundled them (not part of stdlib since Ruby 3.4)
+  s.add_development_dependency  'base64',               '0.2.0'
+  s.add_development_dependency  'bigdecimal',           '3.1.7'
+  s.add_development_dependency  'csv',                  '3.3.0'
+  s.add_development_dependency  'mutex_m',              '0.2.0'
 end
