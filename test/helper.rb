@@ -46,6 +46,8 @@ module ::Kernel
   end
 end
 
+module MiniTest; end
+
 class MiniTest::Test
   def setup
     # trace "* setup #{self.name}"
