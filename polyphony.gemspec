@@ -20,15 +20,15 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.required_ruby_version = '>= 3.1'
 
-  s.add_development_dependency  'rake-compiler',        '1.2.1'
-  s.add_development_dependency  'minitest',             '5.17.0'
+  s.add_development_dependency  'rake-compiler',        '1.2.7'
+  s.add_development_dependency  'minitest',             '5.22.3'
   s.add_development_dependency  'simplecov',            '0.22.0'
-  s.add_development_dependency  'rubocop',              '1.45.1'
+  s.add_development_dependency  'rubocop',              '1.62.1'
   s.add_development_dependency  'pry',                  '0.14.2'
 
-  s.add_development_dependency  'msgpack',              '1.6.0'
+  s.add_development_dependency  'msgpack',              '1.7.2'
   s.add_development_dependency  'httparty',             '0.21.0'
-  s.add_development_dependency  'localhost',            '1.1.10'
-  s.add_development_dependency  'debug',                '1.8.0'
-  s.add_development_dependency  'benchmark-ips',        '2.10.0'
+  s.add_development_dependency  'localhost',            '1.2.0'
+  s.add_development_dependency  'debug',                '1.9.1'
+  s.add_development_dependency  'benchmark-ips',        '2.13.0'
 end

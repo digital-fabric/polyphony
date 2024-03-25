@@ -9,6 +9,7 @@ AllCops:
     - 'Gemfile*'
     - 'ext/**/*.rb'
     - lib/polyphony/adapters/irb.rb
+  NewCops: enable
 
 Style/LambdaCall:
   Enabled: false
