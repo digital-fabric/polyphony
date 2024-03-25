@@ -23,7 +23,7 @@
 ## What is Polyphony?
 
 Polyphony is a library for building concurrent applications in Ruby. Polyphony
-harnesses the power of [Ruby fibers](https://rubyapi.org/3.2/o/fiber) to provide
+harnesses the power of [Ruby fibers](https://rubyapi.org/3.3/o/fiber) to provide
 a cooperative, sequential coroutine-based concurrency model. Under the hood,
 Polyphony uses [io_uring](https://unixism.net/loti/what_is_io_uring.html) or
 [libev](https://github.com/enki/libev) to maximize I/O performance.
