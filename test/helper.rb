@@ -11,6 +11,7 @@ require 'fileutils'
 require_relative './eg'
 
 require 'minitest/autorun'
+require 'minitest/unit'
 
 ::Exception.__disable_sanitized_backtrace__ = true
 
